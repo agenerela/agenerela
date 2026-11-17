@@ -162,8 +162,16 @@ namespace GreyBoxStrategy
         /// realms play the same rules. Off: the writs turn exactly as before.
         /// </summary>
         public bool FreeOrders;
-        /// <summary>With <see cref="FreeOrders"/>: court orders a realm may give a turn; <see cref="CourtOrdersOverride"/> for one realm.</summary>
+        /// <summary>
+        /// With <see cref="FreeOrders"/>: court orders a realm may give a turn. A pacing setting for the model seats, which
+        /// bounds their calls a turn: the person's court follows gold alone (<see cref="CourtOrdersOverride"/>).
+        /// </summary>
         public int MaxCourtOrders = 3;
+        /// <summary>
+        /// With <see cref="FreeOrders"/>: a holding army keeps its order, as a marching or besieging one does, and is asked
+        /// again when a wake rule fires or after standing this many turns unasked. A pacing setting: each ask is a call.
+        /// </summary>
+        public int AskHoldingArmyEvery = 3;
         /// <summary>With <see cref="FreeOrders"/>: a realm's court orders a turn in place of <see cref="MaxCourtOrders"/> (the person's, no limit).</summary>
         public Dictionary<string, int> CourtOrdersOverride = new Dictionary<string, int>();
         /// <summary>With <see cref="FreeOrders"/>: the court orders this country may give a turn.</summary>

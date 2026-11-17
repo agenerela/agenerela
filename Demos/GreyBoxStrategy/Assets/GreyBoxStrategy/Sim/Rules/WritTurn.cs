@@ -261,11 +261,13 @@ namespace GreyBoxStrategy
         }
 
         /// <summary>
-        /// Free orders: the armies a realm is asked about, after its court: those the court recalled, in that order, then
-        /// in id order every army with no standing order (neither marching nor besieging) or woken by something.
+        /// Free orders: whether a realm is asked about this army, after its court. Every order stands, a hold as much as a
+        /// march or a siege: an army is asked when a wake rule fired, or when it has held
+        /// <see cref="GameRules.AskHoldingArmyEvery"/> turns since its last order. Armies the court recalled are asked
+        /// first, the rest in id order.
         /// </summary>
         public static bool AskedFreely(World w, Army a) =>
-            a.Awaiting || (!a.Marching && !(w.Province(a.Location)?.SiegedBy == a.Owner));
+            a.Awaiting || (!a.Marching && !(w.Province(a.Location)?.SiegedBy == a.Owner) && w.Turn - a.OrderedOnTurn >= w.Rules.AskHoldingArmyEvery);
 
         private IEnumerable<Army> FreeArmyQueue(Docket d)
         {

@@ -120,27 +120,43 @@ namespace GreyBoxStrategy.Tests
         }
 
         [Test]
-        public void EveryArmyWithNoStandingOrder_IsAsked_AMarchingOneIsNot_UnlessWoken()
+        public void AHoldingArmy_KeepsItsOrder_AndIsAskedWhenWoken_OrAfterThreeTurnsUnasked()
         {
             var g = New();
             Turn(g);
-            var armies = g.World.ArmiesOf("valen").ToList();
-            foreach (var a in armies) a.Wake.Clear(); // none woken: writs would ask none of them
-            var next = g.World.Neighbours(g.World.Province(armies[0].Location)).First(p => WritLegality.Passable(g.World, "valen", p));
-            var marching = new Army("zed_host", "valen", armies[0].Location, 10, g.World.Turn) { Destination = next.Id, StepTurnsLeft = 1 };
+            int next = g.World.Turn + 1;
+            var armies = g.World.ArmiesOf("valen").OrderBy(a => a.Id).ToList();
+            Assume.That(armies.Count, Is.GreaterThanOrEqualTo(1));
+            foreach (var a in armies) { a.Wake.Clear(); a.OrderedOnTurn = next - 1; } // all holding since last turn
+            var due = armies[0];
+            due.OrderedOnTurn = next - g.Rules.AskHoldingArmyEvery; // held three turns unasked
+            var woken = new Army("zed_host", "valen", due.Location, 10, next - 1);
+            woken.Wake.Clear();
+            woken.Wake.Add("war declared");
+            var step = g.World.Neighbours(g.World.Province(due.Location)).First(p => WritLegality.Passable(g.World, "valen", p));
+            var marching = new Army("yan_host", "valen", due.Location, 10, next - 5) { Destination = step.Id, StepTurnsLeft = 1 };
             marching.Wake.Clear();
-            marching.Path.Add(next.Id);
+            marching.Path.Add(step.Id);
+            g.World.Armies.Add(woken);
             g.World.Armies.Add(marching);
-            g.World.Country("valen").Army += 10;
+            g.World.Country("valen").Army += 20;
 
-            var asked = Turn(g);
-            var orders = asked.Where(r => r.CountryId == "valen" && r.Moment == Moment.Army).Select(r => r.ArmyId).ToList();
-            Assert.That(orders, Is.EquivalentTo(armies.Select(a => a.Id)), "every holding army is asked, woken or not; the marching one is not");
+            var asked = Turn(g).Where(r => r.CountryId == "valen" && r.Moment == Moment.Army).Select(r => r.ArmyId).ToList();
+            Assert.That(asked, Is.EquivalentTo(new[] { due.Id, "zed_host" }),
+                "the army three turns unasked and the woken one; the recent holders and the marching one keep their orders");
+        }
 
-            var writs = new Game(1, MapDefinition.Standard(), Rules(free: false));
-            Turn(writs);
-            foreach (var a in writs.World.ArmiesOf("valen")) a.Wake.Clear();
-            Assert.That(Turn(writs).Count(r => r.CountryId == "valen" && r.Moment == Moment.Army), Is.EqualTo(0), "the writs turn asks only woken armies");
+        [Test]
+        public void AskHoldingArmyEvery_IsASetting_OneAsksEveryHoldingArmy()
+        {
+            var r = Rules();
+            r.AskHoldingArmyEvery = 1;
+            var g = New(r);
+            Turn(g);
+            var armies = g.World.ArmiesOf("valen").ToList();
+            foreach (var a in armies) { a.Wake.Clear(); a.OrderedOnTurn = g.World.Turn; }
+            var asked = Turn(g).Where(x => x.CountryId == "valen" && x.Moment == Moment.Army).Select(x => x.ArmyId).ToList();
+            Assert.That(asked, Is.EquivalentTo(armies.Select(a => a.Id)));
         }
 
         [Test]
