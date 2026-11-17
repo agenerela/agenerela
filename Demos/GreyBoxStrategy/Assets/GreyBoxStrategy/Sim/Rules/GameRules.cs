@@ -127,6 +127,15 @@ namespace GreyBoxStrategy
         public int EventWindfallMin = 20;
         public int EventWindfallMax = 60;
         public double EventPlagueShare = 0.15;
+        /// <summary>
+        /// Whether the storyteller chooses how hard an event with an amount strikes (DR-023's A/B,
+        /// question 5): <see cref="EventStrengthForm.None"/>, today's game, by default; with
+        /// <see cref="EventStrengthForm.Bundled"/> the strength is in the action's id
+        /// (<c>windfall_major</c>), with <see cref="EventStrengthForm.Parameter"/> it is a parameter
+        /// of the action (<c>windfall</c>, <c>strength: major</c>). The same rule and amounts either way
+        /// (<see cref="EventRules.WhyNotStrength"/>, <see cref="EventRules.StrengthFactor"/>).
+        /// </summary>
+        public EventStrengthForm EventStrength = EventStrengthForm.None;
         /// <summary>A sickness needs an army of this size, so it never takes the last soldiers.</summary>
         public int EventMinArmyForPlague = 20;
         public int EventVolunteersMax = 30;

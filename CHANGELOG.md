@@ -28,6 +28,15 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **GreyBoxStrategy's storyteller can choose an event's strength, in two forms, for DR-023's A/B** (#20).
+  `GameRules.EventStrength` (off by default; the default game is unchanged) lets four events strike `minor`
+  (about half) or `major` (about one and a half times), never two majors in a row. `+strength-bundled` registers
+  two actions an event (`windfall_major`); `+strength-param` one action with a `strength` parameter and a
+  per-value check, through the framework's public API. Measured on `qwen3.5:4b`, 20 games an arm: both forms
+  equally legal, neither ties strength to the game's state, the parameter form puts its majors on blows rather
+  than gifts and costs 0.09 s and 5.5 completion tokens more a decision (findings, 16 November). Arms only;
+  DR-023 records that a per-value check cannot see the target.
+
 - **Painted Realm UI, variant B: the inspector and the council** (#20). The decision inspector is a framed window in
   the middle of the screen with five tabs: Answer, Offered, Told, Guards, Model. A click on a ruler's words opens
   their decision there, and the words keep clear of the window. The council's writs are seals, and End turn is
