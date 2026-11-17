@@ -56,7 +56,7 @@ namespace GreyBoxStrategy
                     if (p == null) return "fortify needs one of our provinces";
                     if (p.Owner != countryId) return $"{p.Id} is not ours";
                     if (p.Occupier != null) return $"{p.Id} is occupied by {p.Occupier}";
-                    if (me.Gold < rules.FortCost) return $"a fort needs {rules.FortCost} gold";
+                    if (me.Spendable < rules.FortCost) return $"a fort needs {rules.FortCost} gold";
                     if (p.Forts >= rules.MaxFortsPerProvince) return $"{p.Id} already has {p.Forts} forts";
                     if (!world.IsBorder(p)) return $"{p.Id} borders no one";
                     return null;
