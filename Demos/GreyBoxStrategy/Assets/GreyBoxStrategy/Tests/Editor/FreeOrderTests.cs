@@ -85,12 +85,16 @@ namespace GreyBoxStrategy.Tests
             var g = New();
             Turn(g);
             var me = g.World.Country("valen");
-            int company = g.World.Levy(me);
-            me.Gold = company * g.Rules.GoldPerSoldier + g.Rules.FortCost - 1; // one company, and a fort's gold less one
+            me.Gold = 100000;
+            int company = g.World.Levy(me); // a full company
+            // One company, and less than the smallest levy or a fort over.
+            int left = Math.Min(g.Rules.MinLevy * g.Rules.GoldPerSoldier, g.Rules.FortCost) - 1;
+            me.Gold = company * g.Rules.GoldPerSoldier + left;
             int armyBefore = me.Army;
             var asked = Turn(g, Court("valen", Actions.Recruit, Actions.Fortify));
             var courts = asked.Where(r => r.CountryId == "valen" && r.Moment == Moment.Council).ToList();
-            Assert.That(courts[0].Legal.Any(m => m.Action == Actions.Fortify), Is.True, "before the recruit, a fort is affordable");
+            Assert.That(courts[0].Legal.Any(m => m.Action == Actions.Recruit), Is.True);
+            Assert.That(courts.Count, Is.EqualTo(2), "nothing left to order after the recruit, so the court answers none");
             Assert.That(courts[1].Legal.Any(m => m.Action == Actions.Recruit), Is.False, "the company's gold is held back");
             Assert.That(courts[1].Legal.Any(m => m.Action == Actions.Fortify), Is.False, "and what is left does not pay for a fort");
             Assert.That(me.Army, Is.EqualTo(armyBefore + company), "the recruit landed");
