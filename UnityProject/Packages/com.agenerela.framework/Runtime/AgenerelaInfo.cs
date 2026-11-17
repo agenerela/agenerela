@@ -16,6 +16,6 @@ namespace Agenerela
         /// pull in the Package Manager API; the hygiene check <c>version</c> compares the
         /// two instead, and <c>tools/ci/release.py prepare</c> changes both at once.
         /// </summary>
-        public const string Version = "0.4.0-preview.1";
+        public const string Version = "0.4.0-preview.2";
     }
 }

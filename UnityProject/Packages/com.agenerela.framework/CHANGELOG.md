@@ -8,6 +8,8 @@ While the version stays `0.x`, the public API may change in any release.
 
 ## [Unreleased]
 
+## [0.4.0-preview.2] - 2026-11-16
+
 ### Changed
 
 - **Ollama reports 20 alternatives a token, not 5** (#244 item 1). `top_logprobs` is now 20 on
