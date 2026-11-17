@@ -2540,6 +2540,7 @@ piece off the storyteller is S1's exactly (a test holds that):
 | `+title-call` | The statement is the story alone; a second short call (the scribe) gives the title; "told so far" names template and target only |
 | `+call-choices` | With `+choices`, a dilemma's options come with the call as `DecideOptions.Choices` (#293, DR-022) instead of being registered as the seat's actions: no `target` field, the options listed with their descriptions. It changes what the model reads, so it is an arm until its A/B |
 | `+no-reply-cap` | The storyteller's event and title calls send no `MaxReplyTokens`; by default they send 400 (`ModelSeatOptions.StorytellerReplyCap`, #244 item 11), which binds only a runaway reply and changes nothing the model reads |
+| `+strength-bundled`, `+strength-param` | DR-023's A/B: `windfall`, `bad_harvest`, `plague` and `volunteers` strike `minor` (about half) or `major` (about one and a half times), never two majors in a row (`GameRules.EventStrength`). Bundled: two actions an event (`windfall_major`). Param: one action with a `strength` parameter, `major` left out by its per-value check. Both equally legal on the 4B; the parameter form costs 0.09 s a decision (findings, 16 November) |
 | `+preset-<name>` | `even_hand`, `underdog`, `cruel_fate`, `quiet_years`, `saga` (`StorytellerSettings.Presets`) |
 | `+s2` | Every piece but the chains, on `even_hand` |
 

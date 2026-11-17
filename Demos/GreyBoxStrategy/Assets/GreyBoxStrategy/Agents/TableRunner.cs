@@ -254,6 +254,7 @@ namespace GreyBoxStrategy
                 string model = table.Models.FirstOrDefault() ?? throw new ArgumentException("The storyteller needs a model at the table.");
                 game.EventTable = false;
                 game.Story = table.Options.StoryRules();
+                game.Rules.EventStrength = table.Options.EventStrength;
                 teller = new Storyteller(game, providerFor(model, game.World), table.Options);
             }
 
@@ -467,11 +468,12 @@ namespace GreyBoxStrategy
         private static string StorytellerCsv(IEnumerable<TableGame> played)
         {
             var inv = System.Globalization.CultureInfo.InvariantCulture;
-            var sb = new StringBuilder("seed,turn,open,model_action,model_target,action,target,model_answer_legal,latency_s,prompt_tokens,guard,verdict,error,execution,queued,statement,title_latency_s,title_statement,skipped\n");
+            var sb = new StringBuilder("seed,turn,open,model_action,model_target,action,target,model_answer_legal,latency_s,prompt_tokens,guard,verdict,error,execution,queued,statement,title_latency_s,title_statement,skipped,model_strength,strength,arguments_defaulted,values_unavailable,completion_tokens\n");
             foreach (var d in played.SelectMany(g => g.Storyteller))
                 sb.AppendLine(string.Join(",", d.Seed, d.Turn, d.Open, d.ModelAction, d.ModelTarget, d.Action, d.Target, d.ModelAnswerLegal,
                     d.LatencySeconds.ToString("0.000", inv), d.PromptTokens, d.Guard, d.Verdict, d.Error, d.Execution, d.Queued, EventLog.Q(d.Statement),
-                    d.TitleLatencySeconds.ToString("0.000", inv), EventLog.Q(d.TitleStatement), d.Skipped));
+                    d.TitleLatencySeconds.ToString("0.000", inv), EventLog.Q(d.TitleStatement), d.Skipped,
+                    d.ModelStrength, d.Strength, d.ArgumentsDefaulted, d.ValuesUnavailable, d.CompletionTokens));
             return sb.ToString();
         }
 

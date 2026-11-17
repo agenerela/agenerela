@@ -13,7 +13,7 @@ namespace GreyBoxStrategy
         public static string Csv(IEnumerable<GameRecord> games)
         {
             var sb = new StringBuilder("seed,turn,source,template,target,province,hit,values,total_value,title,story,story_verdict,statement,"
-                                       + "action,model_title,options,choices,chosen_by,spared,chain,chain_stage,traits,history,effects\n");
+                                       + "action,model_title,options,choices,chosen_by,spared,chain,chain_stage,traits,history,effects,strength,provinces_at_time\n");
             foreach (var g in games)
                 foreach (var e in g.Reports.SelectMany(r => r.Events))
                     sb.AppendLine(string.Join(",", g.Seed, e.Turn, e.Source, e.Template, e.Target, e.Province, string.Join(" ", e.Hit),
@@ -21,7 +21,8 @@ namespace GreyBoxStrategy
                         e.Action, Q(e.ModelTitle), string.Join(" ", e.Options), string.Join(" ", e.Choices.Select(kv => $"{kv.Key}={kv.Value}")),
                         string.Join(" ", e.ChosenBy.Select(kv => $"{kv.Key}={kv.Value}")), string.Join(" ", e.Spared), e.ChainId,
                         e.ChainStage == 0 ? "" : e.ChainStage.ToString(), Q(e.Traits), Q(e.HistoryRef),
-                        Q(string.Join("; ", e.Hit.Where(e.Effect.ContainsKey).Select(h => $"{h}: {e.Effect[h]}")))));
+                        Q(string.Join("; ", e.Hit.Where(e.Effect.ContainsKey).Select(h => $"{h}: {e.Effect[h]}"))),
+                        e.Strength, string.Join(" ", e.ProvincesAtTime.Select(kv => $"{kv.Key}={kv.Value}"))));
             return sb.ToString();
         }
 

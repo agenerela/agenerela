@@ -358,7 +358,7 @@ B is built in three slices:
   - Every panel has a gilt frame.
 - **2, the panels (built, #343).** A row kit (icon, label, bar or pips, value) for the province, army and rival views,
   tabs with icons, and portrait frames in the panel headers. Fog decides what a row shows.
-- **3, the inspector and the council (built).** The inspector is a framed window in the middle of the screen, with
+- **3, the inspector and the council (built, #348).** The inspector is a framed window in the middle of the screen, with
   five tabs: Answer, Offered, Told, Guards, Model. Writs show as seals, End turn is larger, and a click on a speech
   bubble opens its decision. While the inspector is open, the bubbles stay beside it, never under it.
 
