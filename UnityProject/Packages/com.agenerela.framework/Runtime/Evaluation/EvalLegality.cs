@@ -36,14 +36,6 @@ namespace Agenerela.Evaluation
         /// </summary>
         [JsonProperty("actionCategories")] public Dictionary<string, string[]> ActionCategories = new Dictionary<string, string[]>();
 
-        /// <summary>
-        /// The <see cref="ActionDefinition.Parameters"/> an action is given, by id, on a copy of the
-        /// profile's definition (DR-023): for measuring what a declared parameter costs on a set whose
-        /// labels know nothing of it. An action not named keeps the profile's. The labels are scored
-        /// on action and target alone, so the parameter's value is never judged.
-        /// </summary>
-        [JsonProperty("actionParameters")] public Dictionary<string, ActionParameter[]> ActionParameters = new Dictionary<string, ActionParameter[]>();
-
         /// <summary>Targets registered after the set's, in order, each told as a standing line as the set's are.</summary>
         [JsonProperty("extraTargets")] public List<EvalExtraTarget> ExtraTargets = new List<EvalExtraTarget>();
 
@@ -56,13 +48,7 @@ namespace Agenerela.Evaluation
                 TargetCategories = new Dictionary<string, string>(TargetCategories ?? new Dictionary<string, string>()),
                 ActionCategories = new Dictionary<string, string[]>(),
                 ExtraTargets = new List<EvalExtraTarget>(),
-                ActionParameters = new Dictionary<string, ActionParameter[]>(),
             };
-
-            foreach (var entry in ActionParameters ?? new Dictionary<string, ActionParameter[]>())
-            {
-                copy.ActionParameters[entry.Key] = CopyOf(entry.Value);
-            }
 
             foreach (var entry in ActionCategories ?? new Dictionary<string, string[]>())
             {
@@ -77,22 +63,6 @@ namespace Agenerela.Evaluation
                 }
 
                 copy.ExtraTargets.Add(new EvalExtraTarget { Id = extra.Id, Description = extra.Description, Category = extra.Category });
-            }
-
-            return copy;
-        }
-
-        internal static ActionParameter[] CopyOf(ActionParameter[] parameters)
-        {
-            if (parameters == null)
-            {
-                return null;
-            }
-
-            var copy = new ActionParameter[parameters.Length];
-            for (int i = 0; i < parameters.Length; i++)
-            {
-                copy[i] = parameters[i]?.Copy();
             }
 
             return copy;

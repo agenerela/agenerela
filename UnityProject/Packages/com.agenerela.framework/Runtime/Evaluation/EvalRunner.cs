@@ -376,22 +376,6 @@ namespace Agenerela.Evaluation
                 }
             }
 
-            foreach (var entry in legality.ActionParameters)
-            {
-                if (!Profile.Actions.Any(asset => asset != null && asset.Action != null && asset.Action.Id == entry.Key))
-                {
-                    yield return $"arm '{arm.Name}': its legality gives parameters to '{entry.Key}', which is not one of the profile's actions.";
-                }
-
-                foreach (var parameter in entry.Value ?? new ActionParameter[0])
-                {
-                    if (!ActionParameter.Validate(parameter, out string why))
-                    {
-                        yield return $"arm '{arm.Name}': action '{entry.Key}': {why}";
-                    }
-                }
-            }
-
             foreach (string id in legality.TargetCategories.Keys)
             {
                 if (!setIds.Contains(id))
@@ -803,16 +787,10 @@ namespace Agenerela.Evaluation
                 var declared = Set.FindAction(action.Id);
                 var handler = new DelegateActionHandler(ctx => declared.IsAvailableIn(ToJson(ctx.State)), (ctx, d) => { });
                 var legality = run.Arm.Legality;
-                string[] categories = null;
-                ActionParameter[] parameters = null;
-                bool ownCategories = legality != null && legality.ActionCategories.TryGetValue(action.Id, out categories);
-                bool ownParameters = legality != null && legality.ActionParameters.TryGetValue(action.Id, out parameters);
-                if (ownCategories || ownParameters)
+                if (legality != null && legality.ActionCategories.TryGetValue(action.Id, out var categories))
                 {
-                    // A copy with the arm's categories and parameters, so the shared profile asset never changes.
-                    agent.Actions.Register(
-                        WithCategories(action, ownCategories ? categories : action.TargetCategories,
-                                       ownParameters ? parameters : action.Parameters), handler);
+                    // A copy with the arm's categories, so the shared profile asset never changes.
+                    agent.Actions.Register(WithCategories(action, categories), handler);
                 }
                 else
                 {
@@ -845,7 +823,7 @@ namespace Agenerela.Evaluation
 
         // The profile's definition with an arm's own target categories (#151): every field copied, so
         // its examples and description read as the profile's do.
-        private static ActionDefinition WithCategories(ActionDefinition action, string[] categories, ActionParameter[] parameters)
+        private static ActionDefinition WithCategories(ActionDefinition action, string[] categories)
         {
             return new ActionDefinition
             {
@@ -860,7 +838,6 @@ namespace Agenerela.Evaluation
                 CounterExampleStimulus = action.CounterExampleStimulus,
                 CounterExampleStatement = action.CounterExampleStatement,
                 TargetCategories = categories == null ? null : (string[])categories.Clone(),
-                Parameters = EvalLegality.CopyOf(parameters),
             };
         }
 

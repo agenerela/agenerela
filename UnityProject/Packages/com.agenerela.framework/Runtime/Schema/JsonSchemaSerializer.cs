@@ -35,11 +35,6 @@ namespace Agenerela
     /// Gemini takes <c>anyOf</c> and not <c>oneOf</c>. A schema without pairs is written exactly as
     /// before.
     /// </para>
-    /// <para>
-    /// A pair's <see cref="ActionTargets.Parameters"/> (DR-023) are written in its branch as string
-    /// properties with an <c>enum</c>, after <c>target</c> and before <c>statement</c>, and listed in
-    /// the branch's <c>required</c> and <c>propertyOrdering</c> in that place.
-    /// </para>
     /// </remarks>
     public sealed class JsonSchemaSerializer
     {
@@ -140,20 +135,12 @@ namespace Agenerela
             Line(json, depth, "\"additionalProperties\": false");
         }
 
-        // The flat fields with the action and target enums narrowed to one pair's, and the pair's
-        // parameters before the statement, or last when the schema asks for none (DR-023).
+        // The flat fields with the action and target enums narrowed to one pair's.
         static List<SchemaField> Branch(IReadOnlyList<SchemaField> fields, ActionTargets pair)
         {
-            var branch = new List<SchemaField>(fields.Count + pair.Parameters.Count);
-            bool placed = false;
+            var branch = new List<SchemaField>(fields.Count);
             foreach (var field in fields)
             {
-                if (field.Name == DecisionSchema.StatementFieldName && !placed)
-                {
-                    branch.AddRange(pair.Parameters);
-                    placed = true;
-                }
-
                 var values = field.Name == DecisionSchema.ActionFieldName ? pair.Actions
                     : field.Name == DecisionSchema.TargetFieldName ? pair.Targets
                     : field.AllowedValues;
@@ -165,11 +152,6 @@ namespace Agenerela
                     AllowedValues = values,
                     Required = field.Required,
                 });
-            }
-
-            if (!placed)
-            {
-                branch.AddRange(pair.Parameters);
             }
 
             return branch;
@@ -187,12 +169,10 @@ namespace Agenerela
                 if (field.Name == DecisionSchema.TargetFieldName) target = field;
             }
 
-            // No target field is a schema with no target registered, paired for its parameters
-            // (DR-023): each pair then takes no_target alone, which the branch does not write.
-            if (action?.AllowedValues == null || (target != null && target.AllowedValues == null))
+            if (action?.AllowedValues == null || target?.AllowedValues == null)
             {
                 throw new ArgumentException(
-                    "A schema with pairs needs an action field with allowed values, and its target field, if any, needs them too.", "schema");
+                    "A schema with pairs needs an action field and a target field, each with allowed values.", "schema");
             }
 
             if (pairs.Count == 0)
@@ -204,31 +184,7 @@ namespace Agenerela
             for (var p = 0; p < pairs.Count; p++)
             {
                 CheckValues(pairs[p].Actions, action.AllowedValues, $"Pair {p}'s actions");
-                if (target != null)
-                {
-                    CheckValues(pairs[p].Targets, target.AllowedValues, $"Pair {p}'s targets");
-                }
-                else if (pairs[p].Targets.Count != 1 || pairs[p].Targets[0] != TargetRegistry.NoTarget)
-                {
-                    throw new ArgumentException(
-                        $"Pair {p} names targets, but the schema has no target field.", "schema");
-                }
-
-                // The branch as it will be written: no parameter named like a field or like another,
-                // and none with an empty enum or an empty value.
-                if (pairs[p].Parameters.Count > 0)
-                {
-                    foreach (var parameter in pairs[p].Parameters)
-                    {
-                        if (parameter.AllowedValues == null)
-                        {
-                            throw new ArgumentException(
-                                $"Pair {p}'s parameter '{parameter.Name}' has no allowed values. A parameter is a closed choice.", "schema");
-                        }
-                    }
-
-                    Validate(Branch(fields, pairs[p]));
-                }
+                CheckValues(pairs[p].Targets, target.AllowedValues, $"Pair {p}'s targets");
 
                 foreach (string id in pairs[p].Actions)
                 {

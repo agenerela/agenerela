@@ -111,7 +111,7 @@ When no target is registered at all, the target field is **left out entirely**, 
 ### 3. Paired: one branch per target list
 
 Built when the call sets `DecideOptions.PairTargetsWithActions` and at least one target is
-registered, and always when an offered action declares a parameter (DR-023, below). `Fields` is the same three fields with the full enums; `Pairs` says which actions go
+registered. `Fields` is the same three fields with the full enums; `Pairs` says which actions go
 with which targets. `JsonSchemaSerializer` writes a root `anyOf` with one object per branch, each
 the flat object with its `action` and `target` enums narrowed to that branch. This is the golden in
 `PairedSchemaTests.QuestGiverJson`, shortened here to the enums:
@@ -132,8 +132,7 @@ Each branch in the real output is a whole object with `type`, `properties`, `req
 How the branches are made (`DecisionSchema.PairsFor`), which decides what a grammar must accept:
 
 - **One branch per distinct target list.** Two actions share a branch exactly when they take the
-  same targets in the same order, and ask for the same parameters with the same values (below). A
-  branch may hold several actions.
+  same targets in the same order. A branch may hold several actions.
 - **Branch order** is the order each list's first action is offered. `none`'s branch is last,
   unless another action takes `no_target` alone, in which case `none` joins that branch.
 - **An action that does not require a target** gets `no_target` first, then its targets.
@@ -148,36 +147,6 @@ How the branches are made (`DecisionSchema.PairsFor`), which decides what a gram
 So in a paired schema an action appears in **exactly one** branch, every branch's lists are
 non-empty, and every value comes from the flat enums. `JsonSchemaSerializer.ValidatePairs` refuses
 a schema that breaks any of these.
-
-### A branch with parameters (DR-023, first step)
-
-An action may declare closed choices beside its target (`ActionDefinition.Parameters`): a set of
-words (`minor`, `major`) or a number list (`1`, `2`, `3`). Offering one such action makes the
-call's schema paired whatever `PairTargetsWithActions` says, because only a branch can ask one
-action for a field the others lack. `ActionTargets.Parameters` holds the branch's parameters as
-required fields, each with the values offered for this decision (a per-value check may have removed
-some); `Fields` is unchanged. `JsonSchemaSerializer` writes them as string properties with an
-`enum`, **after `target` and before `statement`**, and names them in that place in `required` and
-`propertyOrdering`:
-
-```json
-{ "action": ["blight"], "target": ["orsk", "kesh"], "strength": ["minor", "major"], "statement": "string" }
-```
-
-- The order is measured: a value placed after `statement` was written into the statement in 3
-  replies of 6, and in none when placed before it (findings, 14 November 2026). With no
-  `statement` field (#266) the parameters come last.
-- An action with parameters never shares a branch with one that has none, even with the same
-  targets. `none`'s branch has none.
-- **With no target registered the schema is still paired**, and has no `target` field: each pair's
-  `Targets` is `no_target` alone, which the branch does not write. `ValidatePairs` refuses a pair
-  that names a target when there is no target field.
-- Every value is a JSON string, numbers included (`"3"`), so one grammar rule covers both kinds.
-  `DecisionParser` also reads a bare integer.
-- The goldens are in `ParameterTests` (`ADeclaredParameterPairsTheSchemaWithItBetweenTargetAndStatement`).
-
-A GBNF grammar needs nothing new for this: a parameter is one more string-enum property in one
-branch's object rule, placed before the statement.
 
 ### Any of the three without `statement` (#266)
 
@@ -286,11 +255,10 @@ least:
 
 So nobody looks for them:
 
-- **Typed parameters only when an action declares one.** A decision is one action, one target and one
-  statement, or no statement at all (#266), plus the closed choices an action declares (DR-023, first step,
-  built 16 November: sets of words and number lists, see "A branch with parameters" above). An open
-  quantity or price is not a field (#190 LV #12), nor is `also_targets`; nothing becomes a default before DR-023's
-  storyteller A/B.
+- **No typed parameters, yet.** DR-023 (accepted 15 November, nothing built, nothing a default before its
+  storyteller A/B) puts them beside action and target; until it is built a decision is one action, one target and one statement, or no statement
+  at all (#266). Quantities,
+  prices or a strength are not fields (#190 LV #12, #266 item 2).
   What Ollama's grammar can hold beside them was probed on 14 November: an enum and a bounded array
   of target ids, kept in key order, and a parameter written after `statement` lands in the
   statement (`findings.md`, "A closed choice beside action and target").

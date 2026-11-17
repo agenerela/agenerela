@@ -74,33 +74,6 @@ namespace Agenerela
                 return GuardVerdict.Reject("the action takes no target, and the decision has one.");
             }
 
-            // The arguments against the action's own declaration, whatever the request offered: the
-            // check hard rule 5 asks for, made here for DecideAsync and again for Execute (DR-023).
-            foreach (var argument in decision.Arguments)
-            {
-                var parameter = definition.ParameterNamed(argument.Key);
-                if (parameter == null)
-                {
-                    return GuardVerdict.Reject($"the action has no parameter '{argument.Key}'.");
-                }
-
-                if (!parameter.Allows(argument.Value))
-                {
-                    return GuardVerdict.Reject($"'{argument.Value}' is not a value of '{argument.Key}'.");
-                }
-            }
-
-            if (definition.DeclaresParameters)
-            {
-                foreach (var parameter in definition.Parameters)
-                {
-                    if (!decision.TryGetArgument(parameter.Name, out string _))
-                    {
-                        return GuardVerdict.Reject($"the action needs '{parameter.Name}', and the decision has none.");
-                    }
-                }
-            }
-
             if (input.Request != null)
             {
                 if (!Offered(input.Request, decision.ActionId))
@@ -111,17 +84,6 @@ namespace Agenerela
                 if (!OfferedTogether(input.Request, decision.ActionId, decision.TargetId))
                 {
                     return GuardVerdict.Reject("the target was not offered with this action: the schema paired them apart.");
-                }
-
-                // The values the schema offered for this decision: the grammar should have made any
-                // other impossible (DR-023).
-                foreach (var asked in DecisionSchema.ParametersOf(input.Request.Schema, decision.ActionId))
-                {
-                    if (decision.TryGetArgument(asked.Name, out string given) && definition.ParameterNamed(asked.Name) != null &&
-                        definition.ParameterNamed(asked.Name).Allows(given) && !Contains(asked.AllowedValues, given))
-                    {
-                        return GuardVerdict.Reject($"the value '{given}' of '{asked.Name}' was not offered: it was not available for this decision.");
-                    }
                 }
             }
             else
@@ -142,23 +104,7 @@ namespace Agenerela
                             why.Length > 0 ? reason : null);
                     }
 
-                    if (answer.TryGetLeftOut(definition, out because) && because == LeftOutBecause.NoLegalValue)
-                    {
-                        return GuardVerdict.Reject("the action is not available right now: one of its parameters has no value that is. " +
-                                                   answer.RejectedValuesPhrase(definition) + ".");
-                    }
-
                     return GuardVerdict.Reject("the action is not available right now.");
-                }
-
-                // A value its per-value check rejects now, as Execute finds it (DR-023).
-                foreach (var argument in decision.Arguments)
-                {
-                    if (answer.IsValueRejected(definition, argument.Key, argument.Value, out string reason))
-                    {
-                        string why = reason == null ? "its per-value check says no." : reason;
-                        return GuardVerdict.Reject($"'{argument.Key}' cannot be '{argument.Value}' right now: {why}", reason);
-                    }
                 }
             }
 

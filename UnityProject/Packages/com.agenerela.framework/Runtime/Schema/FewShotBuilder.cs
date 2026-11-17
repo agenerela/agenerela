@@ -109,7 +109,7 @@ namespace Agenerela
                                 ?? (mentioned != null ? FallbackTarget(action, targets, mentioned, availability) : null);
                 string name = target == null ? null : NameOf(target, targets);
 
-                string example = ActionExample(action, target, name, label, statements, situations, ExampleArguments(action, availability));
+                string example = ActionExample(action, target, name, label, statements, situations);
                 if (example != null)
                 {
                     lines.Add(example);
@@ -144,31 +144,8 @@ namespace Agenerela
         }
 
         // The action's own example, or null when it has none, or needs a target and has none to name.
-        // ", strength: major" for each of the action's parameters, in declared order, so the example
-        // shows the field between the target and the statement, where the reply gives it (DR-023).
-        // The value is the parameter's ExampleValue, else its Default, else the first, and always one
-        // offered for this decision. Empty for an action that declares none.
-        private static string ExampleArguments(ActionDefinition action, AvailabilityAnswer availability)
-        {
-            if (!action.DeclaresParameters) return "";
-
-            var text = new System.Text.StringBuilder();
-            foreach (var parameter in action.Parameters)
-            {
-                var offered = availability != null ? availability.ValuesOf(action, parameter) : new List<string>(parameter.Values);
-                if (offered.Count == 0) continue;
-
-                string value = offered.Contains(parameter.ExampleValue) ? parameter.ExampleValue
-                    : offered.Contains(parameter.Default) ? parameter.Default
-                    : offered[0];
-                text.Append(", ").Append(parameter.Name).Append(": ").Append(value);
-            }
-
-            return text.ToString();
-        }
-
         private static string ActionExample(ActionDefinition action, string target, string name,
-                                            string label, bool statements, bool situations, string arguments = "")
+                                            string label, bool statements, bool situations)
         {
             if (string.IsNullOrWhiteSpace(action.ExampleStimulus)) return null;
 
@@ -177,13 +154,13 @@ namespace Agenerela
             if (!action.RequiresTarget)
             {
                 return Situation(action, null, situations) +
-                       Example(label, action.ExampleStimulus, action.Id, TargetRegistry.NoTarget, statement, arguments);
+                       Example(label, action.ExampleStimulus, action.Id, TargetRegistry.NoTarget, statement);
             }
 
             if (target == null) return null;
 
             return Situation(action, name, situations) +
-                   Example(label, Fill(action.ExampleStimulus, name), action.Id, target, Fill(statement, name), arguments);
+                   Example(label, Fill(action.ExampleStimulus, name), action.Id, target, Fill(statement, name));
         }
 
         // The example's observations, under the heading a real call's observations have, each "- "
@@ -432,9 +409,9 @@ namespace Agenerela
 
         // "Label: "stimulus" -> action: id, target: id", then ", statement: "..."" when there is one,
         // in the order the reply's fields come: action, target, statement.
-        private static string Example(string label, string stimulus, string actionId, string targetId, string statement, string arguments = "")
+        private static string Example(string label, string stimulus, string actionId, string targetId, string statement)
         {
-            string line = $"{label}: {Quoted(stimulus)} -> action: {actionId}, target: {targetId}{arguments}";
+            string line = $"{label}: {Quoted(stimulus)} -> action: {actionId}, target: {targetId}";
             return string.IsNullOrWhiteSpace(statement) ? line : line + $", statement: {Quoted(statement)}";
         }
 

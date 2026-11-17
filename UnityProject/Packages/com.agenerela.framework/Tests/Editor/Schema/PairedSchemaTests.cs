@@ -275,25 +275,13 @@ namespace Agenerela.Tests
         }
 
         [Test]
-        public void PairsThatNameTargetsNeedATargetField()
+        public void PairsNeedAnActionFieldAndATargetField()
         {
-            // A schema with no target field may still be paired, for its parameters (DR-023), but
-            // then no pair can name a target.
             var schema = new DecisionSchema(new[] { Action("move_to", "none"), Statement() }, new[] { Pair("move_to", "village_gate") });
 
             var error = Assert.Throws<ArgumentException>(() => Serialize(schema));
 
-            Assert.That(error.Message, Does.Contain("names targets, but the schema has no target field"));
-        }
-
-        [Test]
-        public void PairsNeedAnActionField()
-        {
-            var schema = new DecisionSchema(new[] { Statement() }, new[] { Pair("move_to", TargetRegistry.NoTarget) });
-
-            var error = Assert.Throws<ArgumentException>(() => Serialize(schema));
-
-            Assert.That(error.Message, Does.Contain("needs an action field with allowed values"));
+            Assert.That(error.Message, Does.Contain("needs an action field and a target field"));
         }
 
         // ---- SchemaLegalityGuard -------------------------------------------------------------

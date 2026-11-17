@@ -434,28 +434,13 @@ namespace Agenerela
                 {
                     Field(json, DecisionSchema.ActionFieldName, decision);
                     Field(json, DecisionSchema.TargetFieldName, decision);
-                    Arguments(json, decision);
                     Field(json, DecisionSchema.StatementFieldName, decision);
                 }
                 else
                 {
-                    // The arguments where the reply gave them: before the statement, or last when
-                    // the schema asked for none (DR-023).
-                    bool written = false;
                     foreach (var field in schema.Fields)
                     {
-                        if (field.Name == DecisionSchema.StatementFieldName && !written)
-                        {
-                            Arguments(json, decision);
-                            written = true;
-                        }
-
                         Field(json, field.Name, decision);
-                    }
-
-                    if (!written)
-                    {
-                        Arguments(json, decision);
                     }
                 }
 
@@ -463,15 +448,6 @@ namespace Agenerela
             }
 
             return text.ToString();
-        }
-
-        private static void Arguments(JsonTextWriter json, AgentDecision decision)
-        {
-            foreach (var argument in decision.Arguments)
-            {
-                json.WritePropertyName(argument.Key);
-                json.WriteValue(argument.Value);
-            }
         }
 
         private static void Field(JsonTextWriter json, string name, AgentDecision decision)

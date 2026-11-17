@@ -568,15 +568,6 @@ gives after reading the results, in as many phases as it likes, each decision re
 memory, drops the whole round on cancellation with nothing remembered, and groups a round's
 decisions in the log as one `DecisionChain`. `Documentation~/decision-rounds.md`.
 
-An action may declare **parameters** (#266 item 2; DR-023, first step): closed choices beside its
-target, a set of words or a number list, in `ActionDefinition.Parameters`,
-`[AgentParameter]` and `[Argument]`. A call that offers one sends the paired schema with the
-parameters after `target` and before `statement`, and the action list with their values; the
-chosen values are `AgentDecision.Arguments`, which the legality guard holds to the declaration
-inside `DecideAsync` and again at `Execute`. A per-value check (`IValueAvailability`,
-`[AvailableValue]`) leaves a value out of one decision. Nothing changes for an agent that declares
-none. `Documentation~/parameters.md`.
-
 ### 2.2 Actions (`Runtime/Actions/`) — the heart of the framework
 
 **Settled rule: the action vocabulary is data, not an enum.** The prototype's fixed
@@ -2493,11 +2484,8 @@ game wants choices and its ordinary actions in one enum, or a chosen option shou
 
 **Status:** Accepted, 15 November 2026. Proposed on 14 November (#266 item 2, its second box) by
 the #266 framework-gaps session; the lead answered "Yes to all five" to the questions below, so each
-proposed answer is the decision. **The first step is built** (16 November 2026, #266): closed sets
-and number lists, as decided in question 2, with the forced paired schema of question 4; its first
-A/B on the evaluation sets is in findings, 16 November. Not built: `also_targets` (question 3), an
-open number range, the `OrderLost` detection and the provider capability the table names. Nothing
-becomes a default before the measurement in question 5.
+proposed answer is the decision. Nothing is built yet, and nothing becomes a default before the
+measurement in question 5.
 
 **The lead's questions, each decided as proposed** (the table further down gives the reasons):
 
@@ -2558,7 +2546,7 @@ DR-022 already covers the cheaper half: a choice *among options given with the c
 | Several targets | An array replacing `target`; `target` plus `also_targets` (0 to N−1, items from the action's legal targets); groups only (#298) | **`target` plus `also_targets`**, second step. `TargetId` stays the first target, so every existing reader, the grounding guard, `TargetCategoryGuard` and the per-target checks keep working on it. The extra ones are checked by category and availability, de-duplicated by the parser (the probe could not show `uniqueItems` enforced), and not scored by grounding until the guards area (#138) says how |
 | Which schema carries them | Flat, with a "not used" value in every parameter enum; paired only | **Paired only**: offering an action with a parameter makes that call's schema paired (DR-020 decision 7), each branch carrying its action's own parameters in order, `required` and `additionalProperties: false`. Actions share a branch only if their targets *and* parameters match. A call with no parameters is byte-identical to today |
 | How a local model learns them | The schema; the prompt | **The prompt, always**, as for choices (DR-022): an action with parameters is listed with them whatever `ListActionsAndTargets` says ("`blight`: a country falls sick. strength: minor or major."). Its example shows them (`ExampleArguments`), so the few-shot block demonstrates the field rather than leaving it to the schema the model never reads |
-| Parsing | Lenient (bad value → default); strict | **Strict, with a declared default as the only fallback**: a missing or illegal value takes `Default` if the parameter has one, recorded as `ArgumentsDefaulted`; with none, `SchemaLegalityGuard` rejects, as it rejects a pair the grammar should have prevented. Numbers parse with the invariant culture. *Narrowed in review of the first step (16 November 2026, the tech lead): `Default` covers only a **missing** value. A value of the wrong type (a float, a boolean, an array, an integer past 64 bits) makes the reply unreadable, an `UnreadableReply` pipeline error, even when the parameter has a default; a string the parameter does not declare or the request did not offer is rejected by `SchemaLegalityGuard`. And `Execute` never applies `Default`: a hand-built decision missing a required value is refused.* |
+| Parsing | Lenient (bad value → default); strict | **Strict, with a declared default as the only fallback**: a missing or illegal value takes `Default` if the parameter has one, recorded as `ArgumentsDefaulted`; with none, `SchemaLegalityGuard` rejects, as it rejects a pair the grammar should have prevented. Numbers parse with the invariant culture |
 | Guards | Score parameters for grounding; legality only | **Legality and availability only**, inside the existing built-in guards (`SchemaLegalityGuard`, `TargetAvailabilityGuard` re-run at `Execute`). A developer guard reads `decision.Arguments`; `RewriteToNone`, `Reject` and `ReplaceStatement` apply unchanged. No verdict rewrites one value: it would be a fifth verdict for a need not seen |
 | Telemetry and the log | Nothing; the chosen values and what was offered | **Both**: the decision log's line carries `arguments` (an object, left out when empty), plus `argumentsDefaulted` and `valuesUnavailable`; `DecisionTelemetry` carries the same three. Memory under `Move` keeps the arguments with the move (#251) |
 | `AgentDecision` | New fields per kind; a map | **`Arguments`, an `IReadOnlyDictionary<string, string>`, empty and never null**, with `TryGetArgument` and an `int` reader; a 4-argument constructor beside the 3-argument one, which keeps meaning "no arguments". Source-compatible: no member changes, every existing call compiles |

@@ -79,7 +79,7 @@ These are measured (`docs/llm-wiki/findings.md`, and the demo `README.md`), not 
 | Statements invent grievances about land never taken | Opinions with **true reasons** go into the facts ([section 5](#5-diplomacy-and-the-realm)), which also tests whether that helps |
 | Long target lists are where the grounding guard needed 20 alternatives and a 0.6 threshold | At most about 12 targets per decision |
 | A model served through Ollama never reads the schema | Anything the model must know is in the prompt |
-| A decision is one action, one target and one statement. The game uses no typed parameters (#266 item 2, #190 LV #12; DR-023's first step is built, 16 November: closed sets and number lists, off unless an action declares one) | Quantities, unit types and peace terms are spelled into action ids or fixed by the rules. [Section 8](#8-what-each-mechanic-asks-of-the-models-and-the-framework) flags every place this bites |
+| A decision is one action, one target and one statement. No typed parameters (#266 item 2, #190 LV #12; DR-023 accepts them, 15 November, not built) | Quantities, unit types and peace terms are spelled into action ids or fixed by the rules. [Section 8](#8-what-each-mechanic-asks-of-the-models-and-the-framework) flags every place this bites |
 | One storyteller call per about 460 ran away for 20 s (N12) | With about 15 decisions a turn, that is one stall every 30 turns. A reply cap (#244 item 11) moves from nice to needed |
 
 What stays from stages 1 and 2: dice seeded per purpose (a roll is a hash of game seed, turn, who
@@ -1418,7 +1418,7 @@ lines and the moves line; every slice measures them.
 
 **What the framework would need, in one list:**
 
-1. **Typed parameters** (#266 item 2, #190 LV #12; accepted as DR-023 on 15 November; the first step, closed sets and number lists, built on 16 November, off unless an action declares one). *Unit type and building kind as action ids* is a
+1. **Typed parameters** (#266 item 2, #190 LV #12; accepted as DR-023 on 15 November, not built). *Unit type and building kind as action ids* is a
    workaround that works: about 8 actions open in a turn. **A treaty is one term**: a province or
    tribute, never a mix or a size, until a decision can carry a list. **Trade deals with chosen
    goods** are left out because of it. **Choice events written by the model** need it.
