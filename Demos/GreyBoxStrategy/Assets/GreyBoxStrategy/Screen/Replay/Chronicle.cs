@@ -153,6 +153,21 @@ namespace GreyBoxStrategy.Replay
                     line.Quote = r.Story ?? "";
                     break;
                 }
+                case ReplayEventKind.ArmiesMerged:
+                {
+                    var o = e.ArmyOrder;
+                    line.Category = ChronicleCategory.War;
+                    line.Text = $"{N(e.Country)} merges {string.Join(", ", o.Others.Select(Host))} into {Host(o.Army)} at {P(o.Province)}"
+                                + (o.Dismissed.Count > 0 ? $"; {string.Join(", ", o.Dismissed)} {(o.Dismissed.Count == 1 ? "is" : "are")} dismissed" : "");
+                    break;
+                }
+                case ReplayEventKind.ArmySplit:
+                {
+                    var o = e.ArmyOrder;
+                    line.Category = ChronicleCategory.War;
+                    line.Text = $"{N(e.Country)} splits {o.Soldiers} soldiers from {Host(o.Army)} at {P(o.Province)} as {Host(o.Others[0])}, with no general";
+                    break;
+                }
                 case ReplayEventKind.ArmyOrder:
                     line.Category = ChronicleCategory.War;
                     line.Text = e.Province != null ? $"{N(e.Country)}: {Host(e.Army)} marches on {P(e.Province)}" : $"{N(e.Country)}: {Host(e.Army)} holds";

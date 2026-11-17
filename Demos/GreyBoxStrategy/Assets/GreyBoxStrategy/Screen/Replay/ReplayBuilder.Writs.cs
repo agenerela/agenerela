@@ -32,6 +32,8 @@ namespace GreyBoxStrategy.Replay
         private static TurnReport PlayWritsTurn(Game game, RecordedPlayers players, out Dictionary<string, List<string>> paths)
         {
             var requests = game.BeginTurn();
+            // The human player's merges and splits, given in the council before the plan's recalls, as the game gave them.
+            players.GiveArmyOrders(game, game.World.Turn);
             players.Recall(game, game.World.Turn);
             var answers = new List<CountryAnswer>();
             while (requests.Count > 0)
@@ -59,6 +61,22 @@ namespace GreyBoxStrategy.Replay
         {
             var seen = new HashSet<CountryRequest>();
             var outcomes = tr.Outcomes.Where(o => o.Request != null).ToList();
+
+            // The council's merges and splits (#20), before anything resolved: the council's state is from before them.
+            foreach (var order in tr.ArmyOrders)
+            {
+                if (order.IsMerge) s.Armies.RemoveAll(a => order.Others.Contains(a.Id));
+                foreach (var after in order.After)
+                {
+                    s.Armies.RemoveAll(a => a.Id == after.Id);
+                    s.Armies.Add(ArmyOf(after, replay.Rules));
+                }
+                yield return Snap(new ReplayEvent
+                {
+                    Turn = turn, Kind = order.IsMerge ? ReplayEventKind.ArmiesMerged : ReplayEventKind.ArmySplit, Country = order.Country,
+                    Army = order.Army, Province = order.Province, ProvinceIndex = replay.IndexOf(order.Province), Text = order.Text, ArmyOrder = order,
+                }, s);
+            }
 
             // a. Treaties: each term offered, its answer, and the treaty if it landed.
             foreach (var o in outcomes.Where(o => o.Request.Moment == Moment.Council && Actions.IsTerm(o.Choice.Action)))
