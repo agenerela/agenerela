@@ -92,7 +92,7 @@ namespace GreyBoxStrategy.Realm
             if (me != null)
             {
                 OutHead(IconKind.Army, "ARMIES", o.Armies.Count.ToString());
-                foreach (var a in o.Armies)
+                foreach (var a in Folded("ARMIES") ? new List<ScreenModels.ArmyRow>() : o.Armies)
                 {
                     var row = new VisualElement(); row.AddToClassList("ol-row"); if (a.Hungry) row.AddToClassList("hungry");
                     row.tooltip = $"{a.Name}: {a.Soldiers} soldiers, {a.Doing}. Click: its panel.";
@@ -113,10 +113,10 @@ namespace GreyBoxStrategy.Realm
                     row.RegisterCallback<ClickEvent>(_ => HostPressed?.Invoke(id));
                     outlinerBody.Add(row);
                 }
-                if (o.Armies.Count == 0) OutNote("No armies: recruit at your capital.");
+                if (o.Armies.Count == 0 && !Folded("ARMIES")) OutNote("No armies: recruit at your capital.");
             }
             OutHead(IconKind.Fort, "SIEGES", o.Sieges.Count.ToString());
-            foreach (var x in o.Sieges)
+            foreach (var x in Folded("SIEGES") ? new List<ScreenModels.SiegeRow>() : o.Sieges)
             {
                 var row = new VisualElement(); row.AddToClassList("ol-row");
                 var top = new VisualElement(); top.AddToClassList("ol-top");
@@ -129,9 +129,9 @@ namespace GreyBoxStrategy.Realm
                 row.RegisterCallback<ClickEvent>(_ => ProvincePressed?.Invoke(at));
                 outlinerBody.Add(row);
             }
-            if (o.Sieges.Count == 0) OutNote("None.");
+            if (o.Sieges.Count == 0 && !Folded("SIEGES")) OutNote("None.");
             OutHead(IconKind.Swords, "WARS", o.Wars.Count.ToString());
-            foreach (var w in o.Wars)
+            foreach (var w in Folded("WARS") ? new List<ScreenModels.WarRow>() : o.Wars)
             {
                 var row = new VisualElement(); row.AddToClassList("ol-row");
                 var top = new VisualElement(); top.AddToClassList("ol-top");
@@ -145,20 +145,42 @@ namespace GreyBoxStrategy.Realm
                 row.RegisterCallback<ClickEvent>(_ => CountryPressed?.Invoke(who));
                 outlinerBody.Add(row);
             }
-            if (o.Wars.Count == 0) OutNote(me != null ? "At peace with every realm." : "No wars.");
-            OutHead(IconKind.Scroll, "LEDGERS", "");
+            if (o.Wars.Count == 0 && !Folded("WARS")) OutNote(me != null ? "At peace with every realm." : "No wars.");
+            // The ledgers' buttons stay at the outliner's foot, outside its scroll, so a long list never hides them.
+            outlinerFoot.Clear();
             var buttons = new VisualElement(); buttons.AddToClassList("ol-buttons");
             var ledger = new Button(ToggleLedger) { text = "Realms", tooltip = "Every realm's standing, wars, truces, armies, and the neutral land" }; ledger.AddToClassList("tbtn"); ledger.AddToClassList("ol-btn");
             var diplo = new Button(() => DiplomacyPressed?.Invoke()) { text = "Diplomacy", tooltip = "Who is at war, truce or peace with whom (D)" }; diplo.AddToClassList("tbtn"); diplo.AddToClassList("ol-btn");
             buttons.Add(ledger); buttons.Add(diplo);
-            outlinerBody.Add(buttons);
+            outlinerFoot.Add(buttons);
         }
+
+        // The outliner's folded sections, by title: a click on a header folds it, its count still showing.
+        private readonly HashSet<string> folded = new HashSet<string>();
+        private bool Folded(string title) => folded.Contains(title);
+
+        /// <summary>Folds or opens an outliner section by its title ("ARMIES", "SIEGES", "WARS"), as a click on its header does.</summary>
+        public void FoldOutliner(string title) { if (!folded.Remove(title)) folded.Add(title); RenderOutliner(lastState); }
+
+        /// <summary>For tests: the outliner's rows, its sections' headers with their counts, and its foot's buttons.</summary>
+        public (int rows, List<string> heads, List<string> foot) OutlinerShape()
+        {
+            int rows = 0; var heads = new List<string>(); var foot = new List<string>();
+            outlinerBody.Query(className: "ol-row").ForEach(_ => rows++);
+            outlinerBody.Query(className: "ol-head").ForEach(h => heads.Add(string.Join(" ", h.Query<Label>().ToList().Select(l => l.text))));
+            outlinerFoot.Query<Button>().ForEach(b => foot.Add(b.text));
+            return (rows, heads, foot);
+        }
+        private VisualElement outlinerFoot;
 
         private void OutHead(IconKind icon, string title, string note)
         {
-            var h = new VisualElement(); h.AddToClassList("ol-head");
+            var h = new VisualElement { tooltip = Folded(title) ? "Click: show" : "Click: fold" }; h.AddToClassList("ol-head");
+            h.EnableInClassList("folded", Folded(title));
+            h.Add(new Label(Folded(title) ? "▸" : "▾") { style = { width = 12 } });
             h.Add(new Icon(icon, 12) { Tint = new Color32(226, 194, 122, 255) });
             h.Add(new Label(title) { style = { marginLeft = 6, flexGrow = 1 } });
+            h.RegisterCallback<ClickEvent>(_ => FoldOutliner(title));
             if (note.Length > 0) h.Add(new Label(note) { style = { color = (Color)new Color32(141, 127, 102, 255) } });
             outlinerBody.Add(h);
         }
@@ -398,97 +420,106 @@ namespace GreyBoxStrategy.Realm
             if (a == null) return;
             bool rival = Fog.On && a.Owner != You;
             var body = SideHead("ARMY");
-            var hdr = new VisualElement(); hdr.AddToClassList("insp-head");
-            hdr.Add(new Crest(CountryLook.Of(a.Owner), 30));
-            var hb = new VisualElement { style = { marginLeft = 10 } };
-            var name = new Label(Chronicle.Host(a.Id)); name.AddToClassList("insp-title"); hb.Add(name);
-            var sub = new Label($"{CountryLook.NameOf(a.Owner)} · {(rival ? ArmySight.About(a.Soldiers) : a.Soldiers.ToString())} soldiers"); sub.AddToClassList("insp-sub"); hb.Add(sub);
-            hdr.Add(hb); body.Add(hdr);
-
-            var str = Sec(body, "STRENGTH", rival ? "what your court sees" : "");
-            if (a.HasMix && !rival) { str.Add(new MixBars(a)); str.Add(KeyValue("Made of", ArmyLook.Mix(a))); }
-            else if (a.HasMix) str.Add(KeyValue("Mostly", ArmyLook.Mostly(a) ?? "not known"));
-            str.Add(KeyValue("Soldiers", rival ? ArmySight.About(a.Soldiers) : a.Soldiers.ToString()));
-            if (ArmyLook.Leader(a) is string leader)
-            {
-                var gen = Sec(body, "GENERAL", "");
-                var gt = new Label(ReplayBuilder.Title(a)); gt.AddToClassList("insp-title"); gt.style.fontSize = 14; gen.Add(gt);
-                gen.Add(Note(leader));
-            }
-            if (!rival && a.HasStores)
-            {
-                var sup = Sec(body, "STORES", a.Hungry ? "none left" : "");
-                sup.Add(Note(ArmyLook.Stores(a)));
-            }
-            var doing = Sec(body, "ORDERS", "");
-            string what = a.Marching ? $"Marching to {Cap(a.Destination)}" + (TurnsLeft != null ? $", {TurnsLeft(a)} turn{(TurnsLeft(a) == 1 ? "" : "s")}" : "") + "."
-                : a.Awaiting ? $"Awaiting orders at {Cap(a.Location)}: {string.Join(", ", a.Wake)}." : $"Holding at {Cap(a.Location)}.";
-            doing.Add(Note(what));
+            string size = rival ? ArmySight.About(a.Soldiers) : a.Soldiers.ToString();
+            body.Add(KitHeader(CountryLook.Of(a.Owner), Chronicle.Host(a.Id), $"{CountryLook.NameOf(a.Owner)} · {size} soldiers", new PortraitSlot(44, 52, "The general's portrait will hang here")));
             int at = IndexOf(a.Location);
-            if (ArmyLook.SiegeTag(s, at) is string siege && s.SiegedBy[at] == a.Owner) doing.Add(KeyValue("Besieging", $"{Cap(a.Location)}: {siege}"));
-            var where = new Label($"At {Cap(a.Location)}: click to open the province") { tooltip = "Open the province" }; where.AddToClassList("list-more");
-            where.RegisterCallback<ClickEvent>(_ => { if (at >= 0) ProvincePressed?.Invoke(at); });
-            doing.Add(where);
-            var fought = history.Where(e => e.Kind == ReplayEventKind.Battle && e.Battle != null && (e.Battle.AttackerArmies.Contains(id) || e.Battle.DefenderArmies.Contains(id))).ToList();
-            if (fought.Count > 0)
-            {
-                var bat = Sec(body, "BATTLES", fought.Count.ToString());
-                foreach (var e in fought.AsEnumerable().Reverse().Take(8))
+            bool besieging = ArmyLook.SiegeTag(s, at) is string && s.SiegedBy[at] == a.Owner;
+            string doing = a.Marching ? $"to {Cap(a.Destination)}" + (TurnsLeft != null ? $", {TurnsLeft(a)} turn{(TurnsLeft(a) == 1 ? "" : "s")}" : "")
+                : besieging ? $"besieging {Cap(a.Location)}" : a.Awaiting ? $"awaiting orders at {Cap(a.Location)}" : $"holding at {Cap(a.Location)}";
+            var rows = ScreenModels.ArmyRows(a, rival, doing);
+            KitTabs(body, "army",
+                (IconKind.Army, "Army", page =>
                 {
-                    var row = new VisualElement(); row.AddToClassList("row"); row.AddToClassList("wraps");
-                    row.Add(new Icon(IconKind.Swords, 12) { Tint = (e.Battle.AttackerWon == e.Battle.AttackerArmies.Contains(id)) ? new Color32(150, 200, 120, 255) : new Color32(226, 110, 90, 255) });
-                    row.Add(new Label($"Turn {e.Turn} · {Cap(e.Battle.Province ?? "the border")} · {(e.Battle.AttackerWon == e.Battle.AttackerArmies.Contains(id) ? "won" : "lost")}") { style = { marginLeft = 6 } });
-                    var ev = e; row.tooltip = "Click: the battle report"; row.RegisterCallback<ClickEvent>(_ => ShowBattle(ev));
-                    bat.Add(row);
-                }
-            }
+                    foreach (var r in rows.Where(r => r.Key == "soldiers" || r.Key == "mostly" || r.Key.StartsWith("type-")))
+                    {
+                        Color tint = r.Key == "type-riders" ? new Color32(214, 180, 120, 255) : r.Key == "type-bows" ? new Color32(150, 200, 120, 255) : new Color32(196, 204, 214, 255);
+                        page.Add(KitRow(r, IconKind.Army, tint, fill: tint));
+                    }
+                    if (rows.FirstOrDefault(r => r.Key == "stores") is ScreenModels.Row st) page.Add(KitRow(st, IconKind.Loaf, new Color32(217, 168, 90, 255), IconKind.Loaf, new Color32(217, 168, 90, 255)));
+                }),
+                (IconKind.Scales, "General", page =>
+                {
+                    if (a.General == null) { page.Add(Note(rival ? "Its general is not known to your court." : "It has no general.")); return; }
+                    var g = new VisualElement(); g.AddToClassList("kgen");
+                    g.Add(new PortraitSlot(52, 62, $"{a.General}: a portrait will hang here"));
+                    var t = new Label(ReplayBuilder.Title(a)); t.AddToClassList("khead-title"); g.Add(t);
+                    page.Add(g);
+                    foreach (var r in rows.Where(r => r.Key.StartsWith("trait-"))) page.Add(KitRow(r, IconKind.Seal, new Color32(226, 194, 122, 255)));
+                    if (a.Traits.Count == 0) page.Add(Note("No trait yet: a general gains one after three victories."));
+                }),
+                (IconKind.Province, "Orders", page =>
+                {
+                    page.Add(KitRow(rows.First(r => r.Key == "doing"), besieging ? IconKind.Fort : a.Marching ? IconKind.Province : IconKind.Army));
+                    if (besieging) page.Add(KitRow(new ScreenModels.Row { Label = "Siege", Value = ArmyLook.SiegeTag(s, at) }, IconKind.Fort, new Color32(226, 194, 122, 255)));
+                    if (!rival && Fog.On && OrdersRequest != null && (ArmiesWithWrits(OrdersRequest).Contains(id) || CanRecall(OrdersRequest, id)))
+                        page.Add(Note("Click a lit province on the map to march there, or Hold in the council."));
+                    var where = new Label($"At {Cap(a.Location)}: open the province ›"); where.AddToClassList("list-more");
+                    where.RegisterCallback<ClickEvent>(_ => { if (at >= 0) ProvincePressed?.Invoke(at); });
+                    page.Add(where);
+                }),
+                (IconKind.Swords, "Battles", page =>
+                {
+                    var fought = history.Where(e => e.Kind == ReplayEventKind.Battle && e.Battle != null && (e.Battle.AttackerArmies.Contains(id) || e.Battle.DefenderArmies.Contains(id))).ToList();
+                    if (fought.Count == 0) { page.Add(Note("No battles yet.")); return; }
+                    foreach (var e in fought.AsEnumerable().Reverse().Take(12))
+                    {
+                        bool won = e.Battle.AttackerWon == e.Battle.AttackerArmies.Contains(id);
+                        var r = new ScreenModels.Row { Label = $"Turn {e.Turn} · {Cap(e.Battle.Province ?? "the border")}", Value = won ? "won" : "lost", Tone = won ? 1 : -1, Tip = "Click: the battle report" };
+                        var row = KitRow(r, IconKind.Swords, won ? Good : Bad);
+                        var ev = e; row.RegisterCallback<ClickEvent>(_ => ShowBattle(ev));
+                        page.Add(row);
+                    }
+                }));
         }
 
         public void ShowProvince(int p, ReplayState s, IEnumerable<ReplayEvent> history)
         {
             string id = ProvinceIds[p], owner = s.Owners[p];
-            var body = SideHead(Cap(id).ToUpperInvariant());
+            var body = SideHead("PROVINCE");
             bool capital = Queries.IsCapital(p);
-            var hdr = new VisualElement(); hdr.AddToClassList("insp-head");
-            if (owner != null) hdr.Add(new Crest(CountryLook.Of(owner), 30));
-            var hb = new VisualElement { style = { marginLeft = 10 } };
-            var name = new Label(Cap(id)); name.AddToClassList("insp-title"); hb.Add(name);
-            var sub = new Label(owner == null ? "Neutral land" : CountryLook.NameOf(owner) + (capital ? "'s capital" : "'s province")); sub.AddToClassList("insp-sub"); hb.Add(sub);
-            hdr.Add(hb); body.Add(hdr);
-
+            body.Add(KitHeader(owner == null ? null : CountryLook.Of(owner), Cap(id), owner == null ? "Neutral land" : CountryLook.NameOf(owner) + (capital ? "'s capital" : "'s province")));
             bool known = Fog.KnowsProvince(s, p);
-            var hold = Sec(body, "HOLDING", known ? "" : "beyond your borders");
-            hold.Add(KeyValue("Owner", owner == null ? "nobody" : CountryLook.NameOf(owner)));
-            if (owner == null) hold.Add(KeyValue("Garrison", known ? s.Garrisons[p].ToString() : "not known"));
-            else hold.Add(KeyValue("Defended by", $"70% of {s.Countries[owner].Army} soldiers"));
-            hold.Add(KeyValue("Forts", known ? $"{s.Forts[p]} (+{s.Forts[p] * Queries.Rules.FortBonus})" : "not known"));
-            if (capital) hold.Add(KeyValue("Capital", $"+{Queries.Rules.CapitalBonus}"));
-            hold.Add(KeyValue("Defends with about", known ? Queries.Defence(s, p).ToString() : "not known"));
-            if (!known) hold.Add(Note("Your court knows the garrisons and forts of your own provinces and of those touching your land."));
-            hold.Add(KeyValue("Income", owner == null ? "none" : $"{Queries.Rules.IncomePerProvince} gold a turn"));
-            var nb = new Label("Borders: " + string.Join(", ", Queries.Neighbours(p).Select(q => Cap(ProvinceIds[q])))); nb.AddToClassList("why-no"); hold.Add(nb);
-            LandSection(body, id);
-
-
-            if (Fog.On) ProvinceOrders(body, p);
-            var moves = Fog.On ? new VisualElement() : Sec(body, "WHO CAN ATTACK IT", "now");
-            // The realms that can, each with its odds; then those that cannot, one line for every realm too far away.
-            var rivals = CountryIds.Where(c => c != owner && s.Countries[c].Alive).Select(c => (c, why: Queries.WhyNotAttack(s, c, p))).ToList();
-            foreach (var (c, why) in rivals.Where(x => x.why == null))
-                moves.Add(AttackRow(c, $"{CountryLook.NameOf(c)} · wins {Math.Round(Queries.WinChance(s, c, p) * 100)}% of rolls", false));
-            foreach (var (c, why) in rivals.Where(x => x.why != null && !RealmQueries.IsFarReason(x.why)))
-                moves.Add(AttackRow(c, $"{CountryLook.NameOf(c)} · {Lowered(Words.Plain(why)).TrimEnd('.')}", true));
-            int far = rivals.Count(x => x.why != null && RealmQueries.IsFarReason(x.why));
-            if (far > 0) moves.Add(Note(rivals.Count(x => x.why == null) + rivals.Count(x => x.why != null && !RealmQueries.IsFarReason(x.why)) == 0
-                ? (far == 1 ? "No realm can: the only other one is not next to it." : $"No realm can: none of the {far} others is next to it.")
-                : $"{far} {(far == 1 ? "other cannot" : "others cannot")}: not next to it."));
-            if (rivals.Count == 0) moves.Add(Note("No realm is left to attack it."));
-
-            var events = history.Where(e => e.ProvinceIndex == p).ToList();
-            if (events.Count > 0)
+            var rows = ScreenModels.ProvinceRows(s, p, Queries, known, CountryLook.NameOf);
+            var icons = new Dictionary<string, (IconKind, Color)>
             {
-                var hist = Sec(body, "HISTORY", "");
-                foreach (var e in events)
+                ["owner"] = (IconKind.Province, Good), ["occupier"] = (IconKind.War, Bad), ["garrison"] = (IconKind.Army, RowInk), ["defence"] = (IconKind.Shield, RowInk),
+                ["forts"] = (IconKind.Fort, RowInk), ["capital"] = (IconKind.Fort, new Color32(226, 194, 122, 255)), ["income"] = (IconKind.Gold, new Color32(232, 196, 92, 255)), ["siege"] = (IconKind.Fort, Bad),
+            };
+            var tabs = new List<(IconKind, string, Action<VisualElement>)>
+            {
+                (IconKind.Province, "Holding", page =>
+                {
+                    foreach (var r in rows) { var (ic, tint) = icons[r.Key]; page.Add(KitRow(r, ic, tint, IconKind.Fort)); }
+                    var armies = s.Armies.Where(a => a.Location == id && (Sight(s) == null || a.Owner == You || Sight(s).Contains(a.Location))).ToList();
+                    foreach (var a in armies)
+                    {
+                        var r = new ScreenModels.Row { Label = Chronicle.Host(a.Id), Value = Fog.On && a.Owner != You ? ArmySight.About(a.Soldiers) : a.Soldiers.ToString(), Tip = "Click: the army" };
+                        var row = KitRow(r, IconKind.Army, (Color)CountryLook.Of(a.Owner).Colour);
+                        string aid = a.Id; row.RegisterCallback<ClickEvent>(_ => HostPressed?.Invoke(aid));
+                        page.Add(row);
+                    }
+                    if (!known) page.Add(Note("Your court knows the garrisons and forts of your own provinces and of those touching your land."));
+                    var nb = new Label("Borders: " + string.Join(", ", Queries.Neighbours(p).Select(q => Cap(ProvinceIds[q])))); nb.AddToClassList("why-no"); page.Add(nb);
+                }),
+            };
+            if (Land?.Provinces.Any(x => x.Id == id) == true) tabs.Add((IconKind.Hammer, "Land", page => LandSection(page, id)));
+            tabs.Add((IconKind.Swords, Fog.On ? "Orders" : "Attack", page =>
+            {
+                if (Fog.On) { ProvinceOrders(page, p); return; }
+                var rivals = CountryIds.Where(c => c != owner && s.Countries[c].Alive).Select(c => (c, why: Queries.WhyNotAttack(s, c, p))).ToList();
+                foreach (var (c, why) in rivals.Where(x => x.why == null))
+                    page.Add(AttackRow(c, $"{CountryLook.NameOf(c)} · wins {Math.Round(Queries.WinChance(s, c, p) * 100)}% of rolls", false));
+                foreach (var (c, why) in rivals.Where(x => x.why != null && !RealmQueries.IsFarReason(x.why)))
+                    page.Add(AttackRow(c, $"{CountryLook.NameOf(c)} · {Lowered(Words.Plain(why)).TrimEnd('.')}", true));
+                int far = rivals.Count(x => x.why != null && RealmQueries.IsFarReason(x.why));
+                if (far > 0) page.Add(Note($"{far} {(far == 1 ? "other cannot" : "others cannot")}: not next to it."));
+                if (rivals.Count == 0) page.Add(Note("No realm is left to attack it."));
+            }));
+            tabs.Add((IconKind.Quill, "History", page =>
+            {
+                var events = history.Where(e => e.ProvinceIndex == p).ToList();
+                if (events.Count == 0) { page.Add(Note("Nothing has happened here yet.")); return; }
+                foreach (var e in events.AsEnumerable().Reverse())
                 {
                     var line = Chronicle.Line(e, CountryLook.NameOf);
                     if (line == null) continue;
@@ -496,9 +527,10 @@ namespace GreyBoxStrategy.Realm
                     row.Add(new Crest(CountryLook.Of(e.Country), 15));
                     row.Add(new Label($"Turn {e.Turn} · {line.Text}") { style = { marginLeft = 6, whiteSpace = WhiteSpace.Normal, flexShrink = 1 } });
                     if (e.Decision != null && Fog.KnowsDecision(e.Decision.AgentId, GameOver)) { row.tooltip = "Click: the decision"; row.RegisterCallback<ClickEvent>(_ => DecisionPressed?.Invoke(e)); }
-                    hist.Add(row);
+                    page.Add(row);
                 }
-            }
+            }));
+            KitTabs(body, "province", tabs.ToArray());
         }
 
         private static string Lowered(string t) => string.IsNullOrEmpty(t) ? t : char.ToLowerInvariant(t[0]) + t.Substring(1);
@@ -543,75 +575,66 @@ namespace GreyBoxStrategy.Realm
         public void ShowCountry(string id, ReplayState s, IEnumerable<ReplayEvent> history, string personality, IReadOnlyList<string> knowledge)
         {
             var look = CountryLook.Of(id); var player = Players?.GetValueOrDefault(id);
-            var body = SideHead(look.Name.ToUpperInvariant());
-            var hdr = new VisualElement(); hdr.AddToClassList("insp-head");
-            var face = new Image { image = portraits, uv = Faces.Uv(player?.Persona, look.Slot % 2), scaleMode = ScaleMode.ScaleAndCrop };
-            face.AddToClassList("insp-face"); face.style.borderTopColor = face.style.borderBottomColor = face.style.borderLeftColor = face.style.borderRightColor = (Color)look.Colour;
-            hdr.Add(face);
-            var hb = new VisualElement { style = { marginLeft = 10, flexShrink = 1 } };
-            var row = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = Align.Center } };
-            row.Add(new Crest(look, 18)); var name = new Label(look.Name.ToUpperInvariant()); name.AddToClassList("insp-title"); row.Add(name);
-            hb.Add(row);
-            var sub = new Label($"The {player?.Persona ?? "ruler"} · {player?.Model}"); sub.AddToClassList("insp-sub"); hb.Add(sub);
-            if (Fog.On) { hdr.Add(hb); body.Add(hdr); CountryBody(body, id, s, history, personality, knowledge); return; }
-            var follow = new Button(() => FollowPressed?.Invoke(Followed == id ? null : id)) { text = Followed == id ? "Following" : "Follow", tooltip = "Follow: the top bar shows this country's full values, and the reach mode its attacks" };
-            follow.AddToClassList("tbtn"); follow.style.width = StyleKeyword.Auto; follow.style.paddingLeft = 8; follow.style.paddingRight = 8; follow.style.marginTop = 4;
-            if (Followed == id) follow.AddToClassList("on");
-            hb.Add(follow);
-            hdr.Add(hb); body.Add(hdr);
-            CountryBody(body, id, s, history, personality, knowledge);
-        }
-
-        private void CountryBody(VisualElement body, string id, ReplayState s, IEnumerable<ReplayEvent> history, string personality, IReadOnlyList<string> knowledge)
-        {
-            var c = s.Countries[id];
-            if (Fog.On && id != You) CountryOrders(body, id);
-            if (id == You)
+            var body = SideHead(id == You ? "YOUR REALM" : "REALM");
+            // The persona's face where the game has one, in the portrait's frame; an empty frame otherwise.
+            VisualElement face;
+            if (portraits != null && player?.Persona != null)
             {
-                var you = Sec(body, "RULER", "you");
-                you.Add(Note("You rule this country. Your council is offered the moves a model ruler would be offered here, by the same rules."));
+                var img = new Image { image = portraits, uv = Faces.Uv(player.Persona, look.Slot % 2), scaleMode = ScaleMode.ScaleAndCrop };
+                img.style.width = 52; img.style.height = 62; img.AddToClassList("portrait-slot");
+                face = img;
             }
-            else
+            else face = new PortraitSlot(52, 62);
+            var head = KitHeader(look, look.Name, id == You ? "You rule it" : $"the {player?.Persona ?? "ruler"}" + (player?.Model != null ? " · " + player.Model : ""), face);
+            if (!Fog.On)
             {
-                var ruler = Sec(body, "RULER", "persona, not country");
-                var p = new Label(personality ?? ""); p.AddToClassList("insp-sub"); ruler.Add(p);
-                if (knowledge != null) foreach (var k in knowledge) { var kl = new Label("· " + k); kl.AddToClassList("why-no"); ruler.Add(kl); }
+                var follow = new Button(() => FollowPressed?.Invoke(Followed == id ? null : id)) { text = Followed == id ? "Following" : "Follow", tooltip = "Follow: the top bar shows this country's full values, and the reach mode its attacks" };
+                follow.AddToClassList("tbtn"); follow.style.width = StyleKeyword.Auto; follow.style.paddingLeft = 8; follow.style.paddingRight = 8; follow.style.marginLeft = StyleKeyword.Auto;
+                if (Followed == id) follow.AddToClassList("on");
+                head.Add(follow);
             }
-
-            var tre = Sec(body, "TREASURY", "");
-            if (Fog.KnowsTreasury(id))
+            body.Add(head);
+            var rows = ScreenModels.RealmRows(s, id, Fog.On ? You : null, Fog.KnowsTreasury(id), CountryLook.NameOf);
+            var icons = new Dictionary<string, (IconKind, Color)>
             {
-                tre.Add(KeyValue("Gold", c.Gold.ToString()));
-                tre.Add(KeyValue("Income", "+" + c.Income));
-                tre.Add(KeyValue("Upkeep (1 per 2 soldiers)", "-" + c.Upkeep));
-            }
-            tre.Add(KeyValue("Army", c.Army.ToString()));
-            if (Fog.KnowsTreasury(id)) tre.Add(KeyValue("Stability", $"{c.Stability} of 5"));
-            else tre.Add(Note("Its treasury, income and stability are not known to your court. A model ruler is told every rival's army and land, and nothing more."));
-
-            if (id == You && Fog.On) return;
-
-            var last = history.LastOrDefault(e => e.Decision != null && e.Decision.AgentId == id && !e.Decision.IsEnvoy);
-            if (last != null && Fog.KnowsReport(id, GameOver))
-            {
-                var card = DecisionCard.From(last);
-                var told = Sec(body, "WHAT IT READ LAST", $"turn {card.Turn}");
-                var f = new VisualElement(); f.AddToClassList("facts-box"); f.Add(Mono(string.Join("\n", card.Standing))); told.Add(f);
-                var off = Sec(body, "OFFERED THAT TURN", $"{card.Offered.Count} moves");
-                var chips = new VisualElement(); chips.AddToClassList("chips");
-                for (int i = 0; i < card.Offered.Count; i++) { var ch = new Label(card.Offered[i]); ch.AddToClassList("mchip"); if (i == card.Picked) ch.AddToClassList("pick"); chips.Add(ch); }
-                off.Add(chips);
-            }
-            var decs = Sec(body, "DECISIONS", "click one");
-            foreach (var e in history.Where(e => e.Decision != null && e.Decision.AgentId == id).Reverse().Take(12))
-            {
-                var r = new VisualElement(); r.AddToClassList("row"); r.tooltip = "Click: the decision";
-                r.Add(new Icon(IconKind.Eye, 11));
-                var d = e.Decision;
-                r.Add(new Label($"t{d.Turn} · {d.Moment} · {d.Action}{(d.HasTarget ? " " + d.Target : "")}") { style = { marginLeft = 6 } });
-                r.RegisterCallback<ClickEvent>(_ => DecisionPressed?.Invoke(e));
-                decs.Add(r);
-            }
+                ["land"] = (IconKind.Province, Good), ["army"] = (IconKind.Army, new Color32(196, 204, 214, 255)), ["gold"] = (IconKind.Gold, new Color32(232, 196, 92, 255)),
+                ["stab"] = (IconKind.Scales, new Color32(170, 190, 220, 255)), ["relation"] = (IconKind.Seal, new Color32(150, 190, 225, 255)), ["score"] = (IconKind.Swords, Bad),
+            };
+            KitTabs(body, "realm",
+                (IconKind.Eye, id == You || !Fog.On ? "Overview" : "What you know", page =>
+                {
+                    foreach (var r in rows) { var (ic, tint) = icons[r.Key]; page.Add(KitRow(r, ic, tint, r.Key == "stab" ? IconKind.Scales : IconKind.Fort)); }
+                    if (Fog.On && id != You) { page.Add(Note("A model ruler is told every rival's army and land, and nothing more.")); CountryOrders(page, id); }
+                }),
+                (IconKind.Quill, "Ruler", page =>
+                {
+                    if (id == You && Fog.On) { page.Add(Note("You rule this country. Your council is offered the moves a model ruler would be offered here, by the same rules.")); return; }
+                    var p = new Label(personality ?? ""); p.AddToClassList("insp-sub"); p.style.whiteSpace = WhiteSpace.Normal; page.Add(p);
+                    if (knowledge != null) foreach (var k in knowledge) { var kl = new Label("· " + k); kl.AddToClassList("why-no"); page.Add(kl); }
+                }),
+                (IconKind.Seal, "Decisions", page =>
+                {
+                    if (id == You && Fog.On) { page.Add(Note("Your own orders are in the chronicle and the inspector.")); return; }
+                    var last = history.LastOrDefault(e => e.Decision != null && e.Decision.AgentId == id && !e.Decision.IsEnvoy);
+                    if (last != null && Fog.KnowsReport(id, GameOver))
+                    {
+                        var card = DecisionCard.From(last);
+                        var told = Sec(page, "WHAT IT READ LAST", $"turn {card.Turn}");
+                        var f = new VisualElement(); f.AddToClassList("facts-box"); f.Add(Mono(string.Join("\n", card.Standing))); told.Add(f);
+                        var off = Sec(page, "OFFERED THAT TURN", $"{card.Offered.Count} moves");
+                        var chips = new VisualElement(); chips.AddToClassList("chips");
+                        for (int i = 0; i < card.Offered.Count; i++) { var ch = new Label(card.Offered[i]); ch.AddToClassList("mchip"); if (i == card.Picked) ch.AddToClassList("pick"); chips.Add(ch); }
+                        off.Add(chips);
+                    }
+                    foreach (var e in history.Where(e => e.Decision != null && e.Decision.AgentId == id).Reverse().Take(14))
+                    {
+                        var d = e.Decision;
+                        var r = new ScreenModels.Row { Label = $"t{d.Turn} · {d.Moment}", Value = $"{d.Action}{(d.HasTarget ? " " + d.Target : "")}", Tip = "Click: the decision in the inspector" };
+                        var row = KitRow(r, IconKind.Eye, new Color32(226, 194, 122, 255));
+                        row.RegisterCallback<ClickEvent>(_ => DecisionPressed?.Invoke(e));
+                        page.Add(row);
+                    }
+                }));
         }
 
         private static VisualElement Sec(VisualElement body, string title, string note)

@@ -146,6 +146,101 @@ namespace GreyBoxStrategy.Replay
             return o;
         }
 
+        /// <summary>
+        /// One row of a panel (variant B, slice 2): a label, a value, and either a bar (<see cref="Max"/> &gt; 0, filled to
+        /// <see cref="Amount"/>) or pips (<see cref="Pips"/> &gt; 0, <see cref="Amount"/> of them lit). Sentences go in the tip.
+        /// </summary>
+        public sealed class Row
+        {
+            public string Key, Label, Value, Tip;
+            public int Amount, Max, Pips, Half;
+            public int Tone;
+        }
+
+        /// <summary>
+        /// An army's rows: soldiers, then each type as a bar (yours; a rival's shows only what it mostly is, as its piece
+        /// does), its stores as loaves (yours only), its general's traits with what each does, and what it is doing.
+        /// </summary>
+        public static List<Row> ArmyRows(ArmyState a, bool rival, string doing)
+        {
+            var rows = new List<Row>();
+            rows.Add(new Row { Key = "soldiers", Label = "Soldiers", Value = rival ? ArmySight.About(a.Soldiers) : a.Soldiers.ToString(), Tip = rival ? "What your court sees: a size rounded to ten." : $"{a.Soldiers} soldiers." });
+            if (a.HasMix)
+            {
+                if (rival) rows.Add(new Row { Key = "mostly", Label = "Seen as", Value = ArmyLook.Mostly(a) ?? "not known", Tip = "Your court sees what a rival army mostly is, not its count of each type." });
+                else
+                    foreach (var t in Units.All)
+                    {
+                        int n = ArmyLook.Count(a, t);
+                        rows.Add(new Row { Key = "type-" + Units.Name(t), Label = char.ToUpperInvariant(Units.Name(t)[0]) + Units.Name(t).Substring(1), Value = n.ToString(), Amount = n, Max = Math.Max(1, a.Soldiers), Tip = $"{n} {Units.Name(t)} of {a.Soldiers}." });
+                    }
+            }
+            if (!rival && a.HasStores)
+                rows.Add(new Row
+                {
+                    Key = "stores", Label = "Stores", Value = a.Hungry ? "none" : $"{a.HalfStores / 2}{(a.HalfStores % 2 == 1 ? "½" : "")} turns",
+                    Pips = a.MaxHalfStores / 2, Amount = a.HalfStores / 2, Half = a.HalfStores % 2, Tone = a.Hungry ? -1 : 0, Tip = ArmyLook.Stores(a),
+                });
+            if (a.General != null)
+                foreach (var t in a.Traits)
+                    rows.Add(new Row { Key = "trait-" + t, Label = GeneralTraits.Epithet(t), Value = ArmyLook.Effect(t), Tip = $"{a.General} the {GeneralTraits.Epithet(t)}: {ArmyLook.Effect(t)}." });
+            rows.Add(new Row { Key = "doing", Label = "Orders", Value = doing, Tip = a.Awaiting ? "Awaiting orders: " + string.Join(", ", a.Wake) + "." : null });
+            return rows;
+        }
+
+        /// <summary>
+        /// A province's holding rows: owner, who defends it and with about how many, its forts as pips, the capital's
+        /// bonus, its income. What your court does not know beyond your borders says so.
+        /// </summary>
+        public static List<Row> ProvinceRows(ReplayState s, int p, RealmQueries q, bool known, Func<string, string> nameOf)
+        {
+            var rows = new List<Row>();
+            string owner = s.Owners[p], holder = s.Controller(p);
+            rows.Add(new Row { Key = "owner", Label = "Owner", Value = owner == null ? "nobody" : nameOf(owner) });
+            if (holder != owner) rows.Add(new Row { Key = "occupier", Label = "Occupied by", Value = nameOf(holder), Tone = -1, Tip = "The land stays its owner's until a treaty hands it over." });
+            if (owner == null) rows.Add(new Row { Key = "garrison", Label = "Garrison", Value = known ? s.Garrisons[p].ToString() : "not known", Tip = known ? null : "Beyond your borders: your court does not know its garrison." });
+            rows.Add(new Row { Key = "defence", Label = "Defends with about", Value = known ? q.Defence(s, p).ToString() : "not known" });
+            const int fortCap = 5;
+            rows.Add(new Row
+            {
+                Key = "forts", Label = "Forts", Value = known ? $"{s.Forts[p]} (+{s.Forts[p] * q.Rules.FortBonus})" : "not known",
+                Pips = known ? Math.Max(fortCap, s.Forts[p]) : 0, Amount = known ? s.Forts[p] : 0, Tip = known ? $"Each fort adds {q.Rules.FortBonus} to its defence." : "Beyond your borders: your court does not know its forts.",
+            });
+            if (q.IsCapital(p)) rows.Add(new Row { Key = "capital", Label = "Capital", Value = $"+{q.Rules.CapitalBonus}", Tip = "A capital defends harder." });
+            rows.Add(new Row { Key = "income", Label = "Income", Value = owner == null ? "none" : $"+{q.Rules.IncomePerProvince} a turn" });
+            if (s.SiegedBy?[p] != null) rows.Add(new Row { Key = "siege", Label = "Besieged by", Value = $"{nameOf(s.SiegedBy[p])} · {ArmyLook.SiegeTag(s, p)}", Tone = -1 });
+            return rows;
+        }
+
+        /// <summary>
+        /// A realm's rows: land, soldiers and, only if your court knows them, its treasury, income, upkeep and
+        /// stability; its relation to you, and the war score from your side when at war.
+        /// </summary>
+        public static List<Row> RealmRows(ReplayState s, string id, string you, bool knowsTreasury, Func<string, string> nameOf)
+        {
+            var c = s.Countries[id];
+            var rows = new List<Row>
+            {
+                new Row { Key = "land", Label = "Provinces", Value = s.ProvinceCount(id).ToString() },
+                new Row { Key = "army", Label = "Soldiers", Value = c.Army.ToString() },
+            };
+            if (knowsTreasury)
+            {
+                int net = c.Income - c.Upkeep;
+                rows.Add(new Row { Key = "gold", Label = "Treasury", Value = $"{c.Gold} ({net:+0;-0;0} a turn)", Tone = Math.Sign(net), Tip = $"Income +{c.Income}, upkeep -{c.Upkeep}." });
+                rows.Add(new Row { Key = "stab", Label = "Stability", Value = $"{c.Stability} of 5", Pips = 5, Amount = c.Stability });
+            }
+            else rows.Add(new Row { Key = "gold", Label = "Treasury", Value = "not known", Tip = "Its treasury, income and stability are not known to your court." });
+            if (you != null && id != you)
+            {
+                var r = s.Relation(you, id);
+                string kind = r?.Kind ?? "peace";
+                rows.Add(new Row { Key = "relation", Label = "With you", Value = kind == "truce" ? $"truce, {r.TruceTurnsLeft} turns left" : kind, Tone = kind == "war" ? -1 : 0 });
+                if (kind == "war") rows.Add(new Row { Key = "score", Label = "War score", Value = $"{s.WarScore(you, id):+0;-0;0}", Tone = Math.Sign(s.WarScore(you, id)), Tip = "From your side, -100 to +100: positive, you are winning." });
+            }
+            return rows;
+        }
+
         /// <summary>The chronicle feed's filters.</summary>
         public enum Feed { All, Me, War, Land }
 
