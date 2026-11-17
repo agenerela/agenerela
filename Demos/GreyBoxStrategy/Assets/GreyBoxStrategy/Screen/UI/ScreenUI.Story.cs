@@ -124,6 +124,7 @@ namespace GreyBoxStrategy.Realm
             else body.Add(Text("Set by the dev menu: no storyteller decision behind it.", "src"));
             if (e.TitleDecision != null) body.Add(InspectButton($"The title call: “{e.TitleDecision.Statement}”", e.TitleDecision, e));
             Root.Add(eventCard);
+            KeepLayout();
         }
 
         private static string By(string by) => by == "person" ? "you" : by == "model" ? "the model" : by == "default" ? "no answer: the default" : by;

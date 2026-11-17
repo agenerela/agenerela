@@ -362,6 +362,17 @@ B is built in three slices:
   five tabs: Answer, Offered, Told, Guards, Model. Writs show as seals, End turn is larger, and a click on a speech
   bubble opens its decision. While the inspector is open, the bubbles stay beside it, never under it.
 
+**Nothing is cut off at the bottom (17 November).** The lead saw places "cut from the bottom". An audit of 19 screen
+states at six game-view sizes (1920 × 1080, 1920 × 1200, 2560 × 1440, 1536 × 864, 1366 × 768, 1280 × 720) set the rule:
+- A list ends on a whole row, or scrolls with its scrollbar and a fade at its foot while more lies below.
+- Every panel keeps its bottom padding; a panel's head, tabs and foot (End turn, the outliner's buttons) never give way.
+- A window over the map (the inspector, an event, a battle report, diplomacy, an offer) opens under the top bar and is
+  never taller than the room below its own top; its body scrolls inside it.
+- The tales take the outliner's place while open.
+- A model's free text in a panel (the advisor's counsel) shows three whole lines, then **more** opens the rest in place.
+The stylesheet holds what CSS can say; `ScreenUI.Layout.cs` holds the rest, runs four times a second over whatever is on
+the screen, and `LayoutTests` checks it without a scene.
+
 The numbers, the outliner's rows and the feed's filters come from `ScreenModels`, which `ScreenModelsTests` checks
 without a scene.
 
