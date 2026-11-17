@@ -35,6 +35,8 @@ language model through the framework, fighting over 25 provinces on a painted se
   the chronicle. With no server, the dev menu's **Rule kesh, saga** plays the same game with
   stand-ins, and **Dilemma on you** puts the choice card in front of you.
 - **Settings:** try the UI scale steps, then Esc in a game for the pause menu.
+- **The start menu:** the arrow keys and Enter walk its buttons. Read the model status line at its foot, then
+  open **Load a replay**: a game you play or watch to its end is kept there.
 
 1. Open `Demos/GreyBoxStrategy` in Unity 6000.3.23f1, then open
    `Assets/GreyBoxStrategy/Screen/Watch.unity`.
@@ -45,8 +47,13 @@ language model through the framework, fighting over 25 provinces on a painted se
    - The screen's text and panels grow with the screen: 1× at 1080 pixels tall, 1.33× at 1440,
      2× at 2160.
    - Then press **Play**.
-2. The main menu is the first screen: **New game**, **Replay**, **Settings**, **Quit**.
-   - **New game:**
+2. The start menu is the first screen ([what it is](#the-start-menu-16-november)): the title over the painted
+   map, which drifts and changes hands behind it, and **New game**, **Watch a game**, **Load a replay**,
+   **Settings**, **Credits** and **Quit**. The arrow keys (or W and S) and Enter work them, as the mouse does.
+   The line at the foot says which model the game will use and whether its server answers.
+   - **New game** (you rule) and **Watch a game** (the models play) open one framed window. **Watch** or
+     **Rule** is on top, then four groups behind tabs, with **Start** at the foot whichever is open:
+     **World**, **Rivals**, **Rules** and **Model**.
      - Choose **Watch** (five model rulers with personas play) or **Rule** (you rule one country,
        chosen by its crest, against four).
      - Choose the model (`qwen3.5:4b` by default) and the seed (Roll picks one), then **Start**.
@@ -60,11 +67,13 @@ language model through the framework, fighting over 25 provinces on a painted se
        ([what it shows](#the-storyteller-on-screen-13-november)).
      - **Advisor:** on or off, for rule mode with model rulers (on by default; [the advisor in rule
        mode](#the-advisor-in-rule-mode-14-november)). The persona mix is listed as coming.
-   - **Replay:** seed 4 of the persona table, five `qwen3.5:4b` rulers. Kesh wins by domination
-     on turn 17. Every line is the rulers' own. It needs no model and no server.
+   - **Load a replay:** the finished games, newest first, each with the date, the turns and who won. The
+     game that ships is last: seed 4 of the persona table, five `qwen3.5:4b` rulers. Kesh wins by domination
+     on turn 17. Every line is the rulers' own. A replay needs no model and no server.
    - **Settings:**
      - Display mode, resolution, UI scale (automatic or fixed steps), VSync, frame cap, the
-       default playback speed, and sound volumes (no sound plays yet).
+       default playback speed, event windows, sound volumes (no sound plays yet), and the voices to
+       come.
      - Each applies at once and is saved in `settings.json` in the game's persistent data
        folder.
      - A change of display mode or resolution reverts after 12 s unless you keep it.
@@ -73,14 +82,15 @@ language model through the framework, fighting over 25 provinces on a painted se
    - Space plays and pauses, N steps one move, and + changes the speed.
    - Keys 1 to 4 switch the map modes, and D opens diplomacy.
    - **Esc** closes the top panel. With none open it opens the **pause menu**: Resume, Settings,
-     or Main menu. Menu (top right) opens the same pause menu.
+     Back to the start menu, or Quit. Menu (top right) opens the same pause menu. With a game under
+     way that would be lost, the last two ask first.
    - Every country's army stands at its capital with its size, in every map mode.
    - Click a province, a crest or a chronicle line to open it. A chronicle line or a speech banner
      opens the decision behind it.
    - Right-drag pans the map, and the wheel zooms: a notch is a 20% step toward the cursor, eased over about a tenth
      of a second, so out to in takes about twelve notches (`ScreenModels.WheelNotches`, `ZoomTarget`, `EaseZoom`).
      It was tuned for 120 a notch, but the Input System reports 1 a notch by default, so a notch moved it 0.15%.
-   - **Main menu** in the pause menu ends the game and lets the RTX 5080 go.
+   - **Back to the start menu** in the pause menu ends the game and lets the RTX 5080 go.
 4. When you rule a country:
    - The orders panel, bottom centre, lists every move the rules offer you. These are the moves
      a model ruler would be offered in your place. A move that is not offered says why in its
@@ -121,6 +131,55 @@ language model through the framework, fighting over 25 provinces on a painted se
 - **If it cannot start, the menu says why rather than wait:** a variable is not set, the lock is
   held (and by whom), the server cannot be reached, or the key is refused. A game that stops
   mid-way says so across the top of the map.
+
+### The start menu (16 November)
+
+The game opens on a title screen in the game's own look, not on a card of settings.
+
+- **The background is alive, and costs nothing.** It is the Classic board's painting, which is already loaded when
+  the menu opens. The camera drifts slowly over it, closer than a game shows it, and every few seconds the borders
+  change to the next turn of the recorded game. A generated world behind the menu would need seconds of making
+  behind a loading card before the first frame, so it was not chosen. Only the map's owners are painted: the
+  screen's own state is untouched, so a game starts from exactly where it would.
+- **The title** is one constant, `StartMenu.Title`, with the subtitle "Realms ruled by language models, built on
+  the Agenerela framework".
+- **The buttons** are New game, Watch a game, Load a replay, Settings, Credits and Quit. The arrow keys, W and S
+  move a mark, Enter presses, and the mouse moves the same mark. A hint under them says what the marked one does.
+  - **Continue** is listed only when a saved game exists (`Saves/continue.json` in the game's data folder). Nothing
+    writes one yet (saving is the lead's next item after the turn rework), so it
+    never shows. The button, its place and its test are there for the day one can be saved.
+- **New game** is a framed window. Watch or Rule is on top. Under it are four groups behind tabs: **World** (the
+  map, its size, shape, countries and the seed), **Rivals** (your realm, models or scripted rulers, the advisor
+  and the five personas), **Rules** (the turn, victory, your writs, the four army rules and the storyteller) and
+  **Model** (its name and whether its server answers). Start is at the foot whichever is open. **Watch a game**
+  opens the same window set to Watch. Nothing a model reads changed: the window sets the same `NewGameChoice`.
+- **Load a replay** lists finished games, newest first, with the date, the turns and who won; the game that ships
+  is last. A game played or watched to its end is saved by itself in `Replays` in the game's data folder, the
+  newest 40.
+  - A game the scripted rulers played is saved as its setup and made again from the seed.
+  - Any other is saved with its decisions and replayed on the same world and rules.
+  - Not saved: a replay itself, a game the dev menu touched, and a game ruled with unlimited writs.
+- **New game's Rivals group** has **Your face**: the art pack's four neutral portraits, the one you wear framed
+  (`ScreenUI.YourFace`, kept between games).
+- **Settings** has room for the voices the lead decided (`painted-realm-direction.md`): a **Voices** section that
+  lists rulers' lines (off by default, a click on a phrase speaks it) and the storyteller's stories and events (on
+  by default) as coming, beside the Voices volume.
+- **Credits** name the team, the framework's version (`AgenerelaInfo.Version`) and the MIT licence.
+- **The model status line**, at the foot, names the provider and the model and says whether the server answers.
+  - It asks the server for its models through the framework's own provider (`IModelLifecycle.ListModelsAsync`),
+    so it also knows when the server is up and the model is not installed.
+  - It never holds the menu up: the line says "asking the server…" until an answer or 8 s.
+  - With no server it says "No model is running: you can still watch a scripted game or a replay".
+  - While another session holds the RTX 5080's lock, the server is not asked at all, and the line says who holds
+    the card.
+- **The pause menu** (Esc in a game) is Resume, How to play, the advisor, Settings, Back to the start menu and
+  Quit, with the same keys. Leaving a rule game or a live game that is not over asks first, with the safe answer
+  under the keys.
+
+The code is `Screen/UI/ScreenUI.StartMenu.cs`, `Screen/ReplayDirector.StartMenu.cs`,
+`Screen/Replay/StartMenuModel.cs` and `Screen/Replay/ReplayLibrary.cs`; `StartMenuTests` checks it without a scene.
+From the Unity CLI: `OpenTitle()`, `OpenNewGame(true)`, `OpenReplays()`, `OpenPause()`, and `ModelLine` for the
+status line.
 
 ## Dev menu
 
@@ -164,7 +223,7 @@ unity command script eval -- --code 'return GreyBoxStrategy.Realm.DevTools.Run("
 | `fault unreadable on\|off` | Every reply is text no parser can read. The model is never asked |
 | `faults off` | Clear every pretended fault |
 | `readouts` | Frames per second, UI scale, resolution, the last reply's latency and tokens, the last played decision's queue wait, requests in flight, and who holds the card |
-| `screenshot [name]` · `save-recording [name]` | Save to `Logs/Dev/`. A saved recording replays with `load-recording <path>` from the main menu |
+| `screenshot [name]` · `save-recording [name]` | Save to `Logs/Dev/`. A saved recording replays with `load-recording <path>` from the start menu |
 | `size <w>x<h>` | 1366x768, 1920x1080, 2560x1440 or 3840x2160, or 16:10 1920x1200 or 3840x2400 (the lead's display): the Game view in the editor, the window in a build |
 | `menu` | Show or hide the dev menu |
 

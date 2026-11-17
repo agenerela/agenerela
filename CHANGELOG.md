@@ -26,6 +26,15 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: a start menu** (#20). The game opens on a title screen in its own look: the title and large
+  buttons for the keyboard and the mouse (New game, Watch a game, Load a replay, Settings, Credits, Quit) over the
+  Classic painting, which drifts and changes hands behind a veil. A line at the foot says which model the game will
+  use and whether its server answers, asked through the framework's `IModelLifecycle` without holding the menu up;
+  while another session holds the RTX 5080's lock the server is not asked. New game is a framed window with four
+  groups behind tabs (World, Rivals, Rules, Model). A game played or watched to its end is kept for Load a replay,
+  newest first with the date, the turns and who won. New game has a "Your face" picker from the art pack's four
+  neutral faces, and Settings a Voices section for what is coming. The pause menu gained Quit and asks before a game
+  under way is left. Continue shows only when a saved game exists; nothing writes one yet.
 - **Painted Realm: box selection, right-click orders, edge scrolling** (#20). A left-drag on the map chooses every
   army of yours inside the box, Shift-click adds or removes one, and the left panel shows the group. A right click on
   a province orders every chosen army there and names those that cannot go; a left click only selects (it used to

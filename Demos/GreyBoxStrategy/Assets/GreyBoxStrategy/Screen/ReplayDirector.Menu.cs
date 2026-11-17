@@ -115,7 +115,7 @@ namespace GreyBoxStrategy.Realm
         /// <summary>The game's first screen.</summary>
         public void ShowMainMenu()
         {
-            ui.ShowMainMenu(MenuTitle(), ShowNewGame, StartReplay, () => OpenSettings(ShowMainMenu), Quit);
+            OpenTitle(); // the start menu: ReplayDirector.StartMenu.cs
         }
 
         /// <summary>Set by the end screen's "New game": the next start opens New game, not the main menu.</summary>
@@ -129,6 +129,7 @@ namespace GreyBoxStrategy.Realm
         {
             if (game == null) return;
             var summary = EndSummary.From(game, CountryLook.NameOf);
+            SaveFinished(summary); // kept for Load a replay
             ui.ShowEnd(summary, rule?.You, WatchReplay, () => { newGameNext = true; LeaveToMenu(); });
         }
 
@@ -175,8 +176,7 @@ namespace GreyBoxStrategy.Realm
 
         public void ShowNewGame()
         {
-            if (live != null) { newGame.Model = live.Model; }
-            ui.ShowNewGame(newGame, StartNewGame, ShowMainMenu);
+            OpenNewGame(null); // the start menu's window: ReplayDirector.StartMenu.cs
         }
 
         private void StartNewGame(NewGameChoice c)
@@ -224,8 +224,9 @@ namespace GreyBoxStrategy.Realm
             if (!ui.MenuOpen) { pausedByMenu = playing; playing = false; ui.SetPlaying(false, speed); }
             bool advisable = rule != null && rule.Writs && rule.Model != "scripted";
             if (rule != null && rule.Writs) ui.ShowPauseHelp(() => { ResumeFromPause(); ShowHelp(); });
+            EnsureMenuKeys();
             ui.ShowPause(ResumeFromPause, () => OpenSettings(OpenPause), LeaveToMenu, DevTools.Available ? "F1 opens the dev menu (editor and development builds)" : null,
-                advisable ? () => rule.AdvisorOn : (System.Func<bool>)null, advisable ? SetAdvisor : (System.Action<bool>)null);
+                advisable ? () => rule.AdvisorOn : (System.Func<bool>)null, advisable ? SetAdvisor : (System.Action<bool>)null, Quit, LostByLeaving());
         }
 
         private void ResumeFromPause()

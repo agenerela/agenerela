@@ -504,9 +504,9 @@ namespace GreyBoxStrategy.Realm
                 if (kb.iKey.wasPressedThisFrame) { if (ui.InspectorOpen) ui.CloseInspector(); else ui.InspectPressed?.Invoke(); }
                 // Enter dismisses a storyteller's event window first; only then is it End turn.
                 if ((kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame) && ui.EventOpen) ui.DismissEvent();
-                else if ((kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame) && rule != null) EndTurn();
+                else if ((kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame) && rule != null && !ui.MenuOpen) EndTurn(); // Enter on a menu presses its button
             }
-            if (kb != null && !ui.Typing) CameraKeys(kb);
+            if (kb != null && !ui.Typing && !ui.MenuOpen) CameraKeys(kb); // the arrows walk a menu's buttons
             if (mouse != null)
             {
                 WheelZoom(mouse);

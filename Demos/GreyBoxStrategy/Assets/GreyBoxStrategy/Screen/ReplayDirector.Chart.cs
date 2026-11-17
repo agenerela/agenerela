@@ -123,9 +123,10 @@ namespace GreyBoxStrategy.Realm
             {
                 var mapDef = setup.BuildMap();
                 var rules = RulesFor(setup, mapDef);
-                var rec = ScriptedWorldGame.Play(setup, mapDef, rules);
-                scripted = (setup, mapDef, rules);
-                return (rec, ReplayBuilder.Build(rec, mapDef, rules));
+                var kept = TakeReplay(); // Load a replay: a saved game's decisions instead of the scripted rulers'
+                var rec = kept ?? ScriptedWorldGame.Play(setup, mapDef, rules);
+                if (kept == null) scripted = (setup, mapDef, rules);
+                return (rec, ReplayBuilder.Build(rec, mapDef, rules, partial: kept != null));
             });
             while (!playing.IsCompleted) yield return null;
             loading.Close();
@@ -152,6 +153,7 @@ namespace GreyBoxStrategy.Realm
         {
             var setup = pendingWorld;
             pendingWorld = null;
+            loadedSetup = setup; // a finished game is saved with it, for Load a replay
             var size = setup.Generator?.Size ?? MapSize.Medium;
             var loading = LoadingCard.Show(theme, style, $"Making a {size.ToString().ToLowerInvariant()} world from seed {setup.MapSeed ?? setup.Seed}");
             var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -192,9 +194,10 @@ namespace GreyBoxStrategy.Realm
                     liveMap = mapDef; liveRules = rules;
                     return ((Recording)null, (ReplayGame)null, ChartImage.Make(world, chartWidth, setup.Seed, gpu));
                 }
-                var rec = ScriptedWorldGame.Play(setup, mapDef, rules);
-                scripted = (setup, mapDef, rules);
-                var replay = ReplayBuilder.Build(rec, mapDef, rules);
+                var kept = TakeReplay(); // Load a replay: a saved game's decisions instead of the scripted rulers'
+                var rec = kept ?? ScriptedWorldGame.Play(setup, mapDef, rules);
+                if (kept == null) scripted = (setup, mapDef, rules);
+                var replay = ReplayBuilder.Build(rec, mapDef, rules, partial: kept != null);
                 var chart = ChartImage.Make(world, chartWidth, setup.Seed, gpu);
                 return (rec, replay, chart);
             });

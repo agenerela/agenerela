@@ -626,6 +626,73 @@
 .compact .orders .end-turn { height: 34px; font-size: 15px; }
 .orders .panel-head { height: 38px; }
 
+/* ==== The start menu (#20, 16 November): the title screen over the living map, New game's tabbed window, Load a
+   replay, Credits, and the keys' mark on every menu's big buttons. Appended by the start-menu work; nothing above
+   is changed. ==== */
+.hud-off { visibility: hidden; }
+.title-screen { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+.title-veil { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+.title-col { position: absolute; left: 7%; top: 0; bottom: 44px; width: 480px; justify-content: center; }
+.title-name { white-space: nowrap; font-size: 58px; -unity-font-style: bold; letter-spacing: 9px; color: rgb(226, 194, 122); text-shadow: 2px 3px 6px rgba(0, 0, 0, 0.9); margin: 0; padding: 0; }
+.title-sub { width: 440px; font-size: 17px; -unity-font-style: italic; color: rgb(214, 200, 170); white-space: normal; margin-top: 2px; margin-bottom: 4px; padding: 0; }
+.title-list { margin-top: 6px; width: 440px; }
+.title-btn { flex-direction: row; align-items: center; height: 46px; margin: 0 0 7px 0; padding: 0 16px 0 12px; background-color: rgba(24, 18, 12, 0.82); border-width: 1px; border-color: rgba(201, 164, 90, 0.4); border-radius: 0; color: rgb(234, 223, 198); font-size: 20px; -unity-font-style: bold; letter-spacing: 2px; -unity-text-align: middle-left; transition-property: background-color, border-color, translate; transition-duration: 0.12s; }
+.title-btn > Label { padding: 0; margin: 0; }
+.title-mark { width: 9px; height: 9px; margin-right: 12px; rotate: 45deg; background-color: rgba(201, 164, 90, 0.25); }
+.title-btn.sel { background-color: rgba(92, 66, 30, 0.95); border-color: rgb(226, 194, 122); color: rgb(250, 236, 196); translate: 6px 0; }
+.title-btn.sel > .title-mark { background-color: rgb(226, 194, 122); }
+.title-btn:active { background-color: rgb(120, 88, 40); }
+.title-hint { width: 440px; min-height: 38px; margin-top: 4px; font-size: 13.5px; -unity-font-style: italic; color: rgb(194, 179, 147); white-space: normal; }
+.title-foot { position: absolute; left: 0; right: 0; bottom: 0; height: 40px; flex-direction: row; align-items: center; padding-left: 7%; padding-right: 22px; background-color: rgba(14, 10, 7, 0.92); border-top-width: 2px; border-top-color: rgb(110, 86, 49); }
+.title-dot { width: 10px; height: 10px; border-radius: 5px; margin-right: 10px; flex-shrink: 0; background-color: rgb(141, 127, 102); }
+.title-dot.good { background-color: rgb(143, 191, 122); }
+.title-dot.warn { background-color: rgb(216, 162, 74); }
+.title-status { flex-grow: 1; flex-shrink: 1; font-size: 13.5px; color: rgb(214, 200, 170); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.title-version { flex-shrink: 0; margin-left: 16px; font-size: 12px; color: rgb(141, 127, 102); letter-spacing: 1px; }
+.compact .title-col { width: 420px; left: 6%; }
+.compact .title-sub, .compact .title-list, .compact .title-hint { width: 400px; }
+.compact .title-name { font-size: 46px; letter-spacing: 7px; }
+.compact .title-sub { font-size: 15px; }
+.compact .title-btn { height: 40px; font-size: 18px; margin-bottom: 5px; }
+.compact .title-foot { padding-left: 6%; }
+
+/* the keys' mark on the older menus' big buttons, the same as the mouse's */
+.menu-big.sel { background-color: rgba(210, 173, 98, 0.18); border-color: rgb(210, 173, 98); }
+
+/* the menus' windows: a framed card, wider veil */
+.menu-veil { background-color: rgba(9, 7, 5, 0.62); }
+.menu { border-width: 2px; border-color: rgb(138, 106, 56); }
+.menu.replays { width: 760px; }
+.menu.credits { width: 640px; }
+
+/* New game: four groups behind tabs */
+.ng-tabs { margin-top: 8px; padding-left: 0; }
+.ng-tab { height: 30px; margin-top: 0; margin-bottom: 0; margin-left: 0; padding-left: 18px; padding-right: 18px; border-radius: 0; font-size: 13px; -unity-font-style: bold; letter-spacing: 1px; }
+.ng-group { min-height: 318px; padding: 4px 10px 8px 10px; border-width: 1px; border-top-width: 0; border-color: rgb(110, 86, 49); background-color: rgba(0, 0, 0, 0.16); }
+.compact .ng-group { min-height: 268px; }
+.ng-status { margin-top: 6px; font-size: 13px; white-space: normal; color: rgb(194, 179, 147); }
+.ng-status.good { color: rgb(143, 191, 122); }
+.ng-status.warn { color: rgb(216, 162, 74); }
+
+/* Load a replay */
+.replay-list { margin-top: 2px; }
+.replay-row { flex-direction: row; align-items: center; margin: 0 0 6px 0; padding: 8px 14px; background-color: rgba(210, 173, 98, 0.06); border-width: 1px; border-color: rgba(201, 164, 90, 0.4); border-radius: 0; color: rgb(234, 223, 198); }
+.replay-row.sel, .replay-row:hover { background-color: rgba(210, 173, 98, 0.18); border-color: rgb(210, 173, 98); }
+.replay-text { flex-grow: 1; flex-shrink: 1; align-items: flex-start; }
+.replay-side { flex-shrink: 0; align-items: flex-end; margin-left: 14px; max-width: 42%; }
+.replay-title { font-size: 16px; -unity-font-style: bold; white-space: normal; -unity-text-align: middle-left; padding: 0; margin: 0; }
+.replay-line { font-size: 12px; -unity-font-style: italic; color: rgb(194, 179, 147); padding: 0; margin: 2px 0 0 0; white-space: normal; }
+.replay-world { font-size: 12.5px; color: rgb(226, 194, 122); padding: 0; margin: 0; white-space: normal; -unity-text-align: middle-right; }
+
+/* Credits, and New game's personas: a name and what it is */
+.credit-row { flex-direction: row; align-items: flex-start; padding: 3px 0; border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.1); }
+.credit-name { width: 170px; flex-shrink: 0; font-size: 13.5px; -unity-font-style: bold; color: rgb(236, 224, 196); padding: 0; margin: 0; }
+.credit-part { flex-grow: 1; flex-shrink: 1; font-size: 12.5px; color: rgb(194, 179, 147); white-space: normal; padding: 0; margin: 0; }
+/* New game: your face, the art pack's four neutral portraits */
+.face-row { min-height: 70px; }
+.face-pick { width: 52px; height: 64px; margin: 2px 8px 2px 0; padding: 0; border-width: 2px; border-color: rgba(201, 164, 90, 0.35); border-radius: 0; background-color: rgb(35, 26, 16); -unity-background-scale-mode: scale-and-crop; color: rgb(234, 223, 198); }
+.face-pick:hover { border-color: rgb(210, 173, 98); }
+.face-pick.pick { border-color: rgb(226, 194, 122); border-width: 3px; }
 /* ==== Nothing is cut off at the bottom (#20, the lead on 16 November). Nothing is ever half shown: a list ends on a
    whole row or scrolls with its scrollbar (and a fade at its foot while more lies below); every panel keeps its bottom
    padding; a panel never runs under another or off the window. The rules no line here can say (a window no taller
