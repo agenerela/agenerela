@@ -370,6 +370,11 @@ states at six game-view sizes (1920 × 1080, 1920 × 1200, 2560 × 1440, 1536 ×
   never taller than the room below its own top; its body scrolls inside it.
 - The tales take the outliner's place while open.
 - A model's free text in a panel (the advisor's counsel) shows three whole lines, then **more** opens the rest in place.
+- An opened feed entry scrolls into view whole.
+- The top bar never overlaps. Between its full form and the compact one it takes measured steps, one at a time while its
+  stats and rivals do not fit: the sub-labels go (their words stay in each stat's tooltip), then the numbers and icons
+  get smaller, then the icons go and each value keeps its caption. At 1920 wide it drops the sub-labels; on the lead's
+  1707 × 1067 it is one step further, with the icons kept.
 The stylesheet holds what CSS can say; `ScreenUI.Layout.cs` holds the rest, runs four times a second over whatever is on
 the screen, and `LayoutTests` checks it without a scene.
 
