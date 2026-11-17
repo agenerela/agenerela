@@ -21,7 +21,9 @@ Inside `Agent.DecideAsync`, after the reply has been parsed:
 1. **`SchemaLegalityGuard`.** The decision is one the agent could legally make: the action is
    registered and was offered in this request; the target is registered or `no_target`; an
    action that needs a target got a real one; and against a paired schema
-   ([`targets.md`](targets.md#the-paired-schema)), the action was offered with that target. The schema's grammar should already have
+   ([`targets.md`](targets.md#the-paired-schema)), the action was offered with that target. For an action that declares
+   parameters ([`parameters.md`](parameters.md)), every one has a value, each value is one the
+   parameter declares and the request offered, and no argument names a parameter the action lacks. The schema's grammar should already have
    enforced all of this. It is checked again because a provider is untrusted. Every refusal is
    a `Reject`.
 2. **`TargetGroundingGuard`.** Did the model want a target that is not on the list? From the
@@ -200,7 +202,9 @@ the chosen target's distance.
 `Agent.Execute` checks the decision again before running the handler, because the world can
 change while the model thinks. That re-check is `SchemaLegalityGuard`, then
 `TargetCategoryGuard`, then `TargetAvailabilityGuard`, which asks a per-target check again,
-against the targets as they are then. A game's guards judged the answer
+against the targets as they are then. `SchemaLegalityGuard` also checks the decision's arguments
+against the action's declared parameters there, and asks a per-value check again
+([`parameters.md`](parameters.md)). A game's guards judged the answer
 once, inside `DecideAsync`, and are not run again.
 
 If a game rule must still hold at the moment of acting, put it in the handler, in the action's

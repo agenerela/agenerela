@@ -69,7 +69,15 @@ namespace Agenerela
         /// some agents may take.
         /// </summary>
         /// <param name="owner">The object whose methods run the actions.</param>
-        /// <param name="assets">Action assets that win over an attribute with the same id, as in the other overload.</param>
+        /// <param name="assets">
+        /// Action assets that win over an attribute with the same id, as in the other overload. An
+        /// asset's <see cref="ActionDefinition.Parameters"/> replace the method's [AgentParameter]s
+        /// too, so the method's [Argument]s and [AvailableValue] checks must name parameters the
+        /// asset declares, with whole-number values where the method takes an <c>int</c>.
+        /// </param>
+        /// <exception cref="ArgumentException">
+        /// A method is malformed, or disagrees with the asset that defines its action.
+        /// </exception>
         /// <param name="only">
         /// The ids to register, compared ordinally; ids the owner does not declare are ignored, so
         /// one list can serve several owners. Null registers every action, as the other overload
@@ -112,6 +120,10 @@ namespace Agenerela
                 {
                     actions[i] = (asset.Action, actions[i].Handler);
                 }
+
+                // Against the definition that won: the method's [Argument]s and [AvailableValue]
+                // checks must name parameters the asset declares, or Execute would find none (DR-023).
+                (actions[i].Handler as MethodActionHandler)?.CheckAgainst(actions[i].Definition);
             }
 
             // Checks every action before storing any, so a rejected one leaves the registry as it was.
@@ -198,6 +210,24 @@ namespace Agenerela
                 throw new ArgumentException(
                     $"Action '{definition.Id}' takes no target, so it cannot also require one or name target categories.",
                     nameof(definition));
+            }
+
+            if (definition.Parameters != null)
+            {
+                var names = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var parameter in definition.Parameters)
+                {
+                    if (!ActionParameter.Validate(parameter, out string why))
+                    {
+                        throw new ArgumentException($"Action '{definition.Id}': {why}", nameof(definition));
+                    }
+
+                    if (!names.Add(parameter.Name))
+                    {
+                        throw new ArgumentException(
+                            $"Action '{definition.Id}' declares the parameter '{parameter.Name}' twice.", nameof(definition));
+                    }
+                }
             }
 
             if (_byId.ContainsKey(definition.Id))

@@ -89,13 +89,15 @@ var result = await agent.DecideAsync(line, new DecideOptions { PairTargetsWithAc
 ```
 
 It is **off by default and unmeasured**: it changes what the model is constrained to, and it stays
-off until an A/B on the evaluation set shows it helps (hard rule 2, #151). What it does:
+off until an A/B on the evaluation set shows it helps (hard rule 2, #151). One thing turns it on
+without the option: an offered action that declares a parameter, which only a branch can ask for
+([parameters.md](parameters.md)). What it does:
 
 - Each action offered takes the targets its `TargetCategories` name, or every target when it names
   none, and `no_target` only if it does not require a target. `none` takes `no_target` alone, and
   so does an action with `TakesNoTarget` (below).
-- Actions that take the same targets share one branch (`DecisionSchema.Pairs`, one `ActionTargets`
-  each).
+- Actions that take the same targets, and ask for the same parameters, share one branch
+  (`DecisionSchema.Pairs`, one `ActionTargets` each).
 - An action that requires a target and takes none of those registered is not offered at all, and
   its example is not shown, as an action that needs a target already is when nothing is registered.
 - The system prompt, the action and target list, the target rule and the examples are what they
@@ -230,7 +232,7 @@ into.Offer("north", new CountryGroup(new[] { "orsk", "kesh" }), "group");
   not every combination.
 
 A target array beside `target` is not built; it would be a new field in the schema, and waits for
-the typed parameters of #266 item 2 (DR-023, accepted, not built), if groups prove clumsy.
+the `also_targets`, DR-023's second step (accepted, not built), if groups prove clumsy.
 
 ## Facts told through an action
 

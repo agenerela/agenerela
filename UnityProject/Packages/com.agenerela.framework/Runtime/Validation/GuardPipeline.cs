@@ -62,7 +62,7 @@ namespace Agenerela
 
                     telemetry.GuardsFired.Add(name);
                     telemetry.StatementsReplaced.Add(new ReplacedStatement(name, verdict.Reason, decision.Statement, verdict.Statement));
-                    decision = new AgentDecision(decision.ActionId, decision.TargetId, verdict.Statement);
+                    decision = decision.WithStatement(verdict.Statement);
                     current = current.With(decision);
                     continue;
                 }
