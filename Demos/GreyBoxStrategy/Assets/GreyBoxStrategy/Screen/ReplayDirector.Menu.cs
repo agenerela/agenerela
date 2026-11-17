@@ -25,6 +25,7 @@ namespace GreyBoxStrategy.Realm
             settings = settingsStore.Load();
             speed = settings.PlaybackSpeed;
             ApplySettings(settings, null);
+            SoundManager.Apply(settings); // the sound's volumes
         }
 
         /// <summary>The UI scale now: the settings' fixed step, or automatic from the screen's size.</summary>
@@ -59,6 +60,7 @@ namespace GreyBoxStrategy.Realm
         {
             var before = settings;
             settings = next.Normalised();
+            SoundManager.Apply(settings); // the sound's volumes, at once
             ApplySettings(settings, before);
             if (!settings.DisplayDiffers(before) || Application.isEditor)
             {
@@ -231,6 +233,7 @@ namespace GreyBoxStrategy.Realm
 
         private void ResumeFromPause()
         {
+            SoundManager.Play(SoundCues.PanelClose);
             ui.HideMenu();
             if (pausedByMenu) { playing = true; ui.SetPlaying(true, speed); }
             pausedByMenu = false;

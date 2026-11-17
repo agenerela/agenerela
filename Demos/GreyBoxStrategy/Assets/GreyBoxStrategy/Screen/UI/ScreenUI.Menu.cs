@@ -117,6 +117,7 @@ namespace GreyBoxStrategy.Realm
         private VisualElement Page(string cls, Action back)
         {
             HideMenu();
+            SoundManager.Play(SoundCues.PanelOpen); // a window opens
             menu = new VisualElement(); menu.AddToClassList("menu-veil");
             var card = new VisualElement(); card.AddToClassList("panel"); card.AddToClassList("menu"); card.AddToClassList(cls);
             menu.Add(card);
@@ -501,10 +502,11 @@ namespace GreyBoxStrategy.Realm
             card.Add(ew);
 
 
-            card.Add(Section2("SOUND", "no sound plays yet; these are kept for when it does"));
+            card.Add(Section2("SOUND", "the first sounds; more come with the next set"));
             card.Add(Volume("Master", s.MasterVolume, v => { s.MasterVolume = v; Changed(); }));
             card.Add(Volume("Music", s.MusicVolume, v => { s.MusicVolume = v; Changed(); }));
             card.Add(Volume("Effects", s.EffectsVolume, v => { s.EffectsVolume = v; Changed(); }));
+            card.Add(Volume("Interface", s.InterfaceVolume, v => { s.InterfaceVolume = v; Changed(); }));
             card.Add(Volume("Voices", s.VoiceVolume, v => { s.VoiceVolume = v; Changed(); }));
 
             // The lead's decisions (painted-realm-direction.md): room for them here before they exist.
@@ -512,6 +514,7 @@ namespace GreyBoxStrategy.Realm
             card.Add(Coming("Rulers", "Off by default; a click on a phrase in the chronicle speaks it"));
             card.Add(Coming("Storyteller", "On by default: its stories, events and large events read aloud"));
 
+            card.Add(SoundTest()); // every cue, to hear them in one place
             var src = new Label("Saved as you change them, in settings.json in the game's data folder."); src.AddToClassList("src"); card.Add(src);
             var backB = new Button(back) { text = "Back" }; backB.AddToClassList("menu-button"); backB.AddToClassList("quiet");
             var foot = Row(backB); foot.style.marginTop = 10; card.Add(foot);
