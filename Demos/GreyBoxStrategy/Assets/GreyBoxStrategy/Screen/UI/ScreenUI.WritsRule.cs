@@ -167,7 +167,7 @@ namespace GreyBoxStrategy.Realm
             // How many more armies this turn's writs can order (one writ is the court's; an army awaiting orders holds one already).
             int armyWrits = Math.Max(0, req.Writs - 1);
             string ordered = req.Writs == GameRules.UnlimitedWrits ? "" : $"{Math.Max(0, armyWrits - withWrits.Count)} of {armyWrits} army writs left · ";
-            body.Add(SectionHead("YOUR ARMIES", ordered + (withWrits.Count < awaiting.Count ? $"{awaiting.Count - withWrits.Count} wait: no writ left" : "click one, then a lit province")));
+            body.Add(SectionHead("YOUR ARMIES", ordered + (withWrits.Count < awaiting.Count ? $"{awaiting.Count - withWrits.Count} wait: no writ left" : "click one, then right-click a lit province")));
             if (withWrits.Count > 0)
             {
                 // On a big world the army waiting may be anywhere: this finds it, as the N key does.
@@ -188,7 +188,7 @@ namespace GreyBoxStrategy.Realm
             {
                 var moves = WritLegality.ArmyMoves(w, You, SelectedArmy);
                 bool canMarch = moves.Any(m => m.Action == Actions.March);
-                var hint = Text(canMarch ? $"{Chronicle.Host(SelectedArmy)}: click a lit province to march there, or hold."
+                var hint = Text(canMarch ? $"{Chronicle.Host(SelectedArmy)}: right-click a lit province to march there, or hold."
                                          : $"{Chronicle.Host(SelectedArmy)}: no march is offered from {Cap(w.FindArmy(SelectedArmy)?.Location)}; it can only hold.", "src"); body.Add(hint);
                 var hold = new Button(() => { Plan.Armies[SelectedArmy] = moves.First(m => m.Action == Actions.None); PlanChanged?.Invoke(); ShowOrders(status); }) { text = "Hold", tooltip = "Hold where it stands; it waits for orders again when something wakes it" };
                 hold.AddToClassList("order-move"); hold.style.alignSelf = Align.FlexStart; hold.style.marginTop = 2;
@@ -357,7 +357,7 @@ namespace GreyBoxStrategy.Realm
                 state += $"; besieging it: {siege.Substring(0, 1).ToLowerInvariant()}{siege.Substring(1)}";
             var l = new Label(state) { style = { fontSize = 12, flexShrink = 1, whiteSpace = WhiteSpace.Normal } }; row.Add(l);
             row.tooltip = (waits ? "Awaiting orders: " + string.Join(", ", army.Wake) + ". " : "") +
-                          (hasWrit ? "Click, then click a lit province on the map." : waits ? "The rules ask armies the most urgent first, one writ each, keeping one for the court."
+                          (hasWrit ? "Click, then right-click a lit province on the map." : waits ? "The rules ask armies the most urgent first, one writ each, keeping one for the court."
                            : recall ? "Carrying out its order. Click to give it new orders: the court recalls it, for a writ."
                            : "Carrying out its order: it costs no writ. Every writ an army may use is spent this turn; it awaits orders again when it arrives, fights, is blocked, or four turns pass.");
             string id = army.Id;

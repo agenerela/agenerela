@@ -22,6 +22,11 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: box selection, right-click orders, edge scrolling** (#20). A left-drag on the map chooses every
+  army of yours inside the box, Shift-click adds or removes one, and the left panel shows the group. A right click on
+  a province orders every chosen army there and names those that cannot go; a left click only selects (it used to
+  order the march, and a left-drag used to pan). The map pans at the window's edges, a setting on by default.
+
 - **Painted Realm: the first art pack** (#20). Every ruler, general and storyteller event has a picture, made ahead of
   time on the team's asset server in one style, like an illuminated chronicle, and shipped with the game: 19 ruler
   portraits (three a persona, four neutral faces you click through for your own realm), 12 generals and 27 event

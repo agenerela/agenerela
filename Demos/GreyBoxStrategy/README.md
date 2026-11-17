@@ -898,7 +898,14 @@ The lead chose variant B of the UI rework (`docs/demos/painted-realm-ui-variant-
   - A narrow feed at the bottom left, one line an entry, with the speaker's crest and the kind's icon.
   - Filters: All, Me, War and Land (`ScreenModels.Keeps`). "Me" appears only when you rule.
   - A click opens an entry in place, with what was said and a link to find it on the map and open its decision.
-- **Controls.** A left or right click on a province orders the chosen army's march; I opens the decisions.
+- **Controls** (the lead, 17 November). A **right** click on a province orders every chosen army there; a **left** click
+  only selects, an army or a province. A left-drag on the map draws a box and chooses every army of yours inside it;
+  Shift-click adds or removes one; Esc or a click on the sea clears the choice. With several chosen, the outliner's
+  rows and the pieces show it and the left panel shows the group, each army a row with the soldiers in all; those that
+  cannot go where you right-click are named in a notice. Panning is right or middle drag, the arrow keys, and the
+  window's edges (a setting, on by default; off without focus and over a panel other than the top bar). I opens the
+  decisions. The logic is `ScreenModels.OnMapClick`, `OnRightClick`, `BoxSelect`, `ClickArmy` and `EdgeScroll`,
+  tested; `ReplayDirector.ClickAt`, `RightClickAt` and `BoxAt` apply it, for the mouse and the CLI alike.
 - **Smaller windows.** At 1366 × 768 the bar drops the words beside its numbers and shrinks its icons; the feed and
   the outliner narrow.
 
