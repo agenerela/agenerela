@@ -203,7 +203,16 @@ namespace Agenerela
 
         private static void AppendHex8(StringBuilder output, int value)
         {
-            
+            const string Hex = "0123456789abcdef";
+
+            output.Append(Hex[(value >> 28) & 0xf]);
+            output.Append(Hex[(value >> 24) & 0xf]);
+            output.Append(Hex[(value >> 20) & 0xf]);
+            output.Append(Hex[(value >> 16) & 0xf]);
+            output.Append(Hex[(value >> 12) & 0xf]);
+            output.Append(Hex[(value >> 8) & 0xf]);
+            output.Append(Hex[(value >> 4) & 0xf]);
+            output.Append(Hex[value & 0xf]);
         }
     }    
 }
