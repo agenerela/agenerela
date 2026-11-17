@@ -22,6 +22,12 @@ phase table and the open issues, not here.
 
 ### Changed
 
+- **Painted Realm: the storyteller's events and tales are impossible to miss** (#20). An event now opens a window in
+  the middle of the screen, in the style of a grand strategy game's: a picture frame, the title, the story, each realm
+  struck with its effect as icons, and So be it; ruling, the turn waits for it, watching it closes by itself. A tale is a
+  banner under the top bar that never stops the turn. A rival's event under fog shows the news, not its cost. The
+  feed marks the storyteller's entries in gilt. A new setting, Event windows: all, mine only, off. `StoryCards`,
+  `StoryCardsTests`.
 - **Painted Realm: nothing is cut off at the bottom** (#20). An audit at six game-view sizes, 1280 × 720 to 2560 × 1440,
   found windows opening over the top bar, the tales panel over the outliner, the diplomacy table running off small
   screens and lists ending on half a row with nothing to say more lay below. Windows now open under the top bar, fit

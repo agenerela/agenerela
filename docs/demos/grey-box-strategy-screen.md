@@ -373,6 +373,24 @@ states at six game-view sizes (1920 × 1080, 1920 × 1200, 2560 × 1440, 1536 ×
 The stylesheet holds what CSS can say; `ScreenUI.Layout.cs` holds the rest, runs four times a second over whatever is on
 the screen, and `LayoutTests` checks it without a scene.
 
+**The storyteller, impossible to miss (17 November).** Until now an event showed as a small parchment bubble over the
+map for a few seconds and a line in the feed; the full card opened only from the feed's link or the tales.
+- An event with an effect opens the **event window** in the middle of the screen: a picture frame (empty until the
+  generated pictures arrive, through `ScreenUI.EventPicture`), the title large, the story, each realm it struck with its
+  crest and what it did as signed chips with icons (+40 gold, −12 soldiers), and **So be it** (Enter or Esc). Your realm
+  comes first, and the window is framed in your colour when it strikes you. A rival's event shows the news every court
+  hears and not what it cost them, as the fog keeps a rival's treasury and army. Below, **Behind it** keeps the
+  storyteller's decisions and the tale.
+- Ruling, the turn's playback waits for the window; watching or on autoplay it closes by itself after the time to read
+  it, shorter at the faster speeds, and a jump ahead never waits. Two events in one turn come one after the other,
+  "1 of 2".
+- A tale (a story with no effect: an omen, a tale's beginning or end) is a parchment banner under the top bar instead;
+  it never stops the turn, and a click opens its window.
+- In the feed the storyteller's entries are gilt, with a scroll for their icon (a ruler's orders keep the quill).
+- Settings, **Event windows**: all (the default), mine only, off (the bubble, as before).
+Everything comes from the recorded event; nothing the storyteller is told or offered changed. `StoryCards` decides
+what a viewer sees, and `StoryCardsTests` checks it without a scene.
+
 The numbers, the outliner's rows and the feed's filters come from `ScreenModels`, which `ScreenModelsTests` checks
 without a scene.
 
