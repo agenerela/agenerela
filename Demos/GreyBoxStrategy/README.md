@@ -797,10 +797,23 @@ Slice 3, the last of variant B.
   - **Model:** the model and its timings.
 
   Only the shown tab is built. While you rule, a rival's Offered and Told tabs stay private, as before.
-- **Speech:** a click on a ruler's words opens that decision in the inspector. While the inspector is open, words
-  that would fall under it move to the nearer side with room, or below it on a small screen, so it never hides them.
+- **Speech:** a click on a ruler's words opens that decision in the inspector. Where the words sit is
+  `ScreenModels.PlaceWords`, checked by `ScreenModelsTests`. They go above the capital, but never under a panel or
+  off the screen:
+  - right of the side panel when it is open;
+  - above the chronicle and the council;
+  - beside the inspector on the nearer side with room, or below it at 1366 × 768.
+
+  A capital near the bottom edge used to put them off the screen.
+- **Real model text** (one live game on qwen3.5:4b, 16 November): the rulers' lines run to about 105 characters and
+  fit a bubble in four lines. Your advisor's counsel runs to 650, and the council scrolls under it. The timing bar
+  on the Model tab, squeezed to 8 px by a label's default margins, is its full height again. The advisor's Take and
+  Why? keep clear of the council's scrollbar.
 - **The council:** each writ is a seal, red once your plan spends it and dim while it is left. End turn is larger
-  and gilt-framed.
+  and gilt-framed (34 px high at 1366 × 768, 40 above), and it stays inside the council's frame: when the council
+  reaches its height, the orders above scroll and the foot does not shrink.
+- **Closing the inspector:** Esc, its ×, or a click on the map outside it. That click only closes the window; it
+  does not also open a province or order a march (`ScreenModels.OnMapClick`, checked by `ScreenModelsTests`).
 - **For tests and the CLI:** `ScreenUI.InspectorTabs()`, `ShowInspectorTab(name)` and `InspectorText()`.
 - **Tests** (`InspectorWindowTests`), each seen failing once against a deliberate break:
   - a card opens on Answer, each tab holds its part, and every offered move is listed (broken by dropping a move);

@@ -437,16 +437,18 @@ namespace GreyBoxStrategy.Realm
                 {
                     var sp = mouse.position.ReadValue();
                     var panelPos = RuntimePanelUtils.ScreenToPanel(document.rootVisualElement.panel, new Vector2(sp.x, Screen.height - sp.y));
-                    if (document.rootVisualElement.panel.Pick(panelPos) == null)
+                    int p = map.ProvinceAt(cam.ScreenToWorldPoint(sp));
+                    bool armyChosen = rule != null && rule.Writs && ui.OrdersRequest != null && ui.SelectedArmy != null;
+                    switch (ScreenModels.OnMapClick(document.rootVisualElement.panel.Pick(panelPos) != null, ui.InspectorOpen, p, armyChosen))
                     {
-                        int p = map.ProvinceAt(cam.ScreenToWorldPoint(sp));
-                        if (p >= 0 && rule != null && rule.Writs && ui.OrdersRequest != null && ui.SelectedArmy != null)
-                        {
+                        case ScreenModels.MapClick.CloseInspector: ui.CloseInspector(); break;
+                        case ScreenModels.MapClick.OrderMarch:
                             // An army is chosen: the click orders its march, or says why it cannot go there.
                             string why = ui.OrderArmyTo(p);
                             ui.ShowNotice(why == null ? null : $"{Cap(game.ProvinceIds[p])}: {why}");
-                        }
-                        else if (p >= 0) OpenProvince(p); else { ui.CloseSide(); map.SetSelected(-1); }
+                            break;
+                        case ScreenModels.MapClick.OpenProvince: OpenProvince(p); break;
+                        case ScreenModels.MapClick.ClearSelection: ui.CloseSide(); map.SetSelected(-1); break;
                     }
                 }
             }

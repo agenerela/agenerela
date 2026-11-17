@@ -239,5 +239,59 @@ namespace GreyBoxStrategy.Screen.Tests
             ui.FoldOutliner("ARMIES");
             Assert.That(ui.OutlinerShape().rows, Is.EqualTo(open.rows), "opened again");
         }
+
+        [Test]
+        public void A_click_on_the_map_with_the_inspector_open_only_closes_it()
+        {
+            // Open: the map's click dismisses the window, whatever lies under it, and never orders a march.
+            Assert.That(ScreenModels.OnMapClick(false, true, 4, true), Is.EqualTo(ScreenModels.MapClick.CloseInspector));
+            Assert.That(ScreenModels.OnMapClick(false, true, 4, false), Is.EqualTo(ScreenModels.MapClick.CloseInspector));
+            Assert.That(ScreenModels.OnMapClick(false, true, -1, false), Is.EqualTo(ScreenModels.MapClick.CloseInspector));
+            // A click on a panel, the inspector included, is the panel's own.
+            Assert.That(ScreenModels.OnMapClick(true, true, 4, true), Is.EqualTo(ScreenModels.MapClick.Nothing));
+            // Closed: as before.
+            Assert.That(ScreenModels.OnMapClick(false, false, 4, true), Is.EqualTo(ScreenModels.MapClick.OrderMarch));
+            Assert.That(ScreenModels.OnMapClick(false, false, 4, false), Is.EqualTo(ScreenModels.MapClick.OpenProvince));
+            Assert.That(ScreenModels.OnMapClick(false, false, -1, true), Is.EqualTo(ScreenModels.MapClick.ClearSelection));
+        }
+
+        // Panels as the game draws them (measured in play, 16 November): 1920 x 1080 and 1366 x 768.
+        private static readonly ScreenModels.Box Chronicle1920 = new ScreenModels.Box(8, 800, 440, 272), Council1920 = new ScreenModels.Box(1392, 532, 520, 540),
+            Inspector1920 = new ScreenModels.Box(580, 84, 760, 420), Side1920 = new ScreenModels.Box(8, 160, 308, 630),
+            Chronicle1366 = new ScreenModels.Box(8, 540, 380, 220), Inspector1366 = new ScreenModels.Box(363, 84, 640, 377);
+        private const float Half = 150, Height = 104;
+
+        private static ScreenModels.Box Words((float x, float bottom) at) => new ScreenModels.Box(at.x - Half, at.bottom - Height, Half * 2, Height);
+
+        [Test]
+        public void A_rulers_words_sit_above_the_capital_and_never_under_a_panel_or_off_the_screen()
+        {
+            // An open map: above the capital, as before.
+            var free = ScreenModels.PlaceWords(900, 500, Half, Height, 1920, 1080, null, new[] { Chronicle1920, Council1920 }, null);
+            Assert.That(free, Is.EqualTo((900f, 474f)));
+
+            // A capital near the bottom edge, under the chronicle (the live run's Caelar, at 1920): lifted above it.
+            var low = Words(ScreenModels.PlaceWords(463, 1130, Half, Height, 1920, 1080, null, new[] { Chronicle1920, Council1920 }, null));
+            Assert.That(low.Overlaps(Chronicle1920), Is.False, "under the chronicle");
+            Assert.That(low.yMax, Is.LessThanOrEqualTo(1080 - 8), "off the screen");
+
+            // Under the council: lifted above it too.
+            var right = Words(ScreenModels.PlaceWords(1500, 900, Half, Height, 1920, 1080, null, new[] { Chronicle1920, Council1920 }, null));
+            Assert.That(right.Overlaps(Council1920), Is.False, "under the council");
+
+            // A side panel open on the left: the words go right of it.
+            var beside = Words(ScreenModels.PlaceWords(300, 500, Half, Height, 1920, 1080, Side1920, new[] { Chronicle1920 }, null));
+            Assert.That(beside.Overlaps(Side1920), Is.False, "under the side panel");
+
+            // The inspector open at 1920: beside it, on the nearer side.
+            var nextTo = Words(ScreenModels.PlaceWords(700, 400, Half, Height, 1920, 1080, null, new[] { Chronicle1920, Council1920 }, Inspector1920));
+            Assert.That(nextTo.Overlaps(Inspector1920), Is.False, "under the inspector");
+            Assert.That(nextTo.xMax, Is.LessThanOrEqualTo(Inspector1920.xMin), "the nearer side is the left");
+
+            // At 1366 neither side has room: below it, and still on the screen.
+            var under = Words(ScreenModels.PlaceWords(683, 300, Half, Height, 1366, 768, null, new[] { Chronicle1366 }, Inspector1366));
+            Assert.That(under.Overlaps(Inspector1366), Is.False, "under the inspector at 1366");
+            Assert.That(under.yMax, Is.LessThanOrEqualTo(768 - 8), "off the screen at 1366");
+        }
     }
 }

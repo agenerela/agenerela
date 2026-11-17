@@ -4647,3 +4647,31 @@ after the statement.
 **What would change this.** A run where one form ties strength to standing beyond its interval.
 A strength measure that needs no word counts (the agreement row counts big and small words).
 Living Vale's quantity A/B (DR-023's measurement 5) going the other way.
+
+### Painted Realm R3, land traditions on generated worlds: the same 8-point lean as on Classic, and 8 points fewer counters (16 November 2026)
+
+GreyBoxStrategy (#20), `GameRules.LandTraditions` (#336, off), the Classic A/B of this morning repeated on generated worlds. `personas` table, five `qwen3.5:4b` seats with today's default options, RTX 5080 (Docker Ollama 0.40.14), `-strategyTurn writs -strategyCap 40 -strategyMap medium -strategyMapSeed k`, conquest. Control `n`, the defaults of 15 November, against `l`, the same plus `-strategyRules LandTraditions=true`. Pair k plays world k (seed k) in both arms, k = 1 to 12, one game a block, interleaved: n1 l1 as the first slice (17:19 to 17:35), then n2 l2 … n12 l12 to 22:27, with a minute's gap between blocks for other sessions' turns on the card. Every block ran on test at 523acf5 from a checkout that did not change during the run, so before #344's change to the screen's fog (which no ruler reads). Headless Unity tests ran on the laptop beside some blocks; they share no GPU with the 5080, but may have slowed the game's own steps. Kit and data: `.scratch/realm-build-map/landbonus-live/`, `python land_report_gen.py`, then `report.py`, `paired.py` and `extra.py`, each with `data-gen`.
+
+A medium world has five realms, each starting on its own land, so the starting traditions differ from world to world. Each seat's top type was read from the `l` arm's first court request ("Our land makes …"): over 60 seat-games, riders lead 28, bows 19, pikes 13, so unlike Classic every type is somebody's. Personas rotate with period 5 as before. Country ids differ by world, so "by seat" means nothing here and is left out.
+
+| | n (off) | l (land traditions) | l − n, 95% over worlds |
+|---|---|---|---|
+| Illegal answers | 0 of 7,974 | 0 of 7,971 | |
+| Recruits: pikes, riders, bows | 62%, 15%, 23% (2,001) | 56%, 20%, 24% (2,008) | |
+| Share of a seat's recruits in its land's top type (chance 33%) | 23.9% | 32.0% | **+8.1 points [+2.4, +13.4]**, l higher in 9 of 12 worlds |
+| … for seats whose land leans to pikes (13), riders (28), bows (19) | 56%, 14%, 17% | 64%, 23%, 24% | each type up 7 to 9 points |
+| η² of the pike, rider, bow share by persona | 0.45, 0.34, 0.36 | 0.44, 0.28, 0.37 | −0.01 [−0.23, +0.19], −0.05 [−0.22, +0.11], +0.00 [−0.26, +0.27] |
+| η² of the pike, rider, bow share by top tradition | 0.06, 0.14 (p 0.01), 0.02 | 0.01, 0.07, 0.01 | −0.05 [−0.25, +0.08], −0.07 [−0.29, +0.07], −0.01 [−0.20, +0.14] |
+| Counter share (a rival mostly one type, the counter bought) | 80% of 497 | 71% of 526 | **−8.2 [−13.5, −3.5]**, l lower in 10 of 12 |
+| Battles a game | 93.1 | 88.6 | −4.5 [−11.3, +2.4] |
+| Provinces changing hands a game | 36.2 | 36.1 | −0.1 [−3.6, +3.6] |
+| Treaties a game | 2.8 | 2.1 | −0.8 [−2.0, +0.5] |
+| Model seconds a turn | 10.35 | 10.46 | +0.10 (SE 0.45) |
+| Court prompt tokens | 1,501 | 1,536 | the line, about 35 |
+
+- **The lean holds on a generated world.** A seat buys 8 points more of its land's type with the rule on (7 on Classic), and here every type is tested: seats on hills, plains and forest each lean their way by 7 to 9 points, so the bow tradition Classic could not test works like the others.
+- **It costs counters, which Classic did not show.** Facing a rival that is mostly one type, courts bought the counter 80% of the time without the rule and 71% with it, lower in 10 of 12 worlds. On Classic the two were 79% and 77%. A plausible reading is that on a generated world more seats lean to a type that is not the counter of what they face, and the land line pulls against the counters line; this run cannot tell that from noise in how often each pairing came up.
+- **The persona still decides most of it, and the top tradition explains no more than before.** The persona explains 28 to 44% of each share in both arms. The top tradition's η² did not rise (it fell, within its intervals), so the lean is a shift of every seat toward its land rather than a sorting of seats by land; with 12 worlds the η² intervals are about ±0.2 wide and could hide a real rise.
+- **Nothing else moved beyond noise.** 0 illegal answers in either arm; battles, land, treaties and time a turn within their intervals; the line costs about 35 prompt tokens (19 on Classic).
+- **What 12 worlds cannot show:** the games are capped at 40 turns and none finished, so nothing about who wins or whether the lean helps a realm. One map size, one generator setting, one model. The match counts a seat's land at the start; land taken during the game changes the line and is not followed. Whether the lost counters cost battles was not measured: battles fell 4.5 a game, within noise, and the counter's side won about as often in both arms (72% and 70%).
+- **No default changes.** `LandTraditions` stays off; the tech lead decides.

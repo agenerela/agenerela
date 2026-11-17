@@ -22,6 +22,12 @@ phase table and the open issues, not here.
 
 ### Changed
 
+- **Painted Realm: the inspector window and the council's foot** (#20). With the decision inspector open, a click
+  on the map outside it only closes it, as Esc does, so dismissing it never also orders a march. End turn stays
+  inside the council's frame at every size: the council's foot no longer shrinks when the panel reaches its height.
+  A ruler's words never fall under the chronicle, the council or a side panel, nor off the bottom of the screen.
+  The Model tab's timing bar is full height, and the advisor's buttons clear the council's scrollbar.
+
 - **Painted Realm: an army sees the forts where it stands** (#20). Under the screen's fog, a province beyond your
   borders showed its garrison and forts as "not known" even with your army besieging it or passing through.
   `Fog.KnowsProvince` now knows a province where one of your armies stands. The rulers' facts never hid forts.
@@ -34,6 +40,10 @@ phase table and the open issues, not here.
   general for the new one), each at once and for no writ. `RuleSession.CanMerge`, `Merge`, `CanSplit` and `Split`
   are the screen's calls; the buttons follow. Recorded and replayed; older recordings replay as before. No model is
   offered either, and a test pins that every request a model reads is byte for byte as before.
+
+- **Land traditions measured on generated worlds** (#20). Twelve paired games on `qwen3.5:4b`: a court buys 8 points
+  more of its land's type with the rule on ([+2.4, +13.4]), as on Classic, and the counter 8 points less often
+  ([−13.5, −3.5]), which Classic did not show (findings, 16 November). `LandTraditions` stays off.
 
 - **GreyBoxStrategy's storyteller can choose an event's strength, in two forms, for DR-023's A/B** (#20).
   `GameRules.EventStrength` (off by default; the default game is unchanged) lets four events strike `minor`
