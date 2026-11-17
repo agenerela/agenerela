@@ -307,6 +307,81 @@ namespace GreyBoxStrategy.Realm
             if (cam.orthographicSize == zoomTarget) zoomTarget = float.NaN;
         }
 
+        /// <summary>A left click (not a drag) at a screen point: it selects and never orders (ScreenModels.OnMapClick).</summary>
+        public void ClickAt(Vector2 screen)
+        {
+            int p = map.ProvinceAt(cam.ScreenToWorldPoint(screen));
+            switch (ScreenModels.OnMapClick(!OverMap(screen), ui.InspectorOpen, p))
+            {
+                case ScreenModels.MapClick.CloseInspector: ui.CloseInspector(); break;
+                case ScreenModels.MapClick.OpenProvince: if (ui.ChosenArmies.Count > 0) Choose(null, open: false); OpenProvince(p); break;
+                case ScreenModels.MapClick.ClearSelection: Choose(null, open: false); ui.CloseSide(); map.SetSelected(-1); break;
+            }
+        }
+
+        /// <summary>
+        /// A right click (not a drag) at a screen point: every chosen army that can march to the province is ordered there;
+        /// those that cannot are named in a notice (ScreenModels.OnRightClick, ScreenUI.OrderChosenTo).
+        /// </summary>
+        public void RightClickAt(Vector2 screen)
+        {
+            if (rule == null || ui.OrdersRequest == null) return;
+            int p = map.ProvinceAt(cam.ScreenToWorldPoint(screen));
+            if (ScreenModels.OnRightClick(!OverMap(screen), p, ui.ChosenArmies.Count) != ScreenModels.MapClick.OrderMarch) return;
+            var (ordered, refused) = ui.OrderChosenTo(p);
+            ui.ShowNotice(ScreenUI.GroupNotice(Cap(game.ProvinceIds[p]), refused));
+            if (ordered.Count > 0) { ui.CloseSide(); ApplyMode(); lastOrdersStatus = null; RuleTick(); }
+        }
+
+        /// <summary>A left-drag between two screen points: every army of yours inside is chosen (with Shift, added).</summary>
+        public void BoxAt(Vector2 from, Vector2 to, bool shift)
+        {
+            if (rule == null) return;
+            Vector2 a = ToPanel(from), b = ToPanel(to);
+            var box = new ScreenModels.Box(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y), Mathf.Abs(a.x - b.x), Mathf.Abs(a.y - b.y));
+            Choose(ScreenModels.BoxSelect(ui.PiecePoints(), rule.You, box, ui.ChosenArmies, shift));
+        }
+
+        private Vector2 ToPanel(Vector2 screen) => RuntimePanelUtils.ScreenToPanel(document.rootVisualElement.panel, new Vector2(screen.x, Screen.height - screen.y));
+
+        /// <summary>
+        /// Chooses these armies: one opens its panel, several the group view, none closes it; the map, the outliner and
+        /// the council redraw. The box, Shift-click, Esc and the sea come here.
+        /// </summary>
+        public void Choose(IEnumerable<string> ids, bool open = true)
+        {
+            ui.ChooseArmies(ids);
+            if (open)
+            {
+                if (ui.ChosenArmies.Count > 1) ui.ShowGroup(shown);
+                else if (ui.ChosenArmies.Count == 1) ui.ShowArmy(ui.ChosenArmies[0], shown, played);
+            }
+            ui.RefreshChoice();
+            ApplyMode(); lastOrdersStatus = null;
+            if (rule != null) RuleTick();
+        }
+
+        /// <summary>
+        /// The map pans while the pointer touches the window's edge (a setting, on by default). Off without focus, and
+        /// over a panel other than the top bar, which spans the top edge (ScreenModels.EdgeScroll).
+        /// </summary>
+        private void EdgeScrolling(Mouse mouse)
+        {
+            var at = mouse.position.ReadValue();
+            var hit = document?.rootVisualElement?.panel?.Pick(ToPanel(at));
+            bool overPanel = hit != null && !InTopBar(hit);
+            var (x, y) = ScreenModels.EdgeScroll(at.x, at.y, Screen.width, Screen.height, settings?.EdgeScroll ?? true, Application.isFocused, overPanel);
+            if (x == 0 && y == 0) return;
+            float dt = Mathf.Min(0.05f, Time.unscaledDeltaTime);
+            cam.transform.position += (Vector3)(new Vector2(x, y).normalized * cam.orthographicSize * 1.4f * dt);
+        }
+
+        private static bool InTopBar(VisualElement e)
+        {
+            for (; e != null; e = e.parent) if (e.ClassListContains("topbar")) return true;
+            return false;
+        }
+
         /// <summary>For the CLI: the size the wheel is easing toward, or NaN.</summary>
         public float ZoomTarget => zoomTarget;
         public (float min, float max) ZoomRange => (zoomMin, zoomMax);
@@ -435,45 +510,28 @@ namespace GreyBoxStrategy.Realm
             if (mouse != null)
             {
                 WheelZoom(mouse);
+                EdgeScrolling(mouse);
                 if (mouse.rightButton.wasPressedThisFrame) rightClickStart = mouse.position.ReadValue();
-                // A right click (not a drag) on a province, with one of your armies chosen, orders its march there.
-                if (mouse.rightButton.wasReleasedThisFrame && (mouse.position.ReadValue() - rightClickStart).sqrMagnitude < 25
-                    && rule != null && rule.Writs && ui.OrdersRequest != null && ui.SelectedArmy != null && OverMap(rightClickStart))
-                {
-                    int p = map.ProvinceAt(cam.ScreenToWorldPoint(mouse.position.ReadValue()));
-                    if (p >= 0) { string why = ui.OrderArmyTo(p); ui.ShowNotice(why == null ? null : $"{Cap(game.ProvinceIds[p])}: {why}"); }
-                }
+                // A right click (not a drag) on a province orders every chosen army there (the lead, 17 November:
+                // right click orders, left click selects); those that cannot go are named in a notice.
+                var rd = mouse.position.ReadValue() - rightClickStart;
+                if (mouse.rightButton.wasReleasedThisFrame && !ScreenModels.IsDrag(rd.x, rd.y)) RightClickAt(mouse.position.ReadValue());
                 if (mouse.middleButton.wasPressedThisFrame || mouse.rightButton.wasPressedThisFrame) { dragging = true; dragStart = cam.ScreenToWorldPoint(mouse.position.ReadValue()); }
                 if (mouse.middleButton.wasReleasedThisFrame || mouse.rightButton.wasReleasedThisFrame) dragging = false;
                 if (dragging) cam.transform.position += dragStart - cam.ScreenToWorldPoint(mouse.position.ReadValue());
-                // A left click on the map (not on a panel) opens the province's panel; a left drag pans, as the other buttons do.
-                if (mouse.leftButton.wasPressedThisFrame)
+                // A left press on the map starts a box; past 6 px it is drawn, and on release every army of yours inside
+                // is chosen (Shift adds). Shorter, it is a click: it selects and never orders. Panning is right or
+                // middle drag, the arrow keys and the window's edges.
+                if (mouse.leftButton.wasPressedThisFrame) { clickStart = mouse.position.ReadValue(); leftDrag = OverMap(clickStart); }
+                var ld = mouse.position.ReadValue() - clickStart;
+                if (leftDrag && mouse.leftButton.isPressed && ScreenModels.IsDrag(ld.x, ld.y)) ui.ShowBox(ToPanel(clickStart), ToPanel(mouse.position.ReadValue()));
+                if (mouse.leftButton.wasReleasedThisFrame && leftDrag && ScreenModels.IsDrag(ld.x, ld.y))
                 {
-                    clickStart = mouse.position.ReadValue();
-                    leftDrag = OverMap(clickStart);
-                    leftDragStart = cam.ScreenToWorldPoint(clickStart);
+                    ui.HideBox(); leftDrag = false;
+                    BoxAt(clickStart, mouse.position.ReadValue(), Keyboard.current != null && Keyboard.current.shiftKey.isPressed);
                 }
-                if (leftDrag && mouse.leftButton.isPressed && (mouse.position.ReadValue() - clickStart).sqrMagnitude >= 25)
-                    cam.transform.position += leftDragStart - cam.ScreenToWorldPoint(mouse.position.ReadValue());
-                if (mouse.leftButton.wasReleasedThisFrame) leftDrag = false;
-                if (mouse.leftButton.wasReleasedThisFrame && (mouse.position.ReadValue() - clickStart).sqrMagnitude < 25)
-                {
-                    var sp = mouse.position.ReadValue();
-                    var panelPos = RuntimePanelUtils.ScreenToPanel(document.rootVisualElement.panel, new Vector2(sp.x, Screen.height - sp.y));
-                    int p = map.ProvinceAt(cam.ScreenToWorldPoint(sp));
-                    bool armyChosen = rule != null && rule.Writs && ui.OrdersRequest != null && ui.SelectedArmy != null;
-                    switch (ScreenModels.OnMapClick(document.rootVisualElement.panel.Pick(panelPos) != null, ui.InspectorOpen, p, armyChosen))
-                    {
-                        case ScreenModels.MapClick.CloseInspector: ui.CloseInspector(); break;
-                        case ScreenModels.MapClick.OrderMarch:
-                            // An army is chosen: the click orders its march, or says why it cannot go there.
-                            string why = ui.OrderArmyTo(p);
-                            ui.ShowNotice(why == null ? null : $"{Cap(game.ProvinceIds[p])}: {why}");
-                            break;
-                        case ScreenModels.MapClick.OpenProvince: OpenProvince(p); break;
-                        case ScreenModels.MapClick.ClearSelection: ui.CloseSide(); map.SetSelected(-1); break;
-                    }
-                }
+                else if (mouse.leftButton.wasReleasedThisFrame && !ScreenModels.IsDrag(ld.x, ld.y)) { leftDrag = false; ClickAt(mouse.position.ReadValue()); }
+                else if (mouse.leftButton.wasReleasedThisFrame) { leftDrag = false; ui.HideBox(); }
             }
             ClampCamera();
             ui.HostScale = HostScaleNow();
