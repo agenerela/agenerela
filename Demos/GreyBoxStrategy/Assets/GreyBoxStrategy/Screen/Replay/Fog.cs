@@ -12,7 +12,8 @@ namespace GreyBoxStrategy.Replay
     /// <para><b>Known:</b> who holds every province (the map is public); each country's army and
     /// province count, and its relation to you (a model ruler is told both in its standing
     /// facts); your own country in full; garrisons and forts of every province that is yours or
-    /// touches your land (the targets a model is told about); every move that lands, as it lands,
+    /// touches your land (the targets a model is told about), and of every province one of your armies stands in,
+    /// besieging or passing through (the tech lead, 16 November: an army there sees the walls); every move that lands, as it lands,
     /// because a war or a capture is seen by everyone.</para>
     /// <para><b>Hidden:</b> another country's treasury, income, upkeep and stability; the
     /// garrisons and forts of provinces beyond your borders; the harvests, bandits and unrest of
@@ -37,12 +38,17 @@ namespace GreyBoxStrategy.Replay
         public string Viewer { get; }
         public bool On => Viewer != null;
 
-        /// <summary>Whether its garrison and forts are known: it is yours or touches your land.</summary>
+        /// <summary>
+        /// Whether its garrison and forts are known: it is yours, touches your land, or one of your armies stands in it.
+        /// The one call the screen asks, for the panels and the forts map mode.
+        /// </summary>
         public bool KnowsProvince(ReplayState s, int province)
         {
             if (!On) return true;
             if (s.Owners[province] == Viewer) return true;
-            return queries.Neighbours(province).Any(q => s.Owners[q] == Viewer);
+            if (queries.Neighbours(province).Any(q => s.Owners[q] == Viewer)) return true;
+            string id = queries.ProvinceId(province);
+            return s.Armies.Any(a => a.Owner == Viewer && a.Location == id);
         }
 
         /// <summary>Whether a country's treasury, income, upkeep and stability are known: only your own.</summary>
