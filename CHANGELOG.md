@@ -55,6 +55,11 @@ phase table and the open issues, not here.
   general for the new one), each at once and for no writ. `RuleSession.CanMerge`, `Merge`, `CanSplit` and `Split`
   are the screen's calls; the buttons follow. Recorded and replayed; older recordings replay as before. No model is
   offered either, and a test pins that every request a model reads is byte for byte as before.
+- **Painted Realm: research on how a turn is played** (#20). `docs/demos/painted-realm-turn-flow.md` describes a Rule
+  mode turn step by step from the code, a real model game's log and games played for it, with timings (about 5 s of
+  waiting after End turn, about 37 s of playback at 1×, of which about 5 s is your own realm); ranks what is likely
+  to feel strange; and proposes three options with timelines, from the same turn told in order to a clock with
+  pause. No game code changed.
 
 - **Land traditions measured on generated worlds** (#20). Twelve paired games on `qwen3.5:4b`: a court buys 8 points
   more of its land's type with the rule on ([+2.4, +13.4]), as on Classic, and the counter 8 points less often

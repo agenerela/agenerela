@@ -89,6 +89,9 @@ countries deciding on one snapshot, and `Sim/` with no UnityEngine at all. The g
 
 ## 1. The turn
 
+How this turn plays out on the screen in Rule mode, what a person waits for and when, and three proposed changes to
+it are in [`painted-realm-turn-flow.md`](painted-realm-turn-flow.md) (research, 16 November).
+
 ### 1.1 What a country does in a turn
 
 **Writs.** A country has a number of **writs** each turn: sealed orders its court can send.
