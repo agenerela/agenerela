@@ -20,7 +20,11 @@ phase table and the open issues, not here.
 
 ## [Unreleased]
 
+## [0.4.0-preview.2] - 2026-11-16
+
 ### Framework
+
+- The second preview of 0.4.0, cut while Phase 4 (Evaluation harness) is under way, due 7 December. Notes for a developer are in `docs/releases/v0.4.0-preview.2.md`; the package's section of the same name has the API.
 
 - **Phase 3 (Validation pipeline) closed** on 3 November when its gate (#110) passed: the
   guard pipeline and `SchemaLegalityGuard` (#106), target grounding (#105), its one-line
