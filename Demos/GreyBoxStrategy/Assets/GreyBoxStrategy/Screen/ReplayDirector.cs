@@ -342,6 +342,55 @@ namespace GreyBoxStrategy.Realm
             Choose(ScreenModels.BoxSelect(ui.PiecePoints(), rule.You, box, ui.ChosenArmies, shift));
         }
 
+        // ---- merge and split: the rules are the build session's (RuleSession.CanMerge/Merge/CanSplit/Split) ----
+
+        private void WireArmyOrders()
+        {
+            bool open = rule != null && ui.OrdersRequest != null;
+            ui.CanMergeArmies = open ? ids => rule.CanMerge(ids) : (Func<IReadOnlyList<string>, string>)null;
+            ui.CanSplitArmy = open ? (id, n) => rule.CanSplit(id, n) : (Func<string, int, string>)null;
+            ui.MergePressed = () => MergeChosen();
+            ui.SplitPressed = n => SplitChosen(n);
+        }
+
+        /// <summary>
+        /// Merges the chosen armies (the Merge button, M, the CLI): null, or why not, said in a notice. The merged army
+        /// stays chosen; orders planned for the armies it took in are dropped, and the map, outliner and council redraw.
+        /// </summary>
+        public string MergeChosen()
+        {
+            if (rule == null || ui.OrdersRequest == null) return "not in your council";
+            var ids = ui.ChosenArmies.ToList();
+            string why = rule.Merge(ids);
+            if (why != null) { ui.ShowNotice("Cannot merge: " + why); return why; }
+            var w = rule.Orders?.World ?? ui.OrdersRequest.World;
+            foreach (var id in ids) if (w.FindArmy(id) == null) ui.Plan.Armies.Remove(id);
+            AfterArmyOrder(rule.Game.ArmyOrdersGiven.LastOrDefault()?.Army ?? ids.FirstOrDefault(id => w.FindArmy(id) != null));
+            return null;
+        }
+
+        /// <summary>
+        /// Splits so many soldiers off the chosen army (the split's button, the CLI): null, or why not, said in a notice.
+        /// The new army is chosen, so a right click sends it off.
+        /// </summary>
+        public string SplitChosen(int soldiers)
+        {
+            if (rule == null || ui.OrdersRequest == null || ui.ChosenArmies.Count != 1) return "choose one army of yours in your council";
+            string id = ui.ChosenArmies[0];
+            string why = rule.Split(id, soldiers);
+            if (why != null) { ui.ShowNotice("Cannot split: " + why); return why; }
+            var given = rule.Game.ArmyOrdersGiven.LastOrDefault();
+            AfterArmyOrder(given?.Others != null && given.Others.Count > 0 ? given.Others[0] : id);
+            return null;
+        }
+
+        private void AfterArmyOrder(string choose)
+        {
+            var w = rule.Orders?.World ?? ui.OrdersRequest.World;
+            Show(ReplayBuilder.StateOf(w, game.ProvinceIds, shown), null);
+            Choose(choose == null ? null : new[] { choose });
+        }
+
         private Vector2 ToPanel(Vector2 screen) => RuntimePanelUtils.ScreenToPanel(document.rootVisualElement.panel, new Vector2(screen.x, Screen.height - screen.y));
 
         /// <summary>
@@ -351,10 +400,15 @@ namespace GreyBoxStrategy.Realm
         public void Choose(IEnumerable<string> ids, bool open = true)
         {
             ui.ChooseArmies(ids);
+            WireArmyOrders();
             if (open)
             {
                 if (ui.ChosenArmies.Count > 1) ui.ShowGroup(shown);
-                else if (ui.ChosenArmies.Count == 1) ui.ShowArmy(ui.ChosenArmies[0], shown, played);
+                else if (ui.ChosenArmies.Count == 1)
+                {
+                    ui.ShowArmy(ui.ChosenArmies[0], shown, played);
+                    if (shown?.Army(ui.ChosenArmies[0])?.Owner == rule?.You) ui.AddSplitControl(ui.ChosenArmies[0], shown);
+                }
             }
             ui.RefreshChoice();
             ApplyMode(); lastOrdersStatus = null;
@@ -502,6 +556,8 @@ namespace GreyBoxStrategy.Realm
                 if (kb.digit4Key.wasPressedThisFrame) SetMode(MapMode.Reach);
                 if (kb.dKey.wasPressedThisFrame) ToggleDiplomacy();
                 if (kb.iKey.wasPressedThisFrame) { if (ui.InspectorOpen) ui.CloseInspector(); else ui.InspectPressed?.Invoke(); }
+                if (kb.mKey.wasPressedThisFrame && ui.ChosenArmies.Count > 1) MergeChosen();
+                if (kb.sKey.wasPressedThisFrame && ui.ChosenArmies.Count == 1 && shown?.Army(ui.ChosenArmies[0])?.Owner == rule?.You) ui.ToggleSplit(shown);
                 // Enter dismisses a storyteller's event window first; only then is it End turn.
                 if ((kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame) && ui.EventOpen) ui.DismissEvent();
                 else if ((kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame) && rule != null) EndTurn();

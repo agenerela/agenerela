@@ -26,6 +26,11 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: Merge and Split on the screen** (#20). With two or more of your armies chosen, the group view
+  offers Merge (and M); with one, Split… (and S) opens a slider at half its soldiers. Each is disabled with the rules'
+  reason when they say no, and the merged or new army is chosen after. A ruler's words no longer fall under the map's
+  mode row and legend.
+
 - **Painted Realm: box selection, right-click orders, edge scrolling** (#20). A left-drag on the map chooses every
   army of yours inside the box, Shift-click adds or removes one, and the left panel shows the group. A right click on
   a province orders every chosen army there and names those that cannot go; a left click only selects (it used to
