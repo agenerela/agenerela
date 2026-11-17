@@ -39,8 +39,14 @@ namespace Agenerela
     /// </list>
     /// <para>
     /// No reasoning or chain-of-thought field goes before <c>action</c>: it scored 35.3%, the
-    /// worst of five variants and below the unmodified baseline. Any field added later, such as
-    /// an action parameter, goes after <c>statement</c>.
+    /// worst of five variants and below the unmodified baseline.
+    /// </para>
+    /// <para>
+    /// An action's parameters (<see cref="ActionDefinition.Parameters"/>, DR-023) go after
+    /// <c>target</c> and before <c>statement</c>. This remark once said a later field goes after
+    /// <c>statement</c>; measured, a value placed there was written into the statement in 3 replies
+    /// of 6, and in none when placed before it (findings, 14 November 2026). They are carried per
+    /// branch, in <see cref="ActionTargets.Parameters"/>, never in <see cref="Fields"/>.
     /// </para>
     /// </remarks>
     public sealed class DecisionSchema
@@ -152,7 +158,10 @@ namespace Agenerela
         /// </para>
         /// <para>
         /// <see cref="Build(AgentContext, bool)"/> makes them only when asked
-        /// (<see cref="DecideOptions.PairTargetsWithActions"/>, off by default and unmeasured, #151).
+        /// (<see cref="DecideOptions.PairTargetsWithActions"/>, off by default and unmeasured, #151),
+        /// or when an action it offers declares a parameter (DR-023): a parameter belongs to its
+        /// action, so only a branch can carry it. Then there are pairs even with no target registered,
+        /// each taking <see cref="TargetRegistry.NoTarget"/> alone, and the schema has no target field.
         /// </para>
         /// </remarks>
         public IReadOnlyList<ActionTargets> Pairs { get; }
@@ -245,7 +254,53 @@ namespace Agenerela
 
             var answer = ActionAvailability.Evaluate(ctx);
             var available = answer.Offered;
-            return Build(ctx, pairTargets ? Takeable(available, ctx.Targets, answer) : available, pairTargets, answer, askForStatement);
+            var takeable = Takeable(available, ctx.Targets, answer);
+
+            // A parameter forces the paired schema (DR-023), for the actions pairing can offer. An
+            // action with a parameter and no target it can take now is left out even when nothing
+            // else forces pairing, since only a branch could have carried it.
+            bool pair = pairTargets || DeclaresParameters(takeable);
+            return Build(ctx, pair || DeclaresParameters(available) ? takeable : available, pair, answer, askForStatement);
+        }
+
+        // Whether any of these actions declares a parameter, which makes their schema paired (DR-023).
+        internal static bool DeclaresParameters(IReadOnlyList<ActionDefinition> available)
+        {
+            foreach (var definition in available)
+            {
+                if (definition.DeclaresParameters)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static readonly IReadOnlyList<SchemaField> NoParameters = new ReadOnlyCollection<SchemaField>(new List<SchemaField>());
+
+        // The parameters the schema asks of this action: its branch's, or none for a flat schema or
+        // an action no branch offers. What the parser, the prompt, the examples and the legality
+        // guard read, so none of them can disagree with the schema that was sent.
+        internal static IReadOnlyList<SchemaField> ParametersOf(DecisionSchema schema, string actionId)
+        {
+            if (schema?.Pairs == null)
+            {
+                return NoParameters;
+            }
+
+            foreach (var pair in schema.Pairs)
+            {
+                foreach (string id in pair.Actions)
+                {
+                    if (string.Equals(id, actionId, StringComparison.Ordinal))
+                    {
+                        return pair.Parameters;
+                    }
+                }
+            }
+
+            return NoParameters;
         }
 
         // For a caller that has already asked ActionAvailability about this context, as Agent has
@@ -278,7 +333,19 @@ namespace Agenerela
                 fields.Add(StatementField());
             }
 
-            return new DecisionSchema(fields, pairTargets && ctx.Targets.Count > 0 ? PairsFor(available, ctx.Targets, answer) : null);
+            // Paired when the caller says so and there is a target to pair, or an action that declares
+            // a parameter (DR-023), which is paired with targets or none. The caller decides, once
+            // (Agent.Prepare, the public Build), and has passed the list through Takeable; an action
+            // with a parameter in a list the caller did not pair is a mistake in the caller.
+            bool declares = DeclaresParameters(available);
+            if (declares && !pairTargets)
+            {
+                throw new ArgumentException(
+                    "An action that declares a parameter can only be offered in a paired schema.", nameof(available));
+            }
+
+            bool paired = pairTargets && (ctx.Targets.Count > 0 || declares);
+            return new DecisionSchema(fields, paired ? PairsFor(available, ctx.Targets, answer) : null);
         }
 
         // The actions a paired schema can offer: without an action that requires a target and takes
@@ -332,24 +399,27 @@ namespace Agenerela
             return PairsFor(offered, ctx.Targets, answer);
         }
 
-        // One branch per distinct target list, in the order each list's first action is offered,
-        // none's last unless an action shares its list. Keyed on the list itself, so two actions
-        // share a branch exactly when they take the same targets in the same order.
+        // One branch per distinct target list and parameter list, in the order each one's first
+        // action is offered, none's last unless an action shares it. Keyed on the lists themselves,
+        // so two actions share a branch exactly when they take the same targets in the same order
+        // and ask for the same parameters with the same values (DR-023).
         private static List<ActionTargets> PairsFor(IReadOnlyList<ActionDefinition> available, TargetRegistry targets,
             AvailabilityAnswer answer)
         {
             var order = new List<string>();
             var actions = new Dictionary<string, List<string>>(StringComparer.Ordinal);
             var lists = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+            var asks = new Dictionary<string, List<SchemaField>>(StringComparer.Ordinal);
 
-            void Add(string actionId, List<string> takes)
+            void Add(string actionId, List<string> takes, List<SchemaField> parameters)
             {
-                string key = KeyOf(takes);
+                string key = KeyOf(takes) + ParametersKey(parameters);
                 if (!actions.TryGetValue(key, out var ids))
                 {
                     ids = new List<string>();
                     actions.Add(key, ids);
                     lists.Add(key, takes);
+                    asks.Add(key, parameters);
                     order.Add(key);
                 }
 
@@ -369,18 +439,61 @@ namespace Agenerela
                 {
                     takes.AddRange(TargetsOf(definition, targets, answer));
                 }
-                Add(definition.Id, takes);
+                Add(definition.Id, takes, ParameterFields(definition, answer));
             }
 
-            Add(ActionRegistry.None, new List<string> { TargetRegistry.NoTarget });
+            Add(ActionRegistry.None, new List<string> { TargetRegistry.NoTarget }, new List<SchemaField>());
 
             var pairs = new List<ActionTargets>(order.Count);
             foreach (string key in order)
             {
-                pairs.Add(new ActionTargets(actions[key], lists[key]));
+                pairs.Add(new ActionTargets(actions[key], lists[key], asks[key]));
             }
 
             return pairs;
+        }
+
+        // The action's parameters as required fields, in declared order, each with the values offered
+        // for this decision: the declared ones a per-value check in the answer did not reject.
+        private static List<SchemaField> ParameterFields(ActionDefinition definition, AvailabilityAnswer answer)
+        {
+            var fields = new List<SchemaField>();
+            if (!definition.DeclaresParameters)
+            {
+                return fields;
+            }
+
+            foreach (var parameter in definition.Parameters)
+            {
+                var values = answer != null ? answer.ValuesOf(definition, parameter) : new List<string>(parameter.Values);
+                fields.Add(new SchemaField
+                {
+                    Name = parameter.Name,
+                    Description = string.IsNullOrWhiteSpace(parameter.Description) ? null : parameter.Description.Trim(),
+                    AllowedValues = new ReadOnlyCollection<string>(values),
+                    Required = true,
+                });
+            }
+
+            return fields;
+        }
+
+        // A parameter list as one string that no other list shares, after a marker no id key holds.
+        private static string ParametersKey(List<SchemaField> parameters)
+        {
+            if (parameters.Count == 0)
+            {
+                return "";
+            }
+
+            var key = new System.Text.StringBuilder("|");
+            foreach (var field in parameters)
+            {
+                key.Append(field.Name.Length).Append(':').Append(field.Name).Append('=')
+                   .Append(KeyOf(new List<string>(field.AllowedValues))).Append(';');
+            }
+
+            return key.ToString();
         }
 
         // A list of ids as one string that no other list shares: each id with its length in front,

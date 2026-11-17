@@ -188,6 +188,19 @@ namespace Agenerela
         [JsonProperty("targetIgnored")] public string TargetIgnored;
 
         /// <summary>
+        /// The parameters that took their declared default because the model left them out or gave a
+        /// value not offered (<see cref="DecisionTelemetry.ArgumentsDefaulted"/>, DR-023); left out
+        /// when none did. The values themselves are in each decision's <c>arguments</c>.
+        /// </summary>
+        [JsonProperty("argumentsDefaulted")] public List<string> ArgumentsDefaulted;
+
+        /// <summary>
+        /// Each value of an action's parameter a per-value check rejected, with its reason
+        /// (<see cref="DecisionTelemetry.ValuesUnavailable"/>, DR-023); left out when none was.
+        /// </summary>
+        [JsonProperty("valuesUnavailable")] public List<UnavailableValue> ValuesUnavailable;
+
+        /// <summary>
         /// The choices the call offered (<see cref="DecisionTelemetry.ChoicesOffered"/>, DR-022); left out
         /// for a call that gave none.
         /// </summary>
@@ -329,6 +342,20 @@ namespace Agenerela
                 }
             }
             line.StatementAsked = telemetry.StatementAsked ? (bool?)null : false;
+
+            if (telemetry.ArgumentsDefaulted != null && telemetry.ArgumentsDefaulted.Count > 0)
+            {
+                line.ArgumentsDefaulted = new List<string>(telemetry.ArgumentsDefaulted);
+            }
+
+            if (telemetry.ValuesUnavailable != null && telemetry.ValuesUnavailable.Count > 0)
+            {
+                line.ValuesUnavailable = new List<UnavailableValue>();
+                foreach (var value in telemetry.ValuesUnavailable)
+                {
+                    line.ValuesUnavailable.Add(new UnavailableValue(value.Action, value.Parameter, value.Value, Mask(value.Reason)));
+                }
+            }
 
             if (telemetry.TargetsUnavailable != null && telemetry.TargetsUnavailable.Count > 0)
             {
@@ -484,7 +511,10 @@ namespace Agenerela
         }
     }
 
-    /// <summary>An action, a target and a statement, as a <see cref="DecisionLogLine"/> holds a decision.</summary>
+    /// <summary>
+    /// An action, a target, a statement and the action's arguments, if any, as a
+    /// <see cref="DecisionLogLine"/> holds a decision.
+    /// </summary>
     [Serializable]
     public sealed class DecisionLogDecision
     {
@@ -497,16 +527,60 @@ namespace Agenerela
         /// <summary>The statement, possibly empty.</summary>
         [JsonProperty("statement")] public string Statement;
 
+        /// <summary>
+        /// The value chosen for each of the action's parameters, by name
+        /// (<see cref="AgentDecision.Arguments"/>, DR-023); left out for a decision with none.
+        /// </summary>
+        [JsonProperty("arguments", NullValueHandling = NullValueHandling.Ignore)] public Dictionary<string, string> Arguments;
+
         internal static DecisionLogDecision From(AgentDecision decision)
         {
-            return decision == null
-                ? null
-                : new DecisionLogDecision { Action = decision.ActionId, Target = decision.TargetId, Statement = DecisionLogLine.Mask(decision.Statement) };
+            if (decision == null)
+            {
+                return null;
+            }
+
+            var logged = new DecisionLogDecision { Action = decision.ActionId, Target = decision.TargetId, Statement = DecisionLogLine.Mask(decision.Statement) };
+            if (decision.Arguments.Count > 0)
+            {
+                logged.Arguments = new Dictionary<string, string>();
+                foreach (var argument in decision.Arguments)
+                {
+                    logged.Arguments[argument.Key] = DecisionLogLine.Mask(argument.Value);
+                }
+            }
+
+            return logged;
         }
 
         internal bool SameAs(DecisionLogDecision other)
         {
-            return other != null && Action == other.Action && Target == other.Target && Statement == other.Statement;
+            return other != null && Action == other.Action && Target == other.Target && Statement == other.Statement &&
+                   SameArguments(Arguments, other.Arguments);
+        }
+
+        private static bool SameArguments(Dictionary<string, string> a, Dictionary<string, string> b)
+        {
+            int count = a == null ? 0 : a.Count;
+            if (count != (b == null ? 0 : b.Count))
+            {
+                return false;
+            }
+
+            if (count == 0)
+            {
+                return true;
+            }
+
+            foreach (var argument in a)
+            {
+                if (!b.TryGetValue(argument.Key, out string value) || value != argument.Value)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
     }
 

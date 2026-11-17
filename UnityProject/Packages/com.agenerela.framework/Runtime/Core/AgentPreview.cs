@@ -37,6 +37,7 @@ namespace Agenerela
         private readonly List<string> leftOutByCategory = new List<string>();
         private readonly List<string> unlisted = new List<string>();
         private readonly List<UnavailableTarget> unavailable = new List<UnavailableTarget>();
+        private readonly List<UnavailableValue> unavailableValues = new List<UnavailableValue>();
         private readonly List<PreviewSource> observationSources = new List<PreviewSource>();
 
         internal AgentPreview(string stimulus, IReadOnlyList<string> callObservations)
@@ -50,6 +51,7 @@ namespace Agenerela
             TargetsLeftOutByCategory = leftOutByCategory.AsReadOnly();
             TargetsUnlisted = unlisted.AsReadOnly();
             TargetsUnavailable = unavailable.AsReadOnly();
+            ValuesUnavailable = unavailableValues.AsReadOnly();
             ObservationSources = observationSources.AsReadOnly();
         }
 
@@ -89,6 +91,15 @@ namespace Agenerela
         /// into <c>none</c> under a flat one. Empty when no handler has such a check.
         /// </summary>
         public IReadOnlyList<UnavailableTarget> TargetsUnavailable { get; }
+
+        /// <summary>
+        /// Each value of an action's parameter a per-value check (<see cref="IValueAvailability"/>)
+        /// rejected, with its reason, as <see cref="DecisionTelemetry.ValuesUnavailable"/> records it
+        /// for a decision (DR-023): a value left out of the schema and the prompt. Empty when no
+        /// handler has such a check. The parameters each offered action asks for, with the values
+        /// offered now, are in <see cref="Request"/>'s schema (<see cref="ActionTargets.Parameters"/>).
+        /// </summary>
+        public IReadOnlyList<UnavailableValue> ValuesUnavailable { get; }
 
         /// <summary>The targets registered by hand in <see cref="Agent.Targets"/>, by id, before any source.</summary>
         public IReadOnlyList<string> RegisteredTargets { get; }
@@ -192,6 +203,7 @@ namespace Agenerela
         {
             available.AddRange(takeable);
             unavailable.AddRange(answer.Unavailable);
+            unavailableValues.AddRange(answer.UnavailableValues);
             var kept = new HashSet<ActionDefinition>(takeable);
             var allowed = new HashSet<ActionDefinition>(answer.Offered);
 
@@ -225,6 +237,10 @@ namespace Agenerela
                     reason = rejected.Length == 0
                         ? "It needs a target, and none offered is one it takes."
                         : $"It needs a target, and its per-target check allows none of those it takes: {rejected}.";
+                }
+                else if (answer.TryGetLeftOut(definition, out because) && because == LeftOutBecause.NoLegalValue)
+                {
+                    reason = $"One of its parameters has no value its per-value check allows: {answer.RejectedValuesPhrase(definition)}.";
                 }
                 else
                 {

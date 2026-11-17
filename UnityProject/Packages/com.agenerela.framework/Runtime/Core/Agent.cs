@@ -1377,8 +1377,17 @@ namespace Agenerela
             // (#244 item 2). The model's own answer stays in ModelDecision.
             var answered = decision;
             decision = DropStrayTarget(decision, ctx, request, telemetry);
+            decision = DefaultArguments(decision, ctx, request, telemetry);
 
             var result = Guard(new GuardInput(ctx, request, reply, decision, call, telemetry) { AvailabilityAnswer = availability }, answered);
+            if (result.Decision != null)
+            {
+                foreach (var argument in result.Decision.Arguments)
+                {
+                    telemetry.Arguments[argument.Key] = argument.Value;
+                }
+            }
+
             if (result.Verdict.HasValue)
             {
                 result = await SayWhatWasStopped(provider, result, ctx, request, call, ct, reset);
@@ -1469,14 +1478,28 @@ namespace Agenerela
             // function of the context, such as a cooldown.
             availability = ActionAvailability.Evaluate(ctx);
             telemetry.TargetsUnavailable.AddRange(availability.Unavailable);
+            telemetry.ValuesUnavailable.AddRange(availability.UnavailableValues);
             var offered = availability.Offered;
             var available = offered;
             bool paired = call.PairTargetsWithActions;
-            if (paired || call.LegalTargets != LegalTargetListing.Off)
+            var takeable = DecisionSchema.Takeable(available, ctx.Targets, availability);
+
+            // An action with a parameter is offered only in the paired schema, and its values reach
+            // a local model only through the prompt's list, as a choice's words do (DR-023). Decided
+            // here once, from the actions pairing can offer, and passed to the schema: an action
+            // with a parameter and no target it can take now is left out, never given an empty branch.
+            bool parameters = DecisionSchema.DeclaresParameters(takeable);
+            if (parameters)
+            {
+                paired = true;
+                options.ListActionsAndTargets = true;
+            }
+
+            if (paired || call.LegalTargets != LegalTargetListing.Off || DecisionSchema.DeclaresParameters(offered))
             {
                 // No example for an action the paired schema cannot offer (DR-020), and none offered
                 // at all when the prompt names the pairs and it has no legal target (#151).
-                available = DecisionSchema.Takeable(available, ctx.Targets, availability);
+                available = takeable;
             }
 
             seen?.SetActions(ctx, call.Choices != null ? ctx.Actions.Definitions : Definitions(), availability, available);
@@ -1559,7 +1582,56 @@ namespace Agenerela
             }
 
             telemetry.TargetIgnored = decision.TargetId;
-            return new AgentDecision(decision.ActionId, TargetRegistry.NoTarget, decision.Statement);
+            return decision.WithTarget(TargetRegistry.NoTarget);
+        }
+
+        // A parameter the model left out takes its declared default when that default is offered
+        // now, and telemetry says which did (DR-023). Only a missing value: one the model wrote is
+        // kept as written, offered or not, and one left out with no default stays out, both for
+        // SchemaLegalityGuard to judge. The model's own answer stays in ModelDecision.
+        private static AgentDecision DefaultArguments(AgentDecision decision, AgentContext ctx, DecisionRequest request, DecisionTelemetry telemetry)
+        {
+            var asked = DecisionSchema.ParametersOf(request.Schema, decision.ActionId);
+            if (asked.Count == 0 || !ctx.Actions.TryGet(decision.ActionId, out var definition, out _))
+            {
+                return decision;
+            }
+
+            List<KeyValuePair<string, string>> arguments = null;
+            foreach (var field in asked)
+            {
+                bool has = decision.TryGetArgument(field.Name, out string value);
+                var parameter = definition.ParameterNamed(field.Name);
+                if (!has && parameter != null && parameter.HasDefault && Contains(field.AllowedValues, parameter.Default))
+                {
+                    value = parameter.Default;
+                    has = true;
+                    telemetry.ArgumentsDefaulted.Add(field.Name);
+                    arguments = arguments ?? new List<KeyValuePair<string, string>>();
+                }
+
+                if (has)
+                {
+                    (arguments = arguments ?? new List<KeyValuePair<string, string>>()).Add(new KeyValuePair<string, string>(field.Name, value));
+                }
+            }
+
+            return telemetry.ArgumentsDefaulted.Count == 0
+                ? decision
+                : new AgentDecision(decision.ActionId, decision.TargetId, decision.Statement, arguments);
+        }
+
+        private static bool Contains(IReadOnlyList<string> values, string value)
+        {
+            foreach (string candidate in values)
+            {
+                if (string.Equals(candidate, value, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         // The stopped decision with what the agent says about it: the developer's line, else the
