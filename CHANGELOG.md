@@ -31,6 +31,22 @@ phase table and the open issues, not here.
   reason when they say no, and the merged or new army is chosen after. A ruler's words no longer fall under the map's
   mode row and legend.
 
+- **Painted Realm: the first sounds** (#20). A small audio layer: `SoundManager.Play("<cue>")` plays a cue from one
+  table, `SoundCues`, on one of four buses (music, effects, interface, voice). Each bus has its volume in Settings,
+  saved with the rest (Interface is new). Nothing plays while the window has no focus, and headless runs and tests make
+  no sound. Six cues were made on the asset server and picked from three candidates each: click, hover, panel open and
+  close, end turn and turn resolves. They play in the menus, the side panels, End turn and a ruled turn's playback. The
+  rest of the list (battle, siege, treaties, events, victory, the ambient loops and more) is named in the table and
+  silent until its sounds come. Settings has a sound test that plays each cue.
+- **Painted Realm: a start menu** (#20). The game opens on a title screen in its own look: the title and large
+  buttons for the keyboard and the mouse (New game, Watch a game, Load a replay, Settings, Credits, Quit) over the
+  Classic painting, which drifts and changes hands behind a veil. A line at the foot says which model the game will
+  use and whether its server answers, asked through the framework's `IModelLifecycle` without holding the menu up;
+  while another session holds the RTX 5080's lock the server is not asked. New game is a framed window with four
+  groups behind tabs (World, Rivals, Rules, Model). A game played or watched to its end is kept for Load a replay,
+  newest first with the date, the turns and who won. New game has a "Your face" picker from the art pack's four
+  neutral faces, and Settings a Voices section for what is coming. The pause menu gained Quit and asks before a game
+  under way is left. Continue shows only when a saved game exists; nothing writes one yet.
 - **Painted Realm: box selection, right-click orders, edge scrolling** (#20). A left-drag on the map chooses every
   army of yours inside the box, Shift-click adds or removes one, and the left panel shows the group. A right click on
   a province orders every chosen army there and names those that cannot go; a left click only selects (it used to

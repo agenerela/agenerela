@@ -654,10 +654,16 @@ soft.
   - Sharp at 4K needs a painting made at 4096 and the province maps baked at 4096. That is art
     work for the art pass, not code.
 
-**The menus (13 November).**
+**The menus (13 November; the start menu, 16 November).**
 - **The main menu** is the Watch scene's first state, not a scene of its own. The painted map
   stays behind it, and "back to the main menu" is a reload of the one scene, with no scene list
   to keep in the build.
+- **Since 16 November it is a title screen**, asked for by the lead ("do a good start menu"): the title
+  and its buttons on the left over a veil that clears to the right, where the painted map drifts and changes
+  hands; a model status line at the foot; New game as a framed window with four tabbed groups; Load a replay;
+  Credits; and a pause menu that asks before a game under way is left. The demo README's
+  ["The start menu"](../../Demos/GreyBoxStrategy/README.md#the-start-menu-16-november) has the detail and why the
+  background is the Classic painting.
 - **New game** chooses watch or rule, your country, the model and the seed. It lists what is
   coming as disabled rows with a note: the map generator, the persona mix, storyteller presets
   and the advisor. That way the lead sees where they will go before they exist. The map generator (#274, #276) the storyteller presets (#280) and the advisor (#300) have since been built and are live rows; the demo README's "Play it" lists what is still coming.

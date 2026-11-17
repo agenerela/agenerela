@@ -100,8 +100,9 @@ namespace GreyBoxStrategy.Realm
     }
 
     /// <summary>
-    /// The menus, over the painted map: the main menu (the game's first screen), New game,
-    /// Settings, the pause menu (Esc in a game), the display countdown, and a notice line.
+    /// The menus, over the painted map: New game, Settings, the pause menu (Esc in a game), the
+    /// display countdown, and a notice line. The title screen and its other windows are in
+    /// <c>ScreenUI.StartMenu.cs</c>.
     /// </summary>
     public sealed partial class ScreenUI
     {
@@ -116,6 +117,7 @@ namespace GreyBoxStrategy.Realm
         private VisualElement Page(string cls, Action back)
         {
             HideMenu();
+            SoundManager.Play(SoundCues.PanelOpen); // a window opens
             menu = new VisualElement(); menu.AddToClassList("menu-veil");
             var card = new VisualElement(); card.AddToClassList("panel"); card.AddToClassList("menu"); card.AddToClassList(cls);
             menu.Add(card);
@@ -127,11 +129,11 @@ namespace GreyBoxStrategy.Realm
             return scroll.contentContainer;
         }
 
-        public void HideMenu() { menu?.RemoveFromHierarchy(); menu = null; MenuBack = null; menuStatus = null; }
+        public void HideMenu() { menu?.RemoveFromHierarchy(); menu = null; MenuBack = null; menuStatus = null; newGameModelStatus = null; ClearMenuItems(); }
 
         private static Button BigButton(string text, string note, Action pressed)
         {
-            var b = new Button(pressed); b.AddToClassList("menu-big");
+            var b = new Button(pressed) { userData = new MenuEntry { Note = note, Press = pressed } }; b.AddToClassList("menu-big");
             b.Add(new Label(text) { pickingMode = PickingMode.Ignore });
             if (note != null) { var n = new Label(note) { pickingMode = PickingMode.Ignore }; n.AddToClassList("menu-big-note"); b.Add(n); }
             return b;
@@ -153,31 +155,55 @@ namespace GreyBoxStrategy.Realm
             return r;
         }
 
-        // ---- the main menu ----
-
-        public void ShowMainMenu(string replayTitle, Action newGame, Action replay, Action settings, Action quit)
-        {
-            var card = Page("main", null);
-            card.Add(new CompassRose { style = { width = 112, height = 112, alignSelf = Align.Center, marginBottom = 6 } });
-            var title = new Label("PAINTED REALM"); title.AddToClassList("menu-title"); card.Add(title);
-            var sub = new Label("Rulers, each a language model playing through the Agenerela framework, contend for a realm: the Classic board of twenty-five provinces, or a world made from a seed.");
-            sub.AddToClassList("menu-sub"); card.Add(sub);
-            card.Add(new GiltRule());
-            card.Add(BigButton("New game", "Watch model rulers, or rule a country against them, on Classic or a generated world", newGame));
-            card.Add(BigButton("Replay", replayTitle + " · plays without a server", replay));
-            card.Add(BigButton("Settings", "Display, UI scale, speed, sound", settings));
-            card.Add(BigButton("Quit", null, quit));
-            card.Add(new GiltRule());
-            var foot = new Label("A demo of the Agenerela framework · GreyBoxStrategy · Esc opens the pause menu in a game"); foot.AddToClassList("src"); foot.style.alignSelf = Align.Center;
-            card.Add(foot);
-        }
-
         // ---- New game ----
 
-        public void ShowNewGame(NewGameChoice choice, Action<NewGameChoice> start, Action back)
+        /// <summary>The names of New game's four groups, as its tabs show them.</summary>
+        public static readonly string[] NewGameGroups = { "World", "Rivals", "Rules", "Model" };
+
+        private readonly Dictionary<string, (Button tab, VisualElement page)> newGameTabs = new Dictionary<string, (Button, VisualElement)>();
+
+        /// <summary>For the Unity CLI and the tests: New game's tabs, and the one that is open.</summary>
+        public (List<string> tabs, string open) NewGameTabs() =>
+            (newGameTabs.Keys.ToList(), newGameTabs.FirstOrDefault(t => t.Value.tab.ClassListContains("on")).Key);
+
+        /// <summary>Opens one of New game's groups. False when New game is not open or has no such group.</summary>
+        public bool ShowNewGameTab(string name)
         {
-            var card = Page("newgame", back);
-            card.Add(Heading("NEW GAME"));
+            if (menu == null || !newGameTabs.ContainsKey(name)) return false;
+            foreach (var t in newGameTabs)
+            {
+                t.Value.tab.EnableInClassList("on", t.Key == name);
+                t.Value.page.style.display = t.Key == name ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// New game as a framed window: how you play on top, then four groups behind tabs (the world, your rivals and
+        /// their personas, the rules, the model), and Start at its foot whichever group is open.
+        /// </summary>
+        public void ShowNewGame(NewGameChoice choice, Action<NewGameChoice> start, Action back, string heading = "NEW GAME")
+        {
+            var window = Page("newgame", back);
+            window.Add(Heading(heading));
+            // What is always in view: the mode. The groups follow, one at a time.
+            var card = new VisualElement();
+            window.Add(card);
+            var tabBar = new VisualElement(); tabBar.AddToClassList("ktabs"); tabBar.AddToClassList("ng-tabs");
+            window.Add(tabBar);
+            newGameTabs.Clear();
+            var groups = new Dictionary<string, VisualElement>();
+            foreach (string g in NewGameGroups)
+            {
+                string name = g;
+                var tab = new Button(() => ShowNewGameTab(name)) { text = g }; tab.AddToClassList("ktab"); tab.AddToClassList("ng-tab");
+                tabBar.Add(tab);
+                var page = new VisualElement(); page.AddToClassList("ng-group");
+                window.Add(page);
+                groups[g] = page;
+                newGameTabs[g] = (tab, page);
+            }
+            VisualElement worldG = groups["World"], rivalsG = groups["Rivals"], rulesG = groups["Rules"], modelG = groups["Model"];
 
             card.Add(Section2("MODE"));
             var watchB = BigButton("Watch", WatchNote(choice.Writs), null);
@@ -194,7 +220,7 @@ namespace GreyBoxStrategy.Realm
             watchB.clicked += () => Mode(false); ruleB.clicked += () => Mode(true);
             var modes = Row(watchB, ruleB); modes.AddToClassList("menu-modes"); card.Add(modes);
 
-            card.Add(Section2("YOUR COUNTRY", "the realm you rule, when you rule"));
+            rivalsG.Add(Section2("YOUR REALM", "the realm you rule, when you rule"));
             // The Classic five by name; on a generated world, its realms by seat, in the colours they will wear:
             // their names come with the world.
             void Crests()
@@ -228,11 +254,14 @@ namespace GreyBoxStrategy.Realm
                     crests.Add(cb);
                 }
             }
-            card.Add(crests);
+            rivalsG.Add(crests);
+            rivalsG.Add(FacePicker());
 
-            card.Add(Section2("THE RULERS", "language models on a server, or the rules' own scripted rulers"));
+            rivalsG.Add(Section2("THE RULERS", "language models on a server, or the rules' own scripted rulers"));
             var rulersNote = new Label(); rulersNote.AddToClassList("src"); rulersNote.style.whiteSpace = WhiteSpace.Normal;
             var model = new TextField("Model") { value = choice.Model }; model.AddToClassList("menu-field");
+            var modelNote = new Label(); modelNote.AddToClassList("src"); modelNote.style.whiteSpace = WhiteSpace.Normal;
+            var modelLine = new Label(); modelLine.AddToClassList("ng-status");
             VisualElement advisorRow = null; Label advisorNote = null;
             void Rulers(bool scripted)
             {
@@ -242,14 +271,18 @@ namespace GreyBoxStrategy.Realm
                 model.style.display = scripted ? DisplayStyle.None : DisplayStyle.Flex;
                 // The advisor is a model: with scripted rulers there is none, and no switch for it.
                 if (advisorRow != null) advisorRow.style.display = advisorNote.style.display = scripted ? DisplayStyle.None : DisplayStyle.Flex;
+                modelNote.text = scripted
+                    ? "Scripted rulers need no model and no server. Choose Models, live in Rivals to play against language models."
+                    : "Every ruler, marshal, advisor and storyteller asks this model, on the server named in the environment the game was started from (AGENERELA_OLLAMA_URL).";
+                modelLine.style.display = scripted ? DisplayStyle.None : DisplayStyle.Flex;
                 rulersNote.text = scripted
                     ? "Scripted: the rules' own rulers, no model and no server. Watching, the game is made at once and replayed; ruling, they are your rivals and answer through the same agents a model would."
                     : "Models: each ruler is a language model on the server; the game is played as you watch.";
             }
             var rulersRow = Steps("Rulers", new[] { "Models, live", ScriptedLabel(choice.Rule) }, choice.Scripted ? 1 : 0, i => Rulers(i == 1));
             scriptedB = rulersRow.Query<Button>().ToList().Last();
-            card.Add(rulersRow);
-            card.Add(rulersNote);
+            rivalsG.Add(rulersRow);
+            rivalsG.Add(rulersNote);
             advisorNote = new Label(); advisorNote.AddToClassList("src"); advisorNote.style.whiteSpace = WhiteSpace.Normal;
             void AdvisorChoice(int i)
             {
@@ -259,15 +292,29 @@ namespace GreyBoxStrategy.Realm
                     : "Advisor off: you plan every turn alone. Switch it on in the game's menu.";
             }
             advisorRow = Steps("Advisor", new[] { "On", "Off" }, choice.Advisor ? 0 : 1, AdvisorChoice);
-            card.Add(advisorRow);
-            card.Add(advisorNote);
+            rivalsG.Add(advisorRow);
+            rivalsG.Add(advisorNote);
             AdvisorChoice(choice.Advisor ? 0 : 1);
+            rivalsG.Add(Section2("THEIR PERSONAS", "each model ruler is dealt one by the seed, and plays and speaks in it"));
+            foreach (var persona in GreyBoxStrategy.Personas.All)
+            {
+                var pr = new VisualElement(); pr.AddToClassList("credit-row");
+                var pn = new Label(char.ToUpperInvariant(persona.Id[0]) + persona.Id.Substring(1)); pn.AddToClassList("credit-name"); pr.Add(pn);
+                var pd = new Label(persona.Personality); pd.AddToClassList("credit-part"); pr.Add(pd);
+                rivalsG.Add(pr);
+            }
+            rivalsG.Add(Coming("Persona mix", "Which personas rule, and how hard they play"));
             var seed = new IntegerField("Seed") { value = choice.Seed }; seed.AddToClassList("menu-field"); seed.style.maxWidth = 190;
             var dice = new Button(() => seed.value = UnityEngine.Random.Range(1, 10000)) { text = "Roll", tooltip = "A new seed: a new map of events and rolls" }; dice.AddToClassList("tbtn"); dice.style.width = 48;
-            card.Add(Row(model, seed, dice));
+            modelG.Add(Section2("THE MODEL", "the language model behind every ruler"));
+            modelG.Add(Row(model));
+            modelG.Add(modelLine);
+            modelG.Add(modelNote);
+            newGameModelStatus = st => { modelLine.text = st.Line; modelLine.tooltip = st.Detail; foreach (string tone in new[] { "good", "warn", "muted" }) modelLine.EnableInClassList(tone, tone == st.Tone); };
+            if (modelStatus != null) newGameModelStatus(modelStatus);
             Rulers(choice.Scripted);
 
-            card.Add(Section2("MAP", "the Classic board, or a world made from the seed: any size, every way of playing"));
+            worldG.Add(Section2("MAP", "the Classic board, or a world made from the seed: any size, every way of playing"));
             var mapNote = new Label(); mapNote.AddToClassList("src"); mapNote.style.whiteSpace = WhiteSpace.Normal;
             var countryOptions = new[] { "By size" }.Concat(Enumerable.Range(GameSetup.MinCountries, GameSetup.MaxCountries - GameSetup.MinCountries + 1).Select(n => n.ToString())).ToArray();
             void MapNote()
@@ -287,11 +334,13 @@ namespace GreyBoxStrategy.Realm
                 sizeRow.SetEnabled(generated); shapeRow.SetEnabled(generated); countriesRow.SetEnabled(generated);
                 MapNote(); Crests();
             }
-            card.Add(Steps("World", new[] { "Classic, painted", "Generated, drawn" }, choice.Generated ? 1 : 0, i => World(i == 1)));
-            card.Add(sizeRow); card.Add(shapeRow); card.Add(countriesRow); card.Add(mapNote);
+            worldG.Add(Steps("World", new[] { "Classic, painted", "Generated, drawn" }, choice.Generated ? 1 : 0, i => World(i == 1)));
+            worldG.Add(sizeRow); worldG.Add(shapeRow); worldG.Add(countriesRow); worldG.Add(mapNote);
+            worldG.Add(Section2("SEED", "the world, the events and every roll come from it: the same seed is the same game"));
+            worldG.Add(Row(seed, dice));
             World(choice.Generated);
 
-            card.Add(Section2("THE TURN", "how a turn plays: armies on the map, land held by force, peace by treaty"));
+            rulesG.Add(Section2("THE TURN", "how a turn plays: armies on the map, land held by force, peace by treaty"));
             // The lead's choice (13 November): both, conquest the default. Lengths are scripted games' (R1b's tuning).
             var victoryNote = new Label(); victoryNote.AddToClassList("src"); victoryNote.style.whiteSpace = WhiteSpace.Normal;
             void Victory(int i)
@@ -346,22 +395,21 @@ namespace GreyBoxStrategy.Realm
                     ? "Writs: each ruler gives a few orders a turn, to its court and to armies awaiting them; armies march, fight and occupy; land changes hands by treaty. Each ruler has a court and a marshal; you watch, or rule one."
                     : "One move: each ruler makes one move a turn, as every measured game so far.";
             }
-            card.Add(Steps("Turn", new[] { "One move", "Writs and armies" }, choice.Writs ? 1 : 0, i => Turn(i == 1)));
-            card.Add(victoryRow);
-            card.Add(victoryNote);
-            card.Add(writsRow);
-            card.Add(writsNote);
-            card.Add(unitsRow);
-            card.Add(generalsRow);
-            card.Add(siegesRow);
-            card.Add(supplyRow);
-            card.Add(armiesNote);
-            card.Add(turnNote);
+            rulesG.Add(Steps("Turn", new[] { "One move", "Writs and armies" }, choice.Writs ? 1 : 0, i => Turn(i == 1)));
+            rulesG.Add(turnNote);
+            rulesG.Add(victoryRow);
+            rulesG.Add(victoryNote);
+            rulesG.Add(writsRow);
+            rulesG.Add(writsNote);
+            rulesG.Add(Section2("ARMIES", "the writs turn's four army rules, each on or off"));
+            rulesG.Add(unitsRow);
+            rulesG.Add(generalsRow);
+            rulesG.Add(siegesRow);
+            rulesG.Add(supplyRow);
+            rulesG.Add(armiesNote);
             Turn(choice.Writs);
 
-            card.Add(Section2("COMING", "not in the game yet"));
-            card.Add(Coming("Persona mix", "Which personas rule, and how hard they play"));
-            card.Add(Section2("STORYTELLER", "a model that makes things happen: events, dilemmas, tales"));
+            rulesG.Add(Section2("STORYTELLER", "a model that makes things happen: events, dilemmas, tales"));
             var presets = StorytellerSettings.Presets;
             int sel = Math.Max(0, presets.ToList().FindIndex(p => p.Name == choice.Storyteller) + 1);
             var presetNote = new Label(); presetNote.AddToClassList("src"); presetNote.style.whiteSpace = WhiteSpace.Normal;
@@ -370,17 +418,19 @@ namespace GreyBoxStrategy.Realm
                 : presets[i - 1].Description + " Dilemmas, events on many, planned tales, and a second call that titles each event.";
             storytellerRow = Steps("Storyteller", new[] { "Off" }.Concat(presets.Select(p => p.Label)).ToArray(), sel,
                 i => { choice.Storyteller = i == 0 ? "off" : presets[i - 1].Name; Note(i); });
-            card.Add(storytellerRow);
+            rulesG.Add(storytellerRow);
             Note(sel);
-            card.Add(presetNote);
+            rulesG.Add(presetNote);
             Turn(choice.Writs);
 
-            menuStatus = new Label(); menuStatus.AddToClassList("menu-status"); card.Add(menuStatus);
+            menuStatus = new Label(); menuStatus.AddToClassList("menu-status"); window.Add(menuStatus);
             var backB = new Button(back) { text = "Back" }; backB.AddToClassList("menu-button"); backB.AddToClassList("quiet");
             startButton = new Button(() => { choice.Model = model.value; choice.Seed = seed.value; start(choice); }) { text = "Start" }; startButton.AddToClassList("menu-button");
             var foot = Row(backB, new VisualElement { style = { flexGrow = 1 } }, startButton); foot.style.marginTop = 10;
-            card.Add(foot);
+            window.Add(foot);
             Mode(choice.Rule);
+            ShowNewGameTab(NewGameGroups[0]);
+            Ornament();
         }
 
         private static VisualElement Section2(string title, string note = null)
@@ -451,15 +501,24 @@ namespace GreyBoxStrategy.Realm
             ew.tooltip = "All: every storyteller event opens a window in the middle of the screen. Mine only: those striking your realm. Off: the chronicle and the map's bubble only.";
             card.Add(ew);
 
-            card.Add(Section2("SOUND", "no sound plays yet; these are kept for when it does"));
+
+            card.Add(Section2("SOUND", "the first sounds; more come with the next set"));
             card.Add(Volume("Master", s.MasterVolume, v => { s.MasterVolume = v; Changed(); }));
             card.Add(Volume("Music", s.MusicVolume, v => { s.MusicVolume = v; Changed(); }));
             card.Add(Volume("Effects", s.EffectsVolume, v => { s.EffectsVolume = v; Changed(); }));
+            card.Add(Volume("Interface", s.InterfaceVolume, v => { s.InterfaceVolume = v; Changed(); }));
             card.Add(Volume("Voices", s.VoiceVolume, v => { s.VoiceVolume = v; Changed(); }));
 
+            // The lead's decisions (painted-realm-direction.md): room for them here before they exist.
+            card.Add(Section2("VOICES", "spoken lines, as the lead decided them"));
+            card.Add(Coming("Rulers", "Off by default; a click on a phrase in the chronicle speaks it"));
+            card.Add(Coming("Storyteller", "On by default: its stories, events and large events read aloud"));
+
+            card.Add(SoundTest()); // every cue, to hear them in one place
             var src = new Label("Saved as you change them, in settings.json in the game's data folder."); src.AddToClassList("src"); card.Add(src);
             var backB = new Button(back) { text = "Back" }; backB.AddToClassList("menu-button"); backB.AddToClassList("quiet");
             var foot = Row(backB); foot.style.marginTop = 10; card.Add(foot);
+            Ornament();
         }
 
         /// <summary>Scripted rulers are your rivals when you rule, and a game made at once and replayed when you watch.</summary>
@@ -548,8 +607,16 @@ namespace GreyBoxStrategy.Realm
         /// <summary>Rule mode on the writs turn: the pause menu offers the first-turn help, through this.</summary>
         public void ShowPauseHelp(Action open) => pauseHelp = open;
 
-        public void ShowPause(Action resume, Action settings, Action mainMenu, string note = null, Func<bool> advisorOn = null, Action<bool> setAdvisor = null)
+        /// <summary>
+        /// The pause menu. With <paramref name="underWay"/> set (what would be lost, in a sentence), leaving for the
+        /// start menu or quitting asks first.
+        /// </summary>
+        public void ShowPause(Action resume, Action settings, Action mainMenu, string note = null, Func<bool> advisorOn = null, Action<bool> setAdvisor = null,
+            Action quit = null, string underWay = null)
         {
+            void Again() => ShowPause(resume, settings, mainMenu, note, advisorOn, setAdvisor, quit, underWay);
+            Action Asked(string title, string yes, Action go) => underWay == null ? go
+                : () => ShowConfirm(title, underWay, yes, "Stay in the game", go, Again);
             var card = Page("pause", resume);
             card.Add(Heading("PAUSED"));
             card.Add(BigButton("Resume", "Esc", resume));
@@ -559,11 +626,15 @@ namespace GreyBoxStrategy.Realm
                 bool on = advisorOn();
                 card.Add(BigButton(on ? "Advisor: on" : "Advisor: off",
                     on ? "A model on your seat proposes each turn's orders. Click: plan alone from the next turn" : "Click: a model on your seat proposes each turn's orders, from the next turn",
-                    () => { setAdvisor(!on); ShowPause(resume, settings, mainMenu, note, advisorOn, setAdvisor); }));
+                    () => { setAdvisor(!on); Again(); }));
             }
             card.Add(BigButton("Settings", null, settings));
-            card.Add(BigButton("Main menu", "Ends this game; a live or rule game lets the RTX 5080 go", mainMenu));
+            card.Add(BigButton("Back to the start menu", "Ends this game; a live or rule game lets the RTX 5080 go", Asked("LEAVE THIS GAME?", "Leave for the start menu", mainMenu)));
+            if (quit != null) card.Add(BigButton("Quit", null, Asked("QUIT THE GAME?", "Quit", quit)));
             if (note != null) { var n = new Label(note); n.AddToClassList("src"); n.style.alignSelf = Align.Center; card.Add(n); }
+            Ornament();
+            TakeMenuItems(card, "menu-big");
+            MenuMove(0);
         }
 
         // ---- the notice line ----

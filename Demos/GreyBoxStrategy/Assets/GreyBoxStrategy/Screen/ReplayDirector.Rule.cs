@@ -303,6 +303,7 @@ namespace GreyBoxStrategy.Realm
         public void EndTurn()
         {
             if (rule == null || rule.WaitingFor != RuleSession.Waiting.Orders || ui.OrdersRequest == null) return;
+            SoundManager.Play(SoundCues.EndTurn);
             if (rule.Writs)
             {
                 // Your plan for the turn; armies with a writ and no order hold, as the rules hold them.
@@ -492,6 +493,7 @@ namespace GreyBoxStrategy.Realm
         /// <summary>A turn about to play back: the orders panel says so and offers nothing.</summary>
         private void RuleResolving(int turn)
         {
+            SoundManager.Play(SoundCues.TurnResolves);
             ui.SetThinking(false);
             ui.HideOffer();
             ui.OrdersRequest = null;
