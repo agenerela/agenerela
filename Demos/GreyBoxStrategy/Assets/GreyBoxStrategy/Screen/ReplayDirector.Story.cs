@@ -87,7 +87,7 @@ namespace GreyBoxStrategy.Realm
             }
             bool open = true;
             ui.ShowEvent(e, storyQueue.Place(e), () => open = false);
-            bool waits = StoryCards.Waits(viewer, autoOrders);
+            bool waits = StoryCards.Waits(viewer, autoOrders || autoplaying);
             float shut = Time.unscaledTime + StoryCards.StaySeconds(card, speed);
             // Skip never waits: a jump ahead (skipUntilTurn) closes the window at once.
             while (open && skipUntilTurn <= e.Turn && (waits || Time.unscaledTime < shut)) yield return null;

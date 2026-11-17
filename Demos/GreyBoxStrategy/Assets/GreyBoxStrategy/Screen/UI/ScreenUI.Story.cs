@@ -60,12 +60,6 @@ namespace GreyBoxStrategy.Realm
 
         // ---- the event card ----
 
-        /// <summary>
-        /// The one place a storyteller event's picture comes from: null leaves the window's picture frame empty. The art
-        /// session's catalogue plugs in here (an event's template, title and province in, a texture out).
-        /// </summary>
-        public static Func<EventRecord, Texture2D> EventPicture = _ => null;
-
         /// <summary>The setting "Event windows", from the game's settings.</summary>
         public EventWindows EventWindowsSetting = EventWindows.All;
 
@@ -94,15 +88,17 @@ namespace GreyBoxStrategy.Realm
             }
             var head = new VisualElement(); head.AddToClassList("panel-head");
             var t = new Label($"THE CHRONICLE · TURN {r.Turn}" + (place != null ? $" · {place}" : "")); t.AddToClassList("panel-title"); head.Add(t);
+            // RESERVED: the speaker button. The storyteller's stories will be read aloud by default once voice lands (the
+            // lead, 17 November); its button goes in this slot, left of the close button. Not built yet.
+            var speaker = new VisualElement { name = "story-speaker" }; speaker.AddToClassList("story-speaker"); head.Add(speaker);
             var close = new Button(DismissEvent) { text = "×", tooltip = "Close (Esc)" }; close.AddToClassList("tbtn"); head.Add(close);
             eventCard.Add(head);
             var body = new ScrollView(); body.AddToClassList("event-body"); eventCard.Add(body);
 
-            // The picture: a framed slot until generated event pictures arrive (EventPicture).
-            var picture = new VisualElement(); picture.AddToClassList("story-picture");
-            var tex = EventPicture?.Invoke(r);
-            if (tex != null) picture.style.backgroundImage = tex;
-            else { var hint = new Label("A picture of the event will hang here"); hint.AddToClassList("story-picture-hint"); picture.Add(hint); }
+            // The picture, from the art pack (ScreenUI.Art.cs); an event it has none for keeps the empty frame.
+            var picture = new Image { scaleMode = ScaleMode.ScaleAndCrop }; picture.AddToClassList("story-picture");
+            picture.image = EventPicture(r.Template);
+            if (picture.image == null) { var hint = new Label("A picture of the event will hang here"); hint.AddToClassList("story-picture-hint"); picture.Add(hint); }
             body.Add(picture);
             var kicker = new Label(card.Kicker); kicker.AddToClassList("story-kicker"); body.Add(kicker);
             var big = new Label(card.Title); big.AddToClassList("story-title"); body.Add(big);
@@ -132,7 +128,11 @@ namespace GreyBoxStrategy.Realm
             var ok = new Button(DismissEvent) { text = card.Tale ? "So the tale goes" : "So be it", tooltip = "Close (Enter or Esc)" };
             ok.AddToClassList("menu-button"); ok.AddToClassList("story-ok");
             // The button stays in sight at the window's foot, outside the scroll, as End turn does in the council.
-            var foot = new VisualElement(); foot.AddToClassList("story-foot"); foot.Add(ok);
+            var foot = new VisualElement(); foot.AddToClassList("story-foot");
+            // RESERVED: two or three choice buttons. Events on your own realm will offer choices later (the lead,
+            // 17 November); they go in this row, above So be it, and the window waits for one. Not built yet.
+            var choices = new VisualElement { name = "story-choices" }; choices.AddToClassList("story-choices"); foot.Add(choices);
+            foot.Add(ok);
             // Behind it: what the window above leaves out, never repeated, and never more than the fog allows.
             body.Add(SectionHead("BEHIND IT", "the storyteller's call and the framework's decisions"));
             var sub = new Label($"{(r.Options.Count > 0 ? "A dilemma" : r.Template == EventRules.Omen ? "An omen" : "An event")} · {r.Template.Replace('_', ' ')} on {Target(r)}" +

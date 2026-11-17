@@ -58,13 +58,16 @@ namespace GreyBoxStrategy.Screen.Tests
         }
 
         [Test]
-        public void A_story_with_no_effect_is_a_tale_and_takes_the_banner()
+        public void A_story_with_no_effect_is_a_tale_and_opens_the_window_too()
         {
             var tale = StoryCards.For(Omen("kesh"), "kesh", Name, Name);
             Assert.That(tale.Tale, Is.True);
             Assert.That(tale.Kicker, Is.EqualTo("A TALE"));
             Assert.That(tale.Struck.Single().Effects, Is.Empty);
-            Assert.That(StoryCards.Show(tale, EventWindows.All), Is.EqualTo(StoryShow.Banner));
+            Assert.That(StoryCards.Show(tale, EventWindows.All), Is.EqualTo(StoryShow.Window), "every event, tales too, so each is seen");
+            var elsewhere = StoryCards.For(Omen("valen"), "kesh", Name, Name);
+            Assert.That(StoryCards.Show(elsewhere, EventWindows.MineOnly), Is.EqualTo(StoryShow.Banner), "mine only: a tale elsewhere is the banner");
+            Assert.That(StoryCards.Show(elsewhere, EventWindows.Off), Is.EqualTo(StoryShow.Bubble));
             Assert.That(StoryCards.For(Windfall("kesh"), "kesh", Name, Name).Tale, Is.False);
         }
 
@@ -104,11 +107,12 @@ namespace GreyBoxStrategy.Screen.Tests
         }
 
         [Test]
-        public void The_window_waits_only_when_you_rule_and_are_not_skipping()
+        public void Every_window_stops_the_turn_unless_turns_are_skipped()
         {
             Assert.That(StoryCards.Waits("kesh", skipping: false), Is.True);
+            Assert.That(StoryCards.Waits(null, skipping: false), Is.True, "watching too: the lead checks each one");
             Assert.That(StoryCards.Waits("kesh", skipping: true), Is.False, "never blocks Skip or autoplay");
-            Assert.That(StoryCards.Waits(null, skipping: false), Is.False, "watching, it closes by itself");
+            Assert.That(StoryCards.Waits(null, skipping: true), Is.False);
         }
 
         [Test]

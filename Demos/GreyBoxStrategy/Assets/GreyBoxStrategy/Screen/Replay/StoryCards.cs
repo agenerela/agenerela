@@ -150,22 +150,24 @@ namespace GreyBoxStrategy.Replay
         }
 
         /// <summary>
-        /// Where an event shows. An event with an effect opens the window, a tale the banner; "mine only" keeps both for
-        /// what strikes your own realm (while you watch, no realm is yours); otherwise it is the map's bubble, as before.
+        /// Where an event shows. All: every event, tales too, opens the window. Mine only: what strikes your realm opens
+        /// it, a tale elsewhere is the banner (while you watch, no realm is yours). Otherwise the map's bubble, as before.
         /// The chronicle has every one of them under every setting.
         /// </summary>
         public static StoryShow Show(StoryCard card, EventWindows setting)
         {
-            bool shown = setting == EventWindows.All || (setting == EventWindows.MineOnly && card.Mine);
-            if (!shown) return StoryShow.Bubble;
-            return card.Tale ? StoryShow.Banner : StoryShow.Window;
+            // Every event in its window, tales too, so each one is seen and stops the turn (the lead, 17 November).
+            if (setting == EventWindows.All || (setting == EventWindows.MineOnly && card.Mine)) return StoryShow.Window;
+            // Mine only: a tale elsewhere still shows, as the banner that never stops the turn.
+            if (setting == EventWindows.MineOnly && card.Tale) return StoryShow.Banner;
+            return StoryShow.Bubble;
         }
 
         /// <summary>
-        /// Whether the turn waits for you to dismiss the window: only when you rule a realm, and never while turns are
-        /// being skipped or played for you. Watching, the window closes itself.
+        /// Whether the turn waits for you to dismiss the window: always, ruling or watching ("I want to check them and see
+        /// each one", the lead, 17 November), except while turns are skipped or played for you (Skip, autoplay).
         /// </summary>
-        public static bool Waits(string viewer, bool skipping) => viewer != null && !skipping;
+        public static bool Waits(string viewer, bool skipping) => !skipping;
 
         /// <summary>
         /// How long a window nobody has to dismiss stays, in seconds: time to read the title and the story at 1×, less at

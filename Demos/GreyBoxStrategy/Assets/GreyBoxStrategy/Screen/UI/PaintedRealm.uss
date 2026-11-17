@@ -677,3 +677,11 @@
 .story-foot { flex-shrink: 0; align-items: center; padding: 6px 0 8px 0; border-top-width: 1px; border-top-color: rgba(201, 164, 90, 0.3); background-color: rgb(30, 23, 15); }
 .story-foot > .story-ok { margin: 0; }
 .tale-strip .fold-more { margin-top: 3px; color: rgb(110, 60, 20); -unity-font-style: bold-and-italic; }
+/* 17 November: the art pack's pictures get room; the window is wider and the picture taller */
+.story-window { width: 680px; }
+.compact .story-window { width: 560px; }
+.story-picture { height: 280px; }
+.compact .story-picture { height: 170px; }
+/* reserved slots, empty until built: the speaker button in the head, the choice buttons above So be it */
+.story-speaker { flex-direction: row; flex-shrink: 0; }
+.story-choices { flex-direction: row; justify-content: center; flex-wrap: wrap; }
