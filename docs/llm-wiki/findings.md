@@ -4558,3 +4558,92 @@ the statement.
 where the value matters. A wording that brings the parameter arm back to pair-list's score, which
 would say the 14 answers are the line's length and not the field. A second interim run that does
 not reproduce 331 against 309.
+
+### The storyteller's strength as a parameter against bundled ids: equally legal, no closer to the game's state, majors moved from gifts onto blows, for 0.09 s and 5.5 tokens more a decision (16 November 2026)
+
+DR-023's question 5. GreyBoxStrategy's storyteller (#20) chooses how hard four of its events strike
+(`windfall`, `bad_harvest`, `plague`, `volunteers`): `minor` about half the usual amount, `major`
+about one and a half times it, with one rule, "no two major events in a row, whoever they strike".
+Two arms, the same events, rule and amounts (`GameRules.EventStrength`, off by default; tests hold
+the two forms landing the same event from the same reply):
+
+- **bundled**: `default+storyteller+strength-bundled`, two actions an event (`windfall_minor`,
+  `windfall_major`), the major ones left out of the schema after a major;
+- **param**: `default+storyteller+strength-param`, one action with a `strength` parameter, no
+  default, its `major` value left out by the per-value check after a major.
+
+**Conditions.** `personas` table, five `qwen3.5:4b` seats and the storyteller, RTX 5080 (Docker
+Ollama 0.40.14) under the card's lock, seeds 1 to 20, the arms interleaved in blocks of five seeds
+(bundled first in blocks 0 and 2, param first in 1 and 3), one Unity batch run and lock hold per
+arm-block, 16 November 20:05 to 21:10 local, every block whole on its first try. Paired by seed;
+"beyond" when the 95% interval excludes 0. Kit and data: `.scratch/storyteller-params/` in the
+lead's main checkout (`strength_report.py` for the strength rows, `compare.py` for the game).
+
+| Measure (per game, paired by seed) | bundled | param | param − bundled | 95% interval | |
+|---|---:|---:|---:|---:|---|
+| Legal answers | 100% | 100% | 0 | 0 to 0 | within |
+| Contained, pipeline errors, bare-value statements | 0% | 0% | 0 | | within |
+| Major share of events with a strength | 14% | 17% | +2 | −4 to +7 | within |
+| Major on blows to the leader | 22% | 33% | +14 | −0 to +27 | within |
+| Major on blows to the others | 9% | 24% | +13 | +1 to +25 | **beyond** |
+| Major on gifts to the weaker | 10% | 0% | −12 | −18 to −5 | **beyond** |
+| Major on gifts to the stronger | 16% | 5% | −12 | −22 to −2 | **beyond** |
+| Strength follows standing (r, per game) | 0.01 | 0.06 | +0.08 | −0.05 to +0.21 | within |
+| Story agrees with strength (word count) | 76% | 74% | −4 | −20 to +12 | within |
+| Statements naming `minor` or `major` | 3% | 12% | +9 | +6 to +13 | **beyond** |
+| Titles present | 49% | 53% | +3 | −5 to +10 | within |
+| Kinds of event a game | 5.85 | 6.45 | +0.60 | +0.16 to +1.04 | **beyond** |
+| Events a game | 19.9 | 22.5 | +2.6 | −0.4 to +5.5 | within |
+| Calls where the value check left `major` out | – | 12% | | | |
+| Seconds a decision, median | 0.80 | 0.89 | +0.09 | +0.06 to +0.13 | **beyond** |
+| Prompt tokens, mean | 1,408 | 1,375 | −31 | −50 to −13 | **beyond** |
+| Completion tokens, mean | 52.8 | 58.3 | +5.5 | +4.3 to +6.7 | **beyond** |
+
+Major by event, all 20 games: bundled `bad_harvest` 20/74, `volunteers` 18/80, `windfall` 4/75,
+`plague` 0/72; param `bad_harvest` 51/94, `volunteers` 3/88, `windfall` 0/58, `plague` 0/78.
+Seconds at p90: 1.26 and 1.29. In the game: turns with no change 17% → 23% and stories replaced by
+the invented-history check 1% → 4%, both beyond; value tracks standing −0.25 → −0.37, beyond (the
+leaders lose more, from the harder harvests); wars, battles, eliminations, the map's Gini, lead
+changes and the character test (aggression eta² 0.83 and 0.77, p 0.000 both) within or unchanged.
+
+- **The grammar and the checks held in both forms.** Every answer legal, none contained, no
+  pipeline error, no reply without a strength, no statement that was a bare value. In the smoke
+  game, read by hand, `strength` came before `statement` in all 19 replies carrying one.
+- **The parameter form does not make strength follow the game.** Neither form ties strength to a
+  country's standing (r 0.01 and 0.06). Blows to the leader are major a third of the time in
+  param against a fifth in bundled, a difference just inside its interval.
+- **What it changes is where the majors go, by kind of event, not by state.** With one id to read,
+  the model makes harvests major half the time and almost never anything else; with two ids, it
+  spreads its majors over harvests and volunteers. So the param arm's gifts are almost all minor,
+  its blows harder, and the leaders lose more.
+- **The story mentions the strength more often**: 12% of statements say "a major bad harvest"
+  against 3%. The word stays out of the field's place, so this is wording, not a leak.
+- **Cost:** +0.09 s on the median decision (11%), +5.5 completion tokens (10%), 31 prompt tokens
+  fewer (the event is listed once, not twice). Legal answers cost nothing.
+
+**Verdict.** On this table the parameter form does nothing the bundled ids do not: the same
+legality, no closer tie to the game's state, the same share of majors. It moves the majors from
+gifts onto blows, and costs about a tenth more time and output tokens a decision. 20 games can tell
+the cost and the shift by kind of event. They cannot tell whether either form follows the state:
+r sits near 0 in both with an interval of ±0.13, and blows to the leader are at the interval's
+edge. A form that did follow the state would need a measure built for it, or more games.
+
+**A limit of the parameter form found here, for DR-023's second step.** A per-value check
+(`IsAvailableValue`) sees the action and the value, never the target. So a rule that depends on
+both, "not major on the same country twice", cannot be said in the parameter form, while the
+bundled form says it through the target check of `windfall_major`. This A/B used a rule without a
+target so the two arms matched. DR-023 records it beside `also_targets`; nothing is built around
+it.
+
+**What it means.** No default changes: the storyteller asks no strength unless a table sets
+`+strength-bundled` or `+strength-param`. For a developer, both forms work on the 4B; bundled ids
+are cheaper and can carry a per-target rule, and a parameter keeps the action list short. The
+model's choice of strength looks driven by the event's kind in either form.
+
+**Not measured.** `qwen3.5:2b`. A rule per target, which only the bundled form can carry. A
+strength given a default. More than two values. Ollama's native path, which would sort the field
+after the statement.
+
+**What would change this.** A run where one form ties strength to standing beyond its interval.
+A strength measure that needs no word counts (the agreement row counts big and small words).
+Living Vale's quantity A/B (DR-023's measurement 5) going the other way.

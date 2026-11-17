@@ -2499,7 +2499,9 @@ A/B on the evaluation sets is in findings, 16 November. The two things the table
 followed the same day: `DecisionTelemetry.OrderLost`, and `ProviderCapabilities.SupportsPairedSchema`,
 on which an agent refuses an action with a parameter at setup. Not built: `also_targets`
 (question 3) and an open number range. Nothing becomes a default before the measurement in
-question 5.
+question 5. *Question 5's A/B ran on 16 November 2026 (findings, that day): both forms equally
+legal, the parameter form no closer to the game's state, for 0.09 s and 5.5 completion tokens more
+a decision. No default changed; the lead decides.*
 
 **The lead's questions, each decided as proposed** (the table further down gives the reasons):
 
@@ -2558,6 +2560,7 @@ DR-022 already covers the cheaper half: a choice *among options given with the c
 | Place in the reply | After `statement`; between `target` and `statement`; before `target` | **After `target`, before `statement`**, in declaration order: `action`, `target`, parameters, `statement`. Measured: after `statement`, the value lands in the statement. Before `target` would move the grounding guard's field and the measured `action`-then-`target` pair; there is no evidence for it |
 | Ollama's native path, which sorts keys | Rename fields so they sort right; reply as an array (`prefixItems`); detect it and say so | **Detect it and record it** (5 November's "detect it" suggestion): the provider compares the reply's key order with the schema's, and telemetry marks `OrderLost`. Renaming a developer's fields, or changing the reply's format, is out of proportion. Recommend rendered-path models (the `qwen3.5` family) for parameters in the docs. *As built (16 November 2026): **flagged, never refused**. The grammar still held every value, so the decision is legal; refusing it would make every native-path model unusable for a fault that is the server's, and the game can read the flag. The parser makes the comparison, not the provider, so it holds for any provider, and it covers every field, so `statement` before `target` on an agent with no parameter is flagged too* |
 | Several targets | An array replacing `target`; `target` plus `also_targets` (0 to N−1, items from the action's legal targets); groups only (#298) | **`target` plus `also_targets`**, second step. `TargetId` stays the first target, so every existing reader, the grounding guard, `TargetCategoryGuard` and the per-target checks keep working on it. The extra ones are checked by category and availability, de-duplicated by the parser (the probe could not show `uniqueItems` enforced), and not scored by grounding until the guards area (#138) says how |
+| A value's check and the target (found in question 5's A/B, 16 November 2026) | `IsAvailableValue(ctx, parameter, value)` as built, blind to the target; a check given the target too | **Recorded, not built**: the check sees no target, so "not major on the same country twice" cannot be said as a parameter, while a bundled id says it through its target check. To be settled with `also_targets` in the second step, where a check per (target, value) would need a branch per target in the paired schema |
 | Which schema carries them | Flat, with a "not used" value in every parameter enum; paired only | **Paired only**: offering an action with a parameter makes that call's schema paired (DR-020 decision 7), each branch carrying its action's own parameters in order, `required` and `additionalProperties: false`. Actions share a branch only if their targets *and* parameters match. A call with no parameters is byte-identical to today |
 | How a local model learns them | The schema; the prompt | **The prompt, always**, as for choices (DR-022): an action with parameters is listed with them whatever `ListActionsAndTargets` says ("`blight`: a country falls sick. strength: minor or major."). Its example shows them (`ExampleArguments`), so the few-shot block demonstrates the field rather than leaving it to the schema the model never reads |
 | Parsing | Lenient (bad value → default); strict | **Strict, with a declared default as the only fallback**: a missing or illegal value takes `Default` if the parameter has one, recorded as `ArgumentsDefaulted`; with none, `SchemaLegalityGuard` rejects, as it rejects a pair the grammar should have prevented. Numbers parse with the invariant culture. *Narrowed in review of the first step (16 November 2026, the tech lead): `Default` covers only a **missing** value. A value of the wrong type (a float, a boolean, an array, an integer past 64 bits) makes the reply unreadable, an `UnreadableReply` pipeline error, even when the parameter has a default; a string the parameter does not declare or the request did not offer is rejected by `SchemaLegalityGuard`. And `Execute` never applies `Default`: a hand-built decision missing a required value is refused.* |
@@ -2579,7 +2582,7 @@ rule 2):
 2. **No change where none is declared.** A test holds the evaluation set's schema and prompt,
    as `EvalRunner` sends them, byte-identical. No A/B is owed for the 76 curated or the 389 interim
    prompts, since none declares a parameter.
-3. **GreyBoxStrategy's storyteller (#20).**
+3. **GreyBoxStrategy's storyteller (#20).** *Run 16 November 2026, findings that day.*
    - Arms: `windfall_major` ids against a `strength` parameter, the same templates, seeds and
      table.
    - 20 games an arm, `qwen3.5:4b` (the demo rule); the 2B only if the lead asks.
