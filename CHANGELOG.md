@@ -42,6 +42,11 @@ phase table and the open issues, not here.
   newest first with the date, the turns and who won. New game has a "Your face" picker from the art pack's four
   neutral faces, and Settings a Voices section for what is coming. The pause menu gained Quit and asks before a game
   under way is left. Continue shows only when a saved game exists; nothing writes one yet.
+- **Painted Realm: box selection, right-click orders, edge scrolling** (#20). A left-drag on the map chooses every
+  army of yours inside the box, Shift-click adds or removes one, and the left panel shows the group. A right click on
+  a province orders every chosen army there and names those that cannot go; a left click only selects (it used to
+  order the march, and a left-drag used to pan). The map pans at the window's edges, a setting on by default.
+
 - **Painted Realm: free orders in rule mode, the rulers deciding while you plan** (#20, the turn rework's first
   slice, second part). With `FreeOrders` on, the model rulers decide from the moment the council opens, and End turn
   waits only for what is left. Your court gives as many orders as gold allows. `Game.Answer` takes one ruler's

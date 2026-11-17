@@ -510,6 +510,7 @@
 .ol-head { flex-direction: row; align-items: center; padding: 6px 10px 3px 10px; font-size: 11px; -unity-font-style: bold; letter-spacing: 2px; color: rgb(226, 194, 122); border-top-width: 1px; border-top-color: rgba(201, 164, 90, 0.18); }
 .ol-row { padding: 3px 10px 4px 10px; }
 .ol-row:hover { background-color: rgba(226, 194, 122, 0.1); }
+.ol-row.pick { background-color: rgba(226, 194, 122, 0.2); border-left-width: 2px; border-left-color: rgb(226, 194, 122); } /* chosen on the map */
 .ol-row.hungry { border-left-width: 3px; border-left-color: rgb(226, 84, 66); }
 .ol-top { flex-direction: row; align-items: center; }
 #ol-name { margin-left: 6px; font-size: 13px; -unity-font-style: bold; flex-shrink: 1; overflow: hidden; }

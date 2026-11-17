@@ -204,9 +204,9 @@ namespace GreyBoxStrategy.Realm
             for (int k = 0; k < shown.Count; k++)
             {
                 var a = shown[k]; var piece = hosts[a.Id];
-                piece.EnableInClassList("chosen", a.Id == SelectedArmy);
+                piece.EnableInClassList("chosen", IsChosen(a.Id));
                 // Scaled about its foot, where it stands on the map; a chosen piece a little larger, as its style has it.
-                float sc = HostScale * (a.Id == SelectedArmy ? 1.15f : 1f);
+                float sc = HostScale * (IsChosen(a.Id) ? 1.15f : 1f);
                 piece.style.transformOrigin = new TransformOrigin(Length.Percent(50), Length.Percent(100));
                 piece.style.scale = new Scale(new Vector3(sc, sc, 1));
                 // Small pieces keep the number and drop the general's initial, so they stay narrow on a far view.
