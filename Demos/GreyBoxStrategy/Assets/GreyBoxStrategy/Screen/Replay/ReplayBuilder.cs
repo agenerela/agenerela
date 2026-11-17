@@ -42,6 +42,14 @@ namespace GreyBoxStrategy.Replay
         {
             map = map ?? MapDefinition.Standard();
             rules = rules ?? RecordedRules();
+            // A free-orders game replays with free orders, the person's court unlimited as it played.
+            if (recording.FreeOrders)
+            {
+                rules = rules.Clone();
+                rules.FreeOrders = true;
+                foreach (var kv in recording.Players.Where(p => p.Value?.Model == "you"))
+                    rules.CourtOrdersOverride[kv.Key] = 1000;
+            }
             var game = new Game(recording.Seed, map, rules);
             // A storyteller game: no random table, the storyteller's rules, its recorded events.
             var story = StoryArms.Rules(recording.StoryArm);

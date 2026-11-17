@@ -129,28 +129,8 @@ namespace GreyBoxStrategy
             var next = new List<CountryRequest>();
             foreach (var request in openRequests)
             {
-                var d = dockets[request.CountryId];
                 var answer = given.TryGetValue(request, out var a) ? new CountryAnswer(request, a.Choice ?? Move.Hold, a.Note) : new CountryAnswer(request, Move.Hold);
-                d.Answers.Add(answer);
-                bool court = request.Moment == Moment.Council;
-                if (Rules.FreeOrders)
-                {
-                    if (court && d.FirstCourt == null) d.FirstCourt = answer.Choice;
-                    if (court) GiveCourtOrder(d, answer.Choice);
-                    if (d.CourtDone && d.Queue == null) d.Queue = new Queue<Army>(FreeArmyQueue(d));
-                }
-                else if (court && d.FirstCourt == null)
-                {
-                    d.FirstCourt = answer.Choice;
-                    // Recalled armies first, in the order recalled, then the rest awaiting orders in the rules' order.
-                    var recalled = d.Recalled.Select(World.FindArmy).Where(x => x != null).ToList();
-                    d.Queue = new Queue<Army>(recalled.Concat(WritLegality.Awaiting(World, d.Country).Where(x => !recalled.Contains(x))));
-                }
-                if (!(court && answer.Choice.Action == Actions.None)) d.Used++;
-                d.Ordered.Add(request.ArmyId == null ? answer.Choice.ToString()
-                    : answer.Choice.Action == Actions.March ? $"{request.ArmyId} to march to {answer.Choice.Target}" : $"{request.ArmyId} to hold");
-
-                var following = NextRequest(d);
+                var following = Take(answer);
                 if (following != null) next.Add(following);
             }
             openRequests = next;
@@ -160,6 +140,61 @@ namespace GreyBoxStrategy
             phase = Phase.AwaitingEnvoys;
             return proposals.Where(p => p.Request != null).Select(p => p.Request).ToList();
         }
+
+        // One answer to one of a realm's requests: what it gives, and the realm's next request, or null when it is done.
+        private CountryRequest Take(CountryAnswer answer)
+        {
+            var request = answer.Request;
+            var d = dockets[request.CountryId];
+            d.Answers.Add(answer);
+            bool court = request.Moment == Moment.Council;
+            if (Rules.FreeOrders)
+            {
+                if (court && d.FirstCourt == null) d.FirstCourt = answer.Choice;
+                if (court) GiveCourtOrder(d, answer.Choice);
+                if (d.CourtDone && d.Queue == null) d.Queue = new Queue<Army>(FreeArmyQueue(d));
+            }
+            else if (court && d.FirstCourt == null)
+            {
+                d.FirstCourt = answer.Choice;
+                // Recalled armies first, in the order recalled, then the rest awaiting orders in the rules' order.
+                var recalled = d.Recalled.Select(World.FindArmy).Where(x => x != null).ToList();
+                d.Queue = new Queue<Army>(recalled.Concat(WritLegality.Awaiting(World, d.Country).Where(x => !recalled.Contains(x))));
+            }
+            if (!(court && answer.Choice.Action == Actions.None)) d.Used++;
+            d.Ordered.Add(request.ArmyId == null ? answer.Choice.ToString()
+                : answer.Choice.Action == Actions.March ? $"{request.ArmyId} to march to {answer.Choice.Target}" : $"{request.ArmyId} to hold");
+            return NextRequest(d);
+        }
+
+        /// <summary>
+        /// Free orders: one realm's answer to one of its open requests, on its own, so each realm decides at its own pace
+        /// (the rulers while the person plans). Returns that realm's next request, or null when it has given every order.
+        /// Once no realm has a request open the treaty proposals are collected: <see cref="CouncilDone"/>, then
+        /// <see cref="TreatyRequests"/> are answered through <see cref="Submit"/>, then <see cref="Resolve"/>.
+        /// </summary>
+        public CountryRequest Answer(CountryAnswer answer)
+        {
+            if (!Rules.FreeOrders) throw new InvalidOperationException("Answer is free orders'; the writs turn takes a round at a time through Submit.");
+            Expect(Phase.AwaitingCouncil);
+            if (answer?.Request == null || !openRequests.Contains(answer.Request))
+                throw new ArgumentException("That request is not open: answer each request once, as the game gave it.");
+            openRequests.Remove(answer.Request);
+            var next = Take(new CountryAnswer(answer.Request, answer.Choice ?? Move.Hold, answer.Note));
+            if (next != null) openRequests.Add(next);
+            if (openRequests.Count == 0)
+            {
+                CollectProposals();
+                phase = Phase.AwaitingEnvoys;
+            }
+            return next;
+        }
+
+        /// <summary>The requests waiting for an answer in this council, one at most for each realm still giving orders.</summary>
+        public IReadOnlyList<CountryRequest> OpenRequests => phase == Phase.AwaitingCouncil && openRequests != null ? openRequests.ToList() : new List<CountryRequest>();
+
+        /// <summary>Free orders: every realm has given its orders; the treaty answers and <see cref="Resolve"/> remain.</summary>
+        public bool CouncilDone => phase == Phase.AwaitingEnvoys;
 
         /// <summary>The wake reason a recalled army is asked with.</summary>
         public const string RecalledReason = "recalled by the court";
