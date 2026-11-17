@@ -34,6 +34,10 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Land traditions measured on generated worlds** (#20). Twelve paired games on `qwen3.5:4b`: a court buys 8 points
+  more of its land's type with the rule on ([+2.4, +13.4]), as on Classic, and the counter 8 points less often
+  ([−13.5, −3.5]), which Classic did not show (findings, 16 November). `LandTraditions` stays off.
+
 - **GreyBoxStrategy's storyteller can choose an event's strength, in two forms, for DR-023's A/B** (#20).
   `GameRules.EventStrength` (off by default; the default game is unchanged) lets four events strike `minor`
   (about half) or `major` (about one and a half times), never two majors in a row. `+strength-bundled` registers
