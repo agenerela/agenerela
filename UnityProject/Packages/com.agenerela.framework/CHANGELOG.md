@@ -790,6 +790,21 @@ While the version stays `0.x`, the public API may change in any release.
   field in the framework's runtime assembly that nothing resets; the three that need no reset
   (`ProviderConfig`'s provider names and built configs, and the queues) say why in it.
 
+- **A prompt set reads an optional target as optional** (#121, after #245/DR-020). `PromptSetChecks`
+  split an action's target two ways, so `needsTarget: false` meant "always `no_target`" and a prompt
+  that gave such an action a target broke `ActionTakesNoTarget`. Since DR-020 there are three
+  states, and that is the middle one: an action requires a target, never takes one, or leaves it
+  optional. `DeclaredAction.takesNoTarget` is new and says the second, mirroring
+  `ActionDefinition.TakesNoTarget`; absent, as it is in every set written so far, the target is
+  optional and either answer is correct. `PromptSet.CreateFor` carries it from the profile's
+  actions, and `CompareWithProfile` reports a set and profile that disagree on it. Label mode
+  offers the same three: every target, `no_target` alone, or `no_target` and every target, so a
+  blind labeller can give the answer the check allows; `LabelChoices.TargetsFor` returns them and
+  replaces `LabelChoices.NeedsTarget`. No set in the repository declares it yet,
+  so no set changes and no run changes: declaring it on an action that never takes a target is a
+  separate change, and one that moves a run's numbers, since the agent then drops a target the
+  model names rather than being scored wrong for it.
+
 ## [0.4.0-preview.1] - 2026-10-29
 
 ### Added
