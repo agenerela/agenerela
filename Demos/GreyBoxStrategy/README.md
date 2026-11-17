@@ -778,11 +778,11 @@ Variant B's empty picture frames are filled, from an art pack made ahead of time
   a blob ([`docs/demos/painted-realm-art/flags-at-14px.png`](../../docs/demos/painted-realm-art/flags-at-14px.png)).
 - **Remaking it:** `ArtSource/art-pack/pack.json` holds each chosen picture's subject, seed and candidate, and
   `ArtSource/art-pack/build_pack.py <candidates>` resizes the chosen candidates into the pack and writes its README.
-- **Tests** (`ArtCatalogueTests`), each seen failing once against a deliberate break: the hash is pinned to a second
-  implementation's numbers; a realm's face does not depend on the order realms are listed in; over 300 seeds and four
-  seatings no two realms share a face (broken by dropping the taken check); every storyteller template, every
-  listed face and every listed event has its picture, at the right shape; a missing picture is null; and a realm's
-  panel hangs the portrait the catalogue chose.
+- **Tests** (`ArtCatalogueTests`): the hash is pinned to a second implementation's numbers; a realm's face does not
+  depend on the order realms are listed in; over 300 seeds and four seatings no two realms share a face; clicking
+  through your own faces never moves a rival's; every storyteller template, every listed face and every listed event
+  has its picture, at the right shape; a missing picture is null; and a realm's panel hangs the portrait the
+  catalogue chose. The three that read the pack were seen failing before the pack existed.
 
 ### The screen, variant B: the inspector and the council (16 November)
 

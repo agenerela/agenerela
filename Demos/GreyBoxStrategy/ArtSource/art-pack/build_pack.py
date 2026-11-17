@@ -24,9 +24,16 @@ PACK = HERE.parent.parent / "Assets/GreyBoxStrategy/Screen/Art/Resources/ArtPack
 LARGE, SMALL, EVENT = (480, 560), (192, 224), (1024, 576)
 
 
+# A thin painted edge line sometimes runs round a picture; 2.5% off every side removes it and keeps the shape.
+INSET = 0.025
+
+
 def save(image, size, path):
     path.parent.mkdir(parents=True, exist_ok=True)
-    image.convert("RGB").resize(size, Image.LANCZOS).save(path, quality=90, optimize=True)
+    w, h = image.size
+    dx, dy = round(w * INSET), round(h * INSET)
+    image = image.convert("RGB").crop((dx, dy, w - dx, h - dy))
+    image.resize(size, Image.LANCZOS).save(path, quality=90, optimize=True)
 
 
 def main():
@@ -36,7 +43,7 @@ def main():
         "# Painted Realm: the art pack",
         "",
         "Pictures made ahead of time on the team's asset server (`tools/comfyui/comfy.py run image`, Z-Image Turbo,",
-        "8 steps) and chosen by looking at two or more candidates each. `ArtCatalogue.cs` says which picture a ruler,",
+        "8 steps) and chosen by looking at two or more candidates each, then trimmed by 2.5% a side and resized. `ArtCatalogue.cs` says which picture a ruler,",
         "a general or an event shows. No picture shows a real person, a named artist's style or any lettering.",
         "",
         "To remake one: `python tools/comfyui/comfy.py run image --set \"prompt=<its prompt>\" --set seed=<its seed>",
