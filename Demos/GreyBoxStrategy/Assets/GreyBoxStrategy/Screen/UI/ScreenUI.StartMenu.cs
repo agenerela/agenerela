@@ -128,6 +128,7 @@ namespace GreyBoxStrategy.Realm
                 int k = menuItems.Count;
                 menuItems.Add(b);
                 b.RegisterCallback<MouseEnterEvent>(_ => SelectMenuItem(k));
+                b.clicked += () => SoundManager.Play(SoundCues.Click);
             }
         }
 
@@ -141,7 +142,9 @@ namespace GreyBoxStrategy.Realm
         private void SelectMenuItem(int k)
         {
             if (menuItems.Count == 0) return;
+            int was = menuSel;
             menuSel = ((k % menuItems.Count) + menuItems.Count) % menuItems.Count;
+            if (menuSel != was && was >= 0) SoundManager.Play(SoundCues.Hover);
             for (int i = 0; i < menuItems.Count; i++) menuItems[i].EnableInClassList("sel", i == menuSel);
             if (menuHint != null) menuHint.text = (menuItems[menuSel].userData as MenuEntry)?.Note ?? "";
             // A long list (the replays) keeps the chosen row in view.
@@ -164,6 +167,7 @@ namespace GreyBoxStrategy.Realm
             if (Root.panel?.focusController?.focusedElement is Button) return false;
             var press = (menuItems[menuSel].userData as MenuEntry)?.Press;
             if (press == null) return false;
+            SoundManager.Play(SoundCues.Click);
             press();
             return true;
         }
@@ -300,6 +304,27 @@ namespace GreyBoxStrategy.Realm
                 faces.Add(b); row.Add(b);
             }
             return row;
+        }
+
+        // ---- Settings: the sound test ----
+
+        /// <summary>Every cue in the table with a Play button, so the lead hears them all in one place; a cue with no sound yet says so.</summary>
+        private static VisualElement SoundTest()
+        {
+            var box = new VisualElement(); box.AddToClassList("sound-test");
+            box.Add(Section2("SOUND TEST", "each sound the game plays; press to hear it at the levels above"));
+            foreach (var cue in SoundCues.All)
+            {
+                var row = new VisualElement(); row.AddToClassList("set-row"); row.AddToClassList("sound-row");
+                var name = new Label(cue.Name) { style = { width = 150 } }; row.Add(name);
+                var when = new Label(cue.When + " · " + cue.Bus.ToString().ToLowerInvariant()); when.AddToClassList("sound-when"); row.Add(when);
+                string id = cue.Name;
+                if (cue.File != null && !cue.Loop) { var play = new Button(() => SoundManager.Play(id)) { text = "Play" }; play.AddToClassList("order-move"); row.Add(play); }
+                else if (cue.File != null) { var play = new Button(() => SoundManager.Music(id)) { text = "Play" }; play.AddToClassList("order-move"); row.Add(play); }
+                else { var tag = new Label("NOT MADE YET"); tag.AddToClassList("tag"); row.Add(tag); }
+                box.Add(row);
+            }
+            return box;
         }
 
         // ---- a confirmation ----

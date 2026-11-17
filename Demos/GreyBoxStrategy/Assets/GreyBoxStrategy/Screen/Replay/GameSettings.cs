@@ -31,6 +31,8 @@ namespace GreyBoxStrategy.Replay
         public int FrameCap;
         public float PlaybackSpeed = 1f;
         public float MasterVolume = 0.8f, MusicVolume = 0.6f, EffectsVolume = 0.8f, VoiceVolume = 0.8f;
+        /// <summary>The interface bus: clicks, hovers, windows. Below the effects by default, so the menus never shout.</summary>
+        public float InterfaceVolume = 0.6f;
         /// <summary>Which storyteller events open a window in the middle of the screen: all, those striking your realm, none.</summary>
         public EventWindows EventWindows = EventWindows.All;
 
@@ -49,6 +51,7 @@ namespace GreyBoxStrategy.Replay
             if (!Enum.IsDefined(typeof(EventWindows), s.EventWindows)) s.EventWindows = EventWindows.All;
             s.MasterVolume = Clamp01(s.MasterVolume); s.MusicVolume = Clamp01(s.MusicVolume);
             s.EffectsVolume = Clamp01(s.EffectsVolume); s.VoiceVolume = Clamp01(s.VoiceVolume);
+            s.InterfaceVolume = Clamp01(s.InterfaceVolume);
             return s;
         }
 

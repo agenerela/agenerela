@@ -692,6 +692,10 @@
 .face-pick { width: 52px; height: 64px; margin: 2px 8px 2px 0; padding: 0; border-width: 2px; border-color: rgba(201, 164, 90, 0.35); border-radius: 0; background-color: rgb(35, 26, 16); -unity-background-scale-mode: scale-and-crop; color: rgb(234, 223, 198); }
 .face-pick:hover { border-color: rgb(210, 173, 98); }
 .face-pick.pick { border-color: rgb(226, 194, 122); border-width: 3px; }
+/* Settings: the sound test */
+.sound-row { min-height: 26px; }
+.sound-when { flex-grow: 1; flex-shrink: 1; font-size: 12px; -unity-font-style: italic; color: rgb(194, 179, 147); white-space: normal; }
+.sound-row > .order-move { margin: 0; }
 /* ==== Nothing is cut off at the bottom (#20, the lead on 16 November). Nothing is ever half shown: a list ends on a
    whole row or scrolls with its scrollbar (and a fade at its foot while more lies below); every panel keeps its bottom
    padding; a panel never runs under another or off the window. The rules no line here can say (a window no taller

@@ -132,6 +132,23 @@ language model through the framework, fighting over 25 provinces on a painted se
   held (and by whom), the server cannot be reached, or the key is refused. A game that stops
   mid-way says so across the top of the map.
 
+### The first sounds (17 November)
+
+Six sounds play: a click and a soft hover on the menus' buttons, a page for a window or side panel opening and
+closing, a struck chime when you end your turn, and a quill and a turned page as your turn plays out.
+
+- **One table** (`Screen/Replay/SoundCues.cs`) lists every cue: its file, its bus, its level and where it plays.
+  Swap a sound by replacing its file or editing its line. The whole first list is named there; the cues still without a
+  sound play nothing until theirs is added, so other parts of the game can hook them now
+  (`SoundManager.Play(SoundCues.Battle)`).
+- **Four buses** (music, effects, interface, voice), each with its volume in Settings next to the master. The
+  interface sits below the effects by default, and a hover is barely there.
+- **Nothing plays when the window has no focus.** In batch mode and the tests no manager is made, so they need no
+  audio device and make no sound.
+- **Settings → Sound test** plays each cue at the levels above it.
+- How each sound was made (prompt, seed, workflow) and how it was chosen without listening:
+  [`Assets/GreyBoxStrategy/Screen/Audio/README.md`](Assets/GreyBoxStrategy/Screen/Audio/README.md).
+
 ### The start menu (16 November)
 
 The game opens on a title screen in the game's own look, not on a card of settings.

@@ -331,6 +331,7 @@ namespace GreyBoxStrategy.Realm
         }
         public void OpenCountry(string id)
         {
+            SoundManager.Play(SoundCues.PanelOpen);
             var persona = game.Players.TryGetValue(id, out var pl) ? pl.Persona : null;
             GreyBoxStrategy.Persona p = null;
             try { if (persona != null) p = GreyBoxStrategy.Personas.Named(persona); } catch (ArgumentException) { }
@@ -350,6 +351,7 @@ namespace GreyBoxStrategy.Realm
         }
         public void OpenProvince(int province)
         {
+            SoundManager.Play(SoundCues.PanelOpen);
             selected = province; sideCountry = null; map.SetSelected(province);
             ui.ShowProvince(province, shown, played);
         }
