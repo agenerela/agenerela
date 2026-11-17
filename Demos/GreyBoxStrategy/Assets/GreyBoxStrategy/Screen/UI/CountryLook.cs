@@ -230,10 +230,7 @@ namespace GreyBoxStrategy.Realm
     public sealed class Icon : VisualElement
     {
         private readonly IconKind kind;
-        private Color tint = new Color32(194, 179, 147, 255);
-        private bool tinted;
-        /// <summary>The icon's colour. Set, it wins over the stylesheet's colour, so an icon can be lit or dimmed one by one.</summary>
-        public Color Tint { get => tint; set { tint = value; tinted = true; MarkDirtyRepaint(); } }
+        public Color Tint = new Color32(194, 179, 147, 255);
 
         public Icon(IconKind kind, float size = 12)
         {
@@ -248,7 +245,7 @@ namespace GreyBoxStrategy.Realm
             var r = contentRect; float s = r.width / 16f;
             Vector2 P(float x, float y) => new Vector2(r.x + x * s, r.y + y * s);
             var p = ctx.painter2D;
-            var c = tinted ? tint : resolvedStyle.color.a > 0 ? resolvedStyle.color : tint;
+            var c = resolvedStyle.color.a > 0 ? resolvedStyle.color : Tint;
             p.fillColor = c; p.strokeColor = c; p.lineWidth = 1.5f * s;
             void Poly(params float[] xy) { p.BeginPath(); p.MoveTo(P(xy[0], xy[1])); for (int i = 2; i < xy.Length; i += 2) p.LineTo(P(xy[i], xy[i + 1])); p.ClosePath(); p.Fill(); }
             switch (kind)

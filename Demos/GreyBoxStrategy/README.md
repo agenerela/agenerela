@@ -89,7 +89,8 @@ language model through the framework, fighting over 25 provinces on a painted se
    - A peace offer to you opens the envoy's card: **Accept** or **Refuse**.
    - **Report** shows what your court tells you, the same lines a model ruler reads.
    - **Fog of war:** you see what your court knows. Other countries' treasuries and stability
-     are hidden, and so are garrisons and forts beyond your borders. What rivals do and say is
+     are hidden, and so are garrisons and forts beyond your borders, except where one of your
+     armies stands, besieging or passing through: it sees the walls. What rivals do and say is
      shown as it happens: their decisions open in the inspector during the game. What their
      courts tell them (their treasuries) opens when the game is over. The design page has the
      full rule.
@@ -746,24 +747,6 @@ a hungry one none from its hunger line.
 - with both on, over four scripted games: sieges begin and end, an ended siege is occupied by its besieger and has no
   tag, every turn's end tags each siege with the game's own turns, every army has its stores at every moment, and a
   hungry army shows the warning to you and not to a rival (broken by not reading the line of a siege that ended).
-
-### The screen, variant B: the panels (16 November)
-
-Slice 2: the province, army and realm views on the left are built from one kit (`ScreenUI.Rows.cs`).
-- **Header band:** a large crest, a portrait frame (the persona's face where the game has one, an empty frame
-  otherwise), the name and a line under it.
-- **Tabs with icons**, each remembered per kind of view:
-  - **Army:** Army, General, Orders, Battles.
-  - **Province:** Holding, Land (generated worlds), Orders (rule mode) or Attack (watch mode), History.
-  - **Realm:** What you know (Overview for your own), Ruler, Decisions.
-- **Rows:** an icon, a label, then a bar (each unit type), pips (forts, stores as loaves, stability) or nothing, and
-  the value. The sentence that explains a row is its tooltip.
-- **Fog:** a rival's army shows its size to ten and what it mostly is, never its counts or stores. A province
-  beyond your borders shows "not known" with no pips. A rival's treasury is not known.
-- **Models:** the rows come from `ScreenModels.ArmyRows`, `ProvinceRows` and `RealmRows`, which `ScreenModelsTests`
-  checks.
-- **Icon tints:** an icon's own tint now wins over the stylesheet's colour, so a pip can be lit or dim and a
-  chronicle icon keeps its kind's colour.
 
 ### The screen, variant B: layout (16 November)
 

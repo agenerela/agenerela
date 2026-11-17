@@ -108,7 +108,6 @@ namespace GreyBoxStrategy.Realm
             // ---- outliner (variant B, #20): your armies, sieges and wars at a glance; the ledgers behind a button ----
             outliner = Panel("OUTLINER", "outliner");
             outlinerBody = new ScrollView(); outlinerBody.style.flexShrink = 1; outliner.Add(outlinerBody);
-            outlinerFoot = new VisualElement(); outlinerFoot.AddToClassList("ol-foot"); outliner.Add(outlinerFoot);
             root.Add(outliner);
 
             root.Add(BuildInspector());

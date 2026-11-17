@@ -20,12 +20,13 @@ phase table and the open issues, not here.
 
 ## [Unreleased]
 
-### Added
+### Changed
 
-- **Painted Realm UI, variant B: the panels** (#20). The province, army and realm views on the left share one kit: a
-  header band with crest and portrait frame, tabs with icons, and rows of icon, bar or pips, and value, with the
-  explaining sentence as a tooltip. Fog decides what a rival's rows show. An icon's own tint now wins over the
-  stylesheet's colour.
+- **Painted Realm: an army sees the forts where it stands** (#20). Under the screen's fog, a province beyond your
+  borders showed its garrison and forts as "not known" even with your army besieging it or passing through.
+  `Fog.KnowsProvince` now knows a province where one of your armies stands. The rulers' facts never hid forts.
+
+### Added
 
 - **Painted Realm UI, variant B: the layout** (#20), the lead's choice of 16 November. The top bar is taller, with
   the realm's banner hanging below it, an empty portrait frame, and each number with a large icon and a breakdown in

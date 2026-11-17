@@ -235,6 +235,23 @@ namespace GreyBoxStrategy.Screen.Tests
         }
 
         [Test]
+        public void Your_court_knows_the_forts_where_one_of_your_armies_stands_besieging_or_passing()
+        {
+            var g = Start(); var q = new RealmQueries(g); var s = g.Initial.Clone();
+            var fog = new Fog("kesh", q);
+            int highmoor = g.IndexOf("highmoor");
+            Assert.That(fog.KnowsProvince(s, highmoor), Is.False, "across the map, with no army of ours there");
+            s.Armies.Add(new ArmyState { Id = "valen_host", Owner = "valen", Location = "highmoor", Soldiers = 30 });
+            Assert.That(fog.KnowsProvince(s, highmoor), Is.False, "a rival's army there tells us nothing");
+            s.Armies.Add(new ArmyState { Id = "kesh_host", Owner = "kesh", Location = "highmoor", Soldiers = 30 });
+            Assert.That(fog.KnowsProvince(s, highmoor), Is.True, "our army stands there and sees its walls");
+            Assert.That(fog.Known(s).Contains(highmoor), Is.True);
+            foreach (int n in q.Neighbours(highmoor).Where(n => !fog.KnowsProvince(g.Initial, n)))
+                Assert.That(fog.KnowsProvince(s, n), Is.False, $"{g.ProvinceIds[n]}: only where it stands, not beside it");
+            Assert.That(fog.KnowsProvince(g.Initial, highmoor), Is.False, "another moment, without the army, does not know it");
+        }
+
+        [Test]
         public void Watch_mode_hides_nothing()
         {
             var g = Start(); var fog = new Fog(null, new RealmQueries(g));
