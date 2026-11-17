@@ -85,6 +85,8 @@ namespace GreyBoxStrategy.Realm
             // Five countries in full can outgrow a 1080p bar and push Menu off the right edge: the bar then drops
             // each country's lesser stats ("tight") rather than clip the controls.
             root.schedule.Execute(FitTopBar).Every(400);
+            // Nothing is cut off at the bottom: windows fitted to the screen, scrolling lists shaded (ScreenUI.Layout.cs).
+            root.schedule.Execute(KeepLayout).Every(250);
 
             // ---- realm ----
             var realm = Panel("REALM", "realm");

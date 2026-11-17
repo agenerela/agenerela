@@ -136,6 +136,7 @@ namespace GreyBoxStrategy.Realm
             inspector.AddToClassList("on");
             inspector.BringToFront(); // a window over the map: above the legend and the map's modes
             Root.AddToClassList("insp-open");
+            KeepLayout();
             inspectorBody.scrollOffset = Vector2.zero;
         }
 

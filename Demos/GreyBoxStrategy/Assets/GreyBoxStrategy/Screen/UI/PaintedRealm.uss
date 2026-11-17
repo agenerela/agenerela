@@ -624,3 +624,21 @@
 .orders .end-turn { align-self: center; flex-shrink: 0; margin-top: 0; }
 .compact .orders .end-turn { height: 34px; font-size: 15px; }
 .orders .panel-head { height: 38px; }
+
+/* ==== Nothing is cut off at the bottom (#20, the lead on 16 November). Nothing is ever half shown: a list ends on a
+   whole row or scrolls with its scrollbar (and a fade at its foot while more lies below); every panel keeps its bottom
+   padding; a panel never runs under another or off the window. The rules no line here can say (a window no taller
+   than the room below its own top, the fade) are in ScreenUI.Layout.cs. ==== */
+.panel .unity-scroll-view__content-container { padding-bottom: 6px; }
+.panel > .unity-scroll-view, .window > .unity-scroll-view { flex-shrink: 1; min-height: 0; }
+.panel-head, .orders-foot, .ol-foot, .ktabs { flex-shrink: 0; }
+/* windows open under the top bar, never over it */
+.event-card { top: 84px; max-height: none; }
+.inspector, .compact .inspector { max-height: none; }
+/* the tales take the outliner's place while open, as the ledger takes the left */
+.tales-open .outliner { display: none; }
+/* a model's free text in a panel: three whole lines, then "more" */
+.fold { flex-shrink: 0; margin: 2px 0 6px 0; }
+.fold-clip { overflow: hidden; flex-shrink: 0; }
+.fold > .fold-clip > Label { margin: 0; }
+.fold-more { padding: 1px 0 0 0; align-self: flex-start; }

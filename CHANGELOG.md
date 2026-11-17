@@ -22,6 +22,12 @@ phase table and the open issues, not here.
 
 ### Changed
 
+- **Painted Realm: nothing is cut off at the bottom** (#20). An audit at six game-view sizes, 1280 × 720 to 2560 × 1440,
+  found windows opening over the top bar, the tales panel over the outliner, the diplomacy table running off small
+  screens and lists ending on half a row with nothing to say more lay below. Windows now open under the top bar, fit
+  the room below them and scroll inside; every scrolling list fades at its foot while more lies below; every panel
+  keeps its bottom padding; the tales take the outliner's place; the advisor's counsel folds after three lines behind
+  **more**. `ScreenUI.Layout.cs`, `LayoutTests`.
 - **Painted Realm: the inspector window and the council's foot** (#20). With the decision inspector open, a click
   on the map outside it only closes it, as Esc does, so dismissing it never also orders a march. End turn stays
   inside the council's frame at every size: the council's foot no longer shrinks when the panel reaches its height.
