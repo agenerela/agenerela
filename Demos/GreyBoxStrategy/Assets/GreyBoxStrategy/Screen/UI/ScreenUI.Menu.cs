@@ -499,19 +499,17 @@ namespace GreyBoxStrategy.Realm
             ew.tooltip = "All: every storyteller event opens a window in the middle of the screen. Mine only: those striking your realm. Off: the chronicle and the map's bubble only.";
             card.Add(ew);
 
-            var eventNote = new Label(); eventNote.AddToClassList("src"); eventNote.style.whiteSpace = WhiteSpace.Normal;
-            void EventNote() => eventNote.text = s.EventWindows
-                ? "Event windows open by themselves: when the storyteller makes something happen, its window opens over the map as it lands."
-                : "Event windows wait for a click: the storyteller's banner appears over the map, and its window opens when you click it or its chronicle line.";
-            card.Add(Steps("Event windows", new[] { "Wait for a click", "Open by themselves" }, s.EventWindows ? 1 : 0, i => { s.EventWindows = i == 1; EventNote(); Changed(); }));
-            EventNote();
-            card.Add(eventNote);
 
             card.Add(Section2("SOUND", "no sound plays yet; these are kept for when it does"));
             card.Add(Volume("Master", s.MasterVolume, v => { s.MasterVolume = v; Changed(); }));
             card.Add(Volume("Music", s.MusicVolume, v => { s.MusicVolume = v; Changed(); }));
             card.Add(Volume("Effects", s.EffectsVolume, v => { s.EffectsVolume = v; Changed(); }));
             card.Add(Volume("Voices", s.VoiceVolume, v => { s.VoiceVolume = v; Changed(); }));
+
+            // The lead's decisions (painted-realm-direction.md): room for them here before they exist.
+            card.Add(Section2("VOICES", "spoken lines, as the lead decided them"));
+            card.Add(Coming("Rulers", "Off by default; a click on a phrase in the chronicle speaks it"));
+            card.Add(Coming("Storyteller", "On by default: its stories, events and large events read aloud"));
 
             var src = new Label("Saved as you change them, in settings.json in the game's data folder."); src.AddToClassList("src"); card.Add(src);
             var backB = new Button(back) { text = "Back" }; backB.AddToClassList("menu-button"); backB.AddToClassList("quiet");

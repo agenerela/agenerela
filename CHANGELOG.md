@@ -32,8 +32,9 @@ phase table and the open issues, not here.
   use and whether its server answers, asked through the framework's `IModelLifecycle` without holding the menu up;
   while another session holds the RTX 5080's lock the server is not asked. New game is a framed window with four
   groups behind tabs (World, Rivals, Rules, Model). A game played or watched to its end is kept for Load a replay,
-  newest first with the date, the turns and who won. Settings gained Event windows. The pause menu gained Quit and
-  asks before a game under way is left. Continue stays hidden: nothing saves a game in progress yet.
+  newest first with the date, the turns and who won. New game has a "Your face" picker from the art pack's four
+  neutral faces, and Settings a Voices section for what is coming. The pause menu gained Quit and asks before a game
+  under way is left. Continue shows only when a saved game exists; nothing writes one yet.
 - **Painted Realm: free orders, the rules** (#20, the turn rework's first slice). `GameRules.FreeOrders` (off) plays the
   writs turn without writs: a court gives orders until it answers none (three at most, a realm's own number by
   override), its gold held back as it goes; an army is asked when woken or after holding three turns unasked. Off, the game and what

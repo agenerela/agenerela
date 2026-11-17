@@ -32,9 +32,9 @@ namespace GreyBoxStrategy.Realm
             if (started) return;
             // A replay chosen from the library on the Classic board plays at once on the screen just built.
             playingSaved = false;
-            // Continue is offered only when there is a game to go back to. Nothing saves a game in progress yet, so
-            // there never is; the button is ready for the day one can be.
-            ui.ShowTitle(StartMenu.Buttons(canContinue: false), TitleChose, AgenerelaInfo.Version);
+            // Continue is offered only when a saved game exists. Nothing writes one yet (saving comes after the turn
+            // rework, the lead's order), so today it never shows.
+            ui.ShowTitle(StartMenu.Buttons(canContinue: File.Exists(ContinuePath), "Go back to the game you saved"), TitleChose, AgenerelaInfo.Version);
             EnterMenus();
         }
 
@@ -42,6 +42,7 @@ namespace GreyBoxStrategy.Realm
         {
             switch (id)
             {
+                case StartMenu.Continue: ui.ShowNotice("Saved games cannot be loaded yet: saving and continuing come after the turn rework."); break;
                 case StartMenu.NewGame: OpenNewGame(rule: true); break;
                 case StartMenu.Watch: OpenNewGame(rule: false); break;
                 case StartMenu.Replays: OpenReplays(); break;
@@ -72,6 +73,9 @@ namespace GreyBoxStrategy.Realm
             if (backdrop == null && !started) backdrop = StartCoroutine(Backdrop());
             if (ui.ModelStatus == null || ui.ModelStatus.Model != newGame.Model) CheckModel();
         }
+
+        /// <summary>The saved game Continue goes back to: <c>Saves/continue.json</c> in the game's data folder. Nothing writes it yet.</summary>
+        public static string ContinuePath => Path.Combine(Application.persistentDataPath, "Saves", "continue.json");
 
         // ---- the map behind the menus ----
 

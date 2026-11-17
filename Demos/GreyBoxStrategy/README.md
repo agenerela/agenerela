@@ -72,8 +72,8 @@ language model through the framework, fighting over 25 provinces on a painted se
      on turn 17. Every line is the rulers' own. A replay needs no model and no server.
    - **Settings:**
      - Display mode, resolution, UI scale (automatic or fixed steps), VSync, frame cap, the
-       default playback speed, whether event windows open by themselves, and sound volumes (no sound
-       plays yet).
+       default playback speed, event windows, sound volumes (no sound plays yet), and the voices to
+       come.
      - Each applies at once and is saved in `settings.json` in the game's persistent data
        folder.
      - A change of display mode or resolution reverts after 12 s unless you keep it.
@@ -145,7 +145,8 @@ The game opens on a title screen in the game's own look, not on a card of settin
   the Agenerela framework".
 - **The buttons** are New game, Watch a game, Load a replay, Settings, Credits and Quit. The arrow keys, W and S
   move a mark, Enter presses, and the mouse moves the same mark. A hint under them says what the marked one does.
-  - **Continue** is listed only when there is a game to go back to. Nothing saves a game in progress yet, so it
+  - **Continue** is listed only when a saved game exists (`Saves/continue.json` in the game's data folder). Nothing
+    writes one yet (saving is the lead's next item after the turn rework), so it
     never shows. The button, its place and its test are there for the day one can be saved.
 - **New game** is a framed window. Watch or Rule is on top. Under it are four groups behind tabs: **World** (the
   map, its size, shape, countries and the seed), **Rivals** (your realm, models or scripted rulers, the advisor
@@ -158,8 +159,11 @@ The game opens on a title screen in the game's own look, not on a card of settin
   - A game the scripted rulers played is saved as its setup and made again from the seed.
   - Any other is saved with its decisions and replayed on the same world and rules.
   - Not saved: a replay itself, a game the dev menu touched, and a game ruled with unlimited writs.
-- **Settings** gained **Event windows**: wait for a click on the storyteller's banner (as before, the default) or
-  open by themselves as the event lands.
+- **New game's Rivals group** has **Your face**: the art pack's four neutral portraits, the one you wear framed
+  (`ScreenUI.YourFace`, kept between games).
+- **Settings** has room for the voices the lead decided (`painted-realm-direction.md`): a **Voices** section that
+  lists rulers' lines (off by default, a click on a phrase speaks it) and the storyteller's stories and events (on
+  by default) as coming, beside the Voices volume.
 - **Credits** name the team, the framework's version (`AgenerelaInfo.Version`) and the MIT licence.
 - **The model status line**, at the foot, names the provider and the model and says whether the server answers.
   - It asks the server for its models through the framework's own provider (`IModelLifecycle.ListModelsAsync`),

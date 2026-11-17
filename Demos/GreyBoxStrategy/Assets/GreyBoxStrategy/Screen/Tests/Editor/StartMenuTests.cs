@@ -335,20 +335,5 @@ namespace GreyBoxStrategy.Screen.Tests
             Assert.That(text, Has.Some.Contains("MIT License"));
             Assert.That(ui.MenuBack, Is.Not.Null, "Esc goes back");
         }
-
-        [Test]
-        public void Event_windows_is_a_setting_that_is_kept_and_off_until_chosen()
-        {
-            Assert.That(new GameSettings().EventWindows, Is.False, "as the game was: a banner that waits for a click");
-            string path = Path.Combine(folder, "settings.json");
-            new SettingsStore(path).Save(new GameSettings { EventWindows = true });
-            Assert.That(new SettingsStore(path).Load().EventWindows, Is.True);
-
-            var ui = Ui();
-            GameSettings changed = null;
-            ui.ShowSettings(new GameSettings(), new GreyBoxStrategy.Realm.DisplayInfo { InEditor = true, Native = new Vector2Int(1920, 1080) }, s => changed = s, () => { });
-            Assert.That(ui.MenuText(), Has.Some.EqualTo("Event windows"));
-            Assert.That(changed, Is.Null);
-        }
     }
 }
