@@ -141,10 +141,12 @@ namespace GreyBoxStrategy
         {
             bool targeted = categories != null;
             var handler = DelegateActionHandler.WithResult(
+                // Offered only when this request offers it: with free orders an order already given this turn is
+                // allowed by the rules but not offered again, and listing it made the court repeat it (17 November).
                 ctx => ctx.Correlation == null && (targeted
                     ? (Actions.TargetsProvince(action) ? world.ProvinceList.Select(p => p.Id) : world.CountryList.Select(c => c.Id))
-                        .Any(id => WritLegality.WhyNotCourt(world, CountryId, new Move(action, id)) == null)
-                    : WritLegality.WhyNotCourt(world, CountryId, new Move(action)) == null),
+                        .Any(id => WritLegality.WhyNotCourt(world, CountryId, new Move(action, id)) == null && NotOffered(new Move(action, id)) == null)
+                    : WritLegality.WhyNotCourt(world, CountryId, new Move(action)) == null && NotOffered(new Move(action)) == null),
                 (ctx, d) => ActionResult.Done());
             if (targeted)
                 handler.IsAvailableFor = (ctx, target) =>
