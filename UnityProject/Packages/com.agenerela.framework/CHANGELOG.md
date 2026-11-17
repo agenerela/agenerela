@@ -76,6 +76,11 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Changed
 
+- **`LabelChoices.NeedsTarget` is removed; use `LabelChoices.TargetsFor(actionId)`** (#121, #319). It
+  returns the targets an annotator may give an action under DR-020's three states: every declared
+  target, `no_target` alone, or `no_target` then every declared target. Code that called
+  `NeedsTarget` to decide between the first two must call `TargetsFor` and read its list.
+
 - **Ollama reports 20 alternatives a token, not 5** (#244 item 1). `top_logprobs` is now 20 on
   every request unless `OllamaSettings.TokenAlternatives` says otherwise, so the grounding guard
   no longer reads probability spread over many legal targets as doubt just because five
