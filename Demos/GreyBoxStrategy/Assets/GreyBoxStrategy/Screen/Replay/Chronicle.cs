@@ -165,7 +165,8 @@ namespace GreyBoxStrategy.Replay
                 {
                     var o = e.ArmyOrder;
                     line.Category = ChronicleCategory.War;
-                    line.Text = $"{N(e.Country)} splits {o.Soldiers} soldiers from {Host(o.Army)} at {P(o.Province)} as {Host(o.Others[0])}, with no general";
+                    line.Text = $"{N(e.Country)} splits {o.Soldiers} soldiers from {Host(o.Army)} at {P(o.Province)} as {Host(o.Others[0])}"
+                                + (o.After.Count > 1 && o.After[1].General != null ? $", led by {o.After[1].General}" : "");
                     break;
                 }
                 case ReplayEventKind.ArmyOrder:

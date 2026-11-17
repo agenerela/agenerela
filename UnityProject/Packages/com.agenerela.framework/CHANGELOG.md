@@ -76,6 +76,11 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Changed
 
+- **`LabelChoices.NeedsTarget` is removed; use `LabelChoices.TargetsFor(actionId)`** (#121, #319). It
+  returns the targets an annotator may give an action under DR-020's three states: every declared
+  target, `no_target` alone, or `no_target` then every declared target. Code that called
+  `NeedsTarget` to decide between the first two must call `TargetsFor` and read its list.
+
 - **Ollama reports 20 alternatives a token, not 5** (#244 item 1). `top_logprobs` is now 20 on
   every request unless `OllamaSettings.TokenAlternatives` says otherwise, so the grounding guard
   no longer reads probability spread over many legal targets as doubt just because five
@@ -789,6 +794,21 @@ While the version stays `0.x`, the public API may change in any release.
   reload off no longer carries them into the next session. A new EditMode test fails on any static
   field in the framework's runtime assembly that nothing resets; the three that need no reset
   (`ProviderConfig`'s provider names and built configs, and the queues) say why in it.
+
+- **A prompt set reads an optional target as optional** (#121, after #245/DR-020). `PromptSetChecks`
+  split an action's target two ways, so `needsTarget: false` meant "always `no_target`" and a prompt
+  that gave such an action a target broke `ActionTakesNoTarget`. Since DR-020 there are three
+  states, and that is the middle one: an action requires a target, never takes one, or leaves it
+  optional. `DeclaredAction.takesNoTarget` is new and says the second, mirroring
+  `ActionDefinition.TakesNoTarget`; absent, as it is in every set written so far, the target is
+  optional and either answer is correct. `PromptSet.CreateFor` carries it from the profile's
+  actions, and `CompareWithProfile` reports a set and profile that disagree on it. Label mode
+  offers the same three: every target, `no_target` alone, or `no_target` and every target, so a
+  blind labeller can give the answer the check allows; `LabelChoices.TargetsFor` returns them and
+  replaces `LabelChoices.NeedsTarget`. No set in the repository declares it yet,
+  so no set changes and no run changes: declaring it on an action that never takes a target is a
+  separate change, and one that moves a run's numbers, since the agent then drops a target the
+  model names rather than being scored wrong for it.
 
 ## [0.4.0-preview.1] - 2026-10-29
 

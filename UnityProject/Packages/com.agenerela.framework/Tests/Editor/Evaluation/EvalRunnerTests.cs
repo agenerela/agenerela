@@ -692,7 +692,9 @@ namespace Agenerela.Tests.Evaluation
             var legality = new EvalLegality { Name = "empty-categories" };
             legality.ActionCategories["follow_player"] = new string[0];
             var provider = new FakeProvider(Reply("follow_player", "bridge"));
-            var runner = new EvalRunner(fixtures.Set(new[] { Escort }), profile,
+            var set = fixtures.Set(new[] { Escort });
+            set.FindAction("follow_player").TakesNoTarget = true; // CompareWithProfile refuses a set that disagrees
+            var runner = new EvalRunner(set, profile,
                 new EvalArm("A", fixtures.Config(provider, "FakeA")), new EvalArm("B", fixtures.Config(provider, "FakeB")) { Legality = legality });
 
             var report = await Fixtures.NotCancelled(runner.RunAsync());

@@ -13,6 +13,7 @@ model, a script or random, with personas; [the table of models](#models-at-one-t
 Stage 3, the map and the screen, has begun: [watch mode plays back a recorded game](#the-screen-watch-mode-playing-back-a-recorded-game).
 A [storyteller](#storyteller) that invents the game's events is built as an arm, `+storyteller`, and measured against the random event table.
 [Rules v2](../../docs/demos/painted-realm-rules-v2.md), the deeper game, is being built a slice at a time; [what exists so far](#rules-v2-being-built).
+How a turn is played in Rule mode, step by step with its timings, and three proposed changes: [`docs/demos/painted-realm-turn-flow.md`](../../docs/demos/painted-realm-turn-flow.md) (research, 16 November; nothing built).
 
 ## Play it
 
@@ -748,18 +749,55 @@ a hungry one none from its hunger line.
   tag, every turn's end tags each siege with the game's own turns, every army has its stores at every moment, and a
   hungry army shows the warning to you and not to a rival (broken by not reading the line of a siege that ended).
 
+### Generated art: the first pack (16 November)
+
+Variant B's empty picture frames are filled, from an art pack made ahead of time and shipped with the game.
+- **One style for every picture**, a fixed line at the head of every prompt: painted like a late-medieval illuminated
+  chronicle, muted earth colours with small gilt accents, no lettering, border or modern object. Every picture was
+  made on the team's asset server (Z-Image Turbo, `tools/comfyui/comfy.py`), two candidates each at least, and chosen
+  by looking: warped hands and faces, painted borders and anything that read as lettering were rejected.
+- **What is in it**, under `Screen/Art/Resources/ArtPack/`, with every file's prompt and seed in its `README.md`:
+  - **19 rulers:** three faces for each of the five personas, and four neutral faces for your own realm;
+  - **12 generals:** six men and six women;
+  - **27 event pictures:** the storyteller's eight first events, the random table's, the dilemmas, the tales'
+    events, the omen, a tale's beginning and its end.
+- **Who wears which face** is `ArtCatalogue`:
+  - a realm a persona rules wears one of that persona's faces, chosen by a stable hash of the game's seed and the
+    realm's id, so it keeps that face all game and in the game's replay;
+  - no two realms of one game share a face (19 faces, ten realms at most);
+  - your own realm wears one of the four neutral faces; while you rule, a click on your portrait in the top bar
+    changes it, and the choice is kept for later games;
+  - a general's face follows the general's name, a woman's face for a woman's name.
+- **Where the portraits hang:** the top bar beside your banner, the realm panel's header, the army panel's header and
+  its General tab, the inspector's header, an envoy's card, the words on the map and the end screen. Small frames
+  (up to 80 px) use a 192 × 224 copy; the pictures import with mipmaps so they stay smooth at 52 × 62.
+- **Fallbacks:** a realm the pack has no face for shows the persona sheet's face, then the empty frame.
+- **Event pictures** are ready for the storyteller's event window: `ScreenUI.EventPicture(templateId)` returns the
+  picture or null. The window is being built in another branch, which adds the one line that shows it.
+- **Flags stay the crests drawn in code.** A generated emblem, one charge in grey tinted with the realm's colour,
+  was tried at the top bar's 14 px: a tower reads no better than the code crest's own charges, and a wolf's head is
+  a blob ([`docs/demos/painted-realm-art/flags-at-14px.png`](../../docs/demos/painted-realm-art/flags-at-14px.png)).
+- **Remaking it:** `ArtSource/art-pack/pack.json` holds each chosen picture's subject, seed and candidate, and
+  `ArtSource/art-pack/build_pack.py <candidates>` resizes the chosen candidates into the pack and writes its README.
+- **Tests** (`ArtCatalogueTests`): the hash is pinned to a second implementation's numbers; a realm's face does not
+  depend on the order realms are listed in; over 300 seeds and four seatings no two realms share a face; clicking
+  through your own faces never moves a rival's; every storyteller template, every listed face and every listed event
+  has its picture, at the right shape; a missing picture is null; and a realm's panel hangs the portrait the
+  catalogue chose. The three that read the pack were seen failing before the pack existed.
+
 ### Merging and splitting armies: the rules (16 November)
 
 The lead, after playing variant B: "a possibility to unify armies and separate". The rules are in the Sim; the
 buttons come in the screen's own pull request, built on the calls below.
 
-- **Merge.** Two or more of your armies in one province, none marching, become the largest of them (ties: the
-  lower id). Soldiers and each type add up, at most 100 (an army's cap, `ArmyMax`). Stores are the soldier-weighted
-  average in half-turns, rounded down. The largest army's general leads; the others are dismissed, and the chronicle
-  says so. A siege goes on where it was, since its progress belongs to the province.
+- **Merge.** Two or more of your armies in one province, none marching, become the army of the senior general, the one
+  longest in command (ties: the larger army, then the lower id), so splitting and merging back never rerolls a
+  general. Soldiers and each type add up, at most 100 (an army's cap, `ArmyMax`). Stores are the soldier-weighted
+  average in half-turns, rounded down. The other generals are dismissed, and the chronicle says so. A siege goes on where it was, since its progress belongs to the province.
 - **Split.** One army, not marching, gives 1 to its size less one soldiers to a new army in the same province. Each
   type goes in proportion, the remainder to the largest fractions, as losses are taken, so the totals hold. Both
-  keep the same stores level. The general stays with the original; the new army has none, and holds.
+  keep the same stores level. The general stays with the original; the new army gets a general of its own,
+  named as a newly raised army's is (every army has one), and holds.
 - **When.** On the writs turn, while the game waits for your orders and before they are given. Neither costs a writ.
   A merged or new army is ordered like any other, for its writ.
 - **Only yours.** No model court or marshal is offered either, and nothing a model reads changes:
@@ -773,7 +811,7 @@ For the screen (`RuleSession`, each returns null, or why not):
 | Call | Does |
 |---|---|
 | `CanMerge(armyIds)` | whether these armies can merge now |
-| `Merge(armyIds)` | merges them into the largest |
+| `Merge(armyIds)` | merges them into the senior general's army |
 | `CanSplit(armyId, soldiers)` | whether this army can split that many off now |
 | `Split(armyId, soldiers)` | splits them off; the new army's id is `Game.ArmyOrdersGiven.Last().Others[0]` |
 

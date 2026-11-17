@@ -141,8 +141,19 @@ namespace Agenerela.Tests.Evaluation
             Assert.That(choices.ActionsAvailableIn(new JObject { ["isFollowing"] = true }),
                 Is.EqualTo(new[] { "follow_player", "stop_following", "move_to", "attack_target", "none" }));
             Assert.That(choices.Targets, Is.EqualTo(new[] { "bridge", "docks", "wolf" }));
-            Assert.That(choices.NeedsTarget("move_to"), Is.True);
-            Assert.That(choices.NeedsTarget("none"), Is.False);
+        }
+
+        [Test]
+        public void TheTargetsOfferedAreTheOnesTheCheckAllows()
+        {
+            var set = fixture.Load();
+            set.FindAction("stop_following").TakesNoTarget = true;
+            var choices = LabelChoices.From(set);
+
+            Assert.That(choices.TargetsFor("move_to"), Is.EqualTo(new[] { "bridge", "docks", "wolf" }), "Required.");
+            Assert.That(choices.TargetsFor("follow_player"), Is.EqualTo(new[] { "no_target", "bridge", "docks", "wolf" }), "Optional.");
+            Assert.That(choices.TargetsFor("stop_following"), Is.EqualTo(new[] { "no_target" }), "Never takes one.");
+            Assert.That(choices.TargetsFor("none"), Is.EqualTo(new[] { "no_target" }));
         }
 
         [Test]

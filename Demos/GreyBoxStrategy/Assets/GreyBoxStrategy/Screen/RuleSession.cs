@@ -345,7 +345,8 @@ namespace GreyBoxStrategy.Realm
         public string CanSplit(string armyId, int soldiers) => OrdersOpen() ?? Game.CanSplit(You, armyId, soldiers);
 
         /// <summary>
-        /// Merges your armies into the largest, at once and for no writ; its general leads, the others are dismissed.
+        /// Merges your armies into the senior general's army (longest in command, then the larger, then the lower id), at
+        /// once and for no writ; the other generals are dismissed.
         /// Null, or why not and nothing changed. Give it before <see cref="Plan"/>: the plan then orders the merged army.
         /// Recorded, so the replay gives it again.
         /// </summary>
@@ -360,7 +361,7 @@ namespace GreyBoxStrategy.Realm
 
         /// <summary>
         /// Splits <paramref name="soldiers"/> off your army as a new army in the same province, at once and for no writ;
-        /// the new army has no general and holds. Null, or why not. Its id is the last of
+        /// the new army gets a general of its own, as a newly raised army does, and holds. Null, or why not. Its id is the last of
         /// <see cref="Game.ArmyOrdersGiven"/>' <see cref="ArmyOrderRecord.Others"/>. Recorded, so the replay gives it again.
         /// </summary>
         public string Split(string armyId, int soldiers)

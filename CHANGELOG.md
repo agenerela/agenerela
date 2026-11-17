@@ -20,6 +20,16 @@ phase table and the open issues, not here.
 
 ## [Unreleased]
 
+### Added
+
+- **Painted Realm: the first art pack** (#20). Every ruler, general and storyteller event has a picture, made ahead of
+  time on the team's asset server in one style, like an illuminated chronicle, and shipped with the game: 19 ruler
+  portraits (three a persona, four neutral faces you click through for your own realm), 12 generals and 27 event
+  pictures. A realm keeps its face for the whole game and in its replay, and no two realms of one game share a
+  face; the portraits hang in the top bar, the realm and army panels, the inspector, the envoy's card and the end
+  screen. `ArtCatalogue` chooses them, and the event window can ask it for its picture. Flags stay the crests drawn
+  in code: a generated emblem did not read at the top bar's 14 px.
+
 ### Changed
 
 - **Painted Realm: the storyteller's events and tales are impossible to miss** (#20). An event now opens a window in
@@ -34,6 +44,11 @@ phase table and the open issues, not here.
   the room below them and scroll inside; every scrolling list fades at its foot while more lies below; every panel
   keeps its bottom padding; the tales take the outliner's place; the advisor's counsel folds after three lines behind
   **more**. `ScreenUI.Layout.cs`, `LayoutTests`.
+- **Painted Realm: the senior general leads a merged army, and a split-off army gets a general** (#20). A merge now
+  keeps the army of the general longest in command (`General.CommandSince`; ties to the larger army, then the lower
+  id), not the largest, so splitting off the majority and merging back never rerolls a general. A split-off army is
+  given a general at once, as a newly raised army is. Human orders only; nothing a model reads changes.
+
 - **Painted Realm: the inspector window and the council's foot** (#20). With the decision inspector open, a click
   on the map outside it only closes it, as Esc does, so dismissing it never also orders a march. End turn stays
   inside the council's frame at every size: the council's foot no longer shrinks when the panel reaches its height.
@@ -52,6 +67,11 @@ phase table and the open issues, not here.
   general for the new one), each at once and for no writ. `RuleSession.CanMerge`, `Merge`, `CanSplit` and `Split`
   are the screen's calls; the buttons follow. Recorded and replayed; older recordings replay as before. No model is
   offered either, and a test pins that every request a model reads is byte for byte as before.
+- **Painted Realm: research on how a turn is played** (#20). `docs/demos/painted-realm-turn-flow.md` describes a Rule
+  mode turn step by step from the code, a real model game's log and games played for it, with timings (about 5 s of
+  waiting after End turn, about 37 s of playback at 1×, of which about 5 s is your own realm); ranks what is likely
+  to feel strange; and proposes three options with timelines, from the same turn told in order to a clock with
+  pause. No game code changed.
 
 - **Land traditions measured on generated worlds** (#20). Twelve paired games on `qwen3.5:4b`: a court buys 8 points
   more of its land's type with the rule on ([+2.4, +13.4]), as on Classic, and the counter 8 points less often
