@@ -286,10 +286,11 @@ least:
 
 So nobody looks for them:
 
-- **No typed parameters, yet.** DR-023 (accepted 15 November, nothing built, nothing a default before its
-  storyteller A/B) puts them beside action and target; until it is built a decision is one action, one target and one statement, or no statement
-  at all (#266). Quantities,
-  prices or a strength are not fields (#190 LV #12, #266 item 2).
+- **Typed parameters only when an action declares one.** A decision is one action, one target and one
+  statement, or no statement at all (#266), plus the closed choices an action declares (DR-023, first step,
+  built 16 November: sets of words and number lists, see "A branch with parameters" above). An open
+  quantity or price is not a field (#190 LV #12), nor is `also_targets`; nothing becomes a default before DR-023's
+  storyteller A/B.
   What Ollama's grammar can hold beside them was probed on 14 November: an enum and a bounded array
   of target ids, kept in key order, and a parameter written after `statement` lands in the
   statement (`findings.md`, "A closed choice beside action and target").

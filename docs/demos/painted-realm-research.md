@@ -429,7 +429,7 @@ designs:
 |---|---|---|---|
 | **Dilemma templates (chosen)** | The game registers dilemmas, each with two or three options and each option's effect (`sellswords`: hire them for gold, or send them away). The storyteller picks a dilemma as its action and a target, and writes the story; the game writes the option lines from its own data and states the amounts. | One call, the paired schema still holds the grammar, every option is applicable by construction, fairness is availability | The option lines are the game's, not the model's |
 | A second call writes the options | A first call picks the event; a second writes two or three option lines, each mapped to an effect by a list of effects | Options in the model's voice | One more call, and free-text options must be mapped back to effects: a parser the model can break |
-| Typed parameters (#266 item 2) | One action `dilemma` with typed fields: option ids from a closed list, a line per option | One call, model-written options, still closed | Needs the framework's typed parameters, which do not exist (DR-023 accepts them, 15 November; not built) |
+| Typed parameters (#266 item 2) | One action `dilemma` with typed fields: option ids from a closed list, a line per option | One call, model-written options, still closed | Needs the framework's typed parameters (DR-023's first step, closed sets and number lists, is built, 16 November; the storyteller A/B is owed) |
 
 A ruler answers a dilemma as one more decision: a `Choice` moment, the options as its actions (each
 dilemma's option ids, registered on the seat and available only on that choice), the story and
