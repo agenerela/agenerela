@@ -22,6 +22,11 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: free orders, the rules** (#20, the turn rework's first slice). `GameRules.FreeOrders` (off) plays the
+  writs turn without writs: a court gives orders until it answers none (three at most, a realm's own number by
+  override), its gold held back as it goes, then every army with no standing order is asked. Off, the game and what
+  every model reads are unchanged. The rulers deciding while you plan, and the screen's side, follow.
+
 - **Painted Realm: the first art pack** (#20). Every ruler, general and storyteller event has a picture, made ahead of
   time on the team's asset server in one style, like an illuminated chronicle, and shipped with the game: 19 ruler
   portraits (three a persona, four neutral faces you click through for your own realm), 12 generals and 27 event
