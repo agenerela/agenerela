@@ -282,6 +282,34 @@ namespace GreyBoxStrategy.Realm
         private string followed;
         private readonly List<ReplayEvent> played = new List<ReplayEvent>();
         private Vector2 clickStart, rightClickStart;
+
+        // The wheel's zoom: the size it eases toward (NaN when still), and the size it last set, so a pan-to or a fit
+        // that changes the camera's size cancels it rather than being pulled back.
+        private float zoomTarget = float.NaN, zoomLastSet = float.NaN;
+
+        /// <summary>
+        /// A notch of the wheel is a clear step toward the cursor, eased over about a tenth of a second
+        /// (ScreenModels.WheelNotches, ZoomTarget, EaseZoom). The wheel over a panel scrolls the panel, not the map.
+        /// </summary>
+        private void WheelZoom(Mouse mouse)
+        {
+            var at = mouse.position.ReadValue();
+            if (!float.IsNaN(zoomTarget) && Mathf.Abs(cam.orthographicSize - zoomLastSet) > 1e-4f) zoomTarget = float.NaN;
+            float notches = ScreenModels.WheelNotches(mouse.scroll.ReadValue().y);
+            if (notches != 0 && OverMap(at))
+                zoomTarget = ScreenModels.ZoomTarget(float.IsNaN(zoomTarget) ? cam.orthographicSize : zoomTarget, notches, zoomMin, zoomMax);
+            if (float.IsNaN(zoomTarget)) return;
+            var before = cam.ScreenToWorldPoint(at);
+            cam.orthographicSize = ScreenModels.EaseZoom(cam.orthographicSize, zoomTarget, Time.unscaledDeltaTime);
+            if (Mathf.Abs(cam.orthographicSize - zoomTarget) <= zoomTarget * 0.002f) cam.orthographicSize = zoomTarget;
+            cam.transform.position += before - cam.ScreenToWorldPoint(at);
+            zoomLastSet = cam.orthographicSize;
+            if (cam.orthographicSize == zoomTarget) zoomTarget = float.NaN;
+        }
+
+        /// <summary>For the CLI: the size the wheel is easing toward, or NaN.</summary>
+        public float ZoomTarget => zoomTarget;
+        public (float min, float max) ZoomRange => (zoomMin, zoomMax);
         private int selected = -1;
 
         /// <summary>For the Unity CLI: switch the map mode, follow a country (null for none), open a panel.</summary>
@@ -399,20 +427,14 @@ namespace GreyBoxStrategy.Realm
                 if (kb.digit4Key.wasPressedThisFrame) SetMode(MapMode.Reach);
                 if (kb.dKey.wasPressedThisFrame) ToggleDiplomacy();
                 if (kb.iKey.wasPressedThisFrame) { if (ui.InspectorOpen) ui.CloseInspector(); else ui.InspectPressed?.Invoke(); }
-                if ((kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame) && rule != null) EndTurn();
+                // Enter dismisses a storyteller's event window first; only then is it End turn.
+                if ((kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame) && ui.EventOpen) ui.DismissEvent();
+                else if ((kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame) && rule != null) EndTurn();
             }
             if (kb != null && !ui.Typing) CameraKeys(kb);
             if (mouse != null)
             {
-                float wheel = mouse.scroll.ReadValue().y;
-                // The wheel over a panel scrolls the panel (a long chronicle, a world's lists), not the map.
-                if (Mathf.Abs(wheel) > 0.01f && OverMap(mouse.position.ReadValue()))
-                {
-                    var before = cam.ScreenToWorldPoint(mouse.position.ReadValue());
-                    cam.orthographicSize = Mathf.Clamp(cam.orthographicSize * Mathf.Exp(-wheel * 0.0015f), zoomMin, zoomMax);
-                    var after = cam.ScreenToWorldPoint(mouse.position.ReadValue());
-                    cam.transform.position += before - after;
-                }
+                WheelZoom(mouse);
                 if (mouse.rightButton.wasPressedThisFrame) rightClickStart = mouse.position.ReadValue();
                 // A right click (not a drag) on a province, with one of your armies chosen, orders its march there.
                 if (mouse.rightButton.wasReleasedThisFrame && (mouse.position.ReadValue() - rightClickStart).sqrMagnitude < 25

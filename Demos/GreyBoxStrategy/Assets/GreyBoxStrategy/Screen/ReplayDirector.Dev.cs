@@ -17,6 +17,8 @@ namespace GreyBoxStrategy.Realm
     {
         private DevCommands dev;
         private bool autoOrders;
+        /// <summary>The dev menu's autoplay, in any mode: storyteller windows close by themselves rather than stop it.</summary>
+        private bool autoplaying;
         private float fps, devTick;
         private Recording sourceRecording;
 
@@ -113,7 +115,7 @@ namespace GreyBoxStrategy.Realm
             c.Add("play", "play", "play", _ => { playing = true; ui.SetPlaying(true, speed); return "playing"; });
             c.Add("pause", "pause", "pause", _ => { Pause(); return "paused"; });
             c.Add("autoplay", "autoplay on|off", "play to the end at 8×; in rule mode, hold every turn, refuse every envoy and take every dilemma's default",
-                a => { bool on = a.Length == 0 || a[0] == "on"; autoOrders = on && rule != null; if (on) { speed = Math.Max(speed, 8); playing = true; ui.SetPlaying(true, speed); } return on ? "autoplay on" : "autoplay off"; });
+                a => { bool on = a.Length == 0 || a[0] == "on"; autoOrders = on && rule != null; autoplaying = on; if (on) { speed = Math.Max(speed, 8); playing = true; ui.SetPlaying(true, speed); } return on ? "autoplay on" : "autoplay off"; });
 
             // ---- state (rule games: they own the turn loop) ----
             foreach (string name in DevEdits.Names)

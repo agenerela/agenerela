@@ -307,5 +307,32 @@ namespace GreyBoxStrategy.Replay
             float lowest = Math.Max(50 + height, screenH - 8);
             return (x, Math.Min(Math.Max(bottom, 50 + height), lowest));
         }
+
+        /// <summary>The map's zoom for one notch of the wheel: 20% of the current size, so the full range takes about twelve.</summary>
+        public const float ZoomStep = 1.2f;
+
+        /// <summary>
+        /// A frame's wheel reading in notches. The Input System reports a notch as 1 by default (its uniform scroll
+        /// setting) and as 120 on Windows with the platform's own range: a reading of 10 or more is taken as the
+        /// latter. A trackpad's small readings give fractions of a notch; a frame is clamped to three notches.
+        /// </summary>
+        public static float WheelNotches(float scrollY)
+        {
+            if (Math.Abs(scrollY) < 1e-4f) return 0;
+            float n = Math.Abs(scrollY) >= 10 ? scrollY / 120f : scrollY;
+            return Math.Max(-3f, Math.Min(3f, n));
+        }
+
+        /// <summary>The camera size the wheel aims for: up (positive) zooms in. Multiplicative, so each notch feels the same.</summary>
+        public static float ZoomTarget(float from, float notches, float min, float max) =>
+            Math.Max(min, Math.Min(max, from * (float)Math.Pow(ZoomStep, -notches)));
+
+        /// <summary>One frame of easing toward the target, in log space: about 95% of the way in a tenth of a second.</summary>
+        public static float EaseZoom(float current, float target, float dt)
+        {
+            if (current <= 0 || target <= 0) return target;
+            float k = 1f - (float)Math.Exp(-Math.Max(0f, dt) / 0.033f);
+            return (float)Math.Exp(Math.Log(current) + (Math.Log(target) - Math.Log(current)) * k);
+        }
     }
 }

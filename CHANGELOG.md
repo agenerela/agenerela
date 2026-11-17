@@ -20,6 +20,10 @@ phase table and the open issues, not here.
 
 ## [Unreleased]
 
+### Framework
+
+- **DR-024, accepted 17 November:** speech and images as two more provider kinds beside the language model (`ISpeechProvider`, `IImageProvider`), reached only through an agent's statement and through actions. Nothing is built; GreyBoxStrategy builds both in its own code first. Issues #358 and #359.
+
 ### Added
 
 - **Painted Realm: free orders, the rules** (#20, the turn rework's first slice). `GameRules.FreeOrders` (off) plays the
@@ -36,6 +40,28 @@ phase table and the open issues, not here.
   in code: a generated emblem did not read at the top bar's 14 px.
 
 ### Changed
+
+- **Painted Realm: the storyteller's events and tales are impossible to miss** (#20). Every event now opens a window in
+  the middle of the screen, in the style of a grand strategy game's: the art pack's picture, the title, the story, each
+  realm struck with its effect as icons, and So be it. Every event, tales too, stops the turn until dismissed, ruling or
+  watching. A rival's event under fog shows the news, not its cost. The feed marks the storyteller's entries in gilt. A
+  new setting, Event windows: all (each stops the turn), mine only, off. Slots for choice buttons and a speaker button
+  are marked, not built. `StoryCards`, `StoryCardsTests`.
+- **Painted Realm: nothing is cut off at the bottom** (#20). An audit at six game-view sizes, 1280 × 720 to 2560 × 1440,
+  found windows opening over the top bar, the tales panel over the outliner, the diplomacy table running off small
+  screens and lists ending on half a row with nothing to say more lay below. Windows now open under the top bar, fit
+  the room below them and scroll inside; every scrolling list fades at its foot while more lies below; every panel
+  keeps its bottom padding; the tales take the outliner's place; the advisor's counsel folds after three lines behind
+  **more**. `ScreenUI.Layout.cs`, `LayoutTests`.
+- **Painted Realm: the mouse wheel zooms in clear steps** (#20). A notch zoomed 0.15%: the code read the wheel in
+  Windows' units (120 a notch) while the Input System reports 1 a notch by default. A notch is now a 20% step toward
+  the cursor, eased over about a tenth of a second, and either unit reads as the same notch; a trackpad's small
+  readings are fractions of one.
+
+- **Painted Realm: the senior general leads a merged army, and a split-off army gets a general** (#20). A merge now
+  keeps the army of the general longest in command (`General.CommandSince`; ties to the larger army, then the lower
+  id), not the largest, so splitting off the majority and merging back never rerolls a general. A split-off army is
+  given a general at once, as a newly raised army is. Human orders only; nothing a model reads changes.
 
 - **Painted Realm: the inspector window and the council's foot** (#20). With the decision inspector open, a click
   on the map outside it only closes it, as Esc does, so dismissing it never also orders a march. End turn stays
