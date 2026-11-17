@@ -1,0 +1,301 @@
+{
+ "style": "Painted illustration in the manner of a late-medieval illuminated chronicle, tempera and gouache, muted earth colours, ochre, umber, madder red and slate blue, small gilt accents, soft even light, fine brushwork. The painting fills the whole picture to its edges. No text, no lettering, no border, no frame, no modern objects.",
+ "portrait": "Bust portrait, head and shoulders, three-quarter view, centred, plain dark brown background, an invented person.",
+ "scene": "A wide scene seen from a middle distance, small figures.",
+ "rulers": {
+  "warmonger-1": {
+   "candidate": "a",
+   "seed": 11001,
+   "subject": "A scarred, broad warlord in his forties with a black beard, a mail coat, a wolf-fur mantle and an iron circlet, glaring."
+  },
+  "warmonger-2": {
+   "candidate": "a",
+   "seed": 11002,
+   "subject": "A fierce warrior queen in her thirties with braided red hair, a steel gorget, a crimson cloak and a thin gold circlet, a hard stare."
+  },
+  "warmonger-3": {
+   "candidate": "a",
+   "seed": 11003,
+   "subject": "An old grizzled war-king with a grey beard, a scar through one eyebrow, a dented breastplate, a bear-fur collar and a plain iron crown."
+  },
+  "builder-1": {
+   "candidate": "a",
+   "seed": 11004,
+   "subject": "A calm, thoughtful king in his fifties with a trimmed grey beard, a plain blue wool robe and a simple gold crown."
+  },
+  "builder-2": {
+   "candidate": "c",
+   "seed": 33002,
+   "subject": "A composed queen in her forties with a linen veil under a modest circlet, a plain green gown and a simple gold chain, a patient look, the dark background reaching every edge."
+  },
+  "builder-3": {
+   "candidate": "a",
+   "seed": 11006,
+   "subject": "A young, earnest prince, clean-shaven with brown hair, a brown doublet and a small coronet, a serious look."
+  },
+  "opportunist-1": {
+   "candidate": "a",
+   "seed": 11007,
+   "subject": "A thin, sly lord with narrow eyes and a faint smile, a dark hooded cloak thrown back and a silver chain."
+  },
+  "opportunist-2": {
+   "candidate": "a",
+   "seed": 11008,
+   "subject": "A cold, elegant duchess, pale with dark hair pulled back, a black velvet gown with a high collar and a small silver coronet, one eyebrow raised."
+  },
+  "opportunist-3": {
+   "candidate": "a",
+   "seed": 11009,
+   "subject": "A lean, bald old king with a hooked nose, a fur-trimmed dark green robe and a thin crown, a watchful sideways look."
+  },
+  "merchant-1": {
+   "candidate": "b",
+   "seed": 22010,
+   "subject": "A stout merchant prince with a round face, a velvet cap with a feather, a fur collar and a heavy gold chain, a pleased smile."
+  },
+  "merchant-2": {
+   "candidate": "a",
+   "seed": 11011,
+   "subject": "A shrewd merchant queen in her fifties with an embroidered headdress, pearls and a saffron brocade gown, a knowing half smile."
+  },
+  "merchant-3": {
+   "candidate": "a",
+   "seed": 11012,
+   "subject": "A smooth young merchant lord with a neat dark beard, a red cap and a brocade robe, weighing the viewer with his eyes."
+  },
+  "proud-1": {
+   "candidate": "a",
+   "seed": 11013,
+   "subject": "A haughty king with his chin raised, a pointed dark beard, a tall gold crown and an ermine mantle."
+  },
+  "proud-2": {
+   "candidate": "c",
+   "seed": 33001,
+   "subject": "A proud, stern queen with a tall crown over a white veil and a deep red gown, a plain gold band at the neck with no pattern on it."
+  },
+  "proud-3": {
+   "candidate": "b",
+   "seed": 22015,
+   "subject": "A stiff old king with white hair and a long face, a heavy crown and a purple mantle, a disdainful look."
+  },
+  "you-1": {
+   "candidate": "a",
+   "seed": 11016,
+   "subject": "A young king with an open, steady face, short brown hair, a plain gold crown and a slate-blue cloak."
+  },
+  "you-2": {
+   "candidate": "b",
+   "seed": 22017,
+   "subject": "A young queen with an open, steady face, dark braided hair, a plain gold crown and a green cloak."
+  },
+  "you-3": {
+   "candidate": "a",
+   "seed": 11018,
+   "subject": "A weathered king in his fifties with a short grey beard, a simple circlet and a grey-brown cloak, a level look."
+  },
+  "you-4": {
+   "candidate": "b",
+   "seed": 22019,
+   "subject": "A queen in her fifties with silver-streaked hair, a simple circlet and a wine-red cloak, a level look."
+  }
+ },
+ "generals": {
+  "captain-m1": {
+   "candidate": "b",
+   "seed": 22020,
+   "subject": "A weathered veteran commander with a broken nose and cropped grey hair, a steel gorget over a padded coat, bare-headed."
+  },
+  "captain-m2": {
+   "candidate": "b",
+   "seed": 22021,
+   "subject": "A bald captain with an eye patch and a short beard, a mail coat and a dark cloak."
+  },
+  "captain-m3": {
+   "candidate": "a",
+   "seed": 11022,
+   "subject": "A young knight with fair hair and an eager face, bright plate armour at the shoulders, bare-headed."
+  },
+  "captain-m4": {
+   "candidate": "b",
+   "seed": 22023,
+   "subject": "A dark-skinned commander with a short grey beard and calm eyes, a brigandine with brass studs and a red sash."
+  },
+  "captain-m5": {
+   "candidate": "a",
+   "seed": 11024,
+   "subject": "A stout captain with a big moustache and ruddy cheeks, a kettle helm pushed back and a leather jerkin."
+  },
+  "captain-m6": {
+   "candidate": "b",
+   "seed": 22025,
+   "subject": "A gaunt, hawk-faced marshal with long dark hair tied back, black plate armour at the shoulders and a grey cloak."
+  },
+  "captain-w1": {
+   "candidate": "a",
+   "seed": 11026,
+   "subject": "A stern woman commander with cropped grey hair and a scar on her cheek, a plate gorget over a padded coat, bare-headed."
+  },
+  "captain-w2": {
+   "candidate": "a",
+   "seed": 11027,
+   "subject": "A young woman rider with black braided hair and a quick smile, a leather brigandine and a green scarf."
+  },
+  "captain-w3": {
+   "candidate": "a",
+   "seed": 11028,
+   "subject": "A broad-shouldered woman warrior with a blonde braid, a mail coat and a fur collar, a hard look."
+  },
+  "captain-w4": {
+   "candidate": "a",
+   "seed": 11029,
+   "subject": "A calm woman archer captain with brown skin and a dark hood thrown back, a leather jerkin, a quiver strap across her chest."
+  },
+  "captain-w5": {
+   "candidate": "a",
+   "seed": 11030,
+   "subject": "A tall woman knight with auburn hair tied back, a mail coif pushed back on her shoulders and plate armour, bare-headed."
+  },
+  "captain-w6": {
+   "candidate": "a",
+   "seed": 11031,
+   "subject": "An old woman siege master with a weathered face and white hair under a linen cap, a fur collar and a heavy leather apron."
+  }
+ },
+ "events": {
+  "windfall": {
+   "candidate": "b",
+   "seed": 22032,
+   "subject": "A castle hall where a steward lifts the lid of a chest full of gold coins, sunlight falling through a narrow window."
+  },
+  "bad_harvest": {
+   "candidate": "a",
+   "seed": 11033,
+   "subject": "A withered wheat field under a pale sky, peasants standing among the dry stalks with empty baskets."
+  },
+  "plague": {
+   "candidate": "b",
+   "seed": 22034,
+   "subject": "A soldiers' camp of patched tents, sick men lying under blankets, a monk tending one of them, smoke rising from small fires."
+  },
+  "volunteers": {
+   "candidate": "b",
+   "seed": 22035,
+   "subject": "A line of villagers with spears and pitchforks walking up a road to a castle gate hung with plain banners."
+  },
+  "zeal": {
+   "candidate": "a",
+   "seed": 11036,
+   "subject": "A crowd with raised plain banners gathered before a small stone chapel on a hill, golden evening light."
+  },
+  "unrest": {
+   "candidate": "a",
+   "seed": 11037,
+   "subject": "An angry crowd with torches in a town market square at dusk, before the closed doors of a hall."
+  },
+  "stronghold": {
+   "candidate": "b",
+   "seed": 22038,
+   "subject": "Masons on wooden scaffolding raising a stone castle wall, a treadwheel crane lifting a block."
+  },
+  "walls_crumble": {
+   "candidate": "b",
+   "seed": 22039,
+   "subject": "A breached, crumbling castle wall with fallen stones in the grass, ivy on it, crows overhead, nobody about."
+  },
+  "good_harvest": {
+   "candidate": "b",
+   "seed": 22040,
+   "subject": "A golden wheat field with reapers at work and carts loaded high with sheaves, a clear sky."
+  },
+  "bandits": {
+   "candidate": "b",
+   "seed": 22041,
+   "subject": "Masked riders bursting from the trees upon a merchant's cart on a forest road."
+  },
+  "sellswords": {
+   "candidate": "a",
+   "seed": 11042,
+   "subject": "A band of rough mercenaries in mismatched armour standing before a ruler's striped tent, their captain holding out an open hand."
+  },
+  "petitioners": {
+   "candidate": "b",
+   "seed": 22043,
+   "subject": "Ragged peasants kneeling on the stone floor of a throne hall before a dais, guards at the pillars."
+  },
+  "relic": {
+   "candidate": "a",
+   "seed": 11044,
+   "subject": "Workers in a pit beside a ruined chapel lifting out a small golden casket, a shaft of light falling on it."
+  },
+  "muster": {
+   "candidate": "b",
+   "seed": 22045,
+   "subject": "On one side a field of ripe wheat with reapers, on the other men taking spears from a cart beside a plain banner."
+  },
+  "engineers": {
+   "candidate": "a",
+   "seed": 11046,
+   "subject": "Master masons with compasses and plumb lines at a trestle table before a town wall, pointing at the wall."
+  },
+  "fever_camps": {
+   "candidate": "a",
+   "seed": 11047,
+   "subject": "An army camp at night, tents closed, a single fire, soldiers wrapped in blankets, a guard standing apart."
+  },
+  "pretender": {
+   "candidate": "a",
+   "seed": 11048,
+   "subject": "A young man in a crown too large for him standing on a cart before a cheering village crowd."
+  },
+  "pretender_rising": {
+   "candidate": "a",
+   "seed": 11049,
+   "subject": "Armed rebels with scythes and spears under a ragged plain banner marching out of a forest toward a walled town."
+  },
+  "deep_vein": {
+   "candidate": "a",
+   "seed": 11050,
+   "subject": "Miners with candles deep in a rock tunnel, a glittering vein of ore running through the wall beside them."
+  },
+  "ration": {
+   "candidate": "a",
+   "seed": 11051,
+   "subject": "Inside a granary in winter, a steward measuring grain from sacks to a line of people in heavy cloaks, snow at the open door."
+  },
+  "rich_vein": {
+   "candidate": "b",
+   "seed": 22052,
+   "subject": "A mine mouth in a hillside, miners carrying out baskets of shining ore to waiting carts."
+  },
+  "flood": {
+   "candidate": "a",
+   "seed": 11053,
+   "subject": "A river village half under brown water, people on the thatched roofs and in small boats."
+  },
+  "pilgrims": {
+   "candidate": "b",
+   "seed": 22054,
+   "subject": "A line of pilgrims in cloaks with staffs walking a winding road up to a shrine on a hilltop."
+  },
+  "omen": {
+   "candidate": "b",
+   "seed": 22055,
+   "subject": "A comet with a long tail over a walled town at night, small figures on the walls pointing up."
+  },
+  "end_tale": {
+   "candidate": "a",
+   "seed": 11056,
+   "subject": "An old scribe at a desk by candlelight closing a great leather-bound book, dawn at the window."
+  },
+  "tale_begins": {
+   "candidate": "b",
+   "seed": 22057,
+   "subject": "A lone rider on a road at dawn approaching a distant walled town, long shadows, birds rising."
+  },
+  "long_winter": {
+   "candidate": "a",
+   "seed": 11058,
+   "subject": "A snowbound village under a grey sky, thin smoke from the chimneys, people dragging a sledge of firewood."
+  }
+ }
+}

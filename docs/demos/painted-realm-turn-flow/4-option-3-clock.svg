@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 422" width="1280" height="422" role="img" aria-labelledby="t d">
+  <title id="t">Option 3 (a sketch): a clock with pause</title>
+  <desc id="d">Option 3, a sketch. Time runs in weeks of about three seconds. Armies step and sieges tick every week. The model answers one call at a time, so the rulers take turns: each court and its marshal are asked about every third week, on that week&#x27;s snapshot, and their orders land a fixed week later. You order at any time, paused or running.</desc>
+  <style>text{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif}</style>
+  <rect width="1280" height="422" rx="10" fill="#0d1117"/>
+  <text x="20" y="34" font-size="18" font-weight="600" fill="#e6edf3">Option 3 (a sketch): a clock with pause</text>
+  <rect x="12" y="56" width="1256" height="36" rx="6" fill="#161b22"/>
+  <text x="20" y="74" font-size="13" font-weight="600" fill="#e6edf3" dominant-baseline="middle">You</text>
+  <rect x="12" y="102" width="1256" height="36" rx="6" fill="#161b22"/>
+  <text x="20" y="113" font-size="13" font-weight="600" fill="#e6edf3" dominant-baseline="middle">The clock</text>
+  <text x="20" y="130" font-size="11" fill="#8b949e" dominant-baseline="middle">a week is about 3 s at speed 1</text>
+  <rect x="12" y="148" width="1256" height="52" rx="6" fill="#161b22"/>
+  <text x="20" y="167" font-size="13" font-weight="600" fill="#e6edf3" dominant-baseline="middle">Rival rulers</text>
+  <text x="20" y="184" font-size="11" fill="#8b949e" dominant-baseline="middle">the model, one call at a time</text>
+  <rect x="12" y="210" width="1256" height="52" rx="6" fill="#161b22"/>
+  <text x="20" y="236" font-size="13" font-weight="600" fill="#e6edf3" dominant-baseline="middle">The rules</text>
+  <rect x="12" y="272" width="1256" height="36" rx="6" fill="#161b22"/>
+  <text x="20" y="290" font-size="13" font-weight="600" fill="#e6edf3" dominant-baseline="middle">The screen</text>
+  <line x1="509.4" y1="52" x2="509.4" y2="316" stroke="#f0f6fc" stroke-width="1.5" stroke-dasharray="4 4" opacity=".6"/>
+  <line x1="780.9" y1="52" x2="780.9" y2="316" stroke="#f0f6fc" stroke-width="1.5" stroke-dasharray="4 4" opacity=".6"/>
+  <rect x="172.0" y="61" width="335.4" height="26" rx="5" fill="#12351f" stroke="#2ea043"/>
+  <text x="339.7" y="74.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Watch, click, order. Orders land on the next week</text>
+  <rect x="511.4" y="61" width="267.5" height="26" rx="5" fill="#12351f" stroke="#2ea043"/>
+  <text x="645.1" y="74.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Paused: plan as long as you like</text>
+  <rect x="782.9" y="61" width="471.1" height="26" rx="5" fill="#12351f" stroke="#2ea043"/>
+  <text x="1018.4" y="74.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Running again</text>
+  <rect x="172.0" y="107" width="131.8" height="26" rx="5" fill="#21262d" stroke="#6e7681"/>
+  <text x="237.9" y="120.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Week 1</text>
+  <rect x="307.8" y="107" width="131.8" height="26" rx="5" fill="#21262d" stroke="#6e7681"/>
+  <text x="373.6" y="120.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Week 2</text>
+  <rect x="443.5" y="107" width="63.9" height="26" rx="5" fill="#21262d" stroke="#6e7681"/>
+  <text x="475.4" y="120.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">W 3</text>
+  <rect x="511.4" y="107" width="267.5" height="26" rx="5" fill="#3b2a08" stroke="#d29922"/>
+  <text x="645.1" y="120.0" font-size="12" fill="#f0d48a" text-anchor="middle" dominant-baseline="middle">Week 3, held by your pause</text>
+  <rect x="782.9" y="107" width="63.9" height="26" rx="5" fill="#21262d" stroke="#6e7681"/>
+  <text x="814.8" y="120.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">W 3</text>
+  <rect x="850.8" y="107" width="131.8" height="26" rx="5" fill="#21262d" stroke="#6e7681"/>
+  <text x="916.6" y="120.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Week 4</text>
+  <rect x="986.5" y="107" width="131.8" height="26" rx="5" fill="#21262d" stroke="#6e7681"/>
+  <text x="1052.4" y="120.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Week 5</text>
+  <rect x="1122.2" y="107" width="131.8" height="26" rx="5" fill="#21262d" stroke="#6e7681"/>
+  <text x="1188.1" y="120.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Week 6</text>
+  <rect x="172.0" y="153" width="75.2" height="42" rx="5" fill="#11264f" stroke="#4d8eff"/>
+  <text x="209.6" y="174.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Valen</text>
+  <rect x="251.2" y="153" width="75.2" height="42" rx="5" fill="#11264f" stroke="#4d8eff"/>
+  <text x="288.8" y="174.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Orsk</text>
+  <rect x="330.4" y="153" width="75.2" height="42" rx="5" fill="#11264f" stroke="#4d8eff"/>
+  <text x="368.0" y="174.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Merrow</text>
+  <rect x="409.6" y="153" width="75.2" height="42" rx="5" fill="#11264f" stroke="#4d8eff"/>
+  <text x="447.2" y="174.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Ilvar</text>
+  <rect x="488.8" y="153" width="75.2" height="42" rx="5" fill="#11264f" stroke="#4d8eff"/>
+  <text x="526.3" y="174.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Garria</text>
+  <rect x="567.9" y="153" width="210.9" height="42" rx="5" fill="#161b22" stroke="#30363d" stroke-dasharray="5 4"/>
+  <text x="673.4" y="166.0" font-size="12" fill="#8b949e" text-anchor="middle" dominant-baseline="middle">Idle: every ruler has answered</text>
+  <text x="673.4" y="182.0" font-size="12" fill="#8b949e" text-anchor="middle" dominant-baseline="middle">for now</text>
+  <rect x="782.9" y="153" width="75.2" height="42" rx="5" fill="#11264f" stroke="#4d8eff"/>
+  <text x="820.5" y="174.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Valen</text>
+  <rect x="862.1" y="153" width="75.2" height="42" rx="5" fill="#11264f" stroke="#4d8eff"/>
+  <text x="899.7" y="174.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Orsk</text>
+  <rect x="941.2" y="153" width="75.2" height="42" rx="5" fill="#11264f" stroke="#4d8eff"/>
+  <text x="978.8" y="174.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Merrow</text>
+  <rect x="1020.4" y="153" width="75.2" height="42" rx="5" fill="#11264f" stroke="#4d8eff"/>
+  <text x="1058.0" y="174.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Ilvar</text>
+  <rect x="1099.6" y="153" width="75.2" height="42" rx="5" fill="#11264f" stroke="#4d8eff"/>
+  <text x="1137.2" y="174.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Garria</text>
+  <rect x="1178.8" y="153" width="75.2" height="42" rx="5" fill="#11264f" stroke="#4d8eff"/>
+  <text x="1216.4" y="174.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Valen</text>
+  <rect x="172.0" y="215" width="335.4" height="42" rx="5" fill="#21262d" stroke="#6e7681"/>
+  <text x="339.7" y="228.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Each week: orders due land, armies step, sieges</text>
+  <text x="339.7" y="244.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">tick</text>
+  <rect x="511.4" y="215" width="267.5" height="42" rx="5" fill="#161b22" stroke="#30363d" stroke-dasharray="5 4"/>
+  <text x="645.1" y="236.0" font-size="12" fill="#8b949e" text-anchor="middle" dominant-baseline="middle">Nothing moves</text>
+  <rect x="782.9" y="215" width="471.1" height="42" rx="5" fill="#21262d" stroke="#6e7681"/>
+  <text x="1018.4" y="236.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">The same each week; every fourth week also income, upkeep and events</text>
+  <rect x="172.0" y="277" width="1082.0" height="26" rx="5" fill="#2a1d47" stroke="#a371f7"/>
+  <text x="713.0" y="290.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">The map moves all the time. A ruler&#x27;s order shows as a line in the chronicle and a bubble at its capital when it lands; a battle near you pauses the clock</text>
+  <text x="509.4" y="332" font-size="12" font-weight="600" fill="#f0f6fc" text-anchor="middle">You pause</text>
+  <text x="780.9" y="332" font-size="12" font-weight="600" fill="#f0f6fc" text-anchor="middle">You resume</text>
+  <text x="20" y="356" font-size="13" fill="#c9d1d9">Not to scale. One ruler&#x27;s court order and army orders take about 1.5 s, so five rulers take 7.5 s a round: no ruler can be asked more often than every third week,</text>
+  <text x="20" y="376" font-size="13" fill="#c9d1d9">and the clock cannot run faster than the model answers. In a measured game the clock waits for a late answer, so the same recording always replays the same game.</text>
+  <rect x="20" y="394" width="16" height="12" rx="3" fill="#12351f" stroke="#2ea043"/>
+  <text x="42" y="404" font-size="12" fill="#8b949e">you</text>
+  <rect x="85.2" y="394" width="16" height="12" rx="3" fill="#11264f" stroke="#4d8eff"/>
+  <text x="107.2" y="404" font-size="12" fill="#8b949e">model rulers (qwen3.5:4b)</text>
+  <rect x="291.2" y="394" width="16" height="12" rx="3" fill="#21262d" stroke="#6e7681"/>
+  <text x="313.2" y="404" font-size="12" fill="#8b949e">the rules</text>
+  <rect x="394.79999999999995" y="394" width="16" height="12" rx="3" fill="#2a1d47" stroke="#a371f7"/>
+  <text x="416.79999999999995" y="404" font-size="12" fill="#8b949e">what the screen shows</text>
+  <rect x="575.1999999999999" y="394" width="16" height="12" rx="3" fill="#3b2a08" stroke="#d29922"/>
+  <text x="597.1999999999999" y="404" font-size="12" fill="#8b949e">waiting</text>
+  <rect x="666.0" y="394" width="16" height="12" rx="3" fill="#161b22" stroke="#30363d" stroke-dasharray="5 4"/>
+  <text x="688.0" y="404" font-size="12" fill="#8b949e">nothing to do</text>
+</svg>

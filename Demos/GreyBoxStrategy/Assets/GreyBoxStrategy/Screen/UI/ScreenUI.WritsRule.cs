@@ -441,7 +441,7 @@ namespace GreyBoxStrategy.Realm
             var t = new Label($"{look.Name.ToUpperInvariant()} PROPOSES A TREATY"); t.AddToClassList("panel-title"); head.Add(t);
             offerCard.Add(head);
             var row = new VisualElement { style = { flexDirection = FlexDirection.Row, paddingLeft = 12, paddingRight = 12, paddingTop = 10 } };
-            var face = new Image { image = portraits, uv = Faces.Uv(player?.Persona, look.Slot % 2), scaleMode = ScaleMode.ScaleAndCrop };
+            var face = RulerFace(from);
             face.AddToClassList("insp-face"); face.style.borderTopColor = face.style.borderBottomColor = face.style.borderLeftColor = face.style.borderRightColor = (Color)look.Colour;
             row.Add(face);
             var col = new VisualElement { style = { marginLeft = 12, flexShrink = 1 } };
