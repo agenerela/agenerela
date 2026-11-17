@@ -29,6 +29,10 @@ writes.
 var result = await agent.DecideAsync(line, new DecideOptions { ListActionsAndTargets = true });
 ```
 
+A call that offers an action with a parameter sends this list whatever the option says, with the
+parameter's values on the action's line: the list is the only place a local model can read them
+([parameters.md](parameters.md)). So does a call with `Choices` (below).
+
 The system prompt then gains a list, right after the instruction line:
 
 ```

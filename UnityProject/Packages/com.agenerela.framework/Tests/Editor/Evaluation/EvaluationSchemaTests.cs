@@ -81,6 +81,65 @@ namespace Agenerela.Tests.Evaluation
         }
 
         [Test]
+        public async Task AnArmWithADeclaredParameterLeavesTheOtherArmByteForByteWhatItWas()
+        {
+            // DR-023's first A/B: the same set, arm B with one harmless parameter on move_to. Arm A,
+            // which declares none, must still send exactly the schema every number was scored
+            // against; arm B's is paired, asks for the parameter between target and statement, and
+            // its prompt lists the actions.
+            string folder = EvalFixtures.OurSetFolder();
+            var set = PromptSet.Load(Path.Combine(folder, "agent.json"));
+            var profile = AssetDatabase.LoadAssetAtPath<AgentProfile>(OurProfilePath);
+            const string Idle = "{\"action\":\"none\",\"target\":\"no_target\",\"statement\":\"\"}";
+            var a = new FakeProvider(Idle);
+            var b = new FakeProvider(Idle);
+            var plain = new FakeProvider(Idle);
+
+            using (var fixtures = new RunnerFixtures())
+            {
+                var withPace = new EvalArm("B", fixtures.Config(b, "FakeB"))
+                {
+                    Legality = new EvalLegality
+                    {
+                        Name = "pace",
+                        ActionParameters =
+                        {
+                            ["move_to"] = new[] { new ActionParameter { Name = "pace", Description = "how fast to go", Values = new[] { "walk", "run" } } },
+                        },
+                    },
+                };
+                await Fixtures.NotCancelled(new EvalRunner(set, profile, new EvalArm("A", fixtures.Config(a, "FakeA")), withPace).RunAsync());
+
+                // The same arm A beside an arm with no parameter, to compare whole requests with.
+                await Fixtures.NotCancelled(new EvalRunner(set, profile,
+                    new EvalArm("A", fixtures.Config(plain, "FakePlain")), new EvalArm("B", fixtures.Config(new FakeProvider(Idle), "FakeOther"))).RunAsync());
+            }
+
+            var json = new JsonSchemaSerializer();
+            Assert.That(a.Requests, Is.Not.Empty);
+            Assert.That(a.Requests.Select(r => json.Serialize(r.Schema)), Has.All.EqualTo(NotFollowing).Or.EqualTo(Following));
+            Assert.That(a.Requests, Has.Count.EqualTo(plain.Requests.Count));
+            for (int i = 0; i < a.Requests.Count; i++)
+            {
+                Assert.That(a.Requests[i].SystemPrompt, Is.EqualTo(plain.Requests[i].SystemPrompt));
+                Assert.That(a.Requests[i].FewShotBlock, Is.EqualTo(plain.Requests[i].FewShotBlock));
+                Assert.That(a.Requests[i].Observations, Is.EqualTo(plain.Requests[i].Observations));
+                Assert.That(a.Requests[i].Stimulus, Is.EqualTo(plain.Requests[i].Stimulus));
+            }
+
+            Assert.That(b.Requests, Has.Count.EqualTo(a.Requests.Count));
+            foreach (var request in b.Requests)
+            {
+                var pairs = request.Schema.Pairs.Select(p => string.Join(", ", p.Actions) + " [" + string.Join(", ", p.Parameters.Select(f => f.Name)) + "]").ToList();
+                Assert.That(pairs, Is.EqualTo(new[] { "follow_player []", "move_to [pace]", "attack_target []", "none []" })
+                    .Or.EqualTo(new[] { "follow_player, stop_following []", "move_to [pace]", "attack_target []", "none []" }));
+                Assert.That(json.Serialize(request.Schema), Does.Contain("\"required\": [\"action\", \"target\", \"pace\", \"statement\"]"));
+                Assert.That(request.SystemPrompt, Does.Contain("pace (how fast to go): walk or run."));
+                Assert.That(request.FewShotBlock, Does.Contain(", pace: walk"));
+            }
+        }
+
+        [Test]
         public async Task AnArmThatPairsTargetsChangesNothingButTheSchema()
         {
             // #151's A/B for DR-020: the same set, arm B with the paired schema. Our set declares no

@@ -1,0 +1,180 @@
+# Parameters: a closed choice beside the target
+
+An action can ask the model for more than a target: how hard an event strikes, how many potions,
+which of three prices. Each is a **parameter**, a closed list of values the action declares. The
+model picks one, the framework checks it, and the handler receives it (DR-023, first step).
+
+Off unless you declare one. An agent whose actions declare no parameter sends exactly the request
+it sent before, and a test holds the evaluation set's schema to that.
+
+**Unmeasured as a default.** Declaring a parameter changes what the model is sent (below). The
+first A/B, on the evaluation sets with one harmless parameter, is in `docs/llm-wiki/findings.md`
+(16 November 2026); GreyBoxStrategy's storyteller is the measurement DR-023 names before anything
+is recommended.
+
+## Declaring one
+
+In code, on the action's own method:
+
+```csharp
+[AgentAction("blight", "A country falls sick.", RequiresTarget = true)]
+[AgentParameter("strength", "how hard it strikes", "minor", "major")]
+void Blight(Country country, [Argument("strength")] string strength)
+{
+    country.Sicken(strength == "major" ? 3 : 1);
+}
+```
+
+On an asset, fill **Parameters** on the `ActionDefinition`. In a definition built in code:
+
+```csharp
+new ActionDefinition
+{
+    Id = "quote_purchase", Description = "Offer to sell an item.", RequiresTarget = true,
+    Parameters = new[]
+    {
+        new ActionParameter { Name = "quantity", Description = "how many", Values = new[] { "1", "2", "3" }, Default = "1" },
+    },
+};
+```
+
+| Field | What it is |
+|---|---|
+| `Name` | snake_case, the key the model writes. Not `action`, `target`, `statement` or `also_targets` |
+| `Description` | Optional. Shown beside the values in the prompt |
+| `Values` | The closed list. At least one, none empty (Gemini rejects `""` in an enum), none twice |
+| `Default` | Optional. The value used when the reply leaves the parameter out or names a value not offered |
+| `ExampleValue` | Optional. The value the action's example shows; else `Default`, else the first offered |
+
+Two kinds, both a list:
+
+- **A closed set of words**: `minor`, `major`.
+- **A number from a list**: `1`, `2`, `3`. When every value is a whole number, a method may take
+  it as an `int` (`[Argument("quantity")] int quantity`), and `AgentDecision.TryGetNumber` reads it.
+
+There is no open number range and no free text: a small model invents numbers, and a second free
+text is a recipe ([prompt.md](prompt.md#two-texts-in-one-statement-a-title-and-a-story)). Compute a
+short list instead, such as three prices.
+
+With two parameters on one method, give each an `Order` (`[AgentParameter(..., Order = 1)]`): C#
+promises no order for several attributes on one method, and the order is the order the reply gives
+them in. Registration refuses a parameter that could not be sent, and a method whose `[Argument]`
+names no parameter or asks for an `int` from words.
+
+## What the model is sent
+
+A call that offers an action with a parameter differs from the same call without it in three ways.
+
+1. **The schema is paired** (`DecideOptions.PairTargetsWithActions`, DR-020), whether or not the
+   call asked: a parameter belongs to one action, so only that action's branch can ask for it.
+   Each branch is a complete object. An action with a parameter never shares a branch with one
+   that has none.
+2. **The parameter comes after `target` and before `statement`**: `action`, `target`,
+   `strength`, `statement`. Placed after the statement, a value was written into the statement in
+   3 replies of 6; placed before, in none (findings, 14 November 2026).
+3. **The prompt lists the actions and targets**, as `ListActionsAndTargets` does, whatever that
+   option says, with each parameter's values on its action's line:
+
+   ```text
+   Allowed actions:
+   - blight: A country falls sick. strength (how hard it strikes): minor or major.
+   - bless: A country prospers.
+   - none: Take no action.
+   ```
+
+   A model served through Ollama never reads the schema, so this line is the only place it can
+   learn the values. The action's example shows one too:
+   `-> action: blight, target: orsk, strength: minor, statement: "..."`.
+
+With no target registered, the schema is still paired and has no `target` field.
+
+**Key order on some models.** Ollama's native chat path sorts a schema's keys alphabetically
+(findings, 5 November 2026), which would put `strength` after `statement`. The `qwen3.5` family
+takes the path that keeps the order. Detecting a lost order is not built yet; check a new model
+with `tools/benchmarks/closed_choice_grammar_probe.py` before trusting parameters on it.
+
+## Values that depend on the game
+
+A value can be unavailable right now: a quantity the stall cannot cover, a strength a country
+struck last turn should not take again. Give the handler a per-value check, and a value it
+rejects is **absent from the schema and the prompt** for that decision, not forbidden in prose.
+
+```csharp
+[AvailableValue("quote_purchase", "quantity")]
+Availability CanSell(AgentContext ctx, string quantity) =>
+    int.Parse(quantity) <= stock ? Availability.Yes : Availability.No($"only {stock} left");
+```
+
+- `[AvailableValue(actionId, parameter)]` on a method taking the value as a string, alone or after
+  an `AgentContext`, returning `bool` or `Availability`.
+- `DelegateActionHandler.IsAvailableValue`, a `Func<AgentContext, string, string, Availability>`
+  given the parameter's name and the value.
+- `IArgumentAvailability` on a handler of your own.
+
+Each rejected value is recorded with its reason (below). An action with a parameter that has no
+value left is left out of the decision, as an action with no legal target is. The check runs once
+per value per decision, and again at `Execute`; count nothing in it
+([guards.md](guards.md#recipe-fairness-and-cooldowns)).
+
+## What comes back
+
+`AgentDecision.Arguments` holds the chosen value of each parameter by name, in declared order;
+empty, never null, for an action that declares none.
+
+```csharp
+if (result.Decision.TryGetArgument("strength", out string strength)) { ... }
+if (result.Decision.TryGetNumber("quantity", out int quantity)) { ... }
+```
+
+The framework checks the values itself; the model's reply is never trusted (hard rule 5):
+
+| The reply | What happens |
+|---|---|
+| A value the schema offered | Kept |
+| A parameter left out, or a value not offered, and the parameter has a `Default` that is offered now | The default is used, and `DecisionTelemetry.ArgumentsDefaulted` names the parameter. `DecisionResult.ModelDecision` keeps what the model wrote |
+| The same, with no default | `SchemaLegalityGuard` rejects the decision: it becomes `none`, and nothing runs |
+| A value that is not a string or a whole number | The reply is unreadable: a pipeline error |
+
+`Agent.Execute` runs the same guard again against the game as it is then: every argument must be a
+declared value of a declared parameter, none may be missing, and the per-value check is asked
+again. A value gone stale is refused with the check's reason in `ActionResult.AvailabilityReason`,
+and no handler runs. A guard of your own reads `input.Decision.Arguments`;
+`GuardVerdict.ReplaceStatement` keeps them.
+
+## Where it is recorded
+
+| Where | What |
+|---|---|
+| `DecisionTelemetry.Arguments` | The decision's values by name; empty for a stopped decision |
+| `DecisionTelemetry.ArgumentsDefaulted` | The parameters that took their default |
+| `DecisionTelemetry.ValuesUnavailable` | Each value a per-value check rejected, with its reason |
+| The decision log | `arguments` inside `decision` and `modelDecision`; `argumentsDefaulted` and `valuesUnavailable` on the line; all left out when empty ([logging-decisions.md](logging-decisions.md)) |
+| `AgentPreview` | `ValuesUnavailable`, an action left out for a parameter with no value in `LeftOut`, and each branch's parameters with the values offered now in `Request.Schema.Pairs[i].Parameters` |
+| Memory | A remembered decision keeps its arguments before the statement, and `RollingHistory.Remembers = Move` keeps them with the move |
+
+## Parameters, choices and targets
+
+- **A choice among moves** ("hire them, send them away, or seize their arms") is
+  `DecideOptions.Choices` ([prompt.md](prompt.md#a-choice-among-options-given-with-the-call)): each
+  option is an action value. A choice takes no parameter.
+- **A choice about a move** (how hard, how many) is a parameter.
+- **A value that is a game object with its own description**, such as a stock bundle the shop
+  actually holds, is still better as a target ([targets.md](targets.md)).
+- **Several targets** in one decision are not built: use a group as a target
+  ([targets.md](targets.md#a-group-as-one-target)). `target` plus `also_targets` is DR-023's second
+  step.
+
+## Not built
+
+- An open number range, and free text.
+- `target` plus `also_targets`.
+- Detecting a reply whose key order was lost (Ollama's native path).
+- A provider saying it cannot take a paired schema: none but Ollama exists yet. Gemini takes
+  `anyOf`; OpenAI's strict mode refuses a root `anyOf`.
+- A parameter on a `Choice`.
+
+## For an A/B
+
+`EvalLegality.ActionParameters` gives an evaluation arm's copy of an action a parameter, without
+touching the set, its labels or the profile; the labels are scored on action and target alone
+([evaluation.md](evaluation.md)).

@@ -94,6 +94,39 @@ namespace Agenerela
                     }
                 }
 
+                // Per value (DR-023): only for an action that declares parameters and a handler
+                // that has a check. A parameter with no value left leaves the action out, as an
+                // action with no legal target is: there is no answer the schema could take.
+                var valueCheck = definition.DeclaresParameters ? ValueChecks.Of(handler) : null;
+                if (valueCheck != null)
+                {
+                    bool everyParameterHasOne = true;
+                    foreach (var parameter in definition.Parameters)
+                    {
+                        bool anyValue = false;
+                        foreach (string value in parameter.Values)
+                        {
+                            var availability = valueCheck(ctx, parameter.Name, value);
+                            if (availability.IsAvailable)
+                            {
+                                anyValue = true;
+                            }
+                            else
+                            {
+                                answer.RejectValue(definition, parameter.Name, value, availability.Reason);
+                            }
+                        }
+
+                        everyParameterHasOne &= anyValue;
+                    }
+
+                    if (!everyParameterHasOne)
+                    {
+                        answer.LeaveOut(definition, LeftOutBecause.NoLegalValue);
+                        continue;
+                    }
+                }
+
                 answer.Offer(definition);
             }
 
@@ -112,6 +145,9 @@ namespace Agenerela
 
         // It needs a target, and its per-target check allows none of those it takes
         NoLegalTarget,
+
+        // One of its parameters has no value its per-value check allows (DR-023)
+        NoLegalValue,
     }
 
     // One decision's availability, asked once (ActionAvailability.Evaluate).
@@ -123,6 +159,9 @@ namespace Agenerela
             new Dictionary<ActionDefinition, Dictionary<string, string>>();
         private readonly List<UnavailableTarget> unavailable = new List<UnavailableTarget>();
         private readonly HashSet<ActionDefinition> checkedPerTarget = new HashSet<ActionDefinition>();
+        private readonly Dictionary<ActionDefinition, Dictionary<string, string>> rejectedValues =
+            new Dictionary<ActionDefinition, Dictionary<string, string>>();
+        private readonly List<UnavailableValue> unavailableValues = new List<UnavailableValue>();
 
         // The actions offered, in registry order.
         public IReadOnlyList<ActionDefinition> Offered => offered;
@@ -131,10 +170,65 @@ namespace Agenerela
         // and left-out ones alike.
         public IReadOnlyList<UnavailableTarget> Unavailable => unavailable;
 
+        // Every value a per-value check rejected, in registry, parameter then value order (DR-023).
+        public IReadOnlyList<UnavailableValue> UnavailableValues => unavailableValues;
+
         public void Offer(ActionDefinition definition)
         {
             offered.Add(definition);
         }
+
+        public void RejectValue(ActionDefinition definition, string parameter, string value, string reason)
+        {
+            if (!rejectedValues.TryGetValue(definition, out var values))
+            {
+                values = new Dictionary<string, string>(StringComparer.Ordinal);
+                rejectedValues.Add(definition, values);
+            }
+
+            values[ValueKey(parameter, value)] = reason;
+            unavailableValues.Add(new UnavailableValue(definition.Id, parameter, value, reason));
+        }
+
+        public bool IsValueRejected(ActionDefinition definition, string parameter, string value, out string reason)
+        {
+            reason = null;
+            return rejectedValues.TryGetValue(definition, out var values) && values.TryGetValue(ValueKey(parameter, value), out reason);
+        }
+
+        // The declared values of one parameter that no per-value check rejected, in declared order.
+        public List<string> ValuesOf(ActionDefinition definition, ActionParameter parameter)
+        {
+            var values = new List<string>(parameter.Values.Length);
+            foreach (string value in parameter.Values)
+            {
+                if (!IsValueRejected(definition, parameter.Name, value, out _))
+                {
+                    values.Add(value);
+                }
+            }
+
+            return values;
+        }
+
+        // The values rejected for one action, as "name 'value' (reason)" phrases, for a sentence.
+        public string RejectedValuesPhrase(ActionDefinition definition)
+        {
+            var parts = new List<string>();
+            foreach (var value in unavailableValues)
+            {
+                if (value.Action == definition.Id)
+                {
+                    parts.Add(value.Reason == null ? $"{value.Parameter} '{value.Value}'" : $"{value.Parameter} '{value.Value}' ({value.Reason})");
+                }
+            }
+
+            return string.Join(", ", parts);
+        }
+
+        // A parameter name is snake_case with no whitespace (ActionParameter.Validate), so a space
+        // cannot be part of it and the key is unambiguous.
+        private static string ValueKey(string parameter, string value) => parameter + " " + value;
 
         public void LeaveOut(ActionDefinition definition, LeftOutBecause because)
         {
@@ -213,6 +307,25 @@ namespace Agenerela
             }
 
             return string.Join(", ", parts);
+        }
+    }
+
+    // The per-value check behind a handler, or null when it has none (DR-023).
+    internal static class ValueChecks
+    {
+        public static Func<AgentContext, string, string, Availability> Of(IActionHandler handler)
+        {
+            switch (handler)
+            {
+                case DelegateActionHandler delegated:
+                    return delegated.IsAvailableValue;
+                case MethodActionHandler method:
+                    return method.ValueCheck;
+                case IArgumentAvailability checks:
+                    return checks.IsAvailableValue;
+                default:
+                    return null;
+            }
         }
     }
 

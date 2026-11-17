@@ -316,7 +316,8 @@ namespace Agenerela
                     lines.Add(ActionsHeader);
                     foreach (string id in field.AllowedValues)
                     {
-                        lines.Add(Entry(id, id == ActionRegistry.None ? DecisionSchema.NoneDescription : DescriptionOf(ctx.Actions, id)));
+                        lines.Add(WithParameters(
+                            Entry(id, id == ActionRegistry.None ? DecisionSchema.NoneDescription : DescriptionOf(ctx.Actions, id)), schema, id));
                     }
                 }
                 else if (field.Name == DecisionSchema.TargetFieldName)
@@ -374,7 +375,8 @@ namespace Agenerela
             var lines = new List<string> { ActionsHeader };
             foreach (string id in actionField.AllowedValues)
             {
-                string line = Entry(id, id == ActionRegistry.None ? DecisionSchema.NoneDescription : DescriptionOf(ctx.Actions, id));
+                string line = WithParameters(
+                    Entry(id, id == ActionRegistry.None ? DecisionSchema.NoneDescription : DescriptionOf(ctx.Actions, id)), schema, id);
                 var set = TakenBy(id);
                 var real = listed.FindAll(set.Contains);
                 bool noTarget = set.Contains(TargetRegistry.NoTarget);
@@ -493,6 +495,37 @@ namespace Agenerela
 
         // An action's line with its pairs note: "- id: Its description. Target: no_target.", or with
         // no description "- id: Target: no_target.".
+        // The entry with the parameters the schema asks of this action, each as
+        // "strength (how hard it strikes): minor or major." (DR-023): the values offered for this
+        // decision, since a local model never reads the schema's enum. Unchanged for an action that
+        // declares none. New and unmeasured as wording, and here alone so an A/B can change it.
+        private static string WithParameters(string entry, DecisionSchema schema, string actionId)
+        {
+            foreach (var parameter in DecisionSchema.ParametersOf(schema, actionId))
+            {
+                string name = string.IsNullOrWhiteSpace(parameter.Description)
+                    ? parameter.Name
+                    : parameter.Name + " (" + OneLine(parameter.Description) + ")";
+                entry = WithNote(entry, name + ": " + OneOf(parameter.AllowedValues) + ".");
+            }
+
+            return entry;
+        }
+
+        // "a", "a or b", "a, b or c".
+        private static string OneOf(IReadOnlyList<string> values)
+        {
+            if (values.Count == 1)
+            {
+                return values[0];
+            }
+
+            var head = new List<string>(values);
+            string last = head[head.Count - 1];
+            head.RemoveAt(head.Count - 1);
+            return string.Join(", ", head) + " or " + last;
+        }
+
         private static string WithNote(string entry, string note)
         {
             return entry.IndexOf(": ", StringComparison.Ordinal) >= 0 ? entry + " " + note : entry + ": " + note;

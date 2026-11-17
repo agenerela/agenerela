@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
 
@@ -19,11 +20,18 @@ namespace Agenerela
         private readonly bool checkTakesContext;
         private readonly MethodInfo targetCheck;
         private readonly bool targetCheckTakesContext;
+        // For each of the method's parameters, the [Argument] name it receives, or null (DR-023).
+        private readonly string[] argumentNames;
+        // The [AvailableValue] method of each parameter that has one, by parameter name, or null.
+        private readonly IReadOnlyDictionary<string, MethodInfo> valueChecks;
 
         /// <param name="check">The [Available] method, or null when the action is always available.</param>
         /// <param name="targetCheck">The [AvailableFor] method, or null when every target is.</param>
-        public MethodActionHandler(object owner, MethodInfo action, MethodInfo check, MethodInfo targetCheck = null)
+        /// <param name="valueChecks">The [AvailableValue] methods by parameter name, or null when the action has none.</param>
+        public MethodActionHandler(object owner, MethodInfo action, MethodInfo check, MethodInfo targetCheck = null,
+            IReadOnlyDictionary<string, MethodInfo> valueChecks = null)
         {
+            this.valueChecks = valueChecks != null && valueChecks.Count > 0 ? valueChecks : null;
             this.targetCheck = targetCheck;
             targetCheckTakesContext = targetCheck != null && targetCheck.GetParameters().Length == 2;
             this.owner = owner;
@@ -33,9 +41,11 @@ namespace Agenerela
 
             var parameters = action.GetParameters();
             parameterTypes = new Type[parameters.Length];
+            argumentNames = new string[parameters.Length];
             for (int i = 0; i < parameters.Length; i++)
             {
                 parameterTypes[i] = parameters[i].ParameterType;
+                argumentNames[i] = parameters[i].GetCustomAttribute<ArgumentAttribute>(false)?.Name;
             }
 
             checkTakesContext = check != null && check.GetParameters().Length == 1;
@@ -75,7 +85,11 @@ namespace Agenerela
             for (int i = 0; i < args.Length; i++)
             {
                 Type type = parameterTypes[i];
-                if (type == typeof(AgentContext))
+                if (argumentNames[i] != null)
+                {
+                    args[i] = ArgumentFor(type, argumentNames[i], decision);
+                }
+                else if (type == typeof(AgentContext))
                 {
                     args[i] = ctx;
                 }
@@ -91,6 +105,51 @@ namespace Agenerela
 
             object returned = Call(action, args);
             return returned is ActionResult result ? result : ActionResult.Done();
+        }
+
+        // The [AvailableValue] checks as one function, or null when the action has none, so that an
+        // action without one is never treated as having a per-value check (ValueChecks.Of). A
+        // parameter with no check of its own offers every value.
+        internal System.Func<AgentContext, string, string, Availability> ValueCheck =>
+            valueChecks == null ? null : (System.Func<AgentContext, string, string, Availability>)IsAvailableValue;
+
+        private Availability IsAvailableValue(AgentContext ctx, string parameter, string value)
+        {
+            if (!valueChecks.TryGetValue(parameter, out MethodInfo method))
+            {
+                return Availability.Yes;
+            }
+
+            object returned = Call(method, method.GetParameters().Length == 2 ? new object[] { ctx, value } : new object[] { value });
+            return returned is Availability availability ? availability : (Availability)(bool)returned;
+        }
+
+        // The decision's value for one declared parameter, as the method's own parameter type: the
+        // string, or the whole number it reads as. Agent.Execute has checked the value against the
+        // declaration before this runs; a decision handed straight to the handler may still lack it.
+        private object ArgumentFor(Type type, string argument, AgentDecision decision)
+        {
+            if (decision == null)
+            {
+                throw new ArgumentNullException(nameof(decision), $"{name} takes the argument '{argument}', which the decision holds.");
+            }
+
+            if (!decision.TryGetArgument(argument, out string value))
+            {
+                throw new InvalidOperationException($"{name} takes the argument '{argument}', but the decision has none.");
+            }
+
+            if (type == typeof(string))
+            {
+                return value;
+            }
+
+            if (!ActionParameter.TryReadNumber(value, out int number))
+            {
+                throw new InvalidOperationException($"{name} takes '{argument}' as an int, but the decision's value is '{value}'.");
+            }
+
+            return number;
         }
 
         // The object registered under the decision's target id, as the method's own parameter type.

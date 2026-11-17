@@ -24,6 +24,9 @@ namespace Agenerela{
         public List<UnavailableChoice> ChoicesUnavailable = new List<UnavailableChoice>(); // Each choice the call gave as unavailable, with its reason, in the order given; empty when none was (DR-022)
         public string TargetIgnored; // The target the model named for an action that takes none (ActionDefinition.TakesNoTarget), dropped before the guards so the decision's target is no_target; null when nothing was dropped (#244 item 2)
         public List<UnavailableTarget> TargetsUnavailable = new List<UnavailableTarget>(); // Each action and target pair a per-target check (ITargetAvailability) rejected when the request was prepared, with its reason, in registry then target order; empty for an agent with no such check (#190 LV #19)
+        public Dictionary<string, string> Arguments = new Dictionary<string, string>(); // The value the decision holds for each parameter of its action, by name (AgentDecision.Arguments), after any default was applied and the guards ran; empty for an action that declares none, and for a decision a guard stopped (DR-023)
+        public List<string> ArgumentsDefaulted = new List<string>(); // The parameters whose value the model left out or gave as one not offered, and that took ActionParameter.Default instead, in declared order; DecisionResult.ModelDecision keeps what the model wrote. Empty when none did (DR-023)
+        public List<UnavailableValue> ValuesUnavailable = new List<UnavailableValue>(); // Each value of an action's parameter a per-value check (IArgumentAvailability) rejected when the request was prepared, with its reason, in registry, parameter then value order; empty for an agent with no such check (DR-023)
         public int HistoryTurnsSent; // Exchanges of memory sent in DecisionRequest.History, two entries each (#90)
         public int HistoryTurnsDropped; // Exchanges the memory still held but left out of this request, from IReportsDroppedTurns; 0 when it cannot say (#90)
         public int HistoryTurnsForgotten; // Exchanges the memory has let go of since it was made, a rising total, from IReportsDroppedTurns; 0 when it cannot say (#90)
@@ -68,6 +71,9 @@ namespace Agenerela{
             ChoicesUnavailable = new List<UnavailableChoice>();
             TargetIgnored = null;
             TargetsUnavailable = new List<UnavailableTarget>();
+            Arguments = new Dictionary<string, string>();
+            ArgumentsDefaulted = new List<string>();
+            ValuesUnavailable = new List<UnavailableValue>();
             HistoryTurnsSent = 0;
             HistoryTurnsDropped = 0;
             HistoryTurnsForgotten = 0;

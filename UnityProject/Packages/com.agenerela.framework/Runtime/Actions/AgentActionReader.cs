@@ -27,6 +27,7 @@ namespace Agenerela
             public AgentActionAttribute Action;
             public ExampleAttribute Example;
             public CounterExampleAttribute CounterExample;
+            public ActionParameter[] Parameters;
             public int Depth;
         }
 
@@ -40,6 +41,8 @@ namespace Agenerela
             var found = new List<Found>();
             var checks = new Dictionary<string, MethodInfo>();
             var targetChecks = new Dictionary<string, MethodInfo>();
+            // Action id, then parameter name, to its [AvailableValue] method (DR-023).
+            var valueChecks = new Dictionary<string, Dictionary<string, MethodInfo>>();
             var counted = new HashSet<RuntimeMethodHandle>();
 
             // Every class in the hierarchy, private methods included, so a base class can declare
@@ -60,7 +63,9 @@ namespace Agenerela
                     bool isTargetCheck = method.IsDefined(typeof(AvailableForAttribute), false);
                     bool hasExample = method.IsDefined(typeof(ExampleAttribute), false);
                     bool hasCounterExample = method.IsDefined(typeof(CounterExampleAttribute), false);
-                    if (!isAction && !isCheck && !isTargetCheck && !hasExample && !hasCounterExample)
+                    bool hasParameters = method.IsDefined(typeof(AgentParameterAttribute), false);
+                    bool isValueCheck = method.IsDefined(typeof(AvailableValueAttribute), false);
+                    if (!isAction && !isCheck && !isTargetCheck && !hasExample && !hasCounterExample && !hasParameters && !isValueCheck)
                     {
                         continue;
                     }
@@ -89,10 +94,24 @@ namespace Agenerela
                                     "[Available] takes nothing or one AgentContext, and [AvailableFor] takes the target's id: give each its own method.");
                     }
 
+                    if (isValueCheck && (isAction || isCheck || isTargetCheck))
+                    {
+                        throw Error($"{Name(method)} has [AvailableValue] beside another agent attribute. " +
+                                    "Give the per-value check its own method that takes the value.");
+                    }
+
+                    if (hasParameters && !isAction)
+                    {
+                        throw Error($"{Name(method)} has [AgentParameter] but no [AgentAction]. " +
+                                    "A parameter goes on the action's own method.");
+                    }
+
+                    ActionParameter[] declared = null;
                     if (isAction)
                     {
                         var action = method.GetCustomAttribute<AgentActionAttribute>(false);
-                        CheckActionMethod(method);
+                        declared = ParametersOf(method);
+                        CheckActionMethod(method, declared);
                         CheckId(method, action.Id);
 
                         int twin = found.FindIndex(f => f.Action.Id == action.Id);
@@ -108,6 +127,7 @@ namespace Agenerela
                             Action = action,
                             Example = method.GetCustomAttribute<ExampleAttribute>(false),
                             CounterExample = method.GetCustomAttribute<CounterExampleAttribute>(false),
+                            Parameters = declared,
                             Depth = depth
                         });
                     }
@@ -134,6 +154,28 @@ namespace Agenerela
                             }
 
                             checks.Add(id, method);
+                        }
+                    }
+
+                    if (isValueCheck)
+                    {
+                        CheckAvailableValueMethod(method);
+                        foreach (var availableValue in method.GetCustomAttributes<AvailableValueAttribute>(false))
+                        {
+                            string id = availableValue.ActionId ?? "";
+                            string parameter = availableValue.Parameter ?? "";
+                            if (!valueChecks.TryGetValue(id, out var byParameter))
+                            {
+                                byParameter = new Dictionary<string, MethodInfo>(StringComparer.Ordinal);
+                                valueChecks.Add(id, byParameter);
+                            }
+
+                            if (byParameter.TryGetValue(parameter, out MethodInfo other))
+                            {
+                                throw Error($"Parameter '{parameter}' of action '{id}' has two [AvailableValue] checks: {Name(other)} and {Name(method)}.");
+                            }
+
+                            byParameter.Add(parameter, method);
                         }
                     }
 
@@ -174,6 +216,26 @@ namespace Agenerela
                 }
             }
 
+            // A per-value check must name an action here and one of its parameters, for the same reason.
+            foreach (var check in valueChecks)
+            {
+                int at = found.FindIndex(f => f.Action.Id == check.Key);
+                foreach (var byParameter in check.Value)
+                {
+                    if (at < 0)
+                    {
+                        throw Error($"{Name(byParameter.Value)} is an [AvailableValue] check for '{check.Key}', " +
+                                    $"but {owner.GetType().Name} has no [AgentAction] with that id.");
+                    }
+
+                    if (!Array.Exists(found[at].Parameters, p => p.Name == byParameter.Key))
+                    {
+                        throw Error($"{Name(byParameter.Value)} is the [AvailableValue] check for '{byParameter.Key}', " +
+                                    $"but the action '{check.Key}' declares no [AgentParameter] with that name.");
+                    }
+                }
+            }
+
             // Base class first, then declaration order. The schema enum (#8) is built in
             // registration order.
             found.Sort((a, b) => a.Depth != b.Depth
@@ -202,10 +264,12 @@ namespace Agenerela
                     // Copied, so the definition never shares an array with the attribute.
                     TargetCategories = f.Action.TargetCategories == null
                         ? Array.Empty<string>()
-                        : (string[])f.Action.TargetCategories.Clone()
+                        : (string[])f.Action.TargetCategories.Clone(),
+                    Parameters = f.Parameters
                 };
 
-                actions.Add((definition, new MethodActionHandler(owner, f.Method, check, targetCheck)));
+                valueChecks.TryGetValue(f.Action.Id, out var perValue);
+                actions.Add((definition, new MethodActionHandler(owner, f.Method, check, targetCheck, perValue)));
             }
 
             return actions;
@@ -217,7 +281,46 @@ namespace Agenerela
             return $"{method.DeclaringType.Name}.{method.Name}";
         }
 
-        private static void CheckActionMethod(MethodInfo method)
+        // The method's [AgentParameter]s as parameters, by Order then name: reflection promises no
+        // order for several attributes on one method. Each must pass ActionParameter.Validate, and
+        // no two may share a name.
+        private static ActionParameter[] ParametersOf(MethodInfo method)
+        {
+            var attributes = new List<AgentParameterAttribute>(method.GetCustomAttributes<AgentParameterAttribute>(false));
+            attributes.Sort((a, b) => a.Order != b.Order
+                ? a.Order.CompareTo(b.Order)
+                : string.CompareOrdinal(a.Name, b.Name));
+
+            var parameters = new ActionParameter[attributes.Count];
+            var names = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < attributes.Count; i++)
+            {
+                var attribute = attributes[i];
+                parameters[i] = new ActionParameter
+                {
+                    Name = attribute.Name,
+                    Description = attribute.Description,
+                    // Copied, so the definition never shares an array with the attribute.
+                    Values = attribute.Values == null ? null : (string[])attribute.Values.Clone(),
+                    Default = attribute.Default,
+                    ExampleValue = attribute.ExampleValue,
+                };
+
+                if (!ActionParameter.Validate(parameters[i], out string problem))
+                {
+                    throw Error($"{Name(method)}: {problem}");
+                }
+
+                if (!names.Add(attribute.Name))
+                {
+                    throw Error($"{Name(method)} declares the parameter '{attribute.Name}' twice.");
+                }
+            }
+
+            return parameters;
+        }
+
+        private static void CheckActionMethod(MethodInfo method, ActionParameter[] declared)
         {
             // ActionResult says what the action did (DR-018); void counts as done whenever it returns.
             if (method.ReturnType != typeof(void) && method.ReturnType != typeof(ActionResult))
@@ -240,6 +343,31 @@ namespace Agenerela
                 {
                     throw Error($"{Name(method)}: parameter '{parameter.Name}' is ref, out or in, " +
                                 "which an [AgentAction] method cannot take.");
+                }
+
+                var argument = parameter.GetCustomAttribute<ArgumentAttribute>(false);
+                if (argument != null)
+                {
+                    var of = Array.Find(declared, p => p.Name == argument.Name);
+                    if (of == null)
+                    {
+                        throw Error($"{Name(method)}: parameter '{parameter.Name}' takes the argument '{argument.Name}', " +
+                                    "but the method has no [AgentParameter] with that name.");
+                    }
+
+                    if (type != typeof(string) && type != typeof(int))
+                    {
+                        throw Error($"{Name(method)}: parameter '{parameter.Name}' takes the argument '{argument.Name}' " +
+                                    $"as {type.Name}, but an argument is a string or an int.");
+                    }
+
+                    if (type == typeof(int) && !of.IsNumber)
+                    {
+                        throw Error($"{Name(method)}: parameter '{parameter.Name}' takes '{argument.Name}' as an int, " +
+                                    "but not every value of that parameter is a whole number.");
+                    }
+
+                    continue;
                 }
 
                 if (type == typeof(AgentContext))
@@ -286,6 +414,24 @@ namespace Agenerela
                 (parameters.Length == 1 && parameters[0].ParameterType != typeof(AgentContext)))
             {
                 throw Error($"{Name(method)} is an [Available] check, so it takes nothing or one AgentContext.");
+            }
+        }
+
+        private static void CheckAvailableValueMethod(MethodInfo method)
+        {
+            if (method.ReturnType != typeof(bool) && method.ReturnType != typeof(Availability))
+            {
+                throw Error($"{Name(method)} returns {method.ReturnType.Name}, but an [AvailableValue] check must return bool or Availability.");
+            }
+
+            var parameters = method.GetParameters();
+            bool shape = parameters.Length == 1
+                ? parameters[0].ParameterType == typeof(string)
+                : parameters.Length == 2 && parameters[0].ParameterType == typeof(AgentContext) && parameters[1].ParameterType == typeof(string);
+            if (method.ContainsGenericParameters || !shape)
+            {
+                throw Error($"{Name(method)} is an [AvailableValue] check, so it takes the value as a string, " +
+                            "alone or after one AgentContext.");
             }
         }
 

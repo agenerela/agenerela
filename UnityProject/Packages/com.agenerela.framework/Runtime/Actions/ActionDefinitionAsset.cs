@@ -20,6 +20,17 @@ namespace Agenerela
             {
                 Debug.LogWarning($"{name}: {problem}", this);
             }
+
+            if (Action.Parameters != null)
+            {
+                foreach (var parameter in Action.Parameters)
+                {
+                    if (!ActionParameter.Validate(parameter, out string why))
+                    {
+                        Debug.LogWarning($"{name}: {why}", this);
+                    }
+                }
+            }
         }
     }
 }

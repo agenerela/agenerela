@@ -200,6 +200,24 @@ namespace Agenerela
                     nameof(definition));
             }
 
+            if (definition.Parameters != null)
+            {
+                var names = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var parameter in definition.Parameters)
+                {
+                    if (!ActionParameter.Validate(parameter, out string why))
+                    {
+                        throw new ArgumentException($"Action '{definition.Id}': {why}", nameof(definition));
+                    }
+
+                    if (!names.Add(parameter.Name))
+                    {
+                        throw new ArgumentException(
+                            $"Action '{definition.Id}' declares the parameter '{parameter.Name}' twice.", nameof(definition));
+                    }
+                }
+            }
+
             if (_byId.ContainsKey(definition.Id))
             {
                 throw new InvalidOperationException($"Action already registered: {definition.Id}");

@@ -568,6 +568,15 @@ gives after reading the results, in as many phases as it likes, each decision re
 memory, drops the whole round on cancellation with nothing remembered, and groups a round's
 decisions in the log as one `DecisionChain`. `Documentation~/decision-rounds.md`.
 
+An action may declare **parameters** (#266 item 2; DR-023, first step): closed choices beside its
+target, a set of words or a number list, in `ActionDefinition.Parameters`,
+`[AgentParameter]` and `[Argument]`. A call that offers one sends the paired schema with the
+parameters after `target` and before `statement`, and the action list with their values; the
+chosen values are `AgentDecision.Arguments`, which the legality guard holds to the declaration
+inside `DecideAsync` and again at `Execute`. A per-value check (`IArgumentAvailability`,
+`[AvailableValue]`) leaves a value out of one decision. Nothing changes for an agent that declares
+none. `Documentation~/parameters.md`.
+
 ### 2.2 Actions (`Runtime/Actions/`) — the heart of the framework
 
 **Settled rule: the action vocabulary is data, not an enum.** The prototype's fixed
@@ -2484,8 +2493,11 @@ game wants choices and its ordinary actions in one enum, or a chosen option shou
 
 **Status:** Accepted, 15 November 2026. Proposed on 14 November (#266 item 2, its second box) by
 the #266 framework-gaps session; the lead answered "Yes to all five" to the questions below, so each
-proposed answer is the decision. Nothing is built yet, and nothing becomes a default before the
-measurement in question 5.
+proposed answer is the decision. **The first step is built** (16 November 2026, #266): closed sets
+and number lists, as decided in question 2, with the forced paired schema of question 4; its first
+A/B on the evaluation sets is in findings, 16 November. Not built: `also_targets` (question 3), an
+open number range, the `OrderLost` detection and the provider capability the table names. Nothing
+becomes a default before the measurement in question 5.
 
 **The lead's questions, each decided as proposed** (the table further down gives the reasons):
 

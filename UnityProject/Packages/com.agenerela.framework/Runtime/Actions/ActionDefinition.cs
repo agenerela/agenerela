@@ -137,6 +137,38 @@ namespace Agenerela
         public string[] TargetCategories;
 
         /// <summary>
+        /// The closed choices this action asks for beside its target, such as a strength or a count
+        /// (DR-023, first step). Null or empty, the default, asks for none, and the action is sent
+        /// exactly as before.
+        /// </summary>
+        /// <remarks>
+        /// Declaring one changes what the model is sent for every call that offers this action: the
+        /// schema is paired (<see cref="DecideOptions.PairTargetsWithActions"/>), with the parameters
+        /// after <c>target</c> and before <c>statement</c>, and the prompt's action list is sent with
+        /// their values. Unmeasured beyond a grammar probe: the A/B is owed (#151). The chosen values
+        /// are in <see cref="AgentDecision.Arguments"/>. <see cref="ActionParameter.Validate"/> is the
+        /// rule each must pass at registration, and two may not share a name.
+        /// </remarks>
+        [Tooltip("Optional. Closed choices this action asks for beside its target, such as a strength. " +
+                 "Each is offered in the schema and listed with its values in the prompt.")]
+        public ActionParameter[] Parameters;
+
+        /// <summary>Whether <see cref="Parameters"/> holds at least one parameter.</summary>
+        public bool DeclaresParameters => Parameters != null && Parameters.Length > 0;
+
+        /// <summary>The declared parameter named <paramref name="name"/>, or null.</summary>
+        public ActionParameter ParameterNamed(string name)
+        {
+            if (Parameters == null) return null;
+            foreach (var parameter in Parameters)
+            {
+                if (parameter != null && string.Equals(parameter.Name, name, StringComparison.Ordinal)) return parameter;
+            }
+
+            return null;
+        }
+
+        /// <summary>
         /// Whether this action takes a target registered in <paramref name="category"/>: always when
         /// <see cref="TargetCategories"/> names none, otherwise only for one of them. A null or blank
         /// category, a target registered without one, is taken only by an action that names none.

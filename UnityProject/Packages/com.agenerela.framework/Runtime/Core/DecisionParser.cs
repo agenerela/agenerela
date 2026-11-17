@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -41,6 +43,12 @@ namespace Agenerela
         /// otherwise must be a string. Any other field is ignored, and so is a <c>statement</c>
         /// when <paramref name="schema"/> asked for none (<see cref="DecideOptions.AskForStatement"/>,
         /// #266): the decision's statement is then empty, whatever the provider sent.
+        /// <para>
+        /// The parameters <paramref name="schema"/> asks of the chosen action (DR-023) are read by
+        /// name into <see cref="AgentDecision.Arguments"/>, in the schema's order: a string as
+        /// written, a whole number as its invariant text. One missing or null is left out, and one of
+        /// another type is a problem. Whether a value is one the schema offered is not checked here.
+        /// </para>
         /// </summary>
         /// <param name="schema">The schema the request carried, which says whether it asked for a target.</param>
         /// <param name="problem">Why the reply was rejected, or null.</param>
@@ -82,7 +90,36 @@ namespace Agenerela
                 statement = (string)statementToken;
             }
 
-            decision = new AgentDecision(action, target, statement);
+            List<KeyValuePair<string, string>> arguments = null;
+            foreach (var parameter in DecisionSchema.ParametersOf(schema, action))
+            {
+                var token = answer[parameter.Name];
+                if (token == null || token.Type == JTokenType.Null)
+                {
+                    continue;
+                }
+
+                string value;
+                if (token.Type == JTokenType.String)
+                {
+                    value = (string)token;
+                }
+                else if (token.Type == JTokenType.Integer)
+                {
+                    // A number list's value written bare, 2 for "2": unambiguous, so it is read.
+                    value = ((long)token).ToString(CultureInfo.InvariantCulture);
+                }
+                else
+                {
+                    problem = $"'{parameter.Name}' is not a string.";
+                    return false;
+                }
+
+                arguments = arguments ?? new List<KeyValuePair<string, string>>();
+                arguments.Add(new KeyValuePair<string, string>(parameter.Name, value));
+            }
+
+            decision = new AgentDecision(action, target, statement, arguments);
             problem = null;
             return true;
         }

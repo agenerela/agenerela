@@ -8,6 +8,47 @@ While the version stays `0.x`, the public API may change in any release.
 
 ## [Unreleased]
 
+### Added
+
+- **Parameters: a closed choice beside the target** (#266 item 2, DR-023, first step). An action
+  declares them in `ActionDefinition.Parameters` (`ActionParameter`: a name, a description, the
+  values, an optional `Default` and `ExampleValue`), with `[AgentParameter]` on an `[AgentAction]`
+  method, or on an asset. Two kinds, both a list: a set of words (`minor`, `major`) and a number
+  list (`1`, `2`, `3`). The chosen values are in the new `AgentDecision.Arguments`
+  (`TryGetArgument`, `TryGetNumber`), and a method receives one with `[Argument("name")]` as a
+  `string`, or as an `int` for a number list.
+  - **Off unless declared.** An agent whose actions declare none sends exactly the request it sent
+    before; tests hold the evaluation set's schema and prompt to that.
+  - **What a call that offers one sends.** The paired schema (DR-020) whatever
+    `PairTargetsWithActions` says, with the parameters after `target` and before `statement`
+    (`ActionTargets.Parameters`): a value placed after the statement was written into it in 3
+    replies of 6 (findings, 14 November 2026). And the action and target list, with each
+    parameter's values on its action's line, whatever `ListActionsAndTargets` says, because a
+    local model never reads the schema. The action's example shows a value. With no target
+    registered the schema is paired and has no `target` field.
+  - **The framework checks the values, not the model.** A value left out or not offered takes the
+    parameter's `Default` when it has one (`DecisionTelemetry.ArgumentsDefaulted`); otherwise
+    `SchemaLegalityGuard` rejects the decision. `Agent.Execute` runs that check again before any
+    handler: every argument a declared value of a declared parameter, none missing.
+  - **Values per decision.** `IArgumentAvailability`, `[AvailableValue(action, parameter)]` or
+    `DelegateActionHandler.IsAvailableValue` leaves a value out of one decision's schema and
+    prompt, with its reason in `DecisionTelemetry.ValuesUnavailable`; an action with a parameter
+    that has no value left is left out; `Execute` asks again and refuses a stale value with the
+    reason in `ActionResult.AvailabilityReason`.
+  - **Recorded** in `DecisionTelemetry.Arguments`, `ArgumentsDefaulted` and `ValuesUnavailable`;
+    in the decision log as `arguments` inside `decision` and `modelDecision`, and
+    `argumentsDefaulted` and `valuesUnavailable` on the line, each left out when empty; in
+    `AgentPreview.ValuesUnavailable` and `LeftOut`; and in memory, where a remembered decision
+    keeps its arguments before the statement.
+  - **For an A/B**, `EvalLegality.ActionParameters` gives an evaluation arm's copy of an action a
+    parameter. The first run, one harmless parameter on the evaluation sets, is in findings,
+    16 November 2026. Nothing is recommended before the storyteller's A/B (DR-023).
+  - **Not built**: `target` plus `also_targets`, an open number range, free text, detecting a
+    lost key order on Ollama's native path, and a provider saying it cannot take a paired schema.
+  - `Documentation~/parameters.md` is the page. `DecisionSchema`'s remark that a later field goes
+    after `statement` is corrected. The serializer's error for pairs that name targets in a schema
+    with no target field has new wording.
+
 ## [0.4.0-preview.2] - 2026-11-16
 
 ### Changed
