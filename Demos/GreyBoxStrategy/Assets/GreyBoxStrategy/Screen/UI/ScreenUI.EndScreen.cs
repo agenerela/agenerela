@@ -64,7 +64,7 @@ namespace GreyBoxStrategy.Realm
             {
                 var look = CountryLook.Of(r.Country);
                 var row = new VisualElement(); row.AddToClassList("end-ruler");
-                var face = new Image { image = portraits, uv = Faces.Uv(r.Persona, look.Slot % 2), scaleMode = ScaleMode.ScaleAndCrop };
+                var face = RulerFace(r.Country);
                 face.AddToClassList("end-face");
                 face.style.borderTopColor = face.style.borderBottomColor = face.style.borderLeftColor = face.style.borderRightColor = (Color)look.Colour;
                 row.Add(face);

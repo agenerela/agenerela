@@ -646,9 +646,12 @@ namespace GreyBoxStrategy.Replay
         private readonly Dictionary<string, RecordedDecision> told = new Dictionary<string, RecordedDecision>(StringComparer.Ordinal);
         // Each turn's army orders, in the order the game asked them.
         private readonly Dictionary<int, List<RecordedDecision>> armyOrders = new Dictionary<int, List<RecordedDecision>>();
+        // The human player's merges and splits (#20), in the order given.
+        private readonly List<RecordedArmyOrder> merges;
 
         public RecordedPlayers(Recording recording)
         {
+            merges = recording.ArmyOrders.ToList();
             foreach (var d in recording.Decisions)
             {
                 if (!d.IsMove)
@@ -698,6 +701,22 @@ namespace GreyBoxStrategy.Replay
                 string why = game.Recall(d.Country, d.ArmyId);
                 if (why != null)
                     throw new InvalidOperationException($"Turn {turn}: the recording has an order for {d.ArmyId}, but {why}: it is from a different game or different rules.");
+            }
+        }
+
+        /// <summary>
+        /// The writs turn: gives again every merge and split the recording shows in this turn's council, in the order
+        /// given (<see cref="Game.Merge"/>, <see cref="Game.Split"/>). A recording from before them has none.
+        /// </summary>
+        public void GiveArmyOrders(Game game, int turn)
+        {
+            foreach (var o in merges.Where(o => o.Turn == turn))
+            {
+                string why = o.Kind == ArmyOrderRecord.MergeKind ? game.Merge(o.Country, o.Armies)
+                    : o.Kind == ArmyOrderRecord.SplitKind ? game.Split(o.Country, o.Armies.FirstOrDefault(), o.Soldiers)
+                    : $"'{o.Kind}' is not an army order";
+                if (why != null)
+                    throw new InvalidOperationException($"Turn {turn}: the recording has {o}, but {why}: it is from a different game or different rules.");
             }
         }
 

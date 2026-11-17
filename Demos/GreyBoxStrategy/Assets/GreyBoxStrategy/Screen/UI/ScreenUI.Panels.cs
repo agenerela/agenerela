@@ -287,7 +287,7 @@ namespace GreyBoxStrategy.Realm
                 // Variant B (#20): the realm's banner hangs below the bar, the ruler's portrait frame beside it.
                 var banner = new RealmBanner(look) { tooltip = head.tooltip }; banner.RegisterCallback<ClickEvent>(_ => CountryPressed?.Invoke(me));
                 followBar.Add(banner);
-                followBar.Add(new PortraitSlot(58, 66, $"{look.Name}'s ruler: a portrait will hang here") { name = "my-portrait" });
+                followBar.Add(MyPortrait(me));
                 StatBar(s, me, c, look, n, net);
                 RenderOutliner(s);
                 return;
@@ -421,7 +421,7 @@ namespace GreyBoxStrategy.Realm
             bool rival = Fog.On && a.Owner != You;
             var body = SideHead("ARMY");
             string size = rival ? ArmySight.About(a.Soldiers) : a.Soldiers.ToString();
-            body.Add(KitHeader(CountryLook.Of(a.Owner), Chronicle.Host(a.Id), $"{CountryLook.NameOf(a.Owner)} · {size} soldiers", new PortraitSlot(44, 52, "The general's portrait will hang here")));
+            body.Add(KitHeader(CountryLook.Of(a.Owner), Chronicle.Host(a.Id), $"{CountryLook.NameOf(a.Owner)} · {size} soldiers", GeneralPortrait(a.General, 44, 52, "The general's portrait will hang here")));
             int at = IndexOf(a.Location);
             bool besieging = ArmyLook.SiegeTag(s, at) is string && s.SiegedBy[at] == a.Owner;
             string doing = a.Marching ? $"to {Cap(a.Destination)}" + (TurnsLeft != null ? $", {TurnsLeft(a)} turn{(TurnsLeft(a) == 1 ? "" : "s")}" : "")
@@ -441,7 +441,7 @@ namespace GreyBoxStrategy.Realm
                 {
                     if (a.General == null) { page.Add(Note(rival ? "Its general is not known to your court." : "It has no general.")); return; }
                     var g = new VisualElement(); g.AddToClassList("kgen");
-                    g.Add(new PortraitSlot(52, 62, $"{a.General}: a portrait will hang here"));
+                    g.Add(GeneralPortrait(a.General, 52, 62, $"{a.General}: a portrait will hang here"));
                     var t = new Label(ReplayBuilder.Title(a)); t.AddToClassList("khead-title"); g.Add(t);
                     page.Add(g);
                     foreach (var r in rows.Where(r => r.Key.StartsWith("trait-"))) page.Add(KitRow(r, IconKind.Seal, new Color32(226, 194, 122, 255)));
@@ -576,15 +576,8 @@ namespace GreyBoxStrategy.Realm
         {
             var look = CountryLook.Of(id); var player = Players?.GetValueOrDefault(id);
             var body = SideHead(id == You ? "YOUR REALM" : "REALM");
-            // The persona's face where the game has one, in the portrait's frame; an empty frame otherwise.
-            VisualElement face;
-            if (portraits != null && player?.Persona != null)
-            {
-                var img = new Image { image = portraits, uv = Faces.Uv(player.Persona, look.Slot % 2), scaleMode = ScaleMode.ScaleAndCrop };
-                img.style.width = 52; img.style.height = 62; img.AddToClassList("portrait-slot");
-                face = img;
-            }
-            else face = new PortraitSlot(52, 62);
+            // The ruler's portrait from the art pack (ScreenUI.Art.cs); the persona sheet or an empty frame without one.
+            var face = RulerPortrait(id, 52, 62);
             var head = KitHeader(look, look.Name, id == You ? "You rule it" : $"the {player?.Persona ?? "ruler"}" + (player?.Model != null ? " · " + player.Model : ""), face);
             if (!Fog.On)
             {

@@ -102,6 +102,21 @@ namespace GreyBoxStrategy.Replay
         public string Persona;
     }
 
+    /// <summary>A merge or a split the human player gave (#20): what the replay gives again, in the same council.</summary>
+    public sealed class RecordedArmyOrder
+    {
+        public int Turn;
+        /// <summary><see cref="ArmyOrderRecord.MergeKind"/> or <see cref="ArmyOrderRecord.SplitKind"/>.</summary>
+        public string Kind;
+        public string Country;
+        /// <summary>A merge: the armies merged. A split: the army split.</summary>
+        public List<string> Armies = new List<string>();
+        /// <summary>A split: the soldiers the new army takes.</summary>
+        public int Soldiers;
+
+        public override string ToString() => $"turn {Turn}: {Country} {Kind} {string.Join(" ", Armies)}{(Kind == ArmyOrderRecord.SplitKind ? " " + Soldiers : "")}";
+    }
+
     /// <summary>
     /// One game from a table run, as <c>ArtSource/export_recording.py</c> writes it: the seed, who
     /// played each country, and every decision in the order the game asked for them.
@@ -120,6 +135,11 @@ namespace GreyBoxStrategy.Replay
         public List<DevEdit> DevEdits = new List<DevEdit>();
         /// <summary>True for a game the dev menu touched, or played with stand-in rulers: never a measured game.</summary>
         public bool Dev;
+        /// <summary>
+        /// The human player's merges and splits (#20), in the order given; each is given again in its turn's council
+        /// before the recalls. A recording from before them has none, and replays as it always did.
+        /// </summary>
+        public List<RecordedArmyOrder> ArmyOrders = new List<RecordedArmyOrder>();
         /// <summary>
         /// The table arm when the game had a storyteller ("default+storyteller+s2+chains-skeleton"), or
         /// null. The replay plays the storyteller's recorded events under the same rules (<see cref="StoryArms"/>).
@@ -144,6 +164,13 @@ namespace GreyBoxStrategy.Replay
             rec.StoryArm = (string)root["storyArm"];
             if (root["devEdits"] is JArray edits)
                 foreach (var e in edits) rec.DevEdits.Add(new DevEdit { Turn = (int)e["turn"], Command = (string)e["command"] });
+            if (root["armyOrders"] is JArray orders)
+                foreach (var o in orders)
+                    rec.ArmyOrders.Add(new RecordedArmyOrder
+                    {
+                        Turn = (int)o["turn"], Kind = (string)o["kind"], Country = (string)o["country"],
+                        Armies = ((JArray)o["armies"]).Select(x => (string)x).ToList(), Soldiers = (int?)o["soldiers"] ?? 0,
+                    });
             return rec;
         }
 
@@ -198,6 +225,12 @@ namespace GreyBoxStrategy.Replay
             }
             root["decisions"] = decisions;
             root["devEdits"] = new JArray(DevEdits.Select(e => new JObject { ["turn"] = e.Turn, ["command"] = e.Command }));
+            // Written only when there are some, so a game without them saves exactly as before.
+            if (ArmyOrders.Count > 0)
+                root["armyOrders"] = new JArray(ArmyOrders.Select(o => new JObject
+                {
+                    ["turn"] = o.Turn, ["kind"] = o.Kind, ["country"] = o.Country, ["armies"] = new JArray(o.Armies), ["soldiers"] = o.Soldiers,
+                }));
             return root.ToString(Newtonsoft.Json.Formatting.Indented);
         }
 

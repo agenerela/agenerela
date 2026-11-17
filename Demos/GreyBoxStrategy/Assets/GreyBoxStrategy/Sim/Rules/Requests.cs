@@ -182,6 +182,8 @@ namespace GreyBoxStrategy
         public int Battles;
         /// <summary>The writs turn: every battle this turn, with its terms and why it went as it did, for the battle report.</summary>
         public List<BattleRecord> BattleRecords = new List<BattleRecord>();
+        /// <summary>The writs turn: the human player's merges and splits, given in the council before anything resolved (#20).</summary>
+        public List<ArmyOrderRecord> ArmyOrders = new List<ArmyOrderRecord>();
         /// <summary>Moves the re-check refused because an earlier move this turn made them stale.</summary>
         public int StaleRefusals;
         /// <summary>The events that happened at this turn's upkeep: the random table's, or the storyteller's one.</summary>

@@ -109,6 +109,7 @@ namespace GreyBoxStrategy.Realm
             ApplyFonts(root);
             ui = new ScreenUI(root, style, portraits, game.CountryIds, game.ProvinceIds, game.Players, game.Title)
             {
+                ArtSeed = game.Seed,
                 ProvinceToPanel = ProvinceToPanel,
                 PlayPressed = () => { playing = !playing; ui.SetPlaying(playing, speed); },
                 StepPressed = () => { playing = false; stepOnce = true; ui.SetPlaying(false, speed); },

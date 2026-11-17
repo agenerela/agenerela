@@ -30,6 +30,13 @@ phase table and the open issues, not here.
   groups behind tabs (World, Rivals, Rules, Model). A game played or watched to its end is kept for Load a replay,
   newest first with the date, the turns and who won. Settings gained Event windows. The pause menu gained Quit and
   asks before a game under way is left. Continue stays hidden: nothing saves a game in progress yet.
+- **Painted Realm: the first art pack** (#20). Every ruler, general and storyteller event has a picture, made ahead of
+  time on the team's asset server in one style, like an illuminated chronicle, and shipped with the game: 19 ruler
+  portraits (three a persona, four neutral faces you click through for your own realm), 12 generals and 27 event
+  pictures. A realm keeps its face for the whole game and in its replay, and no two realms of one game share a
+  face; the portraits hang in the top bar, the realm and army panels, the inspector, the envoy's card and the end
+  screen. `ArtCatalogue` chooses them, and the event window can ask it for its picture. Flags stay the crests drawn
+  in code: a generated emblem did not read at the top bar's 14 px.
 
 ### Changed
 
@@ -44,6 +51,17 @@ phase table and the open issues, not here.
   `Fog.KnowsProvince` now knows a province where one of your armies stands. The rulers' facts never hid forts.
 
 ### Added
+
+- **Painted Realm: merging and splitting armies, the rules** (#20). The human player's council can merge two or more
+  armies standing together into the largest (types add up, stores the soldier-weighted average, the largest's
+  general leads and the others are dismissed) and split an army in two (types in proportion, the same stores, no
+  general for the new one), each at once and for no writ. `RuleSession.CanMerge`, `Merge`, `CanSplit` and `Split`
+  are the screen's calls; the buttons follow. Recorded and replayed; older recordings replay as before. No model is
+  offered either, and a test pins that every request a model reads is byte for byte as before.
+
+- **Land traditions measured on generated worlds** (#20). Twelve paired games on `qwen3.5:4b`: a court buys 8 points
+  more of its land's type with the rule on ([+2.4, +13.4]), as on Classic, and the counter 8 points less often
+  ([−13.5, −3.5]), which Classic did not show (findings, 16 November). `LandTraditions` stays off.
 
 - **GreyBoxStrategy's storyteller can choose an event's strength, in two forms, for DR-023's A/B** (#20).
   `GameRules.EventStrength` (off by default; the default game is unchanged) lets four events strike `minor`
