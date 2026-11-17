@@ -60,46 +60,91 @@ namespace GreyBoxStrategy.Realm
 
         // ---- the event card ----
 
-        /// <summary>The whole event: title and story, who it struck and how, what each chose and said, its tale, and the storyteller's decisions.</summary>
-        public void ShowEvent(ReplayEvent e)
+        /// <summary>The setting "Event windows", from the game's settings.</summary>
+        public EventWindows EventWindowsSetting = EventWindows.All;
+
+        private Action eventDismissed;
+
+        /// <summary>
+        /// The event window, in the style of a grand strategy game's: a picture, the title large, the story, each realm it
+        /// struck with its crest and what it did in game terms with icons, and one button that dismisses it. Under it, the
+        /// storyteller's decisions behind it. <paramref name="place"/> is "1 of 2" when a turn brings two;
+        /// <paramref name="dismissed"/> runs when it closes, by the button, Enter, Esc or by itself.
+        /// </summary>
+        public void ShowEvent(ReplayEvent e, string place = null, Action dismissed = null)
         {
-            CloseEvent();
+            // Another window in its place counts as dismissing it, so a turn waiting on it never waits for nothing.
+            DismissEvent();
             var r = e.Story;
-            eventCard = new VisualElement(); eventCard.AddToClassList("panel"); eventCard.AddToClassList("event-card");
+            var card = StoryCards.For(e, Fog.Viewer, CountryLook.NameOf, Cap, GameOver);
+            eventDismissed = dismissed;
+            eventCard = new VisualElement(); eventCard.AddToClassList("panel"); eventCard.AddToClassList("event-card"); eventCard.AddToClassList("story-window");
+            eventCard.EnableInClassList("mine", card.Mine);
+            if (card.Mine)
+            {
+                // Yours: the frame in your realm's colour. (A stronger sound plays here once the game has audio.)
+                var c = (Color)CountryLook.Of(Fog.Viewer).Colour;
+                eventCard.style.borderTopColor = eventCard.style.borderBottomColor = eventCard.style.borderLeftColor = eventCard.style.borderRightColor = c;
+            }
             var head = new VisualElement(); head.AddToClassList("panel-head");
-            var t = new Label($"THE CHRONICLE · TURN {r.Turn}"); t.AddToClassList("panel-title"); head.Add(t);
-            var close = new Button(CloseEvent) { text = "×", tooltip = "Close (Esc)" }; close.AddToClassList("tbtn"); head.Add(close);
+            var t = new Label($"THE CHRONICLE · TURN {r.Turn}" + (place != null ? $" · {place}" : "")); t.AddToClassList("panel-title"); head.Add(t);
+            // RESERVED: the speaker button. The storyteller's stories will be read aloud by default once voice lands (the
+            // lead, 17 November); its button goes in this slot, left of the close button. Not built yet.
+            var speaker = new VisualElement { name = "story-speaker" }; speaker.AddToClassList("story-speaker"); head.Add(speaker);
+            var close = new Button(DismissEvent) { text = "×", tooltip = "Close (Esc)" }; close.AddToClassList("tbtn"); head.Add(close);
             eventCard.Add(head);
             var body = new ScrollView(); body.AddToClassList("event-body"); eventCard.Add(body);
 
-            var top = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = Align.Center } };
-            top.Add(new Crest(CountryLook.Storyteller, 34));
-            var tt = new VisualElement { style = { marginLeft = 10, flexShrink = 1 } };
-            var title = new Label(r.Title); title.AddToClassList("event-title"); tt.Add(title);
-            var kind = EventRules.Template(r.Template);
+            // The picture, from the art pack (ScreenUI.Art.cs); an event it has none for keeps the empty frame.
+            var picture = new Image { scaleMode = ScaleMode.ScaleAndCrop }; picture.AddToClassList("story-picture");
+            picture.image = EventPicture(r.Template);
+            if (picture.image == null) { var hint = new Label("A picture of the event will hang here"); hint.AddToClassList("story-picture-hint"); picture.Add(hint); }
+            body.Add(picture);
+            var kicker = new Label(card.Kicker); kicker.AddToClassList("story-kicker"); body.Add(kicker);
+            var big = new Label(card.Title); big.AddToClassList("story-title"); body.Add(big);
+            var tale = new Label(card.Story); tale.AddToClassList("story-text"); body.Add(tale);
+            foreach (var s in card.Struck)
+            {
+                var row = new VisualElement(); row.AddToClassList("story-struck"); row.EnableInClassList("mine", s.Country == Fog.Viewer);
+                row.Add(new Crest(CountryLook.Of(s.Country), 26));
+                var col = new VisualElement(); col.AddToClassList("story-struck-col");
+                var who = new Label(s.Country == Fog.Viewer ? $"{CountryLook.NameOf(s.Country)} (you)" : CountryLook.NameOf(s.Country)); who.AddToClassList("story-who"); col.Add(who);
+                if (s.Chose != null) col.Add(Text(s.Chose, "event-chose"));
+                var fx = new VisualElement(); fx.AddToClassList("story-effects");
+                foreach (var x in s.Effects)
+                {
+                    var chip = new VisualElement(); chip.AddToClassList("story-effect"); chip.EnableInClassList("gain", x.Tone > 0); chip.EnableInClassList("loss", x.Tone < 0);
+                    chip.Add(new Icon(EffectIcon(x.Kind), 14) { Tint = x.Tone > 0 ? Good : x.Tone < 0 ? Bad : RowInk });
+                    chip.Add(new Label(x.Text));
+                    fx.Add(chip);
+                }
+                if (s.Effects.Count > 0) col.Add(fx);
+                else if (!s.Known) col.Add(Text($"News: {CountryLook.NameOf(s.Country)} {s.News}. What it cost them is their court's secret.", "src"));
+                else if (s.Chose == null) col.Add(Text("A story only: nothing changed.", "src"));
+                row.Add(col);
+                body.Add(row);
+            }
+            if (card.Struck.Count == 0) body.Add(Text("It struck no realm.", "src"));
+            var ok = new Button(DismissEvent) { text = card.Tale ? "So the tale goes" : "So be it", tooltip = "Close (Enter or Esc)" };
+            ok.AddToClassList("menu-button"); ok.AddToClassList("story-ok");
+            // The button stays in sight at the window's foot, outside the scroll, as End turn does in the council.
+            var foot = new VisualElement(); foot.AddToClassList("story-foot");
+            // RESERVED: two or three choice buttons. Events on your own realm will offer choices later (the lead,
+            // 17 November); they go in this row, above So be it, and the window waits for one. Not built yet.
+            var choices = new VisualElement { name = "story-choices" }; choices.AddToClassList("story-choices"); foot.Add(choices);
+            foot.Add(ok);
+            // Behind it: what the window above leaves out, never repeated, and never more than the fog allows.
+            body.Add(SectionHead("BEHIND IT", "the storyteller's call and the framework's decisions"));
             var sub = new Label($"{(r.Options.Count > 0 ? "A dilemma" : r.Template == EventRules.Omen ? "An omen" : "An event")} · {r.Template.Replace('_', ' ')} on {Target(r)}" +
                                 (r.Province != null && r.Province != r.Target ? $" · {Cap(r.Province)}" : ""));
-            sub.AddToClassList("insp-sub"); tt.Add(sub);
-            top.Add(tt);
-            body.Add(top);
-            var story = new Label(r.Story); story.AddToClassList("event-story"); body.Add(story);
+            sub.AddToClassList("insp-sub"); body.Add(sub);
             if (r.Traits != null) { var tr = new Label($"{Cap(r.Province)}: {r.Traits}"); tr.AddToClassList("src"); body.Add(tr); }
-
-            body.Add(SectionHead("WHO IT STRUCK"));
+            // A dilemma: who chose for each realm, and what its ruler said; what a ruler does and says is public.
             foreach (string c in r.Hit)
             {
+                if (!r.Choices.ContainsKey(c)) continue;
                 var row = Row2(c);
-                string effect = r.Effect.GetValueOrDefault(c);
-                if (r.Choices.TryGetValue(c, out string chose))
-                {
-                    var option = EventRules.Template(r.Template)?.Options?.FirstOrDefault(o => o.Id == chose);
-                    string by = r.ChosenBy.GetValueOrDefault(c) ?? "?";
-                    // A dilemma's effect line already says what was chosen ("chose to pay him to go: 30 gold").
-                    row.Add(Text(effect != null && effect.StartsWith("chose", StringComparison.Ordinal) ? $"{effect} ({By(by)})"
-                        : $"chose to {option?.Label ?? chose.Replace('_', ' ')} ({By(by)})", "event-chose"));
-                    if (effect != null && effect.StartsWith("chose", StringComparison.Ordinal)) effect = null;
-                }
-                if (effect != null) row.Add(Text(effect, "event-effect"));
+                row.Add(Text($"chosen by {By(r.ChosenBy.GetValueOrDefault(c) ?? "?")}", "event-chose"));
                 body.Add(row);
                 if (e.ChoiceDecisions.TryGetValue(c, out var d))
                 {
@@ -113,7 +158,7 @@ namespace GreyBoxStrategy.Realm
             {
                 body.Add(SectionHead("ITS TALE"));
                 var chain = TalesSource?.Invoke().chains?.FirstOrDefault(c => c.Id == r.ChainId);
-                var b = new Button(() => { CloseEvent(); OpenTales(r.ChainId); }) { text = $"“{chain?.Title ?? r.ChainId}” · stage {r.ChainStage + 1} · follow the tale" };
+                var b = new Button(() => { DismissEvent(); OpenTales(r.ChainId); }) { text = $"“{chain?.Title ?? r.ChainId}” · stage {r.ChainStage + 1} · follow the tale" };
                 b.AddToClassList("tbtn"); b.AddToClassList("wide"); body.Add(b);
             }
 
@@ -123,6 +168,7 @@ namespace GreyBoxStrategy.Realm
             if (e.Decision != null) body.Add(InspectButton($"The storyteller's decision: {e.Decision.Action} on {e.Decision.Target}", e.Decision, e));
             else body.Add(Text("Set by the dev menu: no storyteller decision behind it.", "src"));
             if (e.TitleDecision != null) body.Add(InspectButton($"The title call: “{e.TitleDecision.Statement}”", e.TitleDecision, e));
+            eventCard.Add(foot);
             Root.Add(eventCard);
             KeepLayout();
         }
@@ -163,7 +209,47 @@ namespace GreyBoxStrategy.Realm
             return row;
         }
 
-        public void CloseEvent() { eventCard?.RemoveFromHierarchy(); eventCard = null; }
+        /// <summary>Closes the event window without telling anyone: a new one replaces it, or the screen resets.</summary>
+        public void CloseEvent() { eventCard?.RemoveFromHierarchy(); eventCard = null; eventDismissed = null; }
+
+        /// <summary>The window's button, Enter, Esc, or its own timer: closes it and lets the turn go on.</summary>
+        public void DismissEvent()
+        {
+            var then = eventDismissed;
+            CloseEvent();
+            then?.Invoke();
+        }
+
+        private static IconKind EffectIcon(string kind) => kind switch
+        {
+            "gold" => IconKind.Gold, "income" => IconKind.Gold, "soldiers" => IconKind.Army,
+            "stability" => IconKind.Scales, "fort" => IconKind.Fort, _ => IconKind.Seal,
+        };
+
+        // ---- the tale banner: a story with no rule effect, under the top bar; it never stops the turn ----
+
+        private VisualElement taleBanner;
+        public bool TaleBannerShown => taleBanner != null;
+
+        /// <summary>A tale under the top bar: the chronicler's crest, the title, the story's first lines. A click opens its window; it goes by itself.</summary>
+        public void ShowTaleBanner(StoryCard card, float seconds)
+        {
+            taleBanner?.RemoveFromHierarchy();
+            var b = new VisualElement { tooltip = "Click: the whole tale" }; b.AddToClassList("tale-strip");
+            b.Add(new Crest(CountryLook.Storyteller, 30));
+            var col = new VisualElement(); col.AddToClassList("tale-strip-col");
+            var k = new Label(card.Kicker + " · TURN " + card.Turn); k.AddToClassList("tale-who"); col.Add(k);
+            var t = new Label(card.Title); t.AddToClassList("tale-strip-title"); col.Add(t);
+            var s = new Label(card.Story); s.AddToClassList("tale-line"); col.Add(Fold(s, 2));
+            b.Add(col);
+            var e = card.Event;
+            b.RegisterCallback<ClickEvent>(_ => { HideTaleBanner(); EventPressed?.Invoke(e); });
+            Root.Add(b);
+            taleBanner = b;
+            b.schedule.Execute(() => { if (taleBanner == b) HideTaleBanner(); }).StartingIn((long)(seconds * 1000));
+        }
+
+        public void HideTaleBanner() { taleBanner?.RemoveFromHierarchy(); taleBanner = null; }
 
         // ---- the choice card ----
 
