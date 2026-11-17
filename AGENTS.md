@@ -38,7 +38,7 @@ Neither changelog nor the wiki is loaded into every session; read the one you ne
    error output.
 2. **Never claim an accuracy change without an A/B run** — same model, same machine, same
    prompt set, same session. Single before/after runs are anecdotes. At n≈50 the observed
-   noise floor was about 10 points.
+   noise floor was about 10 points. The checklist is [`docs/llm-wiki/measuring.md`](docs/llm-wiki/measuring.md).
 3. **Unload other models before timing one** (`ollama stop <model>`). Two models resident
    on an 8GB card share compute and flatten every latency measurement.
 4. **Few-shot examples must never reuse evaluation prompts.** Demonstrating a phrase and
@@ -80,13 +80,15 @@ Neither changelog nor the wiki is loaded into every session; read the one you ne
 | Path | Contents |
 |---|---|
 | `UnityProject/Packages/com.agenerela.framework/` | The package — everything shippable |
-| `UnityProject/Assets/Evaluation/` | The labelled prompt set, its first 54 prompts so far (#13), and `agent.json`, the agent they are measured against; its `README.md` documents the format. The benchmark harness that runs it is Phase 4 |
-| `Demos/<Game>/` | Demo games — one full Unity project each, loading the package by relative path (DR-010) |
+| `UnityProject/Assets/Evaluation/` | The labelled prompt set, its 76 prompts so far (#13, #85), and `agent.json`, the agent they are measured against; its `README.md` documents the format. The package's `EvalRunner` (#145) scores it in an A/B run, and the Prompt Set window (#134) writes and labels it. `Interim/` beside it is a 389-prompt set written and labelled by AI models, used until #147's curated set exists |
+| `Demos/<Game>/` | Demo games — one full Unity project each, loading the package by relative path (DR-010). So far `GreyBoxVillage/` (#153), `GreyBoxVillageClassic/` (the pre-v2 village, kept for comparison), `LivingVale/` (#69) and `GreyBoxStrategy/` (#20, headless so far, with a model seat); `Demos/README.md` lists the rest planned |
 | `docs/` | Build plan, llm-wiki, screen designs and course materials — [`docs/README.md`](docs/README.md) maps them |
 | `tools/benchmarks/` | Standalone Python probes, no Unity required |
 | `tools/branding/` | The logo as 3D-printable pins and signs, 4K stills and a 4K animation with sound, all built in Blender from the logo's traced geometry |
+| `tools/live-runs/` | Kits that `docs/run-requests/` points to, so any machine repeats a live run exactly: `model-sweep/` runs a list of models through `EvalRunner` |
 | `tools/ci/` | `hygiene.py`, every check CI runs, runnable on your machine and as a pre-commit hook; `release.py`, the mechanical steps of a release |
 | `tools/comfyui/` | The asset server: ComfyUI in Docker on the lead's RTX 5080 machine, making 3D models, sounds and images for the demo games, and `comfy.py`, which agents call it with |
+| `tools/ollama-server/` | Ollama in Docker on the same RTX 5080 machine, behind a gateway that wants a key, so the laptop runs Unity, the live tests and `tools/live-runs/` on that card; `ollama_remote.py` checks it |
 
 ## Working conventions
 
@@ -114,6 +116,15 @@ framework through a relative `file:` path in its `Packages/manifest.json` — ne
 version or git URL — and uses only the framework's public API. Framework work happens in
 `UnityProject/`.
 
+**In-game checks go through the Unity CLI** (`unity`), not computer use. To see a change working
+in a running game — Play mode, the console, a captured frame, a value read with C# — an agent
+opens the game's editor with `unity open` and drives it with `unity command`, so the user keeps
+their mouse and screen. It needs the experimental `com.unity.pipeline` package in the game;
+GreyBoxVillage and Living Vale have it, and every new game adds it. Batch-mode tests
+(`unity test`) need the project closed. Use computer use only for a check the CLI cannot make, and
+say why. The commands, in order, are in
+[`docs/llm-wiki/environment.md`](docs/llm-wiki/environment.md#the-unity-cli-in-game-checks).
+
 **Generated assets come from the asset server** in [`tools/comfyui/`](tools/comfyui/README.md).
 Before asking it for anything, read
 [`tools/comfyui/AGENT_USAGE.md`](tools/comfyui/AGENT_USAGE.md): connecting a machine, the
@@ -132,6 +143,16 @@ user's own ComfyUI, so touch only this stack's containers, image and volume. Nev
 `docker ... prune`, and never stop, remove or reconfigure another container, or restart WSL
 or Docker Desktop, without the user's say-so. Generated files are drafts until a person
 puts them in a game.
+
+**Models on the RTX 5080 from another machine** come from the Ollama server in
+[`tools/ollama-server/`](tools/ollama-server/README.md). Before using it, read
+[`tools/ollama-server/AGENT_USAGE.md`](tools/ollama-server/AGENT_USAGE.md): connecting, the
+checks, running the sweep kit and the live tests against it, and what each failure means. In
+short: `python tools/ollama-server/ollama_remote.py check`, which reads
+`AGENERELA_OLLAMA_URL` and `AGENERELA_OLLAMA_API_KEY` from `tools/ollama-server/.env`; Unity reads
+the same two from the environment. As with the asset server, never open or print `.env`, never
+put the key in a URL, a command line or a chat, and never touch the machine's other containers.
+That server runs Ollama's Linux build, so its results are never compared with another Ollama's.
 
 **Before opening a pull request:**
 - Unity console clean — no new errors or warnings
@@ -207,19 +228,24 @@ CI check or a test starts enforcing a lesson, delete it from this list.
 
 ## Current state
 
-**Phases 1 and 2 are complete.** Phase 1 (Core, Actions, Schema) closed on 11 October when
+**Phases 1, 2 and 3 are complete.** Phase 1 (Core, Actions, Schema) closed on 11 October when
 the five checks in #11 passed. Phase 2 (Ollama provider, queue, memory) closed on 25 October
-when the live checks in its gate (#94) passed, and is released as 0.3.0. **The framework calls
-a model**: `OllamaProvider` sends `JsonSchemaSerializer`'s output to a local Ollama, and the
-gate's `RequiresOllama` PlayMode tests prove the live path. **Phase 3 (Validation pipeline) is
-under way**, due 9 November: the guards between the provider and the handler (#105 to #110),
-of which the pipeline itself (#106) has merged. Still
-open from Phase 2, off its gate's path: observation sources (#91), the provider config asset
-(#92) and `AgentBehaviour` (#93).
+when the live checks in its gate (#94) passed, and is released as 0.3.0. Its issues off the
+gate's path, observation sources (#91), the provider config asset (#92) and `AgentBehaviour`
+(#93), merged later, and its milestone closed on 2 November. **The framework calls a model**:
+`OllamaProvider` sends `JsonSchemaSerializer`'s output to a local Ollama, and the gate's
+`RequiresOllama` PlayMode tests prove the live path. **Phase 3 (Validation pipeline) closed on
+3 November** when its gate (#110) passed: the guards between the provider and the handler, that
+is the pipeline (#106), target grounding (#105), its fallback rule (#107), developer guards
+(#108) and contained refusals (#109). Its live run scored 19/20 on `qwen3.5:2b` with the guards
+on, 18/20 without (findings, 3 November). **Phase 4 (Evaluation harness) is next**, due
+7 December.
 
-Beside the phases: the evaluation set's real annotators and next prompts (#85), the demo
+Beside the phases: the Prompt Set window, where the evaluation set's next prompts and second
+labels will come from (#134), the demo
 games, one sub-issue each under #47, starting with GreyBoxStrategy (#20), and research areas
-with one owner each (memory, targets, observations, evaluation), listed in build plan §6.6.
+with one owner each (memory, targets, observations, evaluation, guards), listed in build
+plan §6.6.
 
 What has merged is in the two changelogs (see "Where knowledge lives"). Update this section
 only when a phase opens or closes.

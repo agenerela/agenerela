@@ -13,11 +13,17 @@ namespace Agenerela{
         public string Model = string.Empty; // The model that answered, as the provider reported it, such as qwen3.5:2b; empty when it did not say (#88)
         public string ProviderConfig = string.Empty; // The name of the provider config asset whose provider answered, such as OllamaLocal; empty when the provider was built in code (#92, DR-013)
         public string FrameworkVersion = string.Empty; // AgenerelaInfo.version
-        public List<string> GuardsFired = new List<string>(); // Each guard that did not pass the decision, in order: at most one from DecideAsync, then "SchemaLegalityGuard@Execute" for each refusal by Execute's re-check (#106)
+        public List<string> GuardsFired = new List<string>(); // Each guard that did not pass the decision, in order: from DecideAsync, each that replaced the statement (StatementsReplaced) and at most one that stopped it, then "SchemaLegalityGuard@Execute" for each refusal by Execute's re-check (#106)
+        public List<ReplacedStatement> StatementsReplaced = new List<ReplacedStatement>(); // Each statement a guard replaced while keeping the move (GuardVerdict.ReplaceStatement), in order, with the guard, its reason and both texts; empty when none did. Never a stop: Verdict stays null unless a later guard stopped the move (#266 item 4)
         public GuardVerdictKind? Verdict; // The verdict of the guard that stopped the decision, or of Execute's re-check when it refused; null when every guard passed (#106)
         public string GuardReason; // That guard's reason, word for word; null when every guard passed (#106)
         public List<string> TargetsDropped = new List<string>(); // Target ids a source found but left out because of its cap (#32)
+        public List<string> TargetsUnlisted = new List<string>(); // Target ids the schema offered but the prompt's action and target list left out for DecideOptions.MaxListedTargets, in schema order; empty when nothing is listed or nothing was cut. The request is the same with or without this record (#151)
         public List<string> ObservationsDropped = new List<string>(); // Observation lines a source had but the request does not carry, in source order: for each source, its lines Agent.MaxObservations cut, then those its own cap left out, from IReportsDroppedObservations (#91)
+        public List<string> ChoicesOffered = new List<string>(); // The ids of DecideOptions.Choices this call offered, in the order given, none left out; empty for a call that gave no choices (DR-022)
+        public List<UnavailableChoice> ChoicesUnavailable = new List<UnavailableChoice>(); // Each choice the call gave as unavailable, with its reason, in the order given; empty when none was (DR-022)
+        public string TargetIgnored; // The target the model named for an action that takes none (ActionDefinition.TakesNoTarget), dropped before the guards so the decision's target is no_target; null when nothing was dropped (#244 item 2)
+        public List<UnavailableTarget> TargetsUnavailable = new List<UnavailableTarget>(); // Each action and target pair a per-target check (ITargetAvailability) rejected when the request was prepared, with its reason, in registry then target order; empty for an agent with no such check (#190 LV #19)
         public int HistoryTurnsSent; // Exchanges of memory sent in DecisionRequest.History, two entries each (#90)
         public int HistoryTurnsDropped; // Exchanges the memory still held but left out of this request, from IReportsDroppedTurns; 0 when it cannot say (#90)
         public int HistoryTurnsForgotten; // Exchanges the memory has let go of since it was made, a rising total, from IReportsDroppedTurns; 0 when it cannot say (#90)
@@ -30,6 +36,17 @@ namespace Agenerela{
         public float? TargetGrounding; // The lowest share of the model's probability at the target that stayed on the target list, from TargetGroundingGuard; null unless TargetGroundingStatus is Scored (#105)
         public GroundingStatus? TargetGroundingStatus; // Whether that share was read, or why not, Off included; null when the decision never reached the guard (#105)
         public bool TargetRuleSent; // Whether the system prompt carried the target rule, the fallback sent when CheckTarget is on and the provider reports no token probabilities; false for a decision made under the guard (#107)
+        public float RefusalLineSeconds; // Measured around the provider's request for a refusal line, from the send, as LatencySeconds is; 0 when none was sent. Never part of LatencySeconds, and its wait in the queue is not recorded (#109)
+        public int RefusalLinePromptTokens; // That request's tokens, as the provider reported them. Never added to PromptTokens or CompletionTokens (#109)
+        public int RefusalLineCompletionTokens;
+        public PipelineErrorKind? RefusalLineError; // Why that request gave no line: a provider's failure or an unreadable reply. The decision still stands, so Outcome and ErrorKind stay as they were; null when no request failed (#109)
+        public ExecutionStatus? Execution; // What the last Agent.Execute of this decision did: Done, Failed by the handler, NoAction for none, or Refused with no handler run; null until an Execute returns; a handler that throws leaves it as it was (DR-018)
+        public string ExecutionReason; // That Execute's reason, word for word: the handler's for Failed, the agent's for Refused; null for Done and NoAction (DR-018)
+        public float BacklogWaitSeconds; // From the call to its turn in the agent's own Agent.Backlog, before it was prepared; 0 with no backlog, and never part of QueueWaitSeconds (#190, G5)
+        public string ChainId; // DecideOptions.Chain's id: the chain of relayed decisions this one is in; null for none (#190, G4)
+        public int ChainHop; // That chain's hop: relays from its start, 0 for its first decision; 0 with no chain (#190, G4)
+        public bool StatementAsked = true; // DecideOptions.AskForStatement: whether the request's schema had a statement field; false for a call that asked for the move alone, whose decision's statement is empty (#266)
+        public string ChainSource; // The Agent.Id of the agent whose decision was relayed to this one; null at a chain's start, with no chain, or when that agent has no id (#190, G4)
 
         public DecisionTelemetry()
         {
@@ -41,10 +58,16 @@ namespace Agenerela{
             ProviderConfig = string.Empty;
             FrameworkVersion = string.Empty;
             GuardsFired = new List<string>();
+            StatementsReplaced = new List<ReplacedStatement>();
             Verdict = null;
             GuardReason = null;
             TargetsDropped = new List<string>();
+            TargetsUnlisted = new List<string>();
             ObservationsDropped = new List<string>();
+            ChoicesOffered = new List<string>();
+            ChoicesUnavailable = new List<UnavailableChoice>();
+            TargetIgnored = null;
+            TargetsUnavailable = new List<UnavailableTarget>();
             HistoryTurnsSent = 0;
             HistoryTurnsDropped = 0;
             HistoryTurnsForgotten = 0;
@@ -57,7 +80,17 @@ namespace Agenerela{
             TargetGrounding = null;
             TargetGroundingStatus = null;
             TargetRuleSent = false;
-
+            RefusalLineSeconds = 0f;
+            RefusalLinePromptTokens = 0;
+            RefusalLineCompletionTokens = 0;
+            RefusalLineError = null;
+            Execution = null;
+            ExecutionReason = null;
+            BacklogWaitSeconds = 0f;
+            ChainId = null;
+            ChainHop = 0;
+            ChainSource = null;
+            StatementAsked = true;
         }
     }
 
@@ -91,6 +124,58 @@ namespace Agenerela{
         ProviderFailed,
 
         // A reply arrived, but it is empty, not one JSON object, or lacks a field the schema asked for
-        UnreadableReply
+        UnreadableReply,
+
+        // A guard threw while judging the decision, or Agent.Guards held a null entry (#108)
+        GuardFailed,
+
+        // Not sent: a background request whose turn came while its provider was down, before the
+        // retry time, with ProviderHealth.BackOff on. Logs no warning (#190, DR-015)
+        ProviderDown,
+
+        // Not sent: dropped from the agent's Backlog for a newer call. Logs no warning (#190, G5)
+        Superseded,
+
+        // Not sent: refused at once, the agent's Backlog being full. Logs no warning (#190, G5)
+        BacklogFull,
+
+        // Not sent: a DecisionRelay.RelayAsync past its chain's hop cap. Logs no warning (#190, G4)
+        ChainTooLong
+    }
+
+    /// <summary>What a <see cref="PipelineErrorKind"/> says about where a failure came from.</summary>
+    public static class PipelineErrorKindExtensions
+    {
+        /// <summary>
+        /// True when the failure is the provider's, not this decision's: no server, no model, no
+        /// reply in time, a refusal, a server error, an envelope that could not be read, any other
+        /// provider failure, or a background request held back while the provider is down
+        /// (<see cref="PipelineErrorKind.ProviderDown"/>). A game shows these as "the model is not
+        /// answering", once, rather than as one agent's mistake.
+        /// </summary>
+        /// <remarks>
+        /// False for what goes wrong with one decision whoever the provider is: a request that
+        /// could not be prepared, a reply that arrived but cannot be read, a guard that threw, and a
+        /// call the agent's backlog dropped or refused. Every kind but those marks the provider's
+        /// <see cref="Agenerela.Providers.ProviderHealth"/> down, except
+        /// <see cref="PipelineErrorKind.ProviderDown"/>, which is the back-off itself.
+        /// </remarks>
+        public static bool IsProviderFault(this PipelineErrorKind kind)
+        {
+            switch (kind)
+            {
+                case PipelineErrorKind.ProviderUnreachable:
+                case PipelineErrorKind.ModelNotFound:
+                case PipelineErrorKind.ProviderTimeout:
+                case PipelineErrorKind.ProviderRejected:
+                case PipelineErrorKind.ProviderServerError:
+                case PipelineErrorKind.ProviderMalformedResponse:
+                case PipelineErrorKind.ProviderFailed:
+                case PipelineErrorKind.ProviderDown:
+                    return true;
+                default:
+                    return false;
+            }
+        }
     }
 }

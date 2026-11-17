@@ -93,10 +93,10 @@ namespace Agenerela.Tests
             Assert.That(request.FewShotBlock, Is.EqualTo(string.Join("\n",
                 "Examples of correct decisions:",
                 "Player: \"Accompany me on my rounds.\" -> action: follow_player, target: no_target",
-                "Player: \"Proceed to the Tower.\" -> action: move_to, target: tower",
-                "Player: \"Engage the TrainingDummy.\" -> action: attack_target, target: training_dummy",
+                "Player: \"Proceed to the tower.\" -> action: move_to, target: tower",
+                "Player: \"Engage the training dummy.\" -> action: attack_target, target: training_dummy",
                 "Player: \"You seem well rested today.\" -> action: none, target: no_target",
-                "Player: \"Proceed to the Atlantis.\" -> action: none, target: no_target (not an available target)")));
+                "Player: \"Proceed to Atlantis.\" -> action: none, target: no_target (not an available target)")));
             Assert.That(request.Observations, Is.Null);
             Assert.That(request.History, Is.Not.Null.And.Empty, "Nothing to recall on the first decision.");
             Assert.That(request.Stimulus, Is.EqualTo("Player: \"Go to the tower.\""));
@@ -521,7 +521,7 @@ namespace Agenerela.Tests
             using (var cts = new CancellationTokenSource())
             {
                 var pending = agent.DecideAsync("Go to the tower.", null, cts.Token);
-                Assert.That(fake.LastToken, Is.EqualTo(cts.Token), "The caller's token reaches the provider.");
+                Assert.That(fake.LastToken.IsCancellationRequested, Is.False);
                 Assert.That(pending.GetAwaiter().IsCompleted, Is.False);
 
                 cts.Cancel();
@@ -533,6 +533,10 @@ namespace Agenerela.Tests
                 catch (OperationCanceledException)
                 {
                 }
+
+                // The provider is given a token linked to the caller's and the agent's reset (G12),
+                // not the caller's own, so what reaches it is the cancellation.
+                Assert.That(fake.LastToken.IsCancellationRequested, Is.True, "The caller's cancellation reaches the provider.");
             }
         }
 

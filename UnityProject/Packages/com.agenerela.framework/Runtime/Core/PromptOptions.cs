@@ -20,8 +20,10 @@ namespace Agenerela
         public string StimulusLabel = "Player";
 
         /// <summary>
-        /// Idle few-shot example. Agent (#17) copies it from <see cref="AgentProfile"/>; a caller
-        /// may override per call. Null or empty omits the example.
+        /// Idle few-shot example. Agent (#17) fills it from the call's
+        /// <see cref="DecideOptions.IdleExampleStimulus"/>, else its own
+        /// <see cref="Agent.IdleExampleStimulus"/>, else its <see cref="AgentProfile"/>'s. Null or empty
+        /// omits the example.
         /// </summary>
         /// <remarks>
         /// Read by <see cref="FewShotBuilder.Build"/>, not by <see cref="PromptBuilder"/>: the
@@ -57,5 +59,148 @@ namespace Agenerela
         /// </para>
         /// </remarks>
         public bool TargetRule;
+
+        /// <summary>
+        /// Whether the system prompt lists the actions offered, each with its description, and the
+        /// targets offered, each with its own line when it has one (#190, Living Vale #1). Off by
+        /// default. <c>Agent</c> copies it from <see cref="DecideOptions.ListActionsAndTargets"/>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// For a provider that never reads the schema. Ollama uses it only to constrain sampling
+        /// (findings, 10 October 2026), so without this a local model learns the actions only from
+        /// the few-shot examples and the targets only from what the game writes into observations.
+        /// </para>
+        /// <para>
+        /// <see cref="PromptBuilder.Build"/> adds it right after the fixed instruction line, which
+        /// says "from the allowed list", and before the target rule when that is on too:
+        /// </para>
+        /// <code>
+        /// Allowed actions:
+        /// - move_to: Walk to a named place.
+        /// - none: Take no action.
+        /// Targets:
+        /// - stock_bread_one: One loaf of bread, 3 gold.
+        /// - north_tower
+        /// </code>
+        /// <para>
+        /// The actions are the schema's, in its order, so <c>none</c> comes last (build plan §2.2,
+        /// rule 3), with <see cref="DecisionSchema.NoneDescription"/>. Each description is trimmed,
+        /// put on one line and ended with a full stop; an action with none is listed by its id. The
+        /// targets are the schema's, in its order, without <c>no_target</c>, which the instruction
+        /// line already names, and at most <see cref="MaxListedTargets"/> of them. A target object that
+        /// implements <see cref="IDescribedTarget"/> gets its description after its id; any other is
+        /// listed by id. With no target field in the schema there is no target list.
+        /// </para>
+        /// <para>
+        /// <b>Unmeasured.</b> Its form follows the "Around you" list of the probe DR-016 measured, which
+        /// listed targets the same way, but no actions, and was never measured on its own. It stays
+        /// off until the evaluation A/B shows it helps (#151, hard rule 2).
+        /// </para>
+        /// </remarks>
+        public bool ListActionsAndTargets;
+
+        /// <summary>
+        /// The most targets <see cref="ListActionsAndTargets"/> lists, 12 by default, the first ones in
+        /// schema order. Every offered action is always listed: a developer chooses that set, and
+        /// dropping one would hide it. 0 lists no targets.
+        /// </summary>
+        /// <remarks>
+        /// The schema still offers a target past the cap; only its line is left out. A source that
+        /// offers the nearest first, as <c>ProximityTargetSource</c> does, so loses the far ones. 12
+        /// lists every target of the evaluation set (11) and of a <c>ProximityTargetSource</c> at its
+        /// default cap (8). <see cref="PromptBuilder.Build"/> throws for a negative value.
+        /// </remarks>
+        public int MaxListedTargets = DefaultMaxListedTargets;
+
+        /// <summary>The default of <see cref="MaxListedTargets"/> and <see cref="DecideOptions.MaxListedTargets"/>.</summary>
+        public const int DefaultMaxListedTargets = 12;
+
+        /// <summary>
+        /// Whether the action and target list says which targets each offered action may take now,
+        /// and how (#151). <see cref="LegalTargetListing.Off"/> by default, which leaves the prompt
+        /// exactly as it was. <c>Agent</c> copies it from <see cref="DecideOptions.LegalTargets"/>.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="LegalTargetListing.PerTarget"/> lists the actions and targets whether
+        /// <see cref="ListActionsAndTargets"/> is on or not, and lists only targets some offered action
+        /// may take; <see cref="LegalTargetListing.ObservationLine"/> adds one sentence to the
+        /// observations instead. <see cref="LegalTargetListing"/> says where the pairs come from and
+        /// how each rendering reads, and what was measured.
+        /// </remarks>
+        public LegalTargetListing LegalTargets = LegalTargetListing.Off;
+
+        /// <summary>
+        /// How the system prompt introduces the identity's <see cref="AgentIdentity.StatementRules"/>
+        /// (#244 item 8). <see cref="Agenerela.StatementRulesWording.YourStatement"/> by default, which
+        /// leaves the prompt exactly as it was. <c>Agent</c> copies it from
+        /// <see cref="DecideOptions.StatementRulesWording"/>. With no rules there is no line to word.
+        /// </summary>
+        public StatementRulesWording StatementRulesWording = StatementRulesWording.YourStatement;
+
+        /// <summary>
+        /// Whether the few-shot block shows each action's
+        /// <see cref="ActionDefinition.CounterExampleStimulus"/>. On by default, which shows only what
+        /// a developer wrote. <c>Agent</c> copies it from <see cref="DecideOptions.CounterExamples"/>.
+        /// </summary>
+        /// <remarks>
+        /// Read by <see cref="FewShotBuilder.Build"/>, not by <see cref="PromptBuilder"/>, like
+        /// <see cref="IdleExampleStimulus"/>: the caller passes it as <c>counterExamples</c>.
+        /// </remarks>
+        public bool CounterExamples = true;
+
+        /// <summary>
+        /// What the agent says in the idle example (#190, G14). <c>Agent</c> fills it from the call,
+        /// the agent or the profile, never from further down than the idle stimulus came from
+        /// (<see cref="DecideOptions.IdleExampleStatement"/>). Null or empty gives no statement. Read by
+        /// <see cref="FewShotBuilder.Build(System.Collections.Generic.IReadOnlyList{ActionDefinition}, TargetRegistry, PromptOptions)"/>.
+        /// </summary>
+        public string IdleExampleStatement;
+
+        /// <summary>
+        /// Whether the examples show the statements developers wrote (#190, G14). On by default, which
+        /// shows only what was written. <c>Agent</c> copies it from <see cref="DecideOptions.ExampleStatements"/>.
+        /// Read by <c>FewShotBuilder.Build</c>.
+        /// </summary>
+        public bool ExampleStatements = true;
+
+        /// <summary>
+        /// Whether the examples show their <see cref="ActionDefinition.ExampleObservations"/> (#216
+        /// item 1). Off by default. <c>Agent</c> copies it from <see cref="DecideOptions.ExampleObservations"/>.
+        /// Read by <see cref="FewShotBuilder.Build"/>.
+        /// </summary>
+        public bool ExampleObservations;
+
+        /// <summary>
+        /// Whether an example with no registered preferred target names the first offered target its
+        /// action takes, skipping any target <see cref="Stimulus"/> mentions (#190, Living Vale #20).
+        /// Off by default. <c>Agent</c> copies it from <see cref="DecideOptions.ExampleTargetFallback"/>.
+        /// Read by <c>FewShotBuilder.Build</c>.
+        /// </summary>
+        public bool ExampleTargetFallback;
+
+        /// <summary>
+        /// Where the call's own observations go (#151). <see cref="Agenerela.ObservationPlacement.AfterSources"/>
+        /// by default, which renders <c>ctx.Observations</c> exactly as before it existed.
+        /// <c>Agent</c> copies it from <see cref="DecideOptions.ObservationPlacement"/>. Read by
+        /// <see cref="PromptBuilder.Build"/> together with <see cref="CallObservationCount"/>.
+        /// </summary>
+        public ObservationPlacement ObservationPlacement = ObservationPlacement.AfterSources;
+
+        /// <summary>
+        /// How many of the context's observations, counted from its end, are the call's own, 0 by
+        /// default. <c>Agent</c> sets it: it puts the lines of its observation sources first and the
+        /// call's own last, so this says where one ends and the other begins. A value larger than
+        /// the list takes the whole list. With 0, or with <see cref="ObservationPlacement"/> left at
+        /// its default, nothing moves. <see cref="PromptBuilder.Build"/> throws for a negative value.
+        /// </summary>
+        public int CallObservationCount;
+
+        /// <summary>
+        /// The request's stimulus, which <see cref="ExampleTargetFallback"/> reads so a fallback example
+        /// never names a target the stimulus mentions: that example would show the model the answer.
+        /// <c>Agent</c> sets it. Null mentions nothing.
+        /// </summary>
+        public string Stimulus;
     }
 }

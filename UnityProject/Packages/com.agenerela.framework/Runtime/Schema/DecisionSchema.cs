@@ -89,6 +89,19 @@ namespace Agenerela
         /// <exception cref="ArgumentNullException"><paramref name="fields"/> is null.</exception>
         /// <exception cref="ArgumentException">One of <paramref name="fields"/> is null.</exception>
         public DecisionSchema(IEnumerable<SchemaField> fields)
+            : this(fields, null)
+        {
+        }
+
+        /// <summary>
+        /// A schema with exactly these fields, and with <paramref name="pairs"/> saying which targets
+        /// each action takes (DR-020). Null pairs make a flat schema, as the other constructor does.
+        /// Like it, this applies none of the rules <see cref="Build(AgentContext, bool)"/> does; the
+        /// serializer checks the pairs against the fields.
+        /// </summary>
+        /// <exception cref="ArgumentNullException"><paramref name="fields"/> is null.</exception>
+        /// <exception cref="ArgumentException">One of <paramref name="fields"/> or <paramref name="pairs"/> is null.</exception>
+        public DecisionSchema(IEnumerable<SchemaField> fields, IEnumerable<ActionTargets> pairs)
         {
             if (fields == null)
             {
@@ -106,10 +119,67 @@ namespace Agenerela
             }
 
             Fields = new ReadOnlyCollection<SchemaField>(copy);
+
+            if (pairs != null)
+            {
+                var branches = new List<ActionTargets>(pairs);
+                for (int i = 0; i < branches.Count; i++)
+                {
+                    if (branches[i] == null)
+                    {
+                        throw new ArgumentException($"Pair {i} is null.", nameof(pairs));
+                    }
+                }
+
+                Pairs = new ReadOnlyCollection<ActionTargets>(branches);
+            }
         }
 
         /// <summary>Fields in generation order. THE ORDER IS LOAD-BEARING: see the remarks on this type.</summary>
         public IReadOnlyList<SchemaField> Fields { get; }
+
+        /// <summary>
+        /// Which targets each action takes, one <see cref="ActionTargets"/> per distinct target list,
+        /// or null for a flat schema, where every action takes every target: the default (DR-020).
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// A paired schema keeps its flat <c>action</c> and <c>target</c> fields, the same values a
+        /// flat one offers, so everything that reads the fields, the prompt's action and target list,
+        /// the target rule, the grounding guard and the parser, reads exactly what it would without
+        /// the pairs. Only a serializer reads them, and only <see cref="SchemaLegalityGuard"/> holds a
+        /// decision to them.
+        /// </para>
+        /// <para>
+        /// <see cref="Build(AgentContext, bool)"/> makes them only when asked
+        /// (<see cref="DecideOptions.PairTargetsWithActions"/>, off by default and unmeasured, #151).
+        /// </para>
+        /// </remarks>
+        public IReadOnlyList<ActionTargets> Pairs { get; }
+
+        /// <summary>
+        /// Whether this schema has a <c>statement</c> field. Every schema <see cref="Build(AgentContext)"/>
+        /// makes has one, unless <see cref="DecideOptions.AskForStatement"/> was off (#266).
+        /// </summary>
+        /// <remarks>
+        /// What the parser and the prompt read to know a statement was asked for, so the two cannot
+        /// disagree with the schema that was sent.
+        /// </remarks>
+        public bool AsksForStatement
+        {
+            get
+            {
+                foreach (var field in Fields)
+                {
+                    if (field.Name == StatementFieldName)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+        }
 
         /// <summary>
         /// The schema for one decision: the actions <see cref="ActionAvailability.For"/> returns,
@@ -125,17 +195,66 @@ namespace Agenerela
         /// <exception cref="ArgumentNullException"><paramref name="ctx"/> is null.</exception>
         public static DecisionSchema Build(AgentContext ctx)
         {
+            return Build(ctx, pairTargets: false);
+        }
+
+        /// <summary>
+        /// The schema for one decision, as <see cref="Build(AgentContext)"/> makes it, and with
+        /// <paramref name="pairTargets"/> each action paired with the targets it takes (DR-020).
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Paired, each action offered takes the targets in its
+        /// <see cref="ActionDefinition.TargetCategories"/>, or every target when it names none, and
+        /// <see cref="TargetRegistry.NoTarget"/> only when it does not require a target.
+        /// <see cref="ActionRegistry.None"/> takes <see cref="TargetRegistry.NoTarget"/> alone.
+        /// Actions with the same list share one <see cref="ActionTargets"/>, in the order their first
+        /// action is offered. An action that requires a target and takes none of those registered is
+        /// left out of the schema altogether, as one is when no target is registered at all.
+        /// </para>
+        /// <para>
+        /// A target the action's per-target check (<see cref="ITargetAvailability"/>) rejects is not
+        /// one it takes, so that pair is left out. With pairing off the target enum is every
+        /// registered target whatever the checks say; only an action left with no target its check
+        /// allows is left out, as <see cref="ActionAvailability.For"/> does in both modes.
+        /// </para>
+        /// <para>
+        /// With no target registered there is nothing to pair, and the schema is flat whatever
+        /// <paramref name="pairTargets"/> says.
+        /// </para>
+        /// </remarks>
+        /// <exception cref="ArgumentNullException"><paramref name="ctx"/> is null.</exception>
+        public static DecisionSchema Build(AgentContext ctx, bool pairTargets)
+        {
+            return Build(ctx, pairTargets, askForStatement: true);
+        }
+
+        /// <summary>
+        /// The schema for one decision, as <see cref="Build(AgentContext, bool)"/> makes it, and
+        /// without the <c>statement</c> field when <paramref name="askForStatement"/> is false (#266,
+        /// <see cref="DecideOptions.AskForStatement"/>). Every other field, and the pairs, are what
+        /// they would be with it.
+        /// </summary>
+        /// <exception cref="ArgumentNullException"><paramref name="ctx"/> is null.</exception>
+        public static DecisionSchema Build(AgentContext ctx, bool pairTargets, bool askForStatement)
+        {
             if (ctx == null)
             {
                 throw new ArgumentNullException(nameof(ctx));
             }
 
-            return Build(ctx, ActionAvailability.For(ctx));
+            var answer = ActionAvailability.Evaluate(ctx);
+            var available = answer.Offered;
+            return Build(ctx, pairTargets ? Takeable(available, ctx.Targets, answer) : available, pairTargets, answer, askForStatement);
         }
 
         // For a caller that has already asked ActionAvailability about this context, as Agent has
-        // for FewShotBuilder, so the enum and the examples come from one answer.
-        internal static DecisionSchema Build(AgentContext ctx, IReadOnlyList<ActionDefinition> available)
+        // for FewShotBuilder, so the enum and the examples come from one answer. Paired, it has
+        // passed the answer through Takeable, so the examples show no action the schema leaves out.
+        // The answer, when given, is the one available came from: the paired schema leaves out each
+        // pair a per-target check rejected in it (#190 LV #19).
+        internal static DecisionSchema Build(AgentContext ctx, IReadOnlyList<ActionDefinition> available, bool pairTargets = false,
+            AvailabilityAnswer answer = null, bool askForStatement = true)
         {
             if (ctx == null)
             {
@@ -154,8 +273,150 @@ namespace Agenerela
                 fields.Add(TargetField(ctx.Targets.Ids));
             }
 
-            fields.Add(StatementField());
-            return new DecisionSchema(fields);
+            if (askForStatement)
+            {
+                fields.Add(StatementField());
+            }
+
+            return new DecisionSchema(fields, pairTargets && ctx.Targets.Count > 0 ? PairsFor(available, ctx.Targets, answer) : null);
+        }
+
+        // The actions a paired schema can offer: without an action that requires a target and takes
+        // none of those registered, since its branch would have an empty target enum, which allows
+        // no answer at all. In availability order. With an answer, a target its per-target check
+        // rejected is not one it takes.
+        internal static IReadOnlyList<ActionDefinition> Takeable(IReadOnlyList<ActionDefinition> available, TargetRegistry targets,
+            AvailabilityAnswer answer = null)
+        {
+            var takeable = new List<ActionDefinition>(available.Count);
+            foreach (var definition in available)
+            {
+                if (!definition.RequiresTarget || TargetsOf(definition, targets, answer).Count > 0)
+                {
+                    takeable.Add(definition);
+                }
+            }
+
+            return takeable;
+        }
+
+        // The pairs a prompt names (#151, LegalTargetListing): the schema's own when it is paired;
+        // otherwise the ones a paired schema of the same actions would offer, made by the same rule
+        // from the same answer, so the prompt and the schema cannot disagree. The actions are the
+        // schema's, matched on each definition's Id as it is now, as the prompt's list matches them.
+        internal static IReadOnlyList<ActionTargets> PairsOf(AgentContext ctx, DecisionSchema schema, AvailabilityAnswer answer)
+        {
+            if (schema.Pairs != null)
+            {
+                return schema.Pairs;
+            }
+
+            var offered = new List<ActionDefinition>();
+            foreach (var field in schema.Fields)
+            {
+                if (field.Name != ActionFieldName || field.AllowedValues == null) continue;
+
+                foreach (string id in field.AllowedValues)
+                {
+                    foreach (var definition in ctx.Actions.Definitions)
+                    {
+                        if (definition != null && string.Equals(definition.Id, id, StringComparison.Ordinal))
+                        {
+                            offered.Add(definition);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return PairsFor(offered, ctx.Targets, answer);
+        }
+
+        // One branch per distinct target list, in the order each list's first action is offered,
+        // none's last unless an action shares its list. Keyed on the list itself, so two actions
+        // share a branch exactly when they take the same targets in the same order.
+        private static List<ActionTargets> PairsFor(IReadOnlyList<ActionDefinition> available, TargetRegistry targets,
+            AvailabilityAnswer answer)
+        {
+            var order = new List<string>();
+            var actions = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+            var lists = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+
+            void Add(string actionId, List<string> takes)
+            {
+                string key = KeyOf(takes);
+                if (!actions.TryGetValue(key, out var ids))
+                {
+                    ids = new List<string>();
+                    actions.Add(key, ids);
+                    lists.Add(key, takes);
+                    order.Add(key);
+                }
+
+                ids.Add(actionId);
+            }
+
+            foreach (var definition in available)
+            {
+                var takes = new List<string>();
+                if (!definition.RequiresTarget)
+                {
+                    takes.Add(TargetRegistry.NoTarget);
+                }
+
+                // An action that takes no target is offered with no_target alone (#244 item 2).
+                if (!definition.TakesNoTarget)
+                {
+                    takes.AddRange(TargetsOf(definition, targets, answer));
+                }
+                Add(definition.Id, takes);
+            }
+
+            Add(ActionRegistry.None, new List<string> { TargetRegistry.NoTarget });
+
+            var pairs = new List<ActionTargets>(order.Count);
+            foreach (string key in order)
+            {
+                pairs.Add(new ActionTargets(actions[key], lists[key]));
+            }
+
+            return pairs;
+        }
+
+        // A list of ids as one string that no other list shares: each id with its length in front,
+        // since an id may hold any character a separator could be made of.
+        private static string KeyOf(List<string> ids)
+        {
+            var key = new System.Text.StringBuilder();
+            foreach (string id in ids)
+            {
+                key.Append(id.Length).Append(':').Append(id);
+            }
+
+            return key.ToString();
+        }
+
+        // The registered targets this action takes, in registration order: in its categories, and
+        // not rejected by its per-target check in the answer, when there is one.
+        private static List<string> TargetsOf(ActionDefinition definition, TargetRegistry targets, AvailabilityAnswer answer)
+        {
+            var takes = new List<string>();
+            foreach (string id in targets.Ids)
+            {
+                if (definition.AcceptsCategory(targets.CategoryOf(id)) && (answer == null || answer.Allows(definition, id)))
+                {
+                    takes.Add(id);
+                }
+            }
+
+            return takes;
+        }
+
+        // The shape of a refusal line's reply (#109): the one free-text field, so it serializes as
+        // any other schema does. Not a decision: it offers no action and no target.
+        internal static DecisionSchema StatementOnly()
+        {
+            return new DecisionSchema(new[] { StatementField() });
         }
 
         // The available actions in registry order, then none. ActionRegistry.Register rejects

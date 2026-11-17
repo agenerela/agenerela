@@ -38,7 +38,9 @@ namespace Agenerela
         /// must be one too, and may be left out only when <paramref name="schema"/> had no target
         /// field, which means no target was registered; the decision's target is then
         /// <see cref="TargetRegistry.NoTarget"/>. <c>statement</c> missing or null is empty, and
-        /// otherwise must be a string. Any other field is ignored.
+        /// otherwise must be a string. Any other field is ignored, and so is a <c>statement</c>
+        /// when <paramref name="schema"/> asked for none (<see cref="DecideOptions.AskForStatement"/>,
+        /// #266): the decision's statement is then empty, whatever the provider sent.
         /// </summary>
         /// <param name="schema">The schema the request carried, which says whether it asked for a target.</param>
         /// <param name="problem">Why the reply was rejected, or null.</param>
@@ -46,13 +48,89 @@ namespace Agenerela
         {
             decision = null;
 
+            if (!TryReadObject(reply, out var answer, out problem))
+            {
+                return false;
+            }
+
+            if (!ReadId(answer, DecisionSchema.ActionFieldName, out string action, out problem))
+            {
+                return false;
+            }
+
+            string target = TargetRegistry.NoTarget;
+            // A null target reads like a missing one, as a null statement reads like an empty one.
+            var targetToken = answer[DecisionSchema.TargetFieldName];
+            if ((targetToken != null && targetToken.Type != JTokenType.Null) || AsksForTarget(schema))
+            {
+                if (!ReadId(answer, DecisionSchema.TargetFieldName, out target, out problem))
+                {
+                    return false;
+                }
+            }
+
+            string statement = "";
+            var statementToken = schema.AsksForStatement ? answer[DecisionSchema.StatementFieldName] : null;
+            if (statementToken != null && statementToken.Type != JTokenType.Null)
+            {
+                if (statementToken.Type != JTokenType.String)
+                {
+                    problem = $"'{DecisionSchema.StatementFieldName}' is not a string.";
+                    return false;
+                }
+
+                statement = (string)statementToken;
+            }
+
+            decision = new AgentDecision(action, target, statement);
+            problem = null;
+            return true;
+        }
+
+        /// <summary>
+        /// Reads the reply to a refusal line's request (#109), by the same rules as
+        /// <see cref="TryParse"/>. Unlike a decision's, <c>statement</c> is all this reply is for,
+        /// so missing or null it is a problem. An empty one is an answer. Any other field is ignored.
+        /// </summary>
+        /// <param name="problem">Why the reply was rejected, or null.</param>
+        public static bool TryParseStatement(string reply, out string statement, out string problem)
+        {
+            statement = null;
+
+            if (!TryReadObject(reply, out var answer, out problem))
+            {
+                return false;
+            }
+
+            var token = answer[DecisionSchema.StatementFieldName];
+            if (token == null || token.Type == JTokenType.Null)
+            {
+                problem = $"The reply has no '{DecisionSchema.StatementFieldName}'.";
+                return false;
+            }
+
+            if (token.Type != JTokenType.String)
+            {
+                problem = $"'{DecisionSchema.StatementFieldName}' is not a string.";
+                return false;
+            }
+
+            statement = (string)token;
+            problem = null;
+            return true;
+        }
+
+        // The reply as one JSON object, with nothing but whitespace around it.
+        private static bool TryReadObject(string reply, out JObject answer, out string problem)
+        {
+            answer = null;
+
             if (string.IsNullOrWhiteSpace(reply))
             {
                 problem = "The reply was empty.";
                 return false;
             }
 
-            JObject answer;
             try
             {
                 // DateParseHandling.None, or a statement such as "2026-10-10" would come back as a
@@ -82,36 +160,6 @@ namespace Agenerela
                 return false;
             }
 
-            if (!ReadId(answer, DecisionSchema.ActionFieldName, out string action, out problem))
-            {
-                return false;
-            }
-
-            string target = TargetRegistry.NoTarget;
-            // A null target reads like a missing one, as a null statement reads like an empty one.
-            var targetToken = answer[DecisionSchema.TargetFieldName];
-            if ((targetToken != null && targetToken.Type != JTokenType.Null) || AsksForTarget(schema))
-            {
-                if (!ReadId(answer, DecisionSchema.TargetFieldName, out target, out problem))
-                {
-                    return false;
-                }
-            }
-
-            string statement = "";
-            var statementToken = answer[DecisionSchema.StatementFieldName];
-            if (statementToken != null && statementToken.Type != JTokenType.Null)
-            {
-                if (statementToken.Type != JTokenType.String)
-                {
-                    problem = $"'{DecisionSchema.StatementFieldName}' is not a string.";
-                    return false;
-                }
-
-                statement = (string)statementToken;
-            }
-
-            decision = new AgentDecision(action, target, statement);
             problem = null;
             return true;
         }

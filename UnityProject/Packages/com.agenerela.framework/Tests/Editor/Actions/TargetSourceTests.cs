@@ -253,6 +253,49 @@ namespace Agenerela.Tests
         }
 
         [Test]
+        public void ProximityRegistersEachTargetableInItsCategory()
+        {
+            MakeTargetable("tower", new Vector3(1f, 0f, 0f), "landmark");
+            MakeTargetable("bucket", new Vector3(2f, 0f, 0f));
+            var into = new TargetRegistry();
+
+            Proximity().Collect(Context(), into);
+
+            Assert.That(into.CategoryOf("tower"), Is.EqualTo("landmark"));
+            Assert.That(into.CategoryOf("bucket"), Is.Null);
+        }
+
+        [Test]
+        public void ATransformAnEarlierSourceOfferedIsOneTargetAndCountsTowardTheCap()
+        {
+            var near = MakeTargetable("guard_wren", new Vector3(1f, 0f, 0f), "person");
+            MakeTargetable("well", new Vector3(2f, 0f, 0f), "place");
+            MakeTargetable("tower", new Vector3(3f, 0f, 0f), "place");
+            var into = new TargetRegistry();
+            new ExplicitTargetSource().Add("guard_wren", near.transform, "guard").Collect(Context(), into);
+            var source = Proximity(cap: 2);
+
+            source.Collect(Context(), into);
+
+            Assert.That(into.Ids, Is.EqualTo(new[] { "guard_wren", "well" }));
+            Assert.That(into.CategoryOf("guard_wren"), Is.EqualTo("guard"), "The earlier source registered it.");
+            Assert.That(source.Dropped, Is.EqualTo(new[] { "tower" }));
+        }
+
+        [Test]
+        public void ExplicitSourceSkipsTheSameObjectAnEarlierSourceAdded()
+        {
+            var tower = new object();
+            var into = new TargetRegistry();
+            new ExplicitTargetSource().Add("tower", tower).Collect(Context(), into);
+
+            Assert.DoesNotThrow(() => new ExplicitTargetSource().Add("tower", tower, "landmark").Add("bridge", new object()).Collect(Context(), into));
+
+            Assert.That(into.Ids, Is.EqualTo(new[] { "tower", "bridge" }));
+            Assert.That(into.CategoryOf("tower"), Is.Null, "The first offer had none, and it is kept.");
+        }
+
+        [Test]
         public void ProximityFiltersByLayer()
         {
             const int ignoreRaycast = 2;

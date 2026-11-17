@@ -35,7 +35,7 @@ namespace Agenerela.Tests
         public void TheThresholdIsWhatDr016Measured()
         {
             Assert.That(TargetGroundingGuard.DefaultThreshold, Is.EqualTo(0.8f));
-            Assert.That(guard.Threshold, Is.EqualTo(0.8f));
+            Assert.That(new DecideOptions().TargetGroundingThreshold, Is.EqualTo(0.8f), "A call that sets nothing runs what DR-016 measured.");
         }
 
         // ---- Through the guard alone -------------------------------------------------------
@@ -112,6 +112,35 @@ namespace Agenerela.Tests
             Assert.That(Inspect(0.59f, tokens), Is.EqualTo(GuardVerdictKind.Pass));
             Assert.That(Inspect(share, tokens), Is.EqualTo(GuardVerdictKind.Pass), "Only a share below the threshold is refused, as the probe compared.");
             Assert.That(Inspect(0.61f, tokens), Is.EqualTo(GuardVerdictKind.RewriteToNone));
+        }
+
+        [TestCase(float.NaN)]
+        [TestCase(-0.1f)]
+        [TestCase(1.5f)]
+        public void AGuardInputBuiltByHandRefusesAThresholdOutsideZeroToOne(float threshold)
+        {
+            // A NaN threshold would contain every scored decision: no share is >= NaN.
+            var tokens = Reply("move_to", T("tower", -0.001, ("tower", -0.001)));
+
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                Input("move_to", "tower", tokens, new DecideOptions { TargetGroundingThreshold = threshold }, new string[0]));
+        }
+
+        [Test]
+        public void TheCallsThresholdDecidesAndItsReasonSaysWhich()
+        {
+            // The same 0.6 reading: refused at the default, passed by a call that lowers it (#244).
+            var tokens = Reply("move_to",
+                T("tower", -1.204, ("tower", -1.204), ("training", -2.303), ("t", -2.303), ("to", -2.996), ("tr", -2.996)));
+
+            Assert.That(guard.Inspect(Input("move_to", "tower", tokens, new DecideOptions(), new string[0])).Kind,
+                Is.EqualTo(GuardVerdictKind.RewriteToNone));
+            var lowered = Input("move_to", "tower", tokens, new DecideOptions { TargetGroundingThreshold = 0.5f }, new string[0]);
+            Assert.That(guard.Inspect(lowered).Kind, Is.EqualTo(GuardVerdictKind.Pass));
+            Assert.That(lowered.Telemetry.TargetGrounding, Is.EqualTo(0.6f).Within(0.001f), "The reading is recorded whatever the threshold.");
+
+            var raised = guard.Inspect(Input("move_to", "tower", tokens, new DecideOptions { TargetGroundingThreshold = 0.95f }, new string[0]));
+            Assert.That(raised.Reason, Does.EndWith("(threshold 0.95)."));
         }
 
         [TestCase("follow_player")]
@@ -370,7 +399,8 @@ namespace Agenerela.Tests
 
         private static GuardVerdictKind Inspect(float threshold, IReadOnlyList<TokenProbability> tokens)
         {
-            return new TargetGroundingGuard { Threshold = threshold }.Inspect(Input("move_to", "tower", tokens)).Kind;
+            return new TargetGroundingGuard().Inspect(
+                Input("move_to", "tower", tokens, new DecideOptions { TargetGroundingThreshold = threshold }, new string[0])).Kind;
         }
 
         // The decision the tokens spell, over a context with these targets, or tower and

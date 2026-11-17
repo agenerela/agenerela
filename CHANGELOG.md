@@ -20,6 +20,886 @@ phase table and the open issues, not here.
 
 ## [Unreleased]
 
+## [0.4.0-preview.2] - 2026-11-16
+
+### Framework
+
+- The second preview of 0.4.0, cut while Phase 4 (Evaluation harness) is under way, due 7 December. Notes for a developer are in `docs/releases/v0.4.0-preview.2.md`; the package's section of the same name has the API.
+
+- **Phase 3 (Validation pipeline) closed** on 3 November when its gate (#110) passed: the
+  guard pipeline and `SchemaLegalityGuard` (#106), target grounding (#105), its one-line
+  fallback (#107), developer guards (#108) and contained refusals (#109, via #141), which keep
+  an agent from saying what it will not do. See the package's `[Unreleased]` section.
+
+### Added
+
+- **Painted Realm R3: the land traditions live A/B** (#20), 12 pairs on Classic with `qwen3.5:4b`: with
+  `LandTraditions` on, a seat buys 7 points more of the type its starting land favours (paired 95% +3 to +12), the
+  persona still explains most of which types it buys, and nothing else moved outside noise. The rule stays off.
+
+- **Painted Realm R3: land traditions** (#20), behind `GameRules.LandTraditions`, off. The share of a realm's held
+  land that leans to a type (hills and mountains pikes, plains riders, forest bows) makes that type up to 15%
+  stronger in battle, and the court reads it in one line. Scripted only so far.
+
+- **Painted Realm: marches as coloured arrows** (#20). A march under way is a solid arrow in its owner's colour along
+  its path; one ordered this council is the same arrow, pale. Both read the same at every zoom.
+
+- **Painted Realm R3: hunger first** (#20), behind `GameRules.HungerFirst`, off. With supply on, a starving army
+  and then one about to run out are asked first within the writs, and read what hunger costs and the nearest land
+  that feeds them. Scripted only so far.
+
+- **Painted Realm: give new orders to any army** (#20). On #327's recall, a holding or marching army's row offers new
+  orders for a writ, the council counts the army writs left and shows orders the rules did not take, and New game's
+  section hints are in a player's words.
+
+- **Painted Realm R3: every army rule on, run again with the hunger wake and the siege floor** (#20). Sieges now
+  last and are relieved; armies woken as they starve mostly attack on rather than go home, and half the starving
+  army-turns get no writ. No default changes. Results in `findings.md`, 15 November.
+
+- **Painted Realm: you may order any of your armies in the council, woken or not** (#20). `Game.Recall` asks the
+  rules for a holding army's orders ("recalled by the court", for a writ); the rule game recalls every army your
+  plan orders, refuses a plan with more army orders than the writs with the reason, and says any order not taken in
+  `RuleSession.PlanRefusals`. Model rulers never recall, and every recording replays as before.
+
+- **Painted Realm R3: the counters line, on whenever unit types are** (#20). The court's facts say what beats what
+  and what each rival is mostly, and a march names the largest type it would meet. Twelve pairs on `qwen3.5:4b`:
+  recruits that counter the type seen 20% → 67%, no illegal answers, nothing else measured worse beyond noise; the
+  personas no longer differ in which types they buy. `GameRules.CountersLine`, on by default; unit types stay off.
+  Results in `findings.md`, 15 November.
+
+- **Painted Realm rule mode in plain words** (#20). The war score has one sign and a label; every number on the bar and
+  army rows has a unit; the writs counter says "used"; the council warns before the treasury runs dry and says when no
+  army awaits orders; a planned march is drawn at once; a holding army is not offered as orderable; menus lose ids,
+  model names and "R3"; battle reports read each side's mix and commander from the rules' record.
+
+- **Painted Realm rule mode, ready for a playtest with R3 on** (#20). Fixes from a pass with all four R3 settings on:
+  typed recruits read as names in the chronicle, an army's row says why it waits and when it besieges, the siege tag
+  shows beyond your borders, the battle report and the end card lose a stray sentence and comma.
+
+- **Painted Realm R3: a fort holds the road, and a siege stops income** (#20), each behind its own switch, off by
+  default (`GameRules.FortsHoldTheRoad`, `SiegeStopsIncome`). A march stops beside an enemy fort no one besieges,
+  and from there may only besiege it or go back; a besieged province gives its owner nothing. A battle record now
+  keeps each side's unit mix and commander as the battle began, for the replay. Scripted only.
+
+- **Painted Realm R3: every army rule on at once, a first live look** (#20). Six pairs on `qwen3.5:4b`: no illegal
+  answers and no extra model time, more battles and fewer treaties; every siege but one ended the turn it began, and
+  armies left holding abroad starved where they stood, a rule bug fixed in its own PR. No default changes. Results in
+  `findings.md`, 15 November.
+
+- **Painted Realm replay: the council as the live game had it** (#20). `ArmySnapshot` now carries each army's mix,
+  general, traits and stores, and `TurnSnapshot` each siege, so a replay's council shows the same pieces, generals,
+  stores and siege tags as the live game did, and the turn's battle reports start from the exact mixes.
+
+- **Painted Realm: a stalemate counter that reads war score and land by treaty** (#20), behind
+  `GameRules.StalemateByWarScore`, off by default. Land taken or freed by force no longer restarts it; a treaty,
+  free land, a broken realm, a new war or a 10-point swing does. Scripted only; no live run yet.
+
+- **Painted Realm R3 sieges and supply on screen** (#20). New game has "Sieges" and "Supply" switches, off by
+  default. A besieged province carries "Siege 2 of 4" beside its forts; your army rows show their stores as pips
+  and a red "No stores" when there are none; the chronicle tells sieges begun, broken and ended, and hunger. A
+  replay with sieges on no longer stops at the first siege that ends. With both off the screen is unchanged.
+
+- **Painted Realm R3 armies on screen** (#20). New game has "Unit types" and "Generals" switches, off by default,
+  for every way of playing the writs turn. With them on, pieces show their largest type, your army rows and
+  tooltips the mix, a rival's piece only what it mostly is; the council offers the three recruit orders with cost
+  and counter; army rows name their general; the chronicle tells a general's new trait or fall; the battle report
+  shows both mixes and the counters' and generals' effect in words. With both off the screen is unchanged.
+
+- **Painted Realm R3: unit types, a first live look** (#20). Six pairs on `qwen3.5:4b`: no illegal answers and no
+  extra model time with unit types on, but the courts recruit mostly pikes and counter the type they see only 22% of
+  the time. `UnitTypes` stays off. Results in `findings.md`, 14 November.
+
+- **Painted Realm R3, part six: what a country sees of a rival army** (#20), behind `GameRules.Fog`, off by
+  default. `ArmySight` holds the rules: rival armies near our land and armies show position, general and size
+  rounded to 10, nothing in forest but presence, their mix only to our riders. The rulers' facts follow it;
+  scripted players do not yet.
+
+- **Painted Realm R3, part five: supply, model B** (#20), behind `GameRules.Supply`, off by default. Armies
+  carry 0 to 4 turns of stores, refilled at home and eaten abroad, twice as fast in poor land; with none they
+  lose 10% a turn and fight 15% weaker; a forager eats half. The rulers read each army's stores; scripted
+  armies go home to refill. The rules page records the three models considered and why B.
+
+- **Painted Realm pacing settings, measured live** (#20). On two pairs of uncapped `qwen3.5:4b` games, ownership
+  after 8 turns with the break rule made games longer (249 turns against 101): each province that passes resets
+  the stalemate counter. Both stay off; the rules v2 page lists what to try instead. Results in `findings.md`.
+
+- **Painted Realm R3, part four: sieges at forts** (#20), behind `GameRules.Sieges`, off by default. Enemy
+  land with forts is besieged over 2 turns a fort (less with a siegewright or three to one, a 10% breach a turn)
+  and occupied one fort fewer; the siege breaks when the besiegers leave or lose. Both sides read it.
+
+- **Painted Realm R3, part three: generals with traits** (#20), behind `GameRules.Generals`, off by default.
+  Every army has a general with one of seven traits (bold, wary, horse-born, bowmaster, swift, stubborn,
+  inspiring); a side's commander counts in strength, losses and marches, wins a second trait after three
+  victories, and falls 5% of the time in a lost battle. The report and the rulers' facts name them.
+
+- **Painted Realm R3, part two: the model rulers recruit by type and read the mix** (#20), only with
+  `GameRules.UnitTypes`, still off. The court registers `recruit_pikes`, `recruit_riders` and `recruit_bows`
+  in place of `recruit`; the facts give each army's mix and what a rival's armies mostly are. Off, every prompt
+  is as before. Headless table runs take `-strategyRules "Field=value;..."` for rule settings.
+
+- **Painted Realm: the storyteller's history check is a guard** (#20). With `+history`, a story that tells
+  of a fight that never happened is replaced through `GuardVerdict.ReplaceStatement` (#292) before the event
+  is queued, and the event stands. `Game.HistoryVerdict` runs the event's own checks in the same order, so
+  the verdicts, stories and the record of the model's words are the same as before, which a test checks
+  against `+history-in-game` (the check at the queue, kept for comparison).
+
+- **Painted Realm: the storyteller caps its replies, and dilemmas can come with the call** (#20).
+  - The storyteller's event and title calls send `MaxReplyTokens` 400 (#244 item 11), which binds only a
+    runaway; `+no-reply-cap` sends none, as before.
+  - `+call-choices` gives a dilemma's options with the call as `DecideOptions.Choices` (#293, DR-022) in place
+    of registering them as the seat's actions. It is an arm, unmeasured, until its A/B; the default is unchanged.
+
+- **Painted Realm: the end of a game, and a first look** (#20). An end screen in every way of playing: who won
+  and how, provinces per realm over the turns, wars and treaties, each ruler in its own words, and "watch the
+  replay" or "new game". A first-turn help layer for rule mode, six notes at most, which opens once and stays in
+  the pause menu.
+
+- **Painted Realm: the advisor in rule mode** (#20). A model on your own seat proposes each writs turn's plan in
+  the council: its counsel, each order with Take and Why, and "Take the advice". It is on by default with model
+  rulers and can be switched in New game and the pause menu. It is asked alongside the rulers, its orders always
+  map to legal moves, and only advice you take is recorded as yours.
+
+- **Painted Realm R3, part one: pikes, riders and bows with the counter rule** (#20), behind
+  `GameRules.UnitTypes`, off by default.
+  - Armies keep soldiers by type; losses keep the mix; `Army.Soldiers` stays the total.
+  - `recruit_pikes`, `recruit_riders` and `recruit_bows` replace `recruit`; riders cost twice a pike to raise and keep.
+  - Battles weigh each type by the counter rule, and the report names the largest effect.
+  - Scripted players recruit what counters their strongest rival. Scripted numbers in `findings.md`, 14 November.
+
+- **Painted Realm: two pacing settings for the writs turn, both off** (#20).
+  `GameRules.OccupationBecomesOwnership` makes a province held N turns the occupier's, and
+  `GameRules.BreakWhenAllOccupied` breaks a fully occupied realm with armies left. Scripted they leave the pace
+  as it was; the models' stall waits for a live run. Numbers in `findings.md`, 14 November.
+
+- **`tools/benchmarks/closed_choice_grammar_probe.py`** (#266 item 2): asks Ollama, with no framework code,
+  whether its grammar keeps an enum field beside `action` and `target` and an array of target ids with
+  `minItems`/`maxItems`, and in which key order. First run on `qwen3.5:4b`, RTX 5080: every constraint held on
+  `/api/chat`, and a strength placed after `statement` was written into the statement 3 times in 6. The
+  gateway refuses `/v1/chat/completions`, so that half is unmeasured. Results in `findings.md`, 14 November.
+- **Painted Realm: silent armies, an arm for the writs turn** (#20). `+silent-armies` asks the marshal's army
+  orders without a statement (`DecideOptions.AskForStatement`, #266). On `qwen3.5:4b`, 15 games an arm, it saves
+  0.59 s a turn with repeats and legality unchanged, but treaties fell from 4.7 to 3.5 a game within noise, so
+  `default` keeps every line. Results in `findings.md`, 14 November.
+
+- **Painted Realm: detail up close, fields that show, rule mode on a big map** (#20).
+  - Zoomed in, the visible part of the chart is drawn again at screen scale (trees, fields, settlements, roads),
+    not magnified.
+  - Farms and settlements grow visibly with development.
+  - Rule mode has a "next army awaiting orders" jump, and markers at the map's edge for off-screen battles and
+    your capital.
+  - The province panel speaks to a player.
+  - New game: "Your writs: unlimited" for rule mode, off by default; the council reads "no limit".
+
+- **Painted Realm: a ruler's own last lines, the writs turn's default, and a country's own writ count** (#20).
+  - Two voice arms for the writs turn: `+one-voice` (only the first court decision of a turn speaks) and
+    `+own-lines` (a decision that speaks reads the ruler's last four lines and is asked to say something new).
+  - Measured on `qwen3.5:4b`, 15 games an arm: own lines cut word-for-word repeats from 36% to 22% with
+    legality, model time and persona unchanged, so the demo's `default` has it now (`+no-own-lines` for the
+    old one). One voice made repeats worse and halved the treaties. Results in `findings.md`, 13–14 November.
+  - `GameRules.WritsOverride` gives one country its own writs a turn, or `UnlimitedWrits`, for the person's
+    unlimited writs on screen.
+  - `model.csv` gains an `unspoken` column: a line written where none was asked.
+  - With own lines on, the rulers keep 13 observation lines, not 12, so the extra line no longer pushes out
+    "Ordered this turn" (cut from 43% of later orders in the arm as measured) or an army's moves line.
+
+- **Painted Realm: a sharp chart and names that never collide** (#20).
+  - Borders and occupation hatching stay sharp at any zoom: the shader takes each pixel's province from the
+    world's cell grid, by the CPU raster's own vote.
+  - Pieces, march tags, realm, region, capital and province names are kept clear of each other at every zoom.
+  - Realm names appear zoomed out.
+  - The province panel shows the land: terrain, region, settlement and development, population, goods, and a
+    special place's story.
+  - Panels are opaque.
+
+- **Painted Realm: the writs turn on generated worlds** (#20). New game plays a generated world of any size
+  and number of countries in all three ways: a scripted replay, model rulers live, or ruling a realm.
+  - The camera zooms and pans comfortably on any size, and opens on your realm.
+  - Pieces scale with how close provinces stand on screen.
+  - Long realm lists and the chronicle fold.
+  - A huge world plays at about 6 ms a frame.
+  - The lit destinations no longer fill solid red on the chart's west side.
+
+- **Painted Realm: the writs turn polished** (#20).
+  - The council's buttons read as offered, chosen or not offered, with the reason.
+  - The chronicle and the panel use names, never ids.
+  - A ruler's orders of a turn are one entry with its line once.
+  - Refused destinations are the nearest three.
+  - Pieces in neighbouring provinces no longer overlap, and a treaty's seal shows above them.
+
+- **Painted Realm rules v2, R1c: the writs turn measured live on `qwen3.5:4b`** (#20). Tables can play the
+  writs turn (`-strategyTurn writs`, with `-strategyCap`, `-strategyMap`, `-strategyMapSeed` and
+  `-strategyVictory`), and a writs run writes `writs-turns.csv`. 20 writs games on Classic against 20 one-move
+  games, then 5 uncapped and 5 on a medium world: 7.1 s of model time a turn, no capped game finished, armies
+  used, treaties made, personas distinct, statements repeated far more. Results in `findings.md`, 13 November.
+
+- **Painted Realm: rule mode on the writs turn** (#20). You rule one country against four model rulers
+  with a plan a turn: a court order, an order for each army with a writ, a second court order.
+  - Your writs are counted, and armies waiting for want of a writ are marked.
+  - An army chosen on the map lights its legal destinations; the others say why not.
+  - A treaty term put to you is a card with the war score.
+  - Rival armies show only where your court sees.
+  - The storyteller plays the writs turn.
+  - A ruler's line said again shows once.
+
+- **Painted Realm: model rulers play the writs turn live on screen** (#20). Each country has a court
+  and a marshal with its persona, on the RTX 5080.
+  - Every decision is recorded as the game asked it, with the army a marshal's order is for.
+  - The inspector opens each decision with its prompt and facts.
+  - The RTX 5080's lock is not taken while its pause file is set.
+  - Wars with a country out of the game no longer show.
+  - Province names stay above the army plates.
+
+- **Painted Realm: the writs turn on screen, watch and replay** (#20). New game offers the writs
+  turn with stand-in rulers, on Classic or a generated world.
+  - Every army is a piece on the map at all times, with its march line and the turns left, and it
+    steps when the turn's armies march.
+  - A battle clashes where it happens; its report card shows each term from the rules' record.
+  - Occupation is the occupier's inked hatching over the owner's wash, with a pennant. A treaty
+    turns it into the new owner's wash under a seal.
+  - War scores show beside each war.
+  - The dev menu can raise, order and fight armies, occupy and free land, set a war score and land a
+    treaty. A generated chart is drawn again when the window's size needs it.
+
+- **Painted Realm: the drawn chart shows development, rivers, roads and bridges, drawn on the GPU** (#20).
+  - Each province's development decides its settlement (hamlet to large town, a capital walled, forts
+    as towers) and how much farmland lies around it.
+  - Forests and mountains are massed, plains carry trees and hedgerows, scenery islands are drawn as
+    land the rules never see, and special places have their own marks.
+  - Rivers and roads come from the generator's `MapGeometry`, with a bridge at every crossing.
+  - The ground is a shader and the marks one atlas, so a medium world at 3840 × 2400 draws in about
+    0.1 s instead of 7.3 s; a loading card shows the generator's progress.
+  - An open side panel no longer covers the council panel's buttons.
+
+- **Painted Realm rules v2, R1b's second part: model rulers for the writs turn** (#20). `WritRuler` is two
+  framework agents with one persona: a court for court orders, treaties and dilemmas, and a marshal for
+  army orders, the army carried in the decision's correlation. Each keeps a memory of four decisions.
+  They read local facts (at most eight lines on any map, rivals limited to those at war or bordering),
+  a moves line of what is offered, and the orders already given this turn. A fake model playing like
+  the script plays exactly the scripted game through them. A `domination_75` victory preset sits beside
+  conquest, which stays the default until the lead chooses.
+- **Painted Realm: the storyteller on screen** (#20). New game → Storyteller: off, or one of its
+  five presets, for watch live and rule games.
+  - Its events land as the chronicler's banner where they strike and as lines in the chronicle,
+    with its own crest.
+  - Each opens into an event card: who it struck and how, what each chose and said, and its tale.
+    From the card, the storyteller's decision and the title call open in the inspector.
+  - In rule mode, a dilemma that reaches you stops the turn behind a choice card that only a choice
+    closes.
+  - A Tales panel follows each tale from start to end.
+  - The dev menu fires any event, dilemma or tale.
+  - The replay rebuilds a storyteller game exactly from its recording.
+- **Painted Realm rules v2, R1b's first part: the writs turn's pace, battle reports, armies in snapshots**
+  (#20). A Classic game with scripted rulers now takes 78 turns, down from 123; a medium world takes
+  about 180 (median 152), down from 226. The levers: two march steps a turn over open ground, three writs, a weaker militia,
+  shorter truces and stalemates, demands enforced at 80, and scripted rulers who fight wars out. Every
+  battle is recorded with its terms and a sentence on why it went as it did (`TurnReport.BattleRecords`).
+  Each turn's snapshot holds the armies and occupations, so any past turn can be shown.
+- **Painted Realm's generated worlds look like land, not figures** (#20). Coasts have bays and
+  headlands, inland seas are irregular, lobes are uneven, and no land meets the frame. Small scenery
+  islands lie offshore. When a world's starts are unfair, the generator searches again on the same
+  geometry before making a new one. Worlds now have rivers, roads with bridges, and a development
+  value per province, all drawn on the contact sheet; no rule reads them yet. The generator reports its
+  progress and stops at a time budget with the best world found. Every seed now makes a different
+  world than before.
+- **Painted Realm rules v2, slice R1a: the writs turn and armies as pieces, headless** (#20). The turn
+  of rules v2 is a setting, `GameSetup.Writs`, beside today's one-move game, which stays the default
+  and unchanged. Each ruler has a few writs a turn: a court order, orders for its armies awaiting them,
+  and a second court order. Armies stand on the map and march with terrain costs, all stepping at
+  once. They fight with today's battle formula, retreat or are routed, occupy enemy land and take
+  neutral land. Wars end in treaties: white peace, demanding what is occupied, ceding it. A demand at
+  a war score of 90 is enforced, and broken realms fall to their occupiers. Conquest has a stalemate
+  ending. The scripted and random players play it. Model rulers come in R1b.
+- **Painted Realm: a generated world drawn as a sea chart by code** (#20, the screen half of R2).
+  New game → Map: Generated, or the dev menu's `generated` command. Scripted rulers play a world
+  of any size and shape, and the screen replays it over a chart drawn at the screen's size: sea,
+  coast, terrain glyphs, ridges and passes, settlements, ports, special places, a compass rose, and
+  names placed to fit. The owner wash, the borders and the capture work as on the Classic board,
+  with ten owner colours checked to stay apart. The Classic board and its painting are unchanged.
+- **Painted Realm rules v2, slice R2: the map generator, headless** (#20). GreyBoxStrategy generates
+  worlds from a seed: small to huge (30 to 150 provinces), five land shapes, terrain, coasts and
+  ports, ridges with passes, regions, fair capitals and starting realms, goods, population, names from
+  tables and special places. Each world is checked for connectivity, shape and fairness, and made again
+  from the next sub-seed when it fails. A world comes out the same on every machine, and its geometry
+  is plain data for the screen to draw. The world-maker agent, the Cartographer and model-written names
+  plug in through checked hooks. Today's rules play on any generated world headless.
+  `ArtSource/world_sheet.py` draws exported worlds on one sheet.
+- **The RTX 5080 gateway passes `/v1/systemone`**, the route Ollama (0.35 and later) serves decision
+  models on, and `ollama_remote.py systemone <model>` checks it. The lead applies the Caddyfile on the
+  machine with the steps in `docs/llm-wiki/non-llm-deciders.md`, "What to change on the RTX 5080 for
+  decision models". No other `/v1` route opens.
+- **Decision models researched** (Gemini Decision 1, Jev and the open-weight ones in the Ollama
+  library), with their question format measured on `qwen3.5:4b`: 272/389 and 62/76 against 330 and 70,
+  3.2 times faster. Both named models are hosted only. The open ones ran on `/v1/systemone` once
+  the lead opened it: `tev1:4b` 248/389, `strands-decider:2b` 231, `d1:3b` 228, all beyond noise below
+  the 4B, refusing commands. No decision-model provider recommended. They lead the page below.
+- **Non-generative deciders researched and measured against `qwen3.5:4b`**, on the RTX 5080 with the
+  control re-run in the same session: a new wiki page, `docs/llm-wiki/non-llm-deciders.md`, with a
+  survey and the results, an entry in `findings.md` and a row in `live-runs.md`. The probe is
+  `tools/benchmarks/non_llm_decider_probe.py`; its reference and tuning examples, written new and
+  checked against both sets, are in `non_llm_examples.json`.
+  - The best engine, `bge-m3` embeddings with a trained head, scores 271/389 and 63/76 against the
+    4B's 330 and 70, beyond noise on both sets.
+  - A cascade that lets the engine answer only when it is confident kept the 4B's score within noise
+    while answering 28% of interim decisions itself: the one idea left to A/B.
+  - No reranker runs on Ollama 0.40.14.
+  - Five small models pulled onto the server: three embedders and two reranker GGUFs. No framework
+    code changed.
+
+- **Painted Realm rules v2, slice R0: settings and the map as data** (#20). GreyBoxStrategy's map is
+  now data (`WorldMap`, JSON, with terrain, coasts, ports and population no rule reads yet), and
+  today's board is the Classic preset, loaded from it. `GameSetup` holds a new game's settings (seed,
+  map, countries, victory mode, storyteller preset, advisor) with a saved form that refuses invalid
+  settings with a message. Conquest and turn-limit victory modes join today's domination, which stays
+  the default until R1. A test pins today's 200-game series byte for byte. `GreyBoxStrategy.Sim` now
+  references Newtonsoft JSON.
+- **Painted Realm rules v2: the design for the deeper game** (#20),
+  `docs/demos/painted-realm-rules-v2.md`. Design only, no game code. It records the lead's
+  34 answers of 12 November and his answers to its own eight questions, and settles, for build sessions to take one slice at a time:
+  - **The turn:** writs (2 to 5 orders a turn), standing orders, and a model ruler asked only about
+    the court and the armies awaiting orders. About 7 s of model time a turn for six `qwen3.5:4b`
+    rulers, 14 s at worst; five ways compared.
+  - **A seeded map generator** with fairness and connectivity checks, special places named and told
+    by a model, and a sea chart drawn by code at any resolution. Today's board stays as the Classic
+    preset.
+  - **Armies:** three unit types with counters, generals with traits, sieges, supply as stores, fog
+    of war, and a survey of what gives army play depth.
+  - **The rest:** population, food, goods and buildings shown as development; agreements and opinions
+    with reasons; conquest with no turn limit; the settings and presets; what each decision asks of
+    the models and the framework; the A/B each slice owes.
+  - **Conquest by treaty:** armies occupy land, shown as hatching, and a peace treaty transfers it.
+    The treaty is a closed set of terms bounded by a war score, answered by the other ruler.
+  - **Later stages:** orders without a cap (automation, groups, a decision budget), a world shaped
+    by a model through the framework, and names and histories written by a model, each with its
+    A/B. Research on making the unit roster our own.
+  - **The build:** eleven slices with issue-ready checklists. The lead's answers to the first
+    draft's eight questions are recorded beside his other 12 November answers.
+
+- **Painted Realm: a dev menu** (#20). F1 opens it, in the editor and in development builds.
+  - Play with stand-in rulers and no card. Jump, step, autoplay and set any speed.
+  - Change gold, soldiers, stability, forts, owners, wars and eliminations, and fire any of the
+    storyteller's event templates. Edits are recorded and replayed at the same turn.
+  - Pretend the card is held, the server is down, a round times out, or a reply is unreadable,
+    without touching the real lock.
+  - Readouts, screenshots, save and load a recording, and window sizes.
+  - Everything runs through `DevTools.Run("…")` too. A game it touches is marked DEV on screen
+    and in its recording.
+
+- **Painted Realm: a main menu, New game, Settings and a pause menu** (#20).
+  - The game opens on a main menu: New game, Replay, Settings, Quit.
+  - New game chooses watch or rule, your country, the model and the seed. It lists the map,
+    persona mix, storyteller and advisor as coming.
+  - Settings: display mode, resolution, UI scale, VSync, frame cap, playback speed and sound
+    volumes. They are saved in `settings.json` and applied at once. A display change reverts
+    unless kept.
+  - Esc opens a pause menu in a game.
+  - In rule mode, rivals' decisions and words open as they happen; only their court's report
+    stays private until the game ends.
+  - Every country's army stands on the map at its capital, with its size, in every map mode.
+
+- **Two 4B-class candidates measured against `qwen3.5:4b`** (#252's first arms), on the RTX 5080
+  with the control re-run in the same session. The candidates are `gemma4:e4b-it-qat` and
+  `nemotron-3.5-bolt:e4b`. Results are in `findings.md` and `model-candidates.md`'s "Measured",
+  with a row in `live-runs.md` and a candidates table and a fourth game account in the
+  GreyBoxStrategy README.
+  - Both pass the pre-checks: no thinking, field order kept, probabilities from before the mask.
+  - Correct answers, interim and curated: 330 / 329 / 324 and 69 / 69 / 66 (control, Gemma,
+    Bolt). All within noise.
+  - Gemma E4B handles impossible requests worse (−18.8, beyond noise). At the persona table it
+    plays the control's game in shorter lines.
+  - Bolt E4B plays a passive game and repeats half its statements.
+  - `/api/ps` under-reports Bolt: 950 MB, about 2.8 GB real.
+  - No default changed.
+
+- **GreyBoxStrategy: the storyteller's stage S2** (#20, demo only, no framework change). Each piece
+  is a modifier on `+storyteller`, off in `default`:
+  - `+choices`: six dilemmas whose options the struck ruler chooses, as one more decision (`Moment.Choice`);
+    a person's seat answers through `Game.PendingChoices` and `Game.Choose`.
+  - `+multi`: group events that leave out the members the fairness rules protect, each member with its
+    own amount or choice.
+  - `+chains-free` and `+chains-skeleton`: tales over several turns, held by the game (`Game.Chains`),
+    written freely by the model or on four skeletons the game registers.
+  - `+history`: a recent-happenings line, and a story check that replaces an invented battle.
+  - `+traits`: a terrain, a landmark and a resource for every province, and three events that need one.
+  - `+title-call`: the title from a second, short call.
+  - `+preset-<name>`: five storyteller presets (`StorytellerSettings.Presets`); `+s2` is every piece but
+    the chains.
+  - The game deals each turn's kind (a tale, a dilemma or an ordinary event) by the preset's chances.
+    Effects, dilemmas, skeletons and traits are data, with no province or country named.
+  - `-strategyIndex` lets one block of a longer series seat everyone as the series would.
+  - Measured against S1: findings, 12 November, "The storyteller's stage S2".
+- **GreyBoxStrategy: a storyteller that invents the game's events** (#20, stage S1 of
+  `docs/demos/painted-realm-research.md`, demo only, no framework change). One more `Agent` with no
+  body, asked before each upkeep from turn 3, picks one of eight effect templates and a country,
+  group or province, and writes the title and story; the game sets the strength, keeps it fair
+  through availability (a budget, no gift to the leader or blow on the weak, cooldowns, no third
+  blow or gift in a row), replaces a story that names the wrong country or holds a number, and tells
+  the rulers the title. An arm, `+storyteller`, off in `default`; it replaces the random event table
+  (`Game.EventTable`). `StrategyTableMenu.RunInterleavedFromCommandLine` runs several arms on the
+  same seeds in blocks, every run writes `events.csv` and `events.md`, and the scorecard has an
+  events section. Measured against the table on `qwen3.5:4b`: findings, 12 November, "A storyteller
+  in GreyBoxStrategy".
+- **GreyBoxStrategy, Painted Realm: rule mode** (#20). The start menu's third choice: you rule
+  one country against four model rulers with personas.
+  - The rulers decide at once, in one `DecisionRound`, while your order waits. The turn then
+    plays back as in watch mode.
+  - The orders panel offers exactly the moves `Legality` offers a model seat in your place. A
+    move that is not offered says why. Province and rival panels have Order buttons, and a peace
+    offer to you opens the envoy's card.
+  - Fog of war is decided and documented: you know what a model ruler is told, no more.
+  - The RTX 5080's lock is taken for each round of model calls only, and the model is unloaded
+    after each.
+  - Tests drive the four seats with a `ScriptedProvider`.
+- **Painted Realm: three fixes to #260's live game.**
+  - The lock now resolves to the main checkout's from a git worktree too.
+  - The server check and the unload use `HttpClient`, as the framework's provider does. Before,
+    `UnityWebRequest` refused the plain-HTTP gateway.
+  - The start menu fits at 1366 × 768.
+
+- **GreyBoxStrategy, Painted Realm: a start menu and "Play it"** (#20).
+  - The Watch scene opens on a menu: replay the recorded game, or watch a live game (model and
+    seed).
+  - A live game checks first and says why it cannot start: either gateway variable missing, the
+    RTX 5080's lock held (and by whom), the server unreachable, or the key refused.
+  - It takes the lock while the model plays, unloads the model, and releases the lock at once. A
+    game that stops mid-way says so on the map.
+  - The three-turn stop is now enforced where the game asks its rulers, and two tests drive a
+    whole live session with a `ScriptedProvider`.
+  - The demo README opens with the steps.
+
+- **GreyBoxStrategy, the screen follows a live game** (#20).
+  - Five `qwen3.5:4b` persona seats play through `TableRunner`, and the screen reads the
+    framework's `DecisionLog` as it grows: a partial replay build, and the log read while it is
+    written.
+  - A turn plays only once it has fully resolved.
+  - Checked with one full live game on the RTX 5080, where Ilvar won on turn 24; no timing claims.
+  - Also: open panels no longer cover the map-mode bar, and following a country centres its land
+    in the free map area.
+  - 3 new EditMode tests.
+
+- **GreyBoxStrategy, the screen's panels and map modes** (#20, still on the replay).
+  - **Province and country panels** on click: defence, who may attack a province and why not,
+    and a country's persona, treasury, last facts, offered moves and decisions.
+  - **Map modes:** Political, the main one, keeps capitals and forts; Armies; Forts; and Reach,
+    which shows the followed country's legal attacks with win chances.
+  - **A diplomacy matrix.**
+  - **Following a country** turns the top bar into its full values, the groundwork for rule mode.
+  - **The map** is a 4096 × 2304 master with open sea on every side, upscaled from codex-image's
+    painting and re-baked; the sea beyond it no longer repeats visibly.
+  - `RealmQueries`' reach is checked against every attack the recorded game offered. 3 new
+    EditMode tests.
+
+- **GreyBoxStrategy, stage 3, slice 2: the decision inspector** (#20). Any chronicle line or
+  speech banner opens the decision behind it. It shows six sections, from the recorded telemetry
+  alone: the model's raw answer; the game's offered moves with the choice marked, and those not
+  offered with each reason; the facts sent; the guards with target grounding and the re-check when
+  the move landed; memory; model, tokens and queue time. Also: the map now fills the screen edge to
+  edge over a tile of its own sea, the scroller and buttons are styled, tooltips work in play, the
+  top bar turns compact below 1600 px, and banners stay clear of the panels. The URP upgrade
+  Unity asked for on first open is committed, so a fresh checkout opens without the modal dialog
+  that blocked the Unity CLI. 4 new EditMode tests.
+
+- **GreyBoxStrategy, stage 3, slice 1: watch mode plays back a recorded game** (#20, working
+  title Painted Realm). `Screen/Watch.unity` replays seed 4 of the v248 persona 4b table with every
+  ruler's own words and no model call. `ReplayBuilder` rebuilds the game from its recorded decisions,
+  since the rules are deterministic per seed, and refuses a recording the rules no longer fit.
+  The map is one quad and one shader over a sea-chart painting, with a province id map baked from
+  the rule graph. Owners tint the painting's hue, borders between owners redraw themselves, and a
+  capture plays as the design page times it: strike, fall, spread from the attacker's side,
+  settle. A UI Toolkit screen adds the top bar, realm list, filtered chronicle, speech at the
+  capital and time controls. 6 new EditMode tests. Assets and their licences are in the design
+  page's asset list.
+
+- **GreyBoxStrategy, stage 3's design: the painted map and the screen** (#20), for the lead to
+  approve or redirect: [`docs/demos/grey-box-strategy-screen.md`](docs/demos/grey-box-strategy-screen.md)
+  with eight mock-ups (three looks for the parchment map, the capture of a province step by step,
+  rule and advise modes, a court scene). It specifies the colour change to the millisecond, the
+  three modes, the Why card over `DecisionFeed`, a single-shader map built from the rule graph
+  with a painted fallback, and an asset list. Round 2 follows the lead's choices (look C,
+  "Painted Realm" for now, dense terrain, a portrait per persona with several faces): a clickable
+  grand-strategy screen in HTML, `docs/demos/grey-box-strategy-screen/ui/index.html`, with
+  watch, rule and advise modes, a decision inspector, two styles, and twelve screenshots. The
+  lead's answers to 28 design questions are recorded, each marked as met by the mock-up or not.
+  Docs only.
+
+- **GreyBoxStrategy: what a remembered move holds, and invented grievances** (#244 item 4, #216
+  item 3, gap N7). After each turn resolves, `CountryAgent.Learn` attaches every landed move's
+  line from the resolution report (`"took fenmark from orsk (34 against 21); lost 6"`) to its
+  remembered decision through the framework's new `Agent.SetOutcome`. The model-seat modifiers
+  `+memory-move` and `+memory-outcome` set `RollingHistory.Remembers`. The default arm keeps the
+  whole decision, so no existing arm changes. The scorecard's voice section gains **claims land
+  taken** and **invented grievance**: a claim against a country that took none of our land
+  earlier that game. 6 new EditMode tests. Measured on `qwen3.5:4b`, 20 games an arm: both settings
+  made statements name their target far less often (72% to 33% and 43%) and contradict the move
+  more, beyond noise, while repetition (5%) and invented grievances (1.4%) were already rare and
+  did not move. The demo keeps the whole decision. `qwen3.5:2b` was not measured. See `findings.md`.
+- **GreyBoxStrategy: arms for #244's prompt options, and a rule-copy count** (#244 items 5 and 8).
+  - The model-seat modifiers `+no-moves-line`, `+moves-sentence` (`LegalTargets = ObservationLine`),
+    `+how-it-reads` and `+own-words` (`StatementRulesWording`).
+  - The `Scorecard`'s voice section counts statements that copy their persona's whole statement
+    rule, or one sentence of it.
+  - At the persona 2b table, `+own-words` took those copies from 15% to none; at the 4b table,
+    which never copied, it changed nothing beyond noise but statements repeated word for word (5%
+    to 10%). In stage 2, on the 4B only, the framework's moves sentence kept the attack share
+    within noise of the game's line but ended with fewer provinces (0.7 against 2.1, the band's
+    edge), so the game keeps its line. See the demo README's gaps N8 and N9.
+
+- **GreyBoxStrategy: models at one table** (#20). Any seat can be a model, a script or random
+  (`TableDefinition`, `Tables.Named`, `StrategyTableMenu`). Each council is one framework
+  `DecisionRound`, executed in the game's own order. There are five personas built only from
+  `AgentIdentity`, and a `Scorecard` scoring liveliness, sense, character, voice and strength from
+  the logs, with all-script and all-random tables as reference points. On the RTX 5080, 20 games a
+  table: a persona explains 84% of a 4B seat's aggression (placebo 3%) and makes the game livelier
+  (domination 20% → 60%, quiet turns 39% → 25%). The 2B copies its statement rule into its
+  statements (new gap N9). 16 new EditMode tests. See the demo README's "Models at one table" and
+  `findings.md`, 11 November.
+- **GreyBoxStrategy: the grounding guard plays legal moves again** (#244 item 1, gap N4). New arm
+  modifiers `+threshold-<x>` and `+alternatives-<n>`, and the `default` arm now sets the grounding
+  threshold to 0.6 on top of the framework's new 20 alternatives a token. On the RTX 5080, 30 games
+  an arm, the guard's containments of legal moves fell from 72 to 3 (`qwen3.5:4b`) and 94 to 3
+  (`qwen3.5:2b`), and the attack share rose from 22% to 32% and 12% to 21%, as with the guard off;
+  provinces within noise. The arm measured as `default` before is `control+paired+alternatives-5`.
+  The framework's side, and the evaluation-set measurement, is in the package's changelog and
+  `findings.md` (11 November).
+
+- **GreyBoxStrategy: can the framework replace the moves line?** (#20, #244 item 5, #151). The
+  model seat gains arms for the framework's legal-target listing (`per-target`, `per-target-paired`)
+  and modifiers on any arm (`+paired`, `+listed`, `+no-grounding`). Its report adds illegal answers,
+  containments on legal answers and attacks, and attacks landed. On the RTX 5080, 30 games an arm,
+  `LegalTargets = PerTarget` in place of the game's line cut the 4B's attack share from 23% to 15%
+  (17% with pairing), so the line stays. The paired schema took illegal answers from 30 to 0 (4B)
+  and 62 to 0 (2B) at no measured cost, and is now the seat's default (`ModelSeatOptions.Default`,
+  the `default` arm); stage 2's `control` is unchanged. Grounding off with pairing raised the attack
+  share to 33%, sizing gap N4. A new gap, N8, is in the demo's `README.md`. 82 EditMode tests.
+- **GreyBoxStrategy, stage 2: a model plays a country** (#20). A framework `Agent` built in code
+  with no scene plays one seat. Its eight moves are registered once. Availability comes from the
+  game's rules, action-wide and per target (`ITargetAvailability`), with categories for provinces
+  and countries. Standing facts come from an observation source, and this turn's facts go with the
+  call. `Agent.Execute` runs as the re-check at the moment the game lands each move, through a new
+  `IMoveGate` in the simulation. A game-side line names each move's legal targets, standing in for
+  stage 1's gap N1. On the RTX 5080, 30 games per arm against four scripted countries: `qwen3.5:4b`
+  ends with 1.8 provinces (random 1.4, scripted 3.1 to 4.3), `qwen3.5:2b` with 0.4, and neither
+  wins a game. Without the moves line the 4B's attacks fall from 15% to 2% of its moves. The
+  grounding guard contains legal attacks when several provinces are open. Five arms and the
+  baselines are in the demo's `README.md` and `findings.md`. The menu and the CLI entry points run a
+  model seat, and the logs show each model answer and statement. 77 EditMode tests, 15 of them on
+  the model seat through `ScriptedProvider`.
+- **GreyBoxStrategy, stage 1: the country game, headless** (#20). `Demos/GreyBoxStrategy/` is
+  a new Unity project (Universal 2D, the framework by relative path, `com.unity.pipeline`). Its
+  simulation assembly has no engine references at all: five countries on a 5 × 5 map of 25
+  provinces, ten of them neutral, one move each a turn (recruit, fortify, raise taxes, declare
+  war, attack a province, offer peace), envoys that accept or refuse peace before anything
+  lands, every move re-checked at resolution so a stale one is refused, and dice keyed by
+  seed, turn and purpose so a game replays exactly. A scripted AI in two temperaments wins 98 to
+  99% of games against four random players and 27% and 24% per seat in a mixed line-up; random
+  wins none of 200. A runner plays N games from the editor menu, the Unity CLI or
+  `-executeMethod` and writes a summary, a CSV and a per-game log of every decision with the
+  facts the player saw. Facts come in two kinds from the start, standing and this turn's, for
+  `ObservationPlacement.WithStimulus`. 59 EditMode tests. The design moved on from the 9
+  November draft (`docs/demos/grey-box-strategy.md` says what changed and why), and the demo's
+  `README.md` answers #20's four questions and checks #216 against the game.
+- **In-game checks go through the Unity CLI.** Living Vale now has `com.unity.pipeline`
+  0.9.1-exp.1, as GreyBoxVillage does, so `unity command` drives its editor: Play mode, a
+  captured frame, the console and C# run in the game, without taking over the user's screen.
+  `AGENTS.md` makes it the way agents check a running game, with computer use only for what it
+  cannot do. `environment.md` has the loop as checked on Living Vale on 10 November, and
+  `Demos/README.md` adds the package to every new game. Git ignores the package's per-machine
+  `ProjectSettings/Packages/com.unity.pipeline/`. Living Vale's EditMode tests are unchanged:
+  577 passed, 4 skipped.
+- **An Ollama server on the RTX 5080 for other machines**, in `tools/ollama-server/`: Ollama
+  0.40.14 in Docker, pinned by its image tag, with the model-sweep kit's settings, behind a Caddy
+  gateway on port 11436 that wants a key on every request and passes only the routes the framework
+  and the kits use. The laptop runs Unity, the live tests and the kits against the 5080's card,
+  at home or over the VPN. `setup.ps1` prepares the server and writes the key; `ollama_remote.py`
+  checks it, lists and warms models, unloads them and pulls new ones; `AGENT_USAGE.md` is the guide
+  an agent on the laptop follows, and `AGENTS.md` points to it. The kit's `sweep_one.sh` and
+  `probe.py` and its Unity entry point send the key, which `sweep_one.sh` reads from that folder's
+  `.env` when `OLLAMA_URL` is unset, and `LiveOllama` reads `AGENERELA_OLLAMA_API_KEY` for the
+  `RequiresOllama` tests, whose own calls to the server now send it too, and which a 401 fails
+  rather than skips. All nine passed through the gateway from its LAN address on 9 November. `environment.md`'s network
+  section, the sweep README and run request 001 now use it, in place of opening the Ollama app's
+  port, which has no login. The framework's side is the package's new `OllamaSettings.ApiKey`.
+  Its logs: the gateway writes one short line per request instead of its header dump, Docker
+  rotates both containers' logs (5 files of 20 MB), the health check runs every 5 minutes instead
+  of 30 s, and `logs.py` shows both containers as one timeline of requests, model loads, pulls and
+  problems, cutting about 9,000 lines to about 300. It runs without `OLLAMA_NUM_PARALLEL`, which
+  Ollama ignores for `qwen3.5` and which changed replies on models it does batch (findings,
+  11 November).
+- **Run requests**, in `docs/run-requests/`: a run one machine should do, written down for another
+  session or person to pick up. Each is a folder with a `request.md`, what to run step by step, and
+  a `results.md` to fill in, with a status that goes open, claimed, done. Request 001 is the
+  13-model sweep on the interim set, for the RTX 5080. Its kit, `tools/live-runs/model-sweep/`,
+  is the 9 November sweep's scripts made portable: the server, project and set come from
+  environment variables, and the Unity entry point is a file to copy in, not a committed test.
+  `environment.md` gains a section on serving Ollama from another machine over the local network,
+  so the laptop can use the 5080's card. It is untested until someone runs it.
+- **An interim evaluation set of 389 prompts**, in `UnityProject/Assets/Evaluation/Interim/`
+  (#151), for A/B runs until #147's curated 200+ set exists. It is measured against the curated
+  set's agent, with the same actions and 11 targets, and is a set of its own with its own
+  `agent.json` and `int_` ids. It was written and first labelled by Claude, then labelled blind by
+  Codex: they agreed on 391 of 392. The one split was dropped, and so were two prompts Codex's
+  review of the pull request found ambiguous or too near a few-shot example. `none` is 40% of the
+  expected answers, and each acting action has 46 or more, where the curated set has 4 to 7. Its
+  noise floor is about 3.6 points overall and 9 per category, against 8 and 20 to 30 at 76. It is
+  AI-written and interim, not a replacement for #147; its `README.md` says how it was made and
+  checked.
+- **GreyBoxVillageClassic keeps the grey-box village from before v2**, in
+  `Demos/GreyBoxVillageClassic/`: `Demos/GreyBoxVillage` as it stood at 396f266, the commit
+  before #157, with its files and `.meta` GUIDs unchanged, as a Unity project of its own named
+  "GreyBoxVillage Classic". It is kept for comparison and frozen, changing only to keep
+  compiling against the framework.
+- **GreyBoxVillage became Ashford, a village worth exploring** (#153).
+  - **Art:** low-poly art built by a Blender script in `Demos/GreyBoxVillage/ArtSource/`, 77
+    models on one palette. The grey boxes stay as invisible colliders, so the NavMesh and the
+    tests are unchanged.
+  - **Atmosphere:** sky, fog, post-processing, water, lamps, fire, smoke and a day and night
+    cycle.
+  - **Controls:** a third-person camera, running, and E to talk or pick up.
+  - **UI Toolkit:** one theme for the HUD, dialogue panel, speech bubbles, framework view (Tab,
+    with target ids over places and the request queue), pack (I), journal (J), menu and title
+    screen.
+  - **Two more agents:** Odile the merchant and Captain Hale, on the same provider config.
+  - **Quests and an inventory:** quests reach the model as targets through a custom
+    `ITargetSource`.
+  - **New game guards:** `cannot_afford`, `no_free_gifts`, `quest_not_ready` and
+    `target_fits_action`.
+- **GreyBoxVillage is ready to present** (#153, polish slice).
+  - **Play mode changes no file:** the day and night cycle drives copies of the palette and sky,
+    and the default volume profile no longer names two scripts the project lacks.
+  - **No static state** outlives a play session, so it plays the same with the domain reload off;
+    a test checks every static field.
+  - **With no model running**, a HUD banner and a red bubble say so, and the agents stop asking on
+    their own until it answers.
+  - **The scene file went from 4.96 MB to about 1.2 MB:** the palette comes with the FBX import,
+    the nature scatter is drawn with GPU instancing (`ScatterField`), and the particle effects are
+    prefabs. The bushes, flowers and grass inside the walls now appear: the builder's check for
+    buildings in the way had always found the ground.
+  - **The capture tool draws the UI** (`CaptureUiFromCommandLine`) and measures the frame time.
+    The layout fixes it found:
+    - the agent list clear of the purse, on a panel of its own, like the key hints;
+    - toasts, at most three, stacked under the quest tracker, away from speech bubbles;
+    - world labels kept out from under every panel and from each other;
+    - bubbles above name tags;
+    - a card title that wraps;
+    - opaque book, menu, framework view and title panels.
+  - **Portraits** lit from the viewer's side, so Odile's face reads, and a title screen backdrop.
+- **GreyBoxVillage's situations, and a five-minute presenter script** (#153, situations slice).
+  Each situation chains one agent's decision into another's, through the game alone.
+  - **The thief:** it takes a ware from Odile's counter and runs for the eastern road. Odile can
+    `call_guard`, whose target is a guard from a custom `ITargetSource`, and her call becomes that
+    guard's `Merchant` stimulus. Wren can `chase` the thief, and Bram goes after it with
+    `attack_target`; caught, it drops the ware back on the counter.
+  - **Night at the gate:** nightfall shuts the gate. Wren takes the night watch and alone gets
+    `open_gate` and `close_gate`, and Bram goes off watch. A test checks that Bram, the evaluation
+    agent, is offered the same actions by night as by day.
+  - **A fire** at the bread stall: whoever sees the smoke is asked, and Wren can `fetch_water`
+    from the well until three buckets put it out.
+  - **Bram keeps his actions:** `chase`, `fetch_water` and the gate's actions sit on components only
+    Wren carries, and a test checks that whatever happens Bram is offered nothing new.
+  - **No `bell_cooldown` guard:** availability already keeps the bell from ringing twice within
+    30 s, and a test checks two guards answering at once ring it once.
+  - **Presenter keys** F1 to F5 (reset, the wolf, the thief, a fire, dusk) and a panel (F12).
+    They work with the framework view open, not while typing.
+  - **The presenter script** in the README runs end to end as a Play-mode test against scripted
+    replies, and once live through `PresenterLiveFromCommandLine`.
+  - **Two kit models,** `gate_door` and `bucket`, and `KIT_ONLY` to rebuild only the models named.
+  - **Fixes the live run found:** a guard attacking a running thief now runs after it, and a wolf
+    running for its den is no longer reported. Agents are told when it is night.
+- **GreyBoxVillage's day and its weather** (#153, explore slice, first part).
+  - **A daily routine:** the four villagers go to the well at dawn, to work (the fields outside the
+    gate, or the market), to the square at midday, to the campfire at dusk, and home after dark,
+    where the lamp by each door comes on. The bell sends them to the shelter, and they go back to
+    their day when it stops. F5 puts them at the campfire, inside the gate it shuts.
+  - **Every agent is told who is where,** such as "In the village: the market is busy (ada, mira),
+    the square is empty, tomas and pell are working the fields outside the gate."
+  - **Weather:** clear, overcast, rain and fog, changing by itself a few times a day and on a new
+    presenter key, **F6**. Rain falls round the camera, the ground darkens, mist drifts and the sky
+    greys, all on the runtime copies of the palette and the sky.
+  - **It changes what the agents notice:** rain and fog shorten a guard's sight to 22 m and 15 m,
+    so the wolf is seen later and a thief lost sooner, and every agent is told the weather and how
+    far it can see. It never changes what an agent is offered.
+  - **Bram keeps his actions and targets:** tests check that no hour and no weather gives him or
+    takes from him an action or a target, and that the slice adds no target to the village.
+  - `CaptureExploreFromCommandLine` captures the routine at four hours and each weather.
+- **GreyBoxVillage's reset, after #157's landing review** (#153). F1 now cancels what the old
+  agents still have queued or with the model, so the next stage never waits behind an answer nobody
+  will use, and it restarts the guards' quiet timers, so nobody is asked about a quiet moment the
+  moment the village resets. F3 pressed while a thief runs puts its ware back first.
+- **An editor UI kit** (#167) in the package's `Editor/UI/`, for the Phase 5 screens to share.
+  It is internal to `Agenerela.Editor`, so it adds no public API.
+  - `Agenerela.uss` holds colour, spacing and type variables (`--ag-*`) built on Unity's own
+    theme colours, so they suit both editor skins.
+  - `Chip` shows an action or target id in monospace, struck through with a dashed outline when
+    it is not offered.
+  - `OutcomeIcon` shows Executed, No action, Contained or Error with Unity's built-in icons.
+  - `ProblemBox` shows a message with an optional fix button.
+  - `SectionTitle` heads a section in small, spaced, muted capitals, such as "EXPECTED ANSWER".
+  - `AgenerelaButtons` adds two styles to Unity's plain button: a filled primary button for
+    the one action a screen is for (**Save answer**), and a dashed one for an open choice
+    (**Open choice**).
+  - `EditorUiFixtures` in `Tests/Editor/UI/` builds a hosted element, an inspector or a window
+    in an EditMode test, and finds its parts by name. **Window → Agenerela → Tests → UI Kit
+    Gallery** shows every piece on one page, for checking both skins by hand. It is in the test
+    assembly, so it does not ship in the package.
+    A test that opens a window needs a graphics device, so under `-nographics` it is reported as
+    ignored rather than failed.
+  - USS has no muted text colour that reaches an editor window, no dashed border and no
+    `text-transform`. The kit sets the colour itself, draws dashed outlines in
+    `DashedOutline`, and upper-cases titles in code. A test catches a variable that silently
+    fails to resolve.
+  - After its review (#181): setting a chip's `text` sets its id, so the strike always follows
+    `Offered`; the light-skin class is checked again whenever an element's styles resolve,
+    not only when it is built; and `DashedOutline.Attach` attaches once, however often it is
+    called.
+- **GreyBoxVillage has two guards and an agent board** (#143), the first slice of the demo's
+  upgrade.
+  - Bram at the gate and Wren at the bridge are each an `AgentBehaviour` with a profile asset.
+    Both ask one `OllamaProviderConfig`, so they share one queue.
+  - The player speaks to the nearest guard. The bell is heard by every agent except the one who
+    rang it.
+  - A game guard, `never_attack_villagers`, contains an attack on the village's people, and each
+    guard says its own refusal line.
+  - The board shows each agent's stimulus, offered actions, decision, the guard that stopped it,
+    and its queue wait. The request history can be filtered by agent.
+  - The recorder reads `DecisionResult.Request` and `Reply` (#142) instead of wrapping the
+    provider.
+
+- **The evaluation set opens in the Prompt Set window** (#134). `agent.json` now lists its six
+  categories, each with its file and the prefix its ids use (`command_with_target`'s are
+  `target_001`, ...), so the window and the Phase 4 runner find every prompt. No prompt changed:
+  a test loads and saves all 76 and compares them. The files are now in the layout the window
+  writes, which a test keeps them in, so the first save from the window shows only what it
+  changed rather than reflowing every line. Blind second labels go to
+  `Assets/Evaluation/labels/<annotator>/<category>.json`; the README says how.
+- **Screen 8, the Prompt Set window**, in `docs/design/`: the wireframe drawn for #134 before the
+  window was built, with its notes.
+- **Living Vale, a third-person RPG demo built on Agenerela** (#69), in `Demos/LivingVale/`: every
+  NPC is talked to in typed chat, and each reply is a framework decision that the game validates and
+  executes. It uses only the framework's public API and loads it by relative path.
+  - **The first adventure:** *The Missing Wagon*, with three recovery routes (fight the camp, pay
+    Kest or do Iven's herb favour, or bring Fen's account), three endings with visible changes in
+    the valley, and two side quests (herbs, Brann's badge). Every deal and hand-over is a card in the
+    chat, and only its button acts. Claims in chat record nothing.
+  - **Eight NPCs**, each a framework `Agent` on a local model (default `gemma4:e2b-it-qat`; F7 moves
+    to the next model Ollama has, loading only the one the player stops on). F6 switches to scripted
+    replies, which also decide through `Agent`, with `ScriptedProvider`.
+  - **Game systems:** trade with exact quote cards and all-or-nothing transfers; combat with a raider
+    and a wolf, loot and respawn; quests, XP, levels and perks; saves with F9/F10 that include what
+    each NPC remembers. A reply that arrives after the player cancelled, closed, switched or loaded is
+    never applied or remembered.
+  - **The valley:** six places on a 600 m map, routines, discovery, a compass with the quest goal,
+    NPC name tags and a map on M. The art is low-poly, generated by our own Blender scripts
+    (`Demos/LivingVale/ART.md`).
+  - **On the framework:** it uses #193's prompt switches, #194's scripted provider and #195's
+    results, correlation and commit-on-execute memory in place of its own workarounds, after
+    same-session A/B runs where the prompt changed (findings, 5–6 November).
+    `docs/demos/living-vale-framework-gaps.md` lists the 23 gaps the game found. #190 collects
+    them for the framework.
+  - 581 EditMode tests. How to play, and the known issues: `Demos/LivingVale/PLAYTEST.md`.
+- **`tools/benchmarks/paired_schema_probe.py`** (#190 B, DR-020): checks that Ollama compiles the
+  paired schema into a grammar that keeps every reply to a pair it offers, against the flat schema
+  and both again with `none` removed. Its first run, on 6 November, is in `findings.md`: no paired
+  reply held a wrong pair on either chat path. A grammar check, not an accuracy claim.
+- **The risk management plan** in `docs/course/2026-10-29-risk-management/`: an Excel
+  register of 14 risks, two per member, with a risk matrix and a sprint review log, reviewed
+  once per sprint. XLSX now goes through Git LFS.
+- **The Phase 3 gate's checks** (#110). `Phase3GateTests` proves each guard rule in EditMode
+  with no model: a substitution is rewritten to `none`, an unavailable action and a
+  target-needing action with `no_target` are rejected, verdicts reach telemetry, a reading
+  below 0.8 is rewritten while a split between two listed targets passes, `CheckTarget = false`
+  skips the guard for one call, and a provider without token probabilities is recorded as such.
+  `Phase3LiveSuiteTests` runs the prototype's 20-prompt suite live on a 2B (`RequiresOllama`),
+  guards on against a `CheckTarget = false` control arm in one session; its bar is 19/20 or
+  better with the guards on. **It passed on 3 November**: 19/20 with the guards on, 18/20 in
+  the control, on `qwen3.5:2b` and Ollama 0.40.14, recorded in `findings.md`. At n = 20 that
+  says the gate passed, not by how much the guard helps.
+
+
+### Changed
+
+- **Painted Realm: R3's army rules on by default, a generated world first** (#20, the lead's call). `UnitTypes`, `Generals`,
+  `Sieges`, `Supply`, `Fog` and `HungerFirst` are on for the writs turn; the one-move game carries them off. New game
+  starts on a generated world on the writs turn; Classic and each rule's Off stay choices. Headless runs keep Classic;
+  an arm repeats an earlier run with `-strategyRules "Supply=false"` and so on.
+
+- **GreyBoxStrategy marks the moves that take no target** (#244 item 2): recruit, raise_taxes and
+  the two envoy answers set `ActionDefinition.TakesNoTarget`, so the framework drops a target the
+  model names for one and records it, and the seat's `TargetIgnored` reads the framework's
+  telemetry. The seat's own drop stays as a second check.
+
+- **Living Vale runs on the framework features its own gap list asked for** (#190, #69). One
+  commit per feature replaces the game's workaround with the framework's API: the identity's
+  knowledge and statement rules (#231), target categories (#208) and a per-target check (#235) in
+  place of three pair guards, fixed examples with `INamedTarget` and `ExampleTargetFallback` in
+  place of three `RefreshExamples` (#234), the provider's model list, warm-up and unload and a
+  provider swap in place of the game's Ollama calls and driver rebuilds (#198), one agent per NPC
+  for the script and the model (#194, LV #23), `Conversation` for the chat's turns (#209),
+  `Proposals` for the route cards (#236), `Agent.Id` (#217), `CanImport` (#205) and the decision
+  log (#229). The game's code is 268 lines shorter (blank and comment lines not counted). What did
+  not fit, and why, is in `docs/demos/living-vale-framework-gaps.md`, "The adoption". The model
+  now reads the personas' facts in the system prompt and slightly different examples. Living
+  Vale's EditMode tests: 568 passed, 4 skipped, of 572. A same-session check on the RTX 5080
+  (findings, 10 November) found one regression, on the route examples, fixed in the branch.
+
+### Fixed
+
+- **Painted Realm R3: an army starving abroad is asked for orders again, and a siege lasts two turns at least**
+  (#20). The first live look with every army rule on found armies starving where a hold had left them (nothing woke
+  them as their stores ran out) and sieges falling the turn they began. With supply on, an army abroad is woken when
+  a turn's food is left and each turn it starves; with sieges on, a siege never falls the turn it begins. An army's
+  facts no longer read "led by Maren the Wary,, stores 4 of 4".
+
+- **GreyBoxStrategy's map generator speed test no longer fails when the machine is busy** (#20). It timed one
+  Huge try in wall time, which doubled when other Unity runs shared the CPU (two failures on 14 November, both passing
+  alone). It now takes the cheapest of three tries in this process's CPU time, under the same 3 s; a generator made
+  about three times slower still fails it.
+
+- **Painted Realm: a writs ruler's targets are the decision's own list** (#20). The court's and the marshal's
+  availability followed the rules alone, so a model could name a march or fortify target the capped list left
+  out and the game held it as "not offered" (61 army orders in R1c's main run). The scorecard also counted a
+  second court order as a second council move in the same turn.
+
+- **Painted Realm: two offers of peace to you in one turn** were answered only once. The
+  replay then stopped at that turn. Each envoy now waits for its own answer. A replay that
+  cannot rebuild a turn that resolved now says so on screen.
+
+- **Painted Realm: sharp on large screens, and never silent while the card is busy** (#20).
+  - **Large screens.** The UI now grows with the screen: 1.33× at 1440 and 2× at 2160. Before,
+    it stayed 1080p-sized below 2000 pixels tall.
+    - In the editor, a notice says when the Game view draws the game at a fixed size such as
+      1920 × 1080 and stretches it. That is what the lead saw.
+  - **The RTX 5080 in rule mode.** A rule game now holds the card for the whole game, as the
+    lead decided, and the top bar says so.
+    - It waits with the holder and a clock while another session has the card.
+    - It says when the server is slow, and stops a round with no answer in 150 s.
+    - Menu returns to the start menu from any game.
+    - The lock records the Unity that took it, and is let go, with the model unloaded, on every
+      way out: the end, Menu, stopping Play mode, quitting, a script reload, or an error.
+
+- **Painted Realm: fixes from the night's play-through** (#20).
+  - A move that is not offered shows its reason on hover again: disabled buttons got no hover,
+    so the reason never appeared.
+  - Once your country is out, the orders panel says so.
+  - A ruler's speech no longer sits under the open inspector.
+  - The README's Play it section opens with "What to try".
+
+- **The model-sweep kit no longer takes Unity Hub's CLI server for an Editor.** `sweep_one.sh`
+  refused every model while `Unity Hub\resources\unity.exe serve` was running, since it counted
+  any process named Unity. It now counts Editors only. `OLLAMA_SERVER_ENV` points a copy of the kit
+  in a worktree at another checkout's `tools/ollama-server/.env`. Found running request 001.
+- **Release notes no longer break mid-sentence.** GitHub shows every newline in a release's
+  notes as a line break, so notes copied from wrapped Markdown came out as ragged paragraphs
+  stopping halfway across the page, as 0.2.0, 0.3.0 and 0.4.0-preview.1 did (the last was
+  fixed by hand). `tools/ci/release.py notes` now joins wrapped lines, leaving code, headings,
+  HTML, tables and alert markers alone.
+- **The evaluation set names its real annotator on `target_001` to `target_009`.** They held
+  #13's placeholder names, `alice` and `bob`; Maxim labelled them. No prompt is doubly labelled
+  now, so Phase 4's second labels are still to come, from the Prompt Set window (#134).
+- **GreyBoxVillage reads the guard pipeline's verdict.** Since #106 a guard that stops an answer
+  returns it as `none`, so the demo logged refusals as `none` and four of its tests failed. It now
+  takes the outcome from the verdict and `Execute`: `refused` for a rejected answer, `contained`
+  for one the grounding guard rewrote, with the model's answer, the guard and its reason on the
+  overlay and in the history. A new test covers `contained`.
+
 ## [0.4.0-preview.1] - 2026-10-29
 
 ### Framework

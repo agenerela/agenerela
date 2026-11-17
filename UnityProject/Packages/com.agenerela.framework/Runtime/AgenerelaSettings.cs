@@ -4,8 +4,8 @@ using UnityEngine;
 namespace Agenerela
 {
     /// <summary>
-    /// The project's Agenerela settings: for now, the provider config an agent uses when it has none
-    /// of its own (DR-013). Edited in <b>Project Settings → Agenerela</b>, which creates it at
+    /// The project's Agenerela settings: the provider config an agent uses when it has none of its
+    /// own, and the two an evaluation run compares, arm A and arm B (DR-013). Edited in <b>Project Settings → Agenerela</b>, which creates it at
     /// <c>Assets/Agenerela/Resources/AgenerelaSettings.asset</c> the first time a default is set.
     /// </summary>
     /// <remarks>
@@ -21,6 +21,14 @@ namespace Agenerela
 
         [Tooltip("The provider config every agent without one of its own uses.")]
         public ProviderConfig DefaultProvider;
+
+        [Tooltip("Arm A of an evaluation run: the provider config an A/B run (EvalRunner) asks first, " +
+                 "such as OllamaLocal. Only evaluation reads it; agents never do.")]
+        public ProviderConfig EvaluationArmA;
+
+        [Tooltip("Arm B of an evaluation run, compared against arm A on the same prompts, such as " +
+                 "OllamaLocal-noGuards or a second model. Only evaluation reads it; agents never do.")]
+        public ProviderConfig EvaluationArmB;
 
         private static AgenerelaSettings loaded;
 
@@ -49,6 +57,16 @@ namespace Agenerela
         internal static void Forget()
         {
             loaded = null;
+        }
+
+        // Before anything else as Play mode starts. Without a domain reload (Enter Play Mode Options)
+        // statics keep their values from the session before, so a test's Override, or the asset
+        // found last time, would otherwise carry into this one (#190, G8).
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetForPlaySession()
+        {
+            loaded = null;
+            Override = null;
         }
     }
 }

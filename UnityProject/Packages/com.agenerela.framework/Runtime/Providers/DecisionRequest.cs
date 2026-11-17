@@ -114,6 +114,12 @@ namespace Agenerela.Providers
         /// classifies what kind of stimulus this is (DR-008). A provider must not read the
         /// label, branch on it, or assume a speaking character: an agent may be a country
         /// reading a report, and nothing here is a line of dialogue.
+        /// <para>
+        /// With <see cref="DecideOptions.ObservationPlacement"/> set to
+        /// <see cref="ObservationPlacement.WithStimulus"/>, the call's own observations follow the
+        /// closing quote, each ended as a sentence, and are no longer in <see cref="Observations"/>:
+        /// <c>Situation: "Screams are coming from the well." A wolf has cornered a child.</c> (#151).
+        /// </para>
         /// </remarks>
         public string Stimulus;
 
@@ -131,5 +137,36 @@ namespace Agenerela.Providers
         /// without a schema is not a decision request.
         /// </remarks>
         public DecisionSchema Schema;
+
+        /// <summary>
+        /// The call's <see cref="DecideOptions.Temperature"/>: null for the provider's own. A provider
+        /// that can set one sends it; Ollama as <c>options.temperature</c> (#266 item 7).
+        /// </summary>
+        public float? Temperature;
+
+        /// <summary>
+        /// The call's <see cref="DecideOptions.Seed"/>: null for none. Ollama sends it as
+        /// <c>options.seed</c>, and only when set (#266 item 7).
+        /// </summary>
+        public int? Seed;
+
+        /// <summary>
+        /// The call's <see cref="DecideOptions.MaxReplyTokens"/>: null for no cap. Ollama sends it as
+        /// <c>options.num_predict</c>, and only when set (#244 item 11).
+        /// </summary>
+        public int? MaxReplyTokens;
+
+        // Who asked and what, as the developer passed them, set by PromptBuilder; null on a request
+        // built any other way. Internal on purpose: they are never sent, and a provider must not
+        // branch on who is asking or how the stimulus is labelled (DR-008). Only ScriptedProvider
+        // (#190, G6) reads them, to find the reply scripted for this agent and stimulus without
+        // parsing the prompt's wording, which is measured and may change.
+        internal string AgentName;
+        internal string StimulusText;
+        internal string StimulusLabel;
+
+        // The asking agent's Agent.Id, which Agent sets after PromptBuilder builds the request: the
+        // builder sees the context, not the agent. Null when it has none (#190, Living Vale #21).
+        internal string AgentId;
     }
 }

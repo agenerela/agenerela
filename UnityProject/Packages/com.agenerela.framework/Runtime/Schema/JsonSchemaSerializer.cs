@@ -26,6 +26,15 @@ namespace Agenerela
     /// The output is formatted with two-space indentation and <c>\n</c> line endings on
     /// every platform, so the same schema always produces the same string.
     /// </para>
+    /// <para>
+    /// A schema with <see cref="DecisionSchema.Pairs"/> (DR-020) is written as a root <c>anyOf</c>
+    /// with one complete object per pair, each the flat object with its <c>action</c> and
+    /// <c>target</c> enums narrowed to the pair's, and nothing else at the root. That is the shape
+    /// llama.cpp's grammar builds a union from: it reads <c>oneOf</c> and <c>anyOf</c> alike and
+    /// drops any keyword beside them, so a branch that left a field to the root would lose it.
+    /// Gemini takes <c>anyOf</c> and not <c>oneOf</c>. A schema without pairs is written exactly as
+    /// before.
+    /// </para>
     /// </remarks>
     public sealed class JsonSchemaSerializer
     {
@@ -56,8 +65,35 @@ namespace Agenerela
 
             var json = new StringBuilder();
             json.Append("{\n");
-            Line(json, 1, "\"type\": \"object\",");
-            Line(json, 1, "\"properties\": {");
+
+            var pairs = schema.Pairs;
+            if (pairs == null)
+            {
+                Members(json, 1, fields);
+            }
+            else
+            {
+                ValidatePairs(fields, pairs);
+                Line(json, 1, "\"anyOf\": [");
+                for (var p = 0; p < pairs.Count; p++)
+                {
+                    Line(json, 2, "{");
+                    Members(json, 3, Branch(fields, pairs[p]));
+                    Line(json, 2, "}" + (p < pairs.Count - 1 ? "," : ""));
+                }
+                Line(json, 1, "]");
+            }
+
+            json.Append('}');
+            return json.ToString();
+        }
+
+        // The members of one object schema, starting at depth: its type, one string property per
+        // field in field order, the required fields, the order again, and no other properties.
+        static void Members(StringBuilder json, int depth, IReadOnlyList<SchemaField> fields)
+        {
+            Line(json, depth, "\"type\": \"object\",");
+            Line(json, depth, "\"properties\": {");
 
             for (var i = 0; i < fields.Count; i++)
             {
@@ -74,12 +110,12 @@ namespace Agenerela
                     members.Add("\"enum\": " + Array(field.AllowedValues));
                 }
 
-                Line(json, 2, Quote(field.Name) + ": {");
+                Line(json, depth + 1, Quote(field.Name) + ": {");
                 for (var m = 0; m < members.Count; m++)
                 {
-                    Line(json, 3, members[m] + (m < members.Count - 1 ? "," : ""));
+                    Line(json, depth + 2, members[m] + (m < members.Count - 1 ? "," : ""));
                 }
-                Line(json, 2, "}" + (i < fields.Count - 1 ? "," : ""));
+                Line(json, depth + 1, "}" + (i < fields.Count - 1 ? "," : ""));
             }
 
             var required = new List<string>();
@@ -93,12 +129,114 @@ namespace Agenerela
                 }
             }
 
-            Line(json, 1, "},");
-            Line(json, 1, "\"required\": " + Array(required) + ",");
-            Line(json, 1, "\"propertyOrdering\": " + Array(ordering) + ",");
-            Line(json, 1, "\"additionalProperties\": false");
-            json.Append('}');
-            return json.ToString();
+            Line(json, depth, "},");
+            Line(json, depth, "\"required\": " + Array(required) + ",");
+            Line(json, depth, "\"propertyOrdering\": " + Array(ordering) + ",");
+            Line(json, depth, "\"additionalProperties\": false");
+        }
+
+        // The flat fields with the action and target enums narrowed to one pair's.
+        static List<SchemaField> Branch(IReadOnlyList<SchemaField> fields, ActionTargets pair)
+        {
+            var branch = new List<SchemaField>(fields.Count);
+            foreach (var field in fields)
+            {
+                var values = field.Name == DecisionSchema.ActionFieldName ? pair.Actions
+                    : field.Name == DecisionSchema.TargetFieldName ? pair.Targets
+                    : field.AllowedValues;
+
+                branch.Add(new SchemaField
+                {
+                    Name = field.Name,
+                    Description = field.Description,
+                    AllowedValues = values,
+                    Required = field.Required,
+                });
+            }
+
+            return branch;
+        }
+
+        // Pairs a grammar can be built from: each offered action in exactly one pair, and each pair's
+        // values drawn from the flat enums, with no empty list, no "" and no repeat, as Validate
+        // asks of a field.
+        static void ValidatePairs(IReadOnlyList<SchemaField> fields, IReadOnlyList<ActionTargets> pairs)
+        {
+            SchemaField action = null, target = null;
+            foreach (var field in fields)
+            {
+                if (field.Name == DecisionSchema.ActionFieldName) action = field;
+                if (field.Name == DecisionSchema.TargetFieldName) target = field;
+            }
+
+            if (action?.AllowedValues == null || target?.AllowedValues == null)
+            {
+                throw new ArgumentException(
+                    "A schema with pairs needs an action field and a target field, each with allowed values.", "schema");
+            }
+
+            if (pairs.Count == 0)
+            {
+                throw new ArgumentException("The schema has an empty list of pairs, which no answer can satisfy.", "schema");
+            }
+
+            var paired = new HashSet<string>(StringComparer.Ordinal);
+            for (var p = 0; p < pairs.Count; p++)
+            {
+                CheckValues(pairs[p].Actions, action.AllowedValues, $"Pair {p}'s actions");
+                CheckValues(pairs[p].Targets, target.AllowedValues, $"Pair {p}'s targets");
+
+                foreach (string id in pairs[p].Actions)
+                {
+                    if (!paired.Add(id))
+                    {
+                        throw new ArgumentException($"The action '{id}' is in two pairs, so its targets are ambiguous.", "schema");
+                    }
+                }
+            }
+
+            foreach (string id in action.AllowedValues)
+            {
+                if (!paired.Contains(id))
+                {
+                    throw new ArgumentException(
+                        $"The action '{id}' is offered but in no pair, so no answer could choose it.", "schema");
+                }
+            }
+        }
+
+        static void CheckValues(IReadOnlyList<string> values, IReadOnlyList<string> allowed, string what)
+        {
+            if (values.Count == 0)
+            {
+                throw new ArgumentException($"{what} are empty, which no answer can satisfy.", "schema");
+            }
+
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            foreach (string value in values)
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    throw new ArgumentException(
+                        $"{what} include a null or empty value. Gemini rejects \"\" in an enum with HTTP 400.", "schema");
+                }
+
+                if (!seen.Add(value))
+                {
+                    throw new ArgumentException($"{what} include '{value}' twice.", "schema");
+                }
+
+                bool offered = false;
+                foreach (string candidate in allowed)
+                {
+                    offered |= string.Equals(candidate, value, StringComparison.Ordinal);
+                }
+
+                if (!offered)
+                {
+                    throw new ArgumentException($"{what} include '{value}', which the flat field does not offer.", "schema");
+                }
+            }
         }
 
         static void Validate(IReadOnlyList<SchemaField> fields)

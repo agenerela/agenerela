@@ -2,8 +2,10 @@
   "name": "Demos.GreyBoxVillage.Tests.Editor",
   "references": [
     "GreyBoxVillage",
+    "Demos.GreyBoxVillage.Editor",
     "Agenerela",
     "Demos.Shared",
+    "Unity.InputSystem",
     "UnityEngine.TestRunner",
     "UnityEditor.TestRunner"
   ],

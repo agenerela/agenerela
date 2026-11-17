@@ -1,0 +1,1250 @@
+{
+  "category": "simple_command",
+  "prompts": [
+    {
+      "id": "int_simple_001",
+      "label": "Player",
+      "stimulus": "Walk with me.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_simple_002",
+      "label": "Player",
+      "stimulus": "On me, guard.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_simple_003",
+      "label": "Player",
+      "stimulus": "C'mon, let's go.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_simple_004",
+      "label": "Player",
+      "stimulus": "You're with me now.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_simple_005",
+      "label": "Player",
+      "stimulus": "Fall in line with me.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_simple_006",
+      "label": "Player",
+      "stimulus": "Stick with me, ok?",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_simple_007",
+      "label": "Player",
+      "stimulus": "Keep up with me.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_simple_008",
+      "label": "Player",
+      "stimulus": "I'm leaving, come along.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_simple_009",
+      "label": "Player",
+      "stimulus": "Escort me.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_simple_010",
+      "label": "Player",
+      "stimulus": "Shadow me for a bit.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_simple_011",
+      "label": "Player",
+      "stimulus": "Be my bodyguard for a while.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_simple_012",
+      "label": "Player",
+      "stimulus": "follow pls im leaving",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Missing punctuation kept on purpose.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_simple_013",
+      "label": "Player",
+      "stimulus": "Accompany me, would you.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_simple_014",
+      "label": "Player",
+      "stimulus": "Get behind me and keep pace.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_simple_015",
+      "label": "Player",
+      "stimulus": "Hey you. Follow.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_simple_016",
+      "label": "Player",
+      "stimulus": "Right, you're coming with me whether you like it or not.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_simple_017",
+      "label": "Player",
+      "stimulus": "I need you at my side, let's move.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_simple_018",
+      "label": "Player",
+      "stimulus": "Trail me.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_simple_019",
+      "label": "Player",
+      "stimulus": "lets go together",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_simple_020",
+      "label": "Player",
+      "stimulus": "Don't let me out of your sight from now on.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_simple_021",
+      "label": "Player",
+      "stimulus": "Move out, you're coming too.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_simple_022",
+      "label": "Player",
+      "stimulus": "Would you mind coming along with me for a while? I have a few errands to run around the village and I'd rather not do them alone.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_simple_023",
+      "label": "Player",
+      "stimulus": "Oi, guard, quit standing about and follow me then.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_simple_024",
+      "label": "Player",
+      "stimulus": "Hang back here.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_simple_025",
+      "label": "Player",
+      "stimulus": "Stop right there and stay.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_simple_026",
+      "label": "Player",
+      "stimulus": "Remain here until I return.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_simple_027",
+      "label": "Player",
+      "stimulus": "Plant your feet here.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_simple_028",
+      "label": "Player",
+      "stimulus": "Go no further.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_simple_029",
+      "label": "Player",
+      "stimulus": "That's far enough. Stay.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_simple_030",
+      "label": "Player",
+      "stimulus": "Stand here and don't budge till I'm back.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_simple_031",
+      "label": "Player",
+      "stimulus": "Rest here a while.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_simple_032",
+      "label": "Player",
+      "stimulus": "I'll go on alone from here.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_simple_033",
+      "label": "Player",
+      "stimulus": "You can stop tailing me.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_simple_034",
+      "label": "Player",
+      "stimulus": "Quit shadowing me.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_simple_035",
+      "label": "Player",
+      "stimulus": "Keep to this spot.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_simple_036",
+      "label": "Player",
+      "stimulus": "Stay.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_simple_037",
+      "label": "Player",
+      "stimulus": "Halt. Remain here.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_simple_038",
+      "label": "Player",
+      "stimulus": "Leave me be, I'll walk by myself.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_simple_039",
+      "label": "Player",
+      "stimulus": "Enough following. Stand guard here.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_simple_040",
+      "label": "Player",
+      "stimulus": "Don't come any further with me.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "note": "A negation that asks the guard to stop following.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_simple_041",
+      "label": "Player",
+      "stimulus": "Stop walking after me, stay here and keep an eye out.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_simple_042",
+      "label": "Player",
+      "stimulus": "Stand fast.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_simple_043",
+      "label": "Player",
+      "stimulus": "You stay, I go.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_simple_044",
+      "label": "Player",
+      "stimulus": "Wait for me right on this spot, I won't be long.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_simple_045",
+      "label": "Player",
+      "stimulus": "I want you to stay at this spot while I go look around the back of the houses, alright? Don't wander off.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_simple_046",
+      "label": "Player",
+      "stimulus": "Stop. Stay. Good.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_simple_047",
+      "label": "Player",
+      "stimulus": "Stand down and keep still.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_simple_048",
+      "label": "Player",
+      "stimulus": "Park yourself right here.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_simple_049",
+      "label": "Player",
+      "stimulus": "Hold here.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_simple_050",
+      "label": "Player",
+      "stimulus": "I don't want you following me any more.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "note": "A negation of following, from an agent that is following.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_simple_051",
+      "label": "Player",
+      "stimulus": "Stay behind, I'll handle this alone.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_simple_052",
+      "label": "Player",
+      "stimulus": "Don't follow me.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The guard is not following, and the negation asks for nothing to change.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_simple_053",
+      "label": "Player",
+      "stimulus": "No need to come with me.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The guard is not following, and is asked not to start.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_simple_054",
+      "label": "Player",
+      "stimulus": "Do nothing.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_simple_055",
+      "label": "Player",
+      "stimulus": "Carry on with your watch.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_simple_056",
+      "label": "Player",
+      "stimulus": "Never mind, forget I asked.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_simple_057",
+      "label": "Player",
+      "stimulus": "I don't need an escort.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The guard is not following, and is asked not to start.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_simple_058",
+      "label": "Player",
+      "stimulus": "Ignore me.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_simple_059",
+      "label": "Player",
+      "stimulus": "As you were.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_simple_060",
+      "label": "Player",
+      "stimulus": "Don't bother walking me, it's two doors down.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The guard is not following, and is asked not to start.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_simple_061",
+      "label": "Player",
+      "stimulus": "nah you dont have to come",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The guard is not following, and is asked not to start.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_simple_062",
+      "label": "Player",
+      "stimulus": "Hmm, nothing for now.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_simple_063",
+      "label": "Player",
+      "stimulus": "You're not coming. I go alone.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The guard is not following, and is asked not to start.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_simple_064",
+      "label": "Player",
+      "stimulus": "Keep your eyes open.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "note": "Advice, not a command to change what the guard is doing.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_simple_065",
+      "label": "Player",
+      "stimulus": "Mind your step.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    }
+  ]
+}

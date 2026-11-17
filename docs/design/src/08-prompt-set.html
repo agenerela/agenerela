@@ -1,0 +1,157 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Screen 8 - Prompt Set</title>
+<link rel="stylesheet" href="wf.css">
+<style>
+body{width:1600px;height:1000px}
+.win{overflow:visible}.bar{border-radius:5px 5px 0 0}
+.rel{position:relative}
+.tb{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1.5px solid var(--line2);font-size:12.5px}
+.tb .k2{color:var(--ink2)}
+.seg3{display:inline-flex;border:1.5px solid var(--line);border-radius:4px;overflow:hidden}
+.seg3 span{padding:2px 11px;font-size:12px;font-weight:600;background:var(--fill);border-right:1.5px solid var(--line)}
+.seg3 span:last-child{border-right:none}
+.seg3 span.on{background:var(--ink);color:#fff}
+.list{position:absolute;left:0;top:0;bottom:0;width:250px;border-right:1.5px solid var(--line2);font-size:12.5px}
+.cat{display:flex;align-items:center;gap:6px;padding:5px 10px;background:var(--fill);border-bottom:1px solid var(--line3);font-weight:700;font-size:12px}
+.cat .hint{margin-left:auto;font-weight:400}
+.it{display:flex;gap:8px;padding:4px 10px 4px 22px;border-bottom:1px solid var(--line3)}
+.it .mono{width:94px;flex:none;font-size:11.5px}
+.it span:last-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink2)}
+.it.sel{background:var(--fill2)}
+.it .warn{font-weight:700}
+.ed{position:absolute;left:250px;right:0;top:0;bottom:0;padding:6px 0}
+.ta{flex:1;min-height:46px;border:1.5px solid var(--line2);border-radius:3px;padding:4px 8px;font-size:12.5px;line-height:1.4}
+.ok{color:var(--ink2);font-size:12px}
+.bad{font-size:12px;font-weight:600}
+.panel{position:absolute;padding:10px 14px}
+.panel h5{margin:0 0 8px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)}
+.card{border:1.5px solid var(--line2);border-radius:4px;padding:10px 12px;font-size:13px;line-height:1.45}
+.card .lbl{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+.obs{margin:4px 0 0;padding-left:18px;font-size:12.5px;color:var(--ink2)}
+.big{font-size:34px;font-weight:700;line-height:1}
+.st{width:100%;border-collapse:collapse;font-size:12px}
+.st td,.st th{padding:4px 6px;border-bottom:1px solid var(--line3);text-align:left}
+.st th{font-size:11px;color:var(--ink3);font-weight:600;border-bottom:1.5px solid var(--line2)}
+</style></head>
+<body><div class="page">
+
+<div class="hdr">
+  <div>
+    <div class="kicker">Screen 8 · Unity Editor</div>
+    <div class="title">Prompt Set</div>
+    <div class="sub">Writes the labelled prompts an agent is measured against, and collects a second person's answers blind</div>
+  </div>
+  <div class="meta">Agenerela · COMP 491<br>Opened from <b>Window ▸ Agenerela ▸ Prompt Set</b><br><span class="pill">Phase 4 · #134, DR-017</span> <span class="pill dash">Proposal</span></div>
+</div>
+
+<div class="wf">
+
+  <!-- Write mode -->
+  <div class="win" style="left:0;top:0;width:690px;height:828px">
+    <div class="bar"><div class="tabx">Prompt Set</div></div>
+    <div class="tb rel">
+      <span class="c" style="left:-15px;top:8px">1</span>
+      <span class="k2">Set</span><div class="f obj" style="flex:none;width:120px">agent.json</div>
+      <span class="k2">Profile</span><div class="f obj" style="flex:none;width:115px">VillageGuard</div>
+      <span class="k2">You</span><div class="f" style="flex:none;width:62px">Maxim</div>
+      <span class="seg3" style="margin-left:auto"><span class="on">Write</span><span>Label</span><span>Agreement</span></span>
+    </div>
+    <div class="help rel" style="margin:8px 12px;font-size:12px"><span class="c" style="left:-27px;top:6px">2</span><span class="ico">⚠</span><span>The profile has <span class="mono">guard_post</span>, which the set does not declare. Nothing is changed: fix the profile or <span class="mono">agent.json</span>.</span></div>
+    <div class="rel" style="height:692px;border-top:1.5px solid var(--line2)">
+      <div class="list">
+        <span class="c" style="left:-15px;top:30px">3</span>
+        <div class="cat">▸ simple_command <span class="hint">9</span></div>
+        <div class="cat">▾ command_with_target <span class="hint">12</span></div>
+        <div class="it"><span class="mono">target_001</span><span>Head to the bridge.</span></div>
+        <div class="it"><span class="mono">target_002</span><span>Go to the village gate.</span></div>
+        <div class="it"><span class="mono">target_003</span><span>Walk toward the campfire.</span></div>
+        <div class="it"><span class="mono">target_011</span><span>Head over to the well in the…</span></div>
+        <div class="it sel"><span class="mono">target_012</span><span>Go to the bridge.</span></div>
+        <div class="it" style="justify-content:flex-end;border:none"><span class="btn">+ Add prompt</span></div>
+        <div class="cat">▸ impossible_request <span class="hint">9</span></div>
+        <div class="cat">▸ conversation <span class="hint">9</span></div>
+        <div class="cat">▾ situation <span class="hint">19</span></div>
+        <div class="it"><span class="mono">situation_001</span><span>Nothing has happened for…</span></div>
+        <div class="it"><span class="mono warn">situation_002 ⚠</span><span>The path ahead is empty.</span></div>
+        <div class="it"><span class="mono">situation_003</span><span>The camp is quiet.</span></div>
+        <div class="cat">▸ event <span class="hint">19</span></div>
+      </div>
+      <div class="ed">
+        <div class="sub2" style="padding-left:16px">target_012 · command_with_target</div>
+        <div class="r"><span class="k" style="width:120px">Label</span><div class="f dd">Player</div></div>
+        <div class="r"><span class="k" style="width:120px">Stimulus</span><div class="f">Go to the bridge.</div></div>
+        <div class="r" style="align-items:flex-start"><span class="k" style="width:120px;padding-top:4px">Observations</span><div class="ta muted">one per line · empty for most player commands</div></div>
+        <div class="r"><span class="k" style="width:120px">State</span><span class="chip solid">isFollowing = false</span><span class="btn">+</span></div>
+        <div class="sub2 rel" style="padding-left:16px"><span class="c" style="left:-20px;top:-1px">4</span>Expected answer</div>
+        <div class="r"><span class="k" style="width:120px">Action</span><div class="f dd">move_to</div></div>
+        <div class="r"><span class="k" style="width:120px">Target</span><div class="f dd">bridge</div><span class="btn">+ open choice</span></div>
+        <div class="r"><span class="k" style="width:120px">Check target</span><span>☑</span><span class="hint">off only to test with the grounding guard off (DR-016)</span></div>
+        <div class="r" style="align-items:flex-start"><span class="k" style="width:120px;padding-top:4px">Note</span><div class="ta muted">why the answer is what it is</div></div>
+        <div class="r"><span class="k" style="width:120px">Labelled by</span><span class="mono">Maxim</span></div>
+        <div class="sub2 rel" style="padding-left:16px"><span class="c" style="left:-20px;top:-1px">5</span>Checks</div>
+        <div class="r ok">✓ id follows <span class="mono">target_&lt;nnn&gt;</span> and is unique</div>
+        <div class="r ok">✓ <span class="mono">bridge</span> is registered in the set</div>
+        <div class="r ok">✓ the state allows <span class="mono">move_to</span></div>
+        <div class="r bad"><span>⚠ the stimulus is <span class="mono">move_to</span>'s example “Go to the {0}.” — never score on a few-shot example (hard rule 4)</span></div>
+        <div style="position:absolute;left:12px;right:12px;bottom:12px;display:flex;gap:8px;justify-content:flex-end"><span class="btn">Remove</span><span class="btn pri">Save · 1 file changed</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Label mode -->
+  <div class="win" style="left:712px;top:0;width:414px;height:430px">
+    <div class="bar"><div class="tabx">Prompt Set</div></div>
+    <div class="tb"><span class="k2">You</span><div class="f dd" style="flex:none;width:90px">Yevhen</div><span class="seg3" style="margin-left:auto"><span>Write</span><span class="on">Label</span><span>Agreement</span></span></div>
+    <div class="panel" style="left:0;right:0;top:72px">
+      <span class="c" style="left:-15px;top:8px">6</span>
+      <h5>23 left to label · command_with_target</h5>
+      <div class="card">
+        <div class="lbl">Player</div>
+        Go to the bridge.
+        <div class="lbl" style="margin-top:8px">Observations</div>
+        <div class="hint">none</div>
+        <div class="lbl" style="margin-top:8px">State</div>
+        <span class="mono" style="font-size:12px">isFollowing = false</span>
+      </div>
+      <div class="r" style="padding:8px 0 0"><span class="k" style="width:60px">Action</span><div class="f dd">move_to</div></div>
+      <div class="r" style="padding:4px 0 0"><span class="k" style="width:60px">Target</span><div class="f dd">bridge</div></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><span class="btn">Skip</span><span class="btn pri">Save answer</span></div>
+      <div class="hint rel" style="margin-top:10px;line-height:1.45"><span class="c" style="left:-27px;top:-2px">7</span>Saved to <span class="mono">labels/Yevhen/command_with_target.json</span>. No expected answer, note or other label is shown here.</div>
+    </div>
+  </div>
+
+  <!-- Agreement -->
+  <div class="win" style="left:712px;top:450px;width:414px;height:378px">
+    <div class="bar"><div class="tabx">Prompt Set</div></div>
+    <div class="tb"><span class="seg3" style="margin-left:auto"><span>Write</span><span>Label</span><span class="on">Agreement</span></span></div>
+    <div class="panel" style="left:0;right:0;top:72px">
+      <span class="c" style="left:-15px;top:8px">8</span>
+      <div style="display:flex;gap:14px;align-items:center;margin-bottom:10px">
+        <div class="big">2 of 3</div>
+        <div class="hint" style="line-height:1.4">prompts answered by two or more<br>people got the same answer from all</div>
+      </div>
+      <h5>Splits · settled by a person</h5>
+      <table class="st">
+        <tr><th>Prompt</th><th>Maxim</th><th>Yevhen</th></tr>
+        <tr><td class="mono">situation_001</td><td class="mono">none/no_target</td><td class="mono">move_to/village_gate</td></tr>
+      </table>
+      <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap"><span class="btn">Settle as none</span><span class="btn">Settle as move_to · village_gate</span><span class="btn off">Open choice</span></div>
+      <div class="hint rel" style="margin-top:10px;line-height:1.45"><span class="c" style="left:-27px;top:-2px">9</span>Settling writes the chosen answer and both people's <span class="mono">labels</span> into the prompt. The label files are never edited.</div>
+    </div>
+  </div>
+</div>
+
+<div class="notes">
+  <h4>What the numbers point to</h4>
+  <div class="note"><span class="n">1</span><div><b>Set, profile, you</b><p>The set's <span class="mono">agent.json</span>, the Agent Profile it is measured against, and your name, which goes on the prompts you write.</p></div></div>
+  <div class="note"><span class="n">2</span><div><b>Profile and set disagree</b><p>Shown, never fixed silently. Actions come from the profile; targets and states stay in the set.</p></div></div>
+  <div class="note"><span class="n">3</span><div><b>Prompts by category</b><p>Ids are made for you, <span class="mono">target_012</span> after <span class="mono">target_011</span>. ⚠ marks a prompt that breaks a rule.</p></div></div>
+  <div class="note"><span class="n">4</span><div><b>Dropdowns, not typing</b><p>The action list is the profile's plus <span class="mono">none</span>; the targets are the set's plus <span class="mono">no_target</span>.</p></div></div>
+  <div class="note"><span class="n">5</span><div><b>The README's rules, inline</b><p>Registered target, <span class="mono">none</span> with <span class="mono">no_target</span>, a needed target, the state, ids, and no few-shot example.</p></div></div>
+  <div class="note"><span class="n">6</span><div><b>Label blind</b><p>Only the label, stimulus, observations and state. The actions offered are the ones the state allows.</p></div></div>
+  <div class="note"><span class="n">7</span><div><b>One file per person</b><p>Two people labelling at once never touch the same file.</p></div></div>
+  <div class="note"><span class="n">8</span><div><b>Agreement</b><p>How many answered and agreed, per prompt and overall, and the prompts where they split.</p></div></div>
+  <div class="note"><span class="n">9</span><div><b>Settling stays human</b><p>Nothing is written until a person picks the answer, as <span class="mono">findings.md</span> says.</p></div></div>
+</div>
+
+</div></body></html>

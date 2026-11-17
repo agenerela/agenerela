@@ -1,0 +1,122 @@
+<!--
+    The Evaluation Report window's structure (#179, screen 4). Layout is in
+    EvaluationReportWindow.uss; colour, type and the kit's pieces come from Agenerela.uss (#167).
+    Elements with a name are filled or wired by EvaluationReportUi; what repeats (steps, rows,
+    bars, problem boxes) is built there, from the kit.
+-->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:VisualElement name="evaluation-report" class="er">
+        <uie:Toolbar name="toolbar" class="er-toolbar">
+            <uie:ToolbarButton name="use-defaults" text="Use the project's set, profile and arms" />
+            <uie:ToolbarButton name="open-report" text="Open report…" tooltip="Read a saved report.json back, such as one from Logs/Evaluation." />
+            <ui:VisualElement class="er-grow" />
+            <uie:ToolbarButton name="edit-set" text="Edit prompt set" tooltip="Opens the Prompt Set window, which writes and labels prompts." />
+            <uie:ToolbarButton name="project-settings" text="Project Settings" tooltip="Project Settings → Agenerela names the default arm A and arm B." />
+        </uie:Toolbar>
+
+        <ui:ScrollView name="scroll" class="er-scroll">
+
+            <!-- A · First open -->
+            <ui:VisualElement name="start" class="ag-card er-start">
+                <ui:Label text="Start here" class="er-start__title" />
+                <ui:Label text="Measures how often your agent chooses correctly: the same labelled prompts asked in two set-ups, arm A and arm B, in one session. Your choices are remembered on this machine." class="ag-muted er-wrap" />
+                <ui:VisualElement class="er-row er-start__defaults">
+                    <ui:Button name="start-defaults" text="Use the project's set, profile and arms" class="ag-button--primary" />
+                    <ui:Label text="Does steps 1 to 3 at once." class="ag-muted" />
+                </ui:VisualElement>
+                <ui:VisualElement name="steps" />
+            </ui:VisualElement>
+
+            <!-- ① Run set-up -->
+            <ui:VisualElement name="setup" class="er-section">
+                <ui:VisualElement name="setup-header" class="er-row er-setup-header">
+                    <ui:Label name="setup-toggle" class="er-setup-toggle" />
+                    <ui:Label name="setup-summary" class="ag-muted er-setup-summary" />
+                    <ui:VisualElement name="setup-header-run" class="er-row" />
+                </ui:VisualElement>
+                <ui:Label name="setup-folded-reason" class="ag-muted er-wrap er-indent" />
+                <ui:VisualElement name="setup-fields">
+                    <uie:ObjectField name="set-field" label="Prompt set" tooltip="The set file: the agent.json beside a folder of prompts. The Prompt Set window writes and labels it." />
+                    <ui:Label name="set-info" class="ag-muted er-field-note" />
+                    <uie:ObjectField name="profile-field" label="Profile" tooltip="The AgentProfile the set is measured against: every prompt is asked of an agent built from it." />
+                    <uie:ObjectField name="arm-a-config" label="Arm A" class="er-arm" />
+                    <ui:VisualElement class="er-row er-arm-options">
+                        <ui:TextField name="arm-a-name" label="Name" class="er-arm-name" />
+                        <ui:Toggle name="arm-a-guard" text="Grounding guard" />
+                    </ui:VisualElement>
+                    <ui:Label name="arm-a-model" class="ag-muted er-field-note" />
+                    <uie:ObjectField name="arm-b-config" label="Arm B" class="er-arm" />
+                    <ui:VisualElement class="er-row er-arm-options">
+                        <ui:TextField name="arm-b-name" label="Name" class="er-arm-name" />
+                        <ui:Toggle name="arm-b-guard" text="Grounding guard" />
+                    </ui:VisualElement>
+                    <ui:Label name="arm-b-model" class="ag-muted er-field-note" />
+                    <ui:DropdownField name="order" label="Order" />
+                    <ui:Label name="order-note" class="ag-muted er-field-note" />
+                    <ui:Label name="same-arms" class="ag-muted er-wrap er-note" />
+                    <ui:VisualElement name="set-problems" />
+                    <ui:Foldout name="checks" text="What the run checks" value="true" class="er-checks" />
+                    <ui:VisualElement name="run-row" class="er-row er-run-row">
+                        <ui:Label name="run-reason" class="ag-muted er-wrap er-run-reason" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:Button name="run" text="▶ Run A/B" tooltip="Asks every prompt in both arms and saves the report to Logs/Evaluation." class="ag-button--primary er-run" />
+
+                <!-- B · A run -->
+                <ui:VisualElement name="progress-row" class="er-row er-progress-row">
+                    <ui:Button name="cancel" text="Cancel" tooltip="Stops the run between or during decisions. The partial report is saved, marked cancelled." />
+                    <ui:VisualElement class="er-grow">
+                        <ui:ProgressBar name="progress" low-value="0" high-value="1" />
+                        <ui:Label name="elapsed" class="ag-muted" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement name="run-message" />
+            </ui:VisualElement>
+
+            <ui:Label name="no-report" text="No report yet. Press Run A/B, or Open report… in the toolbar to read a saved one." class="ag-muted er-wrap er-note" />
+
+            <!-- C, D · A report -->
+            <ui:VisualElement name="report">
+                <ui:Label name="report-name" class="ag-mono er-report-name" />
+                <ui:Label name="report-run-line" class="ag-muted" />
+                <ui:Label name="report-path" class="ag-muted er-wrap er-small" />
+                <ui:VisualElement name="cancelled" />
+                <ui:VisualElement name="warnings" />
+                <ui:Foldout name="conditions" text="Conditions this run was measured under" value="false" />
+
+                <ui:VisualElement name="outcomes" class="er-section" />
+                <ui:VisualElement name="noise" class="er-section" />
+                <ui:VisualElement name="categories" class="er-section" />
+
+                <ui:VisualElement name="failures" class="er-section">
+                    <ui:VisualElement name="failures-title" />
+                    <ui:VisualElement class="er-row er-failure-filter">
+                        <ui:VisualElement name="failure-arms" class="er-row er-segmented" />
+                        <ui:DropdownField name="failure-filter" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="failure-list" />
+                </ui:VisualElement>
+
+                <ui:VisualElement name="labelling" class="er-section">
+                    <ui:VisualElement name="labelling-title" />
+                    <ui:VisualElement class="er-row er-agreement">
+                        <ui:Label name="agreement-percent" class="er-big" />
+                        <ui:VisualElement class="er-grow">
+                            <ui:Label name="agreement-headline" class="er-wrap er-bold" />
+                            <ui:Label name="agreement-detail" class="er-wrap" />
+                            <ui:Label name="agreement-note" class="ag-muted er-wrap er-small" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="er-row er-buttons">
+                        <ui:Button name="review-disagreements" text="Review disagreements" tooltip="Opens the Prompt Set window: its Agreement tab lists and settles the splits." />
+                        <ui:Button name="copy-summary" text="Copy summary for findings.md" tooltip="Copies a short Markdown summary: what ran, its conditions, the five outcomes and the noise check." />
+                        <ui:Button name="show-files" text="Show files" tooltip="Shows report.json and report.md in the file browser." />
+                        <ui:Button name="save-copy" text="Save a copy…" tooltip="Writes report.json and report.md into a folder of your choice." />
+                    </ui:VisualElement>
+                    <ui:Label text="Every accuracy claim has to come from a run like this one: a control arm, the same model, the same machine, the same session (hard rule 2). Read docs/llm-wiki/measuring.md before writing a number down." class="ag-muted er-wrap er-small er-footnote" />
+                    <ui:Label text="Every run, finished or cancelled, is saved to Logs/Evaluation/&lt;run&gt;/, which git ignores. Open report… reads one back and shows it exactly as above." class="ag-muted er-wrap er-small" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:ScrollView>
+    </ui:VisualElement>
+</ui:UXML>

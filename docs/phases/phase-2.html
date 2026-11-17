@@ -167,7 +167,7 @@ footer p{max-width:78ch}
     <span class="pill dark">Due 29 October 2026</span>
     <span class="pill">Gate: #94</span>
     <span class="pill">8 new issues, plus #81</span>
-    <span class="pill acc">All in Iteration 3, unassigned</span>
+    <span class="pill ok">Complete: gate passed 25 October, milestone closed 2 November</span>
   </div>
 </header>
 
@@ -279,20 +279,20 @@ footer p{max-width:78ch}
         </svg>
       </div>
     </div>
-    <figcaption>One decision in Phase 2. Blue boxes are the two hops Phase 2 adds between the agent and the model. Dashed boxes (#92, #93) are Phase 2 work the gate does not wait for: until they land, a game builds the agent and the provider in code. Execute, the re-check before any game code runs, is unchanged from Phase 1.</figcaption>
+    <figcaption>One decision in Phase 2. Blue boxes are the two hops Phase 2 adds between the agent and the model. Dashed boxes (#92, #93) are Phase 2 work the gate did not wait for: with both merged, a game can use them, or still build the agent and the provider in code. Execute, the re-check before any game code runs, is unchanged from Phase 1.</figcaption>
   </figure>
 </section>
 
 <!-- ============ ORDER OF WORK ============ -->
 <section class="sec" id="order">
-  <div class="sechead"><h2>The order of work</h2><span class="pill ok">3 ready now</span><span class="pill warn">1 waiting</span><span class="pill dark">5 merged</span></div>
-  <p class="seclede">Six issues can start today, in parallel. The gate waits on four of them. Only one chain is longer than a step: the provider, then its config asset, then the component that uses it.</p>
+  <div class="sechead"><h2>The order of work</h2><span class="pill dark">All 9 merged</span></div>
+  <p class="seclede">All of this has merged. The gate waited on four issues. Only one chain was longer than a step: the provider, then its config asset, then the component that uses it.</p>
 
   <figure>
     <div class="fig">
-      <div class="figbar">Figure 2 · What waits on what, as of 12 October</div>
+      <div class="figbar">Figure 2 · What waited on what, all merged by 2 November</div>
       <div class="figscroll">
-        <svg viewBox="0 0 1000 310" role="img" aria-label="Issues 87, 88, 89 and 90 are merged, so the gate, 94, which waited on all four, is ready. Issue 92 is ready now that 88 is merged, and 93 waits on 92. Issue 91 is ready and 81 is merged, and nothing waits on them.">
+        <svg viewBox="0 0 1000 310" role="img" aria-label="Issues 87, 88, 89 and 90 merged, then the gate, 94, which waited on all four. Issue 92 waited on 88, and 93 on 92. Nothing waited on 91 and 81. All have merged.">
           <defs>
             <marker id="p2d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head" d="M0,0 L10,5 L0,10 z"/></marker>
           </defs>
@@ -313,7 +313,7 @@ footer p{max-width:78ch}
           <text class="s" x="520" y="68">Short-term memory</text>
 
           <rect class="box side" x="690" y="24" width="150" height="58" rx="7"/>
-          <text class="n" x="702" y="46">#91</text><text class="ready" x="830" y="46" text-anchor="end">ready</text>
+          <text class="n" x="702" y="46">#91</text><text class="ready" x="830" y="46" text-anchor="end">merged</text>
           <text class="s" x="702" y="68">Observation sources</text>
           <rect class="box side" x="846" y="24" width="150" height="58" rx="7"/>
           <text class="n" x="858" y="46">#81</text><text class="ready" x="986" y="46" text-anchor="end">merged</text>
@@ -321,15 +321,15 @@ footer p{max-width:78ch}
           <text class="lbl" x="843" y="104" text-anchor="middle">nothing waits on these two</text>
 
           <rect class="box side" x="10" y="150" width="150" height="58" rx="7"/>
-          <text class="n" x="22" y="172">#92</text><text class="ready" x="150" y="172" text-anchor="end">ready</text>
+          <text class="n" x="22" y="172">#92</text><text class="ready" x="150" y="172" text-anchor="end">merged</text>
           <text class="s" x="22" y="194">Provider config</text>
 
           <rect class="box gate" x="176" y="150" width="482" height="58" rx="7"/>
-          <text class="n" x="190" y="172">#94  Phase 2 gate</text><text class="ready" x="646" y="172" text-anchor="end">ready</text>
+          <text class="n" x="190" y="172">#94  Phase 2 gate</text><text class="ready" x="646" y="172" text-anchor="end">merged</text>
           <text class="s" x="190" y="194">live decision under 5 s · RequiresOllama PlayMode tests · sandbox scene</text>
 
           <rect class="box side" x="10" y="240" width="150" height="58" rx="7"/>
-          <text class="n" x="22" y="262">#93</text><text class="blocked" x="150" y="262" text-anchor="end">waiting</text>
+          <text class="n" x="22" y="262">#93</text><text class="ready" x="150" y="262" text-anchor="end">merged</text>
           <text class="s" x="22" y="284">AgentBehaviour</text>
 
           <path class="wire" d="M85,82 V148" marker-end="url(#p2d)"/>
@@ -401,7 +401,7 @@ footer p{max-width:78ch}
     </article>
 
     <article class="issue gate">
-      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/94">#94</a><h3>Phase 2 gate</h3><span class="pill ok">ready</span></div>
+      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/94">#94</a><h3>Phase 2 gate</h3><span class="pill dark">merged, #111</span></div>
       <p>Live PlayMode tests tagged <span class="mono">RequiresOllama</span>, skipped with a message when Ollama is not running, and a sandbox scene where you type a command and watch the decision and its telemetry. It records the first in-Unity latency since the prototype in <span class="mono">findings.md</span>.</p>
       <div><div class="lab">Done when</div><ul class="done">
         <li>A five-action agent decides in under 5 s after warm-up</li>
@@ -418,7 +418,7 @@ footer p{max-width:78ch}
   <div class="grid">
 
     <article class="issue">
-      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/91">#91</a><h3>Observation sources</h3><span class="pill ok">ready</span></div>
+      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/91">#91</a><h3>Observation sources</h3><span class="pill dark">merged, #123</span></div>
       <p>Agents gather their own facts at decision time. The one for scene agents reads the <span class="mono">Description</span> of nearby <span class="mono">Targetable</span>s, so "The watchtower door stands open." reaches the guard by the tower. Facts passed for the call are kept first, gathered lines fill the rest of a hard cap, and what was cut is recorded.</p>
       <div><div class="lab">Done when</div><ul class="done">
         <li>Sources are asked in order on every decision; nothing carries over</li>
@@ -430,7 +430,7 @@ footer p{max-width:78ch}
     </article>
 
     <article class="issue">
-      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/92">#92</a><h3>Provider config asset</h3><span class="pill ok">ready</span></div>
+      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/92">#92</a><h3>Provider config asset</h3><span class="pill dark">merged, #129</span></div>
       <p>Set the model connection up once, as an asset (<b>Create → Agenerela → Ollama Provider</b>), with a project default under <b>Project Settings → Agenerela</b>. An agent with no config of its own uses the default. One config means one provider instance, so one queue, and telemetry records which config was used.</p>
       <div><div class="lab">Done when</div><ul class="done">
         <li>The default resolves in Play mode with no <span class="mono">AssetDatabase</span></li>
@@ -441,7 +441,7 @@ footer p{max-width:78ch}
     </article>
 
     <article class="issue">
-      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/93">#93</a><h3>AgentBehaviour</h3><span class="pill warn">waits on #92</span></div>
+      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/93">#93</a><h3>AgentBehaviour</h3><span class="pill dark">merged, #139</span></div>
       <p>Drop it on a GameObject and assign a profile. It builds the agent, registers the <span class="mono">[AgentAction]</span> methods on the same object, binds the listed handlers, finds targets nearby, and cancels the agent's requests when the object is destroyed. No manager object in the scene.</p>
       <div><div class="lab">Done when</div><ul class="done">
         <li>A decision in flight when the object is destroyed ends cancelled</li>
@@ -501,7 +501,7 @@ footer p{max-width:78ch}
 
 <!-- ============ CALLS ============ -->
 <section class="sec" id="calls">
-  <div class="sechead"><h2>Calls made in the issues</h2><span class="pill acc">open to argument before the code lands</span></div>
+  <div class="sechead"><h2>Calls made in the issues</h2><span class="pill">as the issues made them, before the code landed</span></div>
   <p class="seclede">Four choices the build plan left open were settled in the issue text so work could start. Each issue says what to do if building it shows a better answer.</p>
   <ul class="rules calls">
     <li><b>#88 · <span class="mono">HttpClient</span> over <span class="mono">UnityWebRequest</span></b>The prototype used <span class="mono">UnityWebRequest</span>, which lives in a Unity module the package would have to declare, and CI allows only Newtonsoft. <span class="mono">HttpClient</span> needs nothing. The other route is to declare the module and widen the CI rule to Unity's built-in modules in the same PR. <b>Settled:</b> <span class="mono">HttpClient</span>, merged in #102. WebGL players are not supported, since <span class="mono">HttpClient</span> has no sockets there.</li>
@@ -516,7 +516,7 @@ footer p{max-width:78ch}
   <div class="sechead"><h2>Not in Phase 2</h2></div>
   <ul class="rules out">
     <li><b>Guards</b>The grounding guard and the legality pipeline are Phase 3. Phase 2 asks Ollama for token probabilities so Phase 3 has them.</li>
-    <li><b>Accuracy and the evaluation harness</b>Phase 4. The prompt set's next batch and real annotators are #85, ready now beside Phase 2.</li>
+    <li><b>Accuracy and the evaluation harness</b>Phase 4. The prompt set's next prompts and second labels come from the Prompt Set window, #134.</li>
     <li><b>Cloud providers, budgets and rate limits</b>Phase 6, behind the same <span class="mono">ILLMProvider</span>.</li>
     <li><b>The ticker, the summariser, long-term memory</b>Each is an extension point in its issue (#89, #91, #90), waiting for a demo or a Phase 4 measurement.</li>
   </ul>

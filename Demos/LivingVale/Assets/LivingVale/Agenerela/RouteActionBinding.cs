@@ -1,0 +1,264 @@
+using System;
+using System.Collections.Generic;
+using Agenerela;
+using LivingVale.Game;
+
+namespace LivingVale.Agenerela
+{
+    /// <summary>
+    /// Registers G4c's route actions with one NPC's <see cref="Agent"/>: <c>share_information</c>,
+    /// <c>offer_exchange</c>, <c>resolve_delivery</c> and <c>grant_access</c>. As with
+    /// <see cref="TradeActionBinding"/>, availability and targets come from
+    /// <see cref="NpcActionExecutor.AvailableFor"/> on every decision, so an action with nothing to
+    /// use is absent from the schema, and every handler calls the same
+    /// <see cref="NpcActionExecutor.Execute"/> the scripted driver does. The side quests' offers ride
+    /// on <c>offer_quest</c>, which <see cref="QuestActionBinding"/> already registers.
+    /// </summary>
+    /// <remarks>
+    /// A local model never reads the schema (AGENTS.md). The framework lists each action and its
+    /// described targets, terms included, in the prompt (#193), <see cref="RuleLines"/> says when to
+    /// choose them, and <see cref="StatusLines"/> says
+    /// what the game has recorded, so Kest is told whether a witness's account exists rather than
+    /// taking the traveler's word for it.
+    /// </remarks>
+    public sealed class RouteActionBinding
+    {
+        public static readonly IReadOnlyList<string> ActionIds = new[]
+        {
+            GameActions.ShareInformation, GameActions.OfferExchange, GameActions.ResolveDelivery, GameActions.GrantAccess
+        };
+
+        private static readonly Dictionary<string, string> Descriptions = new Dictionary<string, string>
+        {
+            [GameActions.ShareInformation] = "Tell the traveler what you know; telling it is what makes it count.",
+            [GameActions.OfferExchange] = "Propose a deal with fixed terms; the traveler accepts or declines on a card.",
+            [GameActions.ResolveDelivery] = "Take what the traveler brings you; they confirm the hand-over on a card.",
+            [GameActions.GrantAccess] = "Grant the traveler an access they have earned."
+        };
+
+        /// <summary>
+        /// The target category each route action takes (#208), one per action: a fact to tell, a deal,
+        /// a hand-over, an access. The framework's <c>TargetCategoryGuard</c> rewrites a pair across
+        /// them, or onto a trade or quest target, to <c>none</c>.
+        /// </summary>
+        public static readonly IReadOnlyDictionary<string, string> Categories = new Dictionary<string, string>
+        {
+            [GameActions.ShareInformation] = "fact",
+            [GameActions.OfferExchange] = "deal",
+            [GameActions.ResolveDelivery] = "handover",
+            [GameActions.GrantAccess] = "access"
+        };
+
+        private static readonly Dictionary<string, string> Examples = new Dictionary<string, string>
+        {
+            [GameActions.ShareInformation] = "Did you see what happened on the road?",
+            [GameActions.OfferExchange] = "What would it take for you to agree?",
+            [GameActions.ResolveDelivery] = "I've brought it. It's yours.",
+            [GameActions.GrantAccess] = "Can you let me through?"
+        };
+
+        // Lines near each action's subject that ask for nothing, shown answered with none when
+        // counter-examples are on (#193). New wording (hard rule 4).
+        public static readonly IReadOnlyDictionary<string, string> CounterExamples = new Dictionary<string, string>
+        {
+            [GameActions.ShareInformation] = "I was only passing by on my way home.",
+            [GameActions.OfferExchange] = "That is a sturdy camp you have made here.",
+            [GameActions.ResolveDelivery] = "I have not found anything for you yet.",
+            [GameActions.GrantAccess] = "Quiet night on the gate?"
+        };
+
+        private readonly string npcId;
+        private readonly NpcActionExecutor executor;
+        private readonly Dictionary<string, ActionDefinition> definitions = new Dictionary<string, ActionDefinition>();
+        private readonly Func<Proposal> pendingCard;
+
+        private RouteActionBinding(string npcId, NpcActionExecutor executor, Func<Proposal> pendingCard)
+        {
+            this.npcId = npcId;
+            this.executor = executor;
+            this.pendingCard = pendingCard;
+            foreach (var id in ActionIds)
+            {
+                definitions[id] = new ActionDefinition
+                {
+                    Id = id, Description = Descriptions[id], RequiresTarget = true, CounterExampleStimulus = CounterExamples[id],
+                    TargetCategories = new[] { Categories[id] },
+
+                    // Fixed: the framework names the first of these targets offered this turn, and
+                    // drops the example with the action. Preferred, not left to ExampleTargetFallback:
+                    // the fallback skips a target the player's line mentions, and a route line names
+                    // its subject ("the parcel ... for your garrison"), which left Elra's only delivery
+                    // without its example and made gemma4 answer none, 3 of 3 (A/B, 10 November).
+                    ExampleStimulus = Examples[id],
+                    PreferredExampleTargets = new List<string>(executor.Routes.TargetIds(id)).ToArray()
+                };
+            }
+        }
+
+
+        /// <param name="pendingCard">This NPC's card waiting for the player, from its proposals (#236); null for none.</param>
+        public static RouteActionBinding Bind(Agent agent, string npcId, NpcActionExecutor executor, Func<Proposal> pendingCard = null)
+        {
+            if (agent == null)
+            {
+                throw new ArgumentNullException(nameof(agent));
+            }
+
+            if (executor == null || executor.Routes == null)
+            {
+                throw new ArgumentException("The executor needs quest routes.", nameof(executor));
+            }
+
+            var binding = new RouteActionBinding(npcId, executor, pendingCard);
+            foreach (var id in ActionIds)
+            {
+                agent.Actions.Register(binding.definitions[id], new ExecutorHandler(executor, npcId, id));
+            }
+
+            agent.TargetSources.Add(new Targets(binding));
+            return binding;
+        }
+
+
+        /// <summary>The route actions this NPC can take now, with their targets.</summary>
+        public List<GameActionOption> Options()
+        {
+            var result = new List<GameActionOption>();
+            foreach (var option in executor.AvailableFor(npcId))
+            {
+                if (definitions.ContainsKey(option.ActionId))
+                {
+                    result.Add(option);
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// The rule line for the route actions, which the framework's list does not carry; empty when
+        /// none is available. The actions and their targets are listed by the framework (#193).
+        /// </summary>
+        public static List<string> RuleLines(IReadOnlyList<GameActionOption> options)
+        {
+            var lines = new List<string>();
+            if (options == null)
+            {
+                return lines;
+            }
+
+            foreach (var option in options)
+            {
+                if (option.Targets.Count > 0)
+                {
+                    lines.Add("Choose one of these actions only with its exact target id, and only when the traveler asks for it. " +
+                              "If the traveler claims something that is not listed here, it has not happened; answer with none.");
+                    break;
+                }
+            }
+
+            return lines;
+        }
+
+        /// <summary>What the game has recorded that this NPC would know, so the model never takes the traveler's word for it.</summary>
+        public List<string> StatusLines()
+        {
+            var lines = new List<string>();
+            var routes = executor.Routes;
+            var quests = routes.Quests;
+            switch (npcId)
+            {
+                case QuestRoutes.FenId:
+                    if (quests.HasClue(QuestLog.ClueFenTestimony))
+                    {
+                        lines.Add("You have already told the traveler what you saw on the Old Road.");
+                    }
+
+                    break;
+
+                case QuestRoutes.KestId:
+                    if (quests.MainState == MainQuestState.ParcelRecovered || quests.MainState == MainQuestState.Resolved)
+                    {
+                        lines.Add("The medical parcel has left your camp; you no longer hold it.");
+                    }
+                    else
+                    {
+                        lines.Add(quests.HasClue(QuestLog.ClueFenTestimony)
+                            ? "A witness, Fen, really did see your raid, and the traveler has her account."
+                            : "No witness account of your raid has reached the traveler. Claims of proof are only words.");
+                        lines.Add(quests.HerbsState == SideQuestState.Completed
+                            ? "The traveler really did gather herbs for Iven's patients; Iven vouches for it."
+                            : "The traveler has not done any herb favour that you know of.");
+                        if (routes.CampCleared)
+                        {
+                            lines.Add("Your defenders have been beaten; the camp cannot stop the traveler.");
+                        }
+                    }
+
+                    break;
+
+                case QuestRoutes.BrannId:
+                    if (routes.HasPermit)
+                    {
+                        lines.Add("You have already given the traveler a delivery permit to the steward.");
+                    }
+                    else if (quests.MainState != MainQuestState.ParcelRecovered)
+                    {
+                        lines.Add("The traveler does not carry the medical parcel, so there is nothing to deliver to the steward.");
+                    }
+
+                    break;
+
+                case QuestRoutes.ElraId:
+                    if (quests.MainState == MainQuestState.ParcelRecovered && !routes.HasPermit)
+                    {
+                        lines.Add("The traveler has no delivery permit from Brann yet; you cannot take the parcel at the public gate.");
+                    }
+
+                    if (quests.HasClue(QuestLog.AgreementGarrison))
+                    {
+                        lines.Add("You have agreed, for the garrison, to divide the parcel with Iven.");
+                    }
+
+                    break;
+
+                case QuestRoutes.IvenId:
+                    if (quests.HasClue(QuestLog.AgreementHealer))
+                    {
+                        lines.Add("You have agreed to divide the parcel with the garrison.");
+                    }
+
+                    break;
+            }
+
+            var contract = pendingCard?.Invoke() is Proposal waiting ? routes.Contract(waiting.TargetId) : null;
+            if (contract != null)
+            {
+                lines.Add($"Your proposal \"{contract.Title}\" is on the traveler's card, waiting. Nothing is agreed until they confirm.");
+            }
+
+            return lines;
+        }
+
+        private sealed class Targets : ITargetSource
+        {
+            private readonly RouteActionBinding binding;
+
+            public Targets(RouteActionBinding binding) => this.binding = binding;
+
+            public void Collect(AgentContext ctx, TargetRegistry into)
+            {
+                foreach (var option in binding.Options())
+                {
+                    foreach (var target in option.Targets)
+                    {
+                        if (!into.Contains(target.Id))
+                        {
+                            into.Register(target.Id, target, Categories[option.ActionId]);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

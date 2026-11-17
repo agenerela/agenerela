@@ -162,7 +162,7 @@ namespace Agenerela
         }
 
         // How much of one position's alternatives continues prefix into a listed id, as the probe's
-        // on_list_share reads it: what the five alternatives do not cover counts as off the list,
+        // on_list_share reads it: what the reported alternatives do not cover counts as off the list,
         // because the 0.8 threshold was calibrated that way. wanted is the likeliest alternative
         // that does not, written onto prefix, or null when there is none with any text.
         private static double OnListShare(IReadOnlyList<TokenAlternative> alternatives, string prefix,

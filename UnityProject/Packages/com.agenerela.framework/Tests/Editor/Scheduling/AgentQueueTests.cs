@@ -220,7 +220,8 @@ namespace Agenerela.Tests
             {
                 var cancelled = agent.DecideAsync("The bell rings once.", null, cts.Token);
                 var behind = agent.DecideAsync("Go to the tower.");
-                Assert.That(fake.LastToken, Is.EqualTo(cts.Token), "Once sent, the caller's token is the provider's.");
+                var sentWith = fake.LastToken;
+                Assert.That(sentWith.IsCancellationRequested, Is.False);
 
                 cts.Cancel();
                 try
@@ -231,6 +232,10 @@ namespace Agenerela.Tests
                 catch (OperationCanceledException)
                 {
                 }
+
+                // A token linked to the caller's and the agent's reset (G12): the caller's
+                // cancellation is what reaches the provider.
+                Assert.That(sentWith.IsCancellationRequested, Is.True, "Once sent, the caller's cancellation is the provider's to honour.");
 
                 Assert.That(fake.Requests, Has.Count.EqualTo(2), "The slot went to the next request.");
                 fake.Release();

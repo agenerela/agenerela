@@ -1,0 +1,690 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using GreyBoxStrategy.Replay;
+using UnityEngine;
+using UnityEngine.UIElements;
+
+namespace GreyBoxStrategy.Realm
+{
+    /// <summary>
+    /// The writs turn on the map (rules v2, 3.9 and 5.1): every army as a piece, always shown, in every
+    /// map mode; its march as a dashed ink line with the turns it has left; a battle's clash and its report
+    /// card; a pennant on every occupied province; the seal a treaty stamps.
+    /// </summary>
+    public sealed partial class ScreenUI
+    {
+        /// <summary>True for a writs game: armies are pieces in the rules, so the map shows each one.</summary>
+        public bool Writs;
+        /// <summary>For a march line's label: the turns an army needs for the rest of its path.</summary>
+        public Func<ArmyState, int> TurnsLeft;
+        /// <summary>R3's unit types or generals are on in this game: the battle report says so even when neither changed a battle.</summary>
+        public bool ArmyRules;
+        /// <summary>A piece clicked: the army, for the side panel.</summary>
+        public Action<string> HostPressed;
+
+        private readonly Dictionary<string, VisualElement> hosts = new Dictionary<string, VisualElement>(StringComparer.Ordinal);
+        private readonly Dictionary<string, (int from, int to, float t)> hostMotion = new Dictionary<string, (int, int, float)>(StringComparer.Ordinal);
+        private readonly Dictionary<int, VisualElement> pennants = new Dictionary<int, VisualElement>();
+        private MarchLines marchLines;
+        /// <summary>The plates and pennants, under the province names in the same layer, so a crowd of armies never hides a name.</summary>
+        private VisualElement hostLayer;
+        private ReplayState hostState;
+
+        /// <summary>The pieces for a state: one per army, fanned out where several stand together.</summary>
+        private void ShowHosts(ReplayState s)
+        {
+            hostState = s;
+            standing = null; // a new state: the next PlaceHosts indexes it
+            if (hostLayer == null)
+            {
+                hostLayer = new VisualElement { pickingMode = PickingMode.Ignore, name = "hosts" };
+                hostLayer.style.position = Position.Absolute; hostLayer.style.left = 0; hostLayer.style.top = 0; hostLayer.style.right = 0; hostLayer.style.bottom = 0;
+                labels.Insert(0, hostLayer);
+            }
+            foreach (var kv in armyPieces) kv.Value.style.display = DisplayStyle.None;
+            var sight = Sight(s);
+            bool Seen(ArmyState a) => sight == null || a.Owner == You || sight.Contains(a.Location);
+            var alive = new HashSet<string>(s.Armies.Where(Seen).Select(a => a.Id), StringComparer.Ordinal);
+            foreach (var id in hosts.Keys.Where(k => !alive.Contains(k)).ToList()) { hosts[id].RemoveFromHierarchy(); hosts.Remove(id); }
+            foreach (var a in s.Armies)
+            {
+                if (!Seen(a)) continue;
+                if (!hosts.TryGetValue(a.Id, out var piece))
+                {
+                    piece = new VisualElement { pickingMode = PickingMode.Position }; piece.AddToClassList("host");
+                    piece.Add(new Crest(CountryLook.Of(a.Owner), 15));
+                    var n = new Label(); n.AddToClassList("host-n"); piece.Add(n);
+                    var g = new Label(Initial(a.Id)); g.AddToClassList("host-g"); piece.Add(g);
+                    // R3: the type it is mostly, as a small mark; hidden when the rules have no unit types.
+                    var mark = new TypeMark(); mark.AddToClassList("host-type"); piece.Add(mark);
+                    var seal = new VisualElement { pickingMode = PickingMode.Ignore }; seal.AddToClassList("host-wait"); piece.Add(seal);
+                    string id = a.Id;
+                    piece.RegisterCallback<ClickEvent>(_ => HostPressed?.Invoke(id));
+                    hostLayer.Add(piece);
+                    hosts[a.Id] = piece;
+                }
+                piece.style.backgroundColor = (Color)Darker(CountryLook.Of(a.Owner).Colour);
+                bool rival = sight != null && a.Owner != You;
+                piece.Q<Label>(className: "host-n").text = rival ? $"~{(int)Math.Round(a.Soldiers / 10.0) * 10}" : a.Soldiers.ToString();
+                piece.Q(className: "host-wait").style.display = ShowAwaiting && a.Awaiting && a.Owner == You ? DisplayStyle.Flex : DisplayStyle.None;
+                // R3's supply: an army out of stores, edged in red; a rival's hunger is not yours to see.
+                piece.EnableInClassList("host-hungry", !(sight != null && a.Owner != You) && a.Hungry);
+                piece.tooltip = rival ? $"{Chronicle.Host(a.Id)} ({CountryLook.NameOf(a.Owner)}), about {(int)Math.Round(a.Soldiers / 10.0) * 10} soldiers at {Cap(a.Location)}. Your court sees no more of it than that."
+                    : HostLine(a) + "\nClick: its army.";
+                // R3: a rival in sight shows what it mostly is, never its exact mix (rules v2 3.8); yours shows all of it.
+                var extra = ArmyLook.TooltipLines(a, rival);
+                if (extra.Count > 0) piece.tooltip += "\n" + string.Join("\n", extra);
+                var typeMark = piece.Q<TypeMark>();
+                var largest = ArmyLook.Largest(a);
+                typeMark.style.display = largest != null ? DisplayStyle.Flex : DisplayStyle.None;
+                if (largest is UnitType lt && typeMark.Type != lt) { typeMark.Type = lt; typeMark.MarkDirtyRepaint(); }
+            }
+            // Under the pieces, in their layer: a march line never strikes through a piece's number.
+            if (marchLines == null) { marchLines = new MarchLines { Owner = this }; hostLayer.Insert(0, marchLines); }
+            marchLines.MarkDirtyRepaint();
+            ShowPennants(s);
+        }
+
+        /// <summary>How large the pieces are drawn, 0.6 to 1: the director shrinks them as provinces come close on screen.</summary>
+        public float HostScale = 1;
+
+        /// <summary>The open-seal mark on armies awaiting orders: rule mode's, on the person's own armies.</summary>
+        public bool ShowAwaiting;
+
+        /// <summary>An army in one line: "Maren's host (Orsk), 40 soldiers at Corwick, marching to Ashby (2 turns)".</summary>
+        public string HostLine(ArmyState a)
+        {
+            string order = a.Marching ? $", marching to {Cap(a.Destination)}" + (TurnsLeft != null ? $" ({TurnsLeft(a)} turn{(TurnsLeft(a) == 1 ? "" : "s")})" : "") : ", holding";
+            string waits = a.Awaiting ? $"\nAwaiting orders: {string.Join(", ", a.Wake)}." : "";
+            string border = a.StepTurnsLeft > 1 && a.Path.Count > 0 ? $"\nOn the border with {Cap(a.Path[0])}: rough ground takes two turns." : "";
+            return $"{Chronicle.Host(a.Id)} ({CountryLook.NameOf(a.Owner)}), {a.Soldiers} soldiers at {Cap(a.Location)}{order}.{border}{waits}";
+        }
+
+        private static string Initial(string id) => string.IsNullOrEmpty(id) ? "?" : char.ToUpperInvariant(id[0]).ToString();
+
+        /// <summary>Moves a piece between two provinces (indices) during an animation; t 0 to 1. Cleared by <see cref="StopHostMotion"/>.</summary>
+        public void MoveHost(string id, int from, int to, float t) => hostMotion[id] = (from, to, t);
+        public void StopHostMotion() => hostMotion.Clear();
+
+        /// <summary>Where a piece stands, in panel space: its province, or between two while it moves or waits on a border.</summary>
+        public Vector2 HostPoint(ArmyState a)
+        {
+            if (hostMotion.TryGetValue(a.Id, out var m)) return Vector2.Lerp(ProvinceToPanel(m.from), ProvinceToPanel(m.to), m.t) + new Vector2(0, -20);
+            int at = IndexOf(a.Location);
+            if (at < 0) return new Vector2(-1000, -1000);
+            // Who stands here with it: from the frame's index (PlaceHosts), not a sort of every army for every piece.
+            var here = standing != null && standing.TryGetValue(a.Location ?? "", out var st) ? st
+                : hostState.Armies.Where(x => x.Location == a.Location && !hostMotion.ContainsKey(x.Id)).OrderBy(x => x.Owner, StringComparer.Ordinal).ThenBy(x => x.Id, StringComparer.Ordinal).ToList();
+            int k = Math.Max(0, here.IndexOf(a)), n = Math.Max(1, here.Count);
+            var p = ProvinceToPanel(at);
+            if (a.StepTurnsLeft > 1 && a.Marching && a.Path.Count > 0 && IndexOf(a.Path[0]) >= 0) p = Vector2.Lerp(p, ProvinceToPanel(IndexOf(a.Path[0])), 0.45f);
+            // Several armies in one province stand side by side, two rows when there are many, so each reads.
+            int perRow = n <= 3 ? n : (n + 1) / 2;
+            int row = k / perRow, col = k % perRow, inRow = Math.Min(perRow, n - row * perRow);
+            // Spaced by the pieces' own size, as the last layout measured it, so neighbours never touch.
+            float dx = (col - (inRow - 1) / 2f) * Math.Max(58, pieceSize.x + 4) * HostScale;
+            return p + new Vector2(dx, (-24 - row * Math.Max(24, pieceSize.y + 3)) * HostScale);
+        }
+
+        /// <summary>
+        /// Pieces that would overlap are set apart: one at a time, each is moved up or down just clear of those
+        /// already placed. Moving pieces are placed first and stay on their paths. Each point is a piece's bottom
+        /// centre (pieces hang above their point).
+        /// </summary>
+        public static void Unclutter(List<Vector2> at, List<Vector2> size, List<bool> moving, float gap = 2)
+        {
+            var order = Enumerable.Range(0, at.Count).OrderBy(i => moving[i] ? 0 : 1).ThenBy(i => i).ToList();
+            var done = new List<int>();
+            foreach (int j in order)
+            {
+                int dir = 0;
+                for (int tries = 0; !moving[j] && tries < 32; tries++)
+                {
+                    int k = -1;
+                    foreach (int i in done) if (Overlap(at, size, i, j, gap) > 0) { k = i; break; }
+                    if (k < 0) break;
+                    // Clear of it by what is missing: upwards when level or above it, as pieces stand above their provinces.
+                    // Once a piece starts moving one way it keeps going that way: turning back between two pieces would
+                    // bounce it between them until the tries ran out, still overlapping.
+                    float h = (size[k].y + size[j].y) / 2 + gap;
+                    if (dir == 0) dir = at[j].y - at[k].y > 0 ? 1 : -1;
+                    at[j] = new Vector2(at[j].x, dir > 0 ? at[k].y + h : at[k].y - h);
+                }
+                done.Add(j);
+            }
+        }
+
+        // How far two pieces overlap, vertically; 0 when they do not.
+        private static float Overlap(List<Vector2> at, List<Vector2> size, int i, int j, float gap)
+        {
+            float w = (size[i].x + size[j].x) / 2 + gap, h = (size[i].y + size[j].y) / 2 + gap;
+            var d = at[j] - at[i];
+            return Math.Abs(d.x) >= w || Math.Abs(d.y) >= h ? 0 : h - Math.Abs(d.y);
+        }
+
+        private Dictionary<string, int> provinceIndex;
+        private IReadOnlyList<string> provinceIndexFor;
+
+        private int IndexOf(string province)
+        {
+            if (province == null) return -1;
+            if (provinceIndexFor != ProvinceIds)
+            {
+                provinceIndexFor = ProvinceIds;
+                provinceIndex = new Dictionary<string, int>(StringComparer.Ordinal);
+                for (int i = 0; i < ProvinceIds.Count; i++) provinceIndex[ProvinceIds[i]] = i;
+            }
+            return provinceIndex.TryGetValue(province, out int k) ? k : -1;
+        }
+
+        private readonly Dictionary<string, Vector2> placed = new Dictionary<string, Vector2>(StringComparer.Ordinal);
+
+        /// <summary>Where a piece is drawn: its point, nudged clear of the others.</summary>
+        public Vector2 PlacedPoint(ArmyState a) => placed.TryGetValue(a.Id, out var p) ? p : HostPoint(a);
+
+        // The largest piece as last laid out, unscaled: how far apart pieces stand side by side and in rows.
+        private Vector2 pieceSize = new Vector2(52, 20);
+
+        // The armies standing still in each province, in the order they stand side by side; rebuilt each frame.
+        private Dictionary<string, List<ArmyState>> standing;
+
+        private void PlaceHosts()
+        {
+            if (hostState == null) return;
+            standing = hostState.Armies.Where(x => !hostMotion.ContainsKey(x.Id)).GroupBy(x => x.Location ?? "")
+                .ToDictionary(g => g.Key, g => g.OrderBy(x => x.Owner, StringComparer.Ordinal).ThenBy(x => x.Id, StringComparer.Ordinal).ToList(), StringComparer.Ordinal);
+            var shown = hostState.Armies.Where(a => hosts.ContainsKey(a.Id)).ToList();
+            var at = shown.Select(HostPoint).ToList();
+            var size = shown.Select(a => { var r = hosts[a.Id].resolvedStyle; return HostScale * new Vector2(float.IsNaN(r.width) || r.width < 1 ? 52 : r.width, float.IsNaN(r.height) || r.height < 1 ? 20 : r.height); }).ToList();
+            // The widest and tallest piece, unscaled, for the next frame's spacing (HostPoint).
+            if (size.Count > 0) pieceSize = new Vector2(size.Max(v => v.x), size.Max(v => v.y)) / Math.Max(0.01f, HostScale);
+            Unclutter(at, size, shown.Select(a => hostMotion.ContainsKey(a.Id)).ToList());
+            placed.Clear();
+            for (int k = 0; k < shown.Count; k++)
+            {
+                var a = shown[k]; var piece = hosts[a.Id];
+                piece.EnableInClassList("chosen", a.Id == SelectedArmy);
+                // Scaled about its foot, where it stands on the map; a chosen piece a little larger, as its style has it.
+                float sc = HostScale * (a.Id == SelectedArmy ? 1.15f : 1f);
+                piece.style.transformOrigin = new TransformOrigin(Length.Percent(50), Length.Percent(100));
+                piece.style.scale = new Scale(new Vector3(sc, sc, 1));
+                // Small pieces keep the number and drop the general's initial, so they stay narrow on a far view.
+                piece.Q(className: "host-g").style.display = HostScale < 0.7f ? DisplayStyle.None : DisplayStyle.Flex;
+                placed[a.Id] = at[k];
+                piece.style.left = at[k].x;
+                piece.style.top = at[k].y;
+            }
+            foreach (var kv in pennants)
+            {
+                var p = ProvinceToPanel(kv.Key);
+                kv.Value.style.left = p.x + 10;
+                kv.Value.style.top = p.y - 6;
+            }
+            marchLines?.MarkDirtyRepaint();
+            marchLines?.PlaceLabels();
+        }
+
+        // ---- pennants on occupied land ----
+
+        private void ShowPennants(ReplayState s)
+        {
+            for (int i = 0; i < s.Occupiers.Length; i++)
+            {
+                string occ = s.Occupiers[i];
+                pennants.TryGetValue(i, out var flag);
+                if (occ == null) { if (flag != null) { flag.RemoveFromHierarchy(); pennants.Remove(i); } continue; }
+                if (flag == null)
+                {
+                    flag = new Pennant { pickingMode = PickingMode.Position };
+                    hostLayer.Add(flag);
+                    pennants[i] = flag;
+                }
+                ((Pennant)flag).Colour = CountryLook.Of(occ).Colour;
+                flag.tooltip = $"{Cap(ProvinceIds[i])}: {CountryLook.NameOf(s.Owners[i])}'s, occupied by {CountryLook.NameOf(occ)}. It stays {CountryLook.NameOf(s.Owners[i])}'s until a treaty says otherwise.";
+                flag.MarkDirtyRepaint();
+            }
+        }
+
+        private sealed class Pennant : VisualElement
+        {
+            public Color Colour;
+            public Pennant()
+            {
+                AddToClassList("pennant");
+                generateVisualContent += ctx =>
+                {
+                    var p = ctx.painter2D;
+                    p.strokeColor = new Color32(40, 28, 16, 255); p.lineWidth = 1.6f;
+                    p.BeginPath(); p.MoveTo(new Vector2(2, 20)); p.LineTo(new Vector2(2, 0)); p.Stroke();
+                    p.fillColor = Colour; p.strokeColor = new Color32(30, 20, 10, 255); p.lineWidth = 1;
+                    p.BeginPath(); p.MoveTo(new Vector2(2.5f, 1)); p.LineTo(new Vector2(16, 5)); p.LineTo(new Vector2(2.5f, 10)); p.ClosePath(); p.Fill(); p.Stroke();
+                };
+            }
+        }
+
+        // ---- march lines ----
+
+        public sealed class MarchLines : VisualElement
+        {
+            public ScreenUI Owner;
+            private readonly List<Label> turnLabels = new List<Label>();
+
+            public MarchLines()
+            {
+                pickingMode = PickingMode.Ignore;
+                style.position = Position.Absolute; style.left = 0; style.top = 0; style.right = 0; style.bottom = 0;
+                generateVisualContent += Draw;
+            }
+
+            /// <summary>Marches ordered this council and not yet under way: a lighter stroke from the army to its target.</summary>
+            private List<(string owner, List<Vector2> pts)> Planned()
+            {
+                var lines = new List<(string, List<Vector2>)>();
+                var req = Owner?.OrdersRequest; var s = Owner?.hostState;
+                if (req == null || s == null || Owner.Plan == null) return lines;
+                foreach (var kv in Owner.Plan.Armies.Where(kv => kv.Value.Action == Actions.March))
+                {
+                    var a = s.Army(kv.Key); var army = req.World.FindArmy(kv.Key);
+                    if (a == null || army == null) continue;
+                    var paths = WritLegality.Paths(req.World, army.Owner, army.Location, req.World.Rules.MarchRange);
+                    if (!paths.TryGetValue(kv.Value.Target, out var path)) continue;
+                    var pts = new List<Vector2> { Owner.PlacedPoint(a) + new Vector2(0, 14) };
+                    foreach (string step in path) { int i = Owner.IndexOf(step); if (i >= 0) pts.Add(Owner.ProvinceToPanel(i)); }
+                    if (pts.Count >= 2) lines.Add((a.Owner, pts));
+                }
+                return lines;
+            }
+
+            private List<(ArmyState army, List<Vector2> pts)> Lines()
+            {
+                var lines = new List<(ArmyState, List<Vector2>)>();
+                var s = Owner?.hostState;
+                if (s == null) return lines;
+                var sight = Owner.Sight(s);
+                foreach (var a in s.Armies.Where(a => a.Marching && a.Path.Count > 0 && (sight == null || a.Owner == Owner.You || sight.Contains(a.Location))))
+                {
+                    var pts = new List<Vector2> { Owner.PlacedPoint(a) + new Vector2(0, 14) };
+                    foreach (string step in a.Path)
+                    {
+                        int i = Owner.IndexOf(step);
+                        if (i >= 0) pts.Add(Owner.ProvinceToPanel(i));
+                    }
+                    if (pts.Count >= 2) lines.Add((a, pts));
+                }
+                return lines;
+            }
+
+            /// <summary>The turns-left labels, outside drawing: a label cannot change while the tree renders.</summary>
+            public void PlaceLabels()
+            {
+                int used = 0;
+                if (Owner.TurnsLeft != null)
+                    foreach (var (a, pts) in Lines())
+                    {
+                        if (used >= turnLabels.Count) { var l = new Label(); l.AddToClassList("march-turns"); Add(l); turnLabels.Add(l); }
+                        var label = turnLabels[used++];
+                        int t = Owner.TurnsLeft(a);
+                        label.text = t == 1 ? "1 turn" : $"{t} turns";
+                        label.style.display = DisplayStyle.Flex;
+                        var end = pts[pts.Count - 1];
+                        // Under the destination's name (and its fort marks), centred, so the tag never covers the name.
+                        int dest = Owner.IndexOf(a.Path[a.Path.Count - 1]);
+                        float below = end.y + 12;
+                        if (dest >= 0)
+                        {
+                            var name = Owner.provinceLabels[dest];
+                            if (name.resolvedStyle.display != DisplayStyle.None && !float.IsNaN(name.layout.height))
+                                below = Math.Max(below, name.layout.y + name.layout.height + 1);
+                            var fort = Owner.fortMarks[dest];
+                            if (fort.resolvedStyle.display != DisplayStyle.None && fort.childCount > 0 && !float.IsNaN(fort.layout.height) && fort.layout.height > 0)
+                                below = Math.Max(below, fort.layout.y + fort.layout.height + 1);
+                        }
+                        label.style.left = end.x; label.style.top = below;
+                    }
+                Hide(used);
+            }
+
+            private void Draw(MeshGenerationContext ctx)
+            {
+                var p = ctx.painter2D;
+                // A march under way: a solid arrow in the owner's colour, inked at the edge, along a smoothed path.
+                foreach (var (a, pts) in Lines())
+                {
+                    var c = (Color)CountryLook.Of(a.Owner).Colour;
+                    Arrow(p, pts, Color.Lerp(c, Color.white, 0.12f), new Color(0.07f, 0.04f, 0.02f, 0.95f), ArrowBody, ArrowHead);
+                }
+                // A march ordered this council: the same arrow, pale with a coloured edge, so it reads as "to come".
+                foreach (var (owner, pts) in Planned())
+                {
+                    var c = (Color)CountryLook.Of(owner).Colour;
+                    Arrow(p, pts, new Color(Mathf.Lerp(c.r, 1, 0.7f), Mathf.Lerp(c.g, 1, 0.7f), Mathf.Lerp(c.b, 1, 0.65f), 0.88f), Color.Lerp(c, Color.black, 0.25f), ArrowBody, ArrowHead);
+                }
+            }
+
+            /// <summary>The turns tags in use this frame, for the collision pass.</summary>
+            public IEnumerable<Label> Tags => turnLabels;
+
+            private void Hide(int from) { for (int i = from; i < turnLabels.Count; i++) turnLabels[i].style.display = DisplayStyle.None; }
+
+            // In panel pixels, so an arrow reads the same at every zoom.
+            private const float ArrowBody = 7f, ArrowHead = 20f;
+
+            /// <summary>
+            /// An arrow along <paramref name="pts"/>: the path smoothed, a body of even width, and a head on the last
+            /// point; filled with <paramref name="fill"/> and edged with <paramref name="edge"/>.
+            /// </summary>
+            public static void Arrow(Painter2D p, List<Vector2> pts, Color fill, Color edge, float body, float head)
+            {
+                var outline = ArrowOutline(pts, body, head);
+                if (outline.Count < 3) return;
+                p.BeginPath();
+                p.MoveTo(outline[0]);
+                for (int k = 1; k < outline.Count; k++) p.LineTo(outline[k]);
+                p.ClosePath();
+                p.fillColor = fill; p.Fill();
+                p.strokeColor = edge; p.lineWidth = 1.6f; p.lineJoin = LineJoin.Round; p.Stroke();
+            }
+
+            /// <summary>
+            /// The arrow's outline, clockwise from the tail's left: the body's left edge, the head (its tip the path's last
+            /// point), the body's right edge back to the tail. Empty when the path has no length.
+            /// </summary>
+            public static List<Vector2> ArrowOutline(List<Vector2> pts, float body, float head)
+            {
+                var outline = new List<Vector2>();
+                var path = Smooth(pts);
+                if (path.Count < 2) return outline;
+                float headLen = head * 0.95f;
+                var tip = path[path.Count - 1];
+                float total = 0; for (int k = 1; k < path.Count; k++) total += Vector2.Distance(path[k - 1], path[k]);
+                if (total < 1e-3f) return outline;
+                if (total < headLen * 1.2f) headLen = total * 0.6f;
+                var shaft = Trim(path, headLen);
+                var dir = (tip - shaft[shaft.Count - 1]).normalized;
+                if (dir == Vector2.zero) return outline;
+                var n = new Vector2(-dir.y, dir.x);
+                var left = new List<Vector2>(); var right = new List<Vector2>();
+                for (int k = 0; k < shaft.Count; k++)
+                {
+                    Vector2 d0 = k > 0 ? (shaft[k] - shaft[k - 1]).normalized : (shaft[1] - shaft[0]).normalized;
+                    Vector2 d1 = k < shaft.Count - 1 ? (shaft[k + 1] - shaft[k]).normalized : d0;
+                    var nk = new Vector2(-(d0.y + d1.y), d0.x + d1.x);
+                    nk = nk.sqrMagnitude < 1e-6f ? new Vector2(-d0.y, d0.x) : nk.normalized;
+                    float w = body / 2;
+                    left.Add(shaft[k] + nk * w); right.Add(shaft[k] - nk * w);
+                }
+                var baseC = shaft[shaft.Count - 1];
+                outline.AddRange(left);
+                outline.Add(baseC + n * head / 2);
+                outline.Add(tip);
+                outline.Add(baseC - n * head / 2);
+                for (int k = right.Count - 1; k >= 0; k--) outline.Add(right[k]);
+                return outline;
+            }
+
+            // Corners rounded by cutting each twice (Chaikin), the ends kept where they are.
+            private static List<Vector2> Smooth(List<Vector2> pts)
+            {
+                var cur = pts;
+                for (int it = 0; it < 2 && cur.Count > 2; it++)
+                {
+                    var next = new List<Vector2> { cur[0] };
+                    for (int k = 0; k < cur.Count - 1; k++)
+                    {
+                        Vector2 a = cur[k], b = cur[k + 1];
+                        if (k > 0) next.Add(Vector2.Lerp(a, b, 0.25f));
+                        if (k < cur.Count - 2) next.Add(Vector2.Lerp(a, b, 0.75f));
+                    }
+                    next.Add(cur[cur.Count - 1]);
+                    cur = next;
+                }
+                return cur;
+            }
+
+            // The path less its last <paramref name="cut"/> pixels.
+            private static List<Vector2> Trim(List<Vector2> path, float cut)
+            {
+                var res = new List<Vector2>(path);
+                while (res.Count >= 2 && cut > 0)
+                {
+                    var b = res[res.Count - 1]; var a = res[res.Count - 2];
+                    float len = Vector2.Distance(a, b);
+                    if (len > cut) { res[res.Count - 1] = Vector2.Lerp(b, a, cut / len); break; }
+                    cut -= len; res.RemoveAt(res.Count - 1);
+                }
+                if (res.Count < 2) res = new List<Vector2> { path[0], Vector2.Lerp(path[0], path[path.Count - 1], 0.4f) };
+                return res;
+            }
+        }
+
+        // ---- a battle: the clash where it happens ----
+
+        private sealed class Clash : VisualElement
+        {
+            public Func<Vector2> At;
+            public float Puff, Swords;
+            public Clash()
+            {
+                pickingMode = PickingMode.Ignore;
+                style.position = Position.Absolute; style.left = 0; style.top = 0; style.right = 0; style.bottom = 0;
+                generateVisualContent += ctx =>
+                {
+                    if (At == null) return;
+                    var c = At() + new Vector2(0, 8);
+                    var p = ctx.painter2D;
+                    if (Puff > 0)
+                    {
+                        // A puff of smoke: a few rings opening and fading.
+                        for (int k = 0; k < 5; k++)
+                        {
+                            float ang = k * 1.2566f + Puff * 0.6f, r = 8 + 22 * Puff;
+                            p.fillColor = new Color(0.85f, 0.8f, 0.7f, 0.5f * (1 - Puff));
+                            p.BeginPath(); p.Arc(c + new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * r * 0.6f, 6 + 10 * Puff, Angle.Degrees(0), Angle.Degrees(360)); p.Fill();
+                        }
+                    }
+                    if (Swords > 0)
+                    {
+                        float s = 0.6f + 0.4f * Swords;
+                        p.fillColor = new Color32(27, 19, 11, (byte)(255 * Swords));
+                        p.strokeColor = new Color32(210, 173, 98, (byte)(255 * Swords)); p.lineWidth = 1.5f;
+                        p.BeginPath(); p.Arc(c, 15 * s, Angle.Degrees(0), Angle.Degrees(360)); p.Fill(); p.Stroke();
+                        p.strokeColor = new Color32(243, 226, 184, (byte)(255 * Swords)); p.lineWidth = 3; p.lineCap = LineCap.Round;
+                        p.BeginPath(); p.MoveTo(c + new Vector2(-8, -8) * s); p.LineTo(c + new Vector2(8, 8) * s); p.Stroke();
+                        p.BeginPath(); p.MoveTo(c + new Vector2(8, -8) * s); p.LineTo(c + new Vector2(-8, 8) * s); p.Stroke();
+                    }
+                };
+            }
+        }
+
+        /// <summary>A clash at a province, or on the border between two: returns a handle for <see cref="SetClash"/> and <see cref="HideClash"/>.</summary>
+        public object ShowClash(int province, int other = -1)
+        {
+            var c = new Clash { At = () => other >= 0 ? Vector2.Lerp(ProvinceToPanel(province), ProvinceToPanel(other), 0.5f) : ProvinceToPanel(province) };
+            fx.Add(c);
+            return c;
+        }
+
+        public void SetClash(object handle, float swords, float puff)
+        {
+            if (!(handle is Clash c)) return;
+            c.Swords = swords; c.Puff = puff; c.MarkDirtyRepaint();
+        }
+
+        public void HideClash(object handle) => (handle as Clash)?.RemoveFromHierarchy();
+
+        // ---- the battle report card ----
+
+        private VisualElement battleCard;
+
+        /// <summary>
+        /// The battle report (v2 3.4): both sides, their armies and soldiers, each term of the result as a bar,
+        /// the dice last; who lost what and where the loser went; and the rules' own sentence on why.
+        /// </summary>
+        public void ShowBattle(ReplayEvent e)
+        {
+            CloseBattle();
+            var b = e.Battle;
+            if (b == null) return;
+            string where = b.Province != null ? Cap(b.Province) : $"the {Cap(b.Border?[0])}–{Cap(b.Border?[1])} border";
+            string them = b.Defender == null ? "The garrison" : CountryLook.NameOf(b.Defender) + (b.DefenderKind == "militia" ? "'s militia" : "");
+            battleCard = new VisualElement(); battleCard.AddToClassList("panel"); battleCard.AddToClassList("event-card"); battleCard.AddToClassList("battle-card");
+            var head = new VisualElement(); head.AddToClassList("panel-head");
+            var t = new Label($"BATTLE REPORT · TURN {b.Turn}"); t.AddToClassList("panel-title"); head.Add(t);
+            var close = new Button(CloseBattle) { text = "×", tooltip = "Close (Esc)" }; close.AddToClassList("tbtn"); head.Add(close);
+            battleCard.Add(head);
+            var body = new ScrollView(); body.AddToClassList("event-body"); battleCard.Add(body);
+
+            var title = new Label($"The battle at {where}"); title.AddToClassList("event-title"); body.Add(title);
+            var verdict = new Label(Named(b.Why)); verdict.AddToClassList("event-story"); body.Add(verdict);
+
+            var sides = new VisualElement { style = { flexDirection = FlexDirection.Row, marginTop = 4 } };
+            var attackSide = Side(b.Attacker, CountryLook.NameOf(b.Attacker), "attacking", b.AttackerArmies, b.AttackerSoldiers, 0, b.AttackerLost, b.AttackerWon, b);
+            var defenceSide = Side(b.Defender, them, b.DefenderKind == "army" ? "defending" : b.DefenderKind == "militia" ? "its militia" : "neutral garrison", b.DefenderArmies, b.DefenderSoldiers, b.Militia, b.DefenderLost, !b.AttackerWon, b);
+            // R3: each side's mix, as it stood (losses come from every type in proportion); a garrison or militia fights as pikes.
+            if (b.CounterNote != null || b.AttackCounter != 1 || b.DefenceCounter != 1)
+            {
+                // The rules' own record of each side as the battle began (#323), or the replay's reckoning without one.
+                string atk = ArmyLook.MixText(b.AttackerMix) ?? e.AttackMix, def = ArmyLook.MixText(b.DefenderMix) ?? e.DefenceMix;
+                if (atk != null) attackSide.Add(Text(atk, "src"));
+                if (def != null) defenceSide.Add(Text(def, "src"));
+            }
+            // R3's generals: who commanded each side, as the rules recorded it.
+            if (b.AttackerCommander != null) attackSide.Add(Text("led by " + b.AttackerCommander, "src"));
+            if (b.DefenderCommander != null) defenceSide.Add(Text("led by " + b.DefenderCommander, "src"));
+            sides.Add(attackSide);
+            sides.Add(defenceSide);
+            body.Add(sides);
+
+            body.Add(SectionHead("WHAT DECIDED IT", "strength, side by side"));
+            double max = Math.Max(1, Math.Max(b.AttackStrength, b.DefenceStrength));
+            body.Add(Bar("Soldiers", b.AttackerSoldiers, b.DefenderSoldiers, max, b, plain: true));
+            if (b.FortTerm > 0) body.Add(Bar(b.Forts == 1 ? "1 fort" : $"{b.Forts} forts", 0, b.FortTerm, max, b));
+            if (b.CapitalTerm > 0) body.Add(Bar("The capital", 0, b.CapitalTerm, max, b));
+            // R3: the counter's effect and the generals', as the rules weighed them, in the report's own words.
+            if (b.AttackCounter != 1 || b.DefenceCounter != 1)
+                body.Add(Bar($"Unit types ×{b.AttackCounter:0.00} and ×{b.DefenceCounter:0.00}", b.AttackerSoldiers * (b.AttackCounter - 1), b.DefenderSoldiers * (b.DefenceCounter - 1), max, b));
+            if (b.AttackGeneral != 1 || b.DefenceGeneral != 1)
+                body.Add(Bar($"Generals ×{b.AttackGeneral:0.00} and ×{b.DefenceGeneral:0.00}", b.AttackerSoldiers * (b.AttackGeneral - 1), b.DefenderSoldiers * (b.DefenceGeneral - 1), max, b));
+            body.Add(Bar($"The dice ×{b.AttackRoll:0.00} and ×{b.DefenceRoll:0.00}", b.AttackerSoldiers * (b.AttackRoll - 1), b.DefenderSoldiers * (b.DefenceRoll - 1), max, b));
+            body.Add(Bar("Strength", b.AttackStrength, b.DefenceStrength, max, b, plain: true, total: true));
+            var told = new[] { b.CounterNote, b.GeneralNote }.Where(x => !string.IsNullOrEmpty(x)).Select(x => Cap1(Named(x).TrimEnd('.')) + ".").ToList();
+            if (told.Count > 0) body.Add(Text(string.Join(" ", told), "event-chose"));
+            bool r3 = ArmyRules || b.AttackCounter != 1 || b.DefenceCounter != 1 || b.AttackGeneral != 1 || b.DefenceGeneral != 1 || b.CounterNote != null || b.GeneralNote != null;
+            if (b.Terrain != null) body.Add(Text(r3 ? $"Fought on {b.Terrain}: terrain does not change a battle yet." : $"Fought on {b.Terrain}: terrain does not change a battle.", "src"));
+
+            var after = new List<string>();
+            foreach (var kv in b.Retreats) after.Add($"{Chronicle.Host(kv.Key)} fell back to {Cap(kv.Value)}");
+            if (b.Routed) after.Add(b.Retreats.Count == 0 ? "The loser was routed: destroyed, with nowhere to go or beaten by more than 2.5 to 1" : "Some of the loser's armies were routed");
+            if (after.Count > 0) body.Add(Text(string.Join(". ", after) + ".", "event-effect"));
+            Root.Add(battleCard);
+        }
+
+        public void CloseBattle() { battleCard?.RemoveFromHierarchy(); battleCard = null; }
+
+        private static string Cap1(string s) => string.IsNullOrEmpty(s) ? s : char.ToUpperInvariant(s[0]) + s.Substring(1);
+
+        /// <summary>R3: a small drawn mark for a unit type: a pike's head, a horseshoe, a drawn bow.</summary>
+        public sealed class TypeMark : VisualElement
+        {
+            public UnitType Type;
+            public TypeMark()
+            {
+                pickingMode = PickingMode.Ignore;
+                generateVisualContent += ctx =>
+                {
+                    var p = ctx.painter2D; float w = contentRect.width, h = contentRect.height;
+                    p.strokeColor = new Color(0.97f, 0.92f, 0.8f, 1); p.fillColor = p.strokeColor; p.lineWidth = 1.4f; p.lineCap = LineCap.Round;
+                    switch (Type)
+                    {
+                        case UnitType.Pikes:
+                            p.BeginPath(); p.MoveTo(new Vector2(w / 2, h)); p.LineTo(new Vector2(w / 2, h * 0.3f)); p.Stroke();
+                            p.BeginPath(); p.MoveTo(new Vector2(w / 2, 0)); p.LineTo(new Vector2(w * 0.25f, h * 0.38f)); p.LineTo(new Vector2(w * 0.75f, h * 0.38f)); p.ClosePath(); p.Fill();
+                            break;
+                        case UnitType.Riders:
+                            p.BeginPath(); p.Arc(new Vector2(w / 2, h * 0.45f), w * 0.36f, Angle.Degrees(20), Angle.Degrees(160), ArcDirection.CounterClockwise); p.Stroke();
+                            break;
+                        default:
+                            p.BeginPath(); p.Arc(new Vector2(w * 0.25f, h / 2), h * 0.48f, Angle.Degrees(-70), Angle.Degrees(70)); p.Stroke();
+                            p.BeginPath(); p.MoveTo(new Vector2(w * 0.41f, h * 0.05f)); p.LineTo(new Vector2(w * 0.41f, h * 0.95f)); p.Stroke();
+                            break;
+                    }
+                };
+            }
+        }
+
+        /// <summary>R3: an army's mix as three small bars, pikes, riders and bows, with the counts in the tooltip.</summary>
+        public sealed class MixBars : VisualElement
+        {
+            public MixBars(ArmyState a)
+            {
+                AddToClassList("mix-bars");
+                tooltip = ArmyLook.Mix(a);
+                int total = Math.Max(1, a.Pikes + a.Riders + a.Bows);
+                foreach (var t in Units.All)
+                {
+                    var bar = new VisualElement(); bar.AddToClassList("mix-bar"); bar.AddToClassList("mix-" + Units.Name(t));
+                    bar.style.width = Length.Percent(100f * ArmyLook.Count(a, t) / total);
+                    Add(bar);
+                }
+            }
+        }
+        public bool BattleOpen => battleCard != null;
+
+        private VisualElement Side(string country, string name, string role, List<string> armies, int soldiers, int militia, int lost, bool won, BattleRecord b)
+        {
+            var col = new VisualElement { style = { flexGrow = 1, flexBasis = 0, marginRight = 8 } };
+            var row = new VisualElement(); row.AddToClassList("event-row");
+            if (country != null) row.Add(new Crest(CountryLook.Of(country), 22));
+            var n = new Label(name); n.AddToClassList("event-name"); row.Add(n);
+            col.Add(row);
+            col.Add(Text($"{role}{(won ? " · won" : " · lost")}", won ? "event-chose" : "event-effect"));
+            string who = armies.Count > 0 ? string.Join(", ", armies.Select(Chronicle.Host)) : "";
+            if (militia > 0) who += (who.Length > 0 ? " and " : "") + $"{(country == null ? "a garrison" : "the militia")} of {militia}";
+            col.Add(Text($"{soldiers} soldiers{(who.Length > 0 ? ": " + who : "")}", "src"));
+            col.Add(Text($"Lost {lost}", "event-effect"));
+            return col;
+        }
+
+        // One term as two bars, the attacker's growing left of the middle, the defender's right.
+        /// <summary>A sentence of the rules' with country ids as names: "valen won" reads "Valen won".</summary>
+        private string Named(string text) => Words.Plain(text);
+
+        private static VisualElement Bar(string label, double attack, double defence, double max, BattleRecord b, bool plain = false, bool total = false)
+        {
+            var row = new VisualElement(); row.AddToClassList("battle-bar");
+            var l = new Label(label); l.AddToClassList("battle-bar-label"); row.Add(l);
+            var track = new VisualElement(); track.AddToClassList("battle-track");
+            var left = new VisualElement(); left.AddToClassList("battle-half"); left.style.justifyContent = Justify.FlexEnd; left.style.flexDirection = FlexDirection.Row;
+            var right = new VisualElement(); right.AddToClassList("battle-half"); right.style.flexDirection = FlexDirection.Row;
+            var a = new VisualElement(); a.AddToClassList("battle-fill"); a.style.width = Length.Percent((float)(100 * Math.Max(0, attack) / max));
+            a.style.backgroundColor = (Color)CountryLook.Of(b.Attacker).Colour;
+            var d = new VisualElement(); d.AddToClassList("battle-fill"); d.style.width = Length.Percent((float)(100 * Math.Max(0, defence) / max));
+            d.style.backgroundColor = b.Defender != null ? (Color)CountryLook.Of(b.Defender).Colour : new Color(0.6f, 0.56f, 0.48f);
+            left.Add(a); right.Add(d);
+            track.Add(left); track.Add(right);
+            row.Add(track);
+            var v = new Label(plain ? $"{attack:0} : {defence:0}" : $"{Signed(attack)} : {Signed(defence)}"); v.AddToClassList("battle-bar-value"); row.Add(v);
+            if (total) row.AddToClassList("total");
+            return row;
+        }
+
+        private static string Signed(double v) => Math.Abs(v) < 0.5 ? "0" : v > 0 ? $"+{v:0}" : $"{v:0}";
+
+        // ---- the treaty's seal ----
+
+        /// <summary>A wax seal stamping on a province for a moment as a treaty lands: grows in, holds, fades.</summary>
+        public VisualElement StampSeal(int province, string country)
+        {
+            var seal = new VisualElement { pickingMode = PickingMode.Ignore }; seal.AddToClassList("seal");
+            seal.Add(new Crest(CountryLook.Of(country), 20));
+            var p = ProvinceToPanel(province);
+            seal.style.left = p.x; seal.style.top = p.y;
+            labels.Add(seal);
+            seal.schedule.Execute(() => seal.AddToClassList("on")).StartingIn(16);
+            seal.schedule.Execute(() => seal.RemoveFromClassList("on")).StartingIn(1100);
+            seal.schedule.Execute(() => seal.RemoveFromHierarchy()).StartingIn(1500);
+            return seal;
+        }
+    }
+}

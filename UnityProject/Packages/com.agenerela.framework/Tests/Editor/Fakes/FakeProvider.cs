@@ -99,6 +99,13 @@ namespace Agenerela.Tests
         /// <summary>When true, the reply stays pending until <see cref="Release"/> or cancellation.</summary>
         public bool Hold;
 
+        /// <summary>
+        /// When true, a held request ignores its cancellation token and stays pending until
+        /// <see cref="Release"/>, as a backend that does not honour cancellation would: what a
+        /// <see cref="Conversation"/>'s deadline must not wait for (#190, Living Vale #8).
+        /// </summary>
+        public bool IgnoresCancellation;
+
         /// <summary>How many requests <see cref="Hold"/> is keeping pending now.</summary>
         public int HeldCount => held.Count;
 
@@ -148,6 +155,11 @@ namespace Agenerela.Tests
             {
                 var entry = new HeldRequest { Source = source };
                 held.Add(entry);
+                if (IgnoresCancellation)
+                {
+                    return source.Awaitable;
+                }
+
                 entry.Cancellation = ct.Register(() =>
                 {
                     if (!held.Remove(entry))

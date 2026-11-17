@@ -1,0 +1,6 @@
+{
+  "name": "LivingVale",
+  "rootNamespace": "LivingVale",
+  "references": ["Agenerela", "Unity.InputSystem", "UnityEngine.UI"],
+  "autoReferenced": true
+}

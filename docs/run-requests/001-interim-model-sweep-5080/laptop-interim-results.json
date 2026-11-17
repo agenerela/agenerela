@@ -1,0 +1,142 @@
+{
+ "describe": "The lead's laptop, 9 November 2026: the interim set, 389 prompts, origin/test db16c03, the same server set-up. qwen3.5:2b only: the sweep was stopped there and moved to the RTX 5080 (this request). Per-prompt answers left out.",
+ "baseline": "qwen3.5:2b",
+ "noise_floor": "10 x sqrt(50 / n) points",
+ "models": [
+  {
+   "model": "qwen3.5:2b",
+   "template": "renderer_parser",
+   "order_kept": "2/2",
+   "thinking_replies": 0,
+   "idle_on": {
+    "correct": 265,
+    "n": 389,
+    "accuracy": 68.1,
+    "categories": {
+     "command_with_target": {
+      "correct": 63,
+      "n": 66,
+      "pct": 95.5
+     },
+     "conversation": {
+      "correct": 44,
+      "n": 64,
+      "pct": 68.8
+     },
+     "event": {
+      "correct": 39,
+      "n": 65,
+      "pct": 60.0
+     },
+     "impossible_request": {
+      "correct": 41,
+      "n": 64,
+      "pct": 64.1
+     },
+     "simple_command": {
+      "correct": 46,
+      "n": 65,
+      "pct": 70.8
+     },
+     "situation": {
+      "correct": 32,
+      "n": 65,
+      "pct": 49.2
+     }
+    },
+    "stop_following": {
+     "correct": 21,
+     "n": 48
+    },
+    "unasked_actions": {
+     "count": 46,
+     "n": 156
+    },
+    "missed_requests": {
+     "count": 37,
+     "n": 233
+    },
+    "latency_s": {
+     "median": 0.656,
+     "p90": 0.812
+    },
+    "replies": {
+     "checked": 389,
+     "echo": 14,
+     "empty": 0,
+     "tooLong": 0,
+     "leak": 0,
+     "flagged": 14
+    }
+   },
+   "idle_off": {
+    "correct": 279,
+    "n": 389,
+    "accuracy": 71.7,
+    "categories": {
+     "command_with_target": {
+      "correct": 60,
+      "n": 66,
+      "pct": 90.9
+     },
+     "conversation": {
+      "correct": 44,
+      "n": 64,
+      "pct": 68.8
+     },
+     "event": {
+      "correct": 40,
+      "n": 65,
+      "pct": 61.5
+     },
+     "impossible_request": {
+      "correct": 47,
+      "n": 64,
+      "pct": 73.4
+     },
+     "simple_command": {
+      "correct": 57,
+      "n": 65,
+      "pct": 87.7
+     },
+     "situation": {
+      "correct": 31,
+      "n": 65,
+      "pct": 47.7
+     }
+    },
+    "stop_following": {
+     "correct": 39,
+     "n": 48
+    },
+    "unasked_actions": {
+     "count": 51,
+     "n": 156
+    },
+    "missed_requests": {
+     "count": 22,
+     "n": 233
+    },
+    "latency_s": {
+     "median": 0.647,
+     "p90": 0.802
+    },
+    "replies": {
+     "checked": 389,
+     "echo": 6,
+     "empty": 0,
+     "tooLong": 0,
+     "leak": 0,
+     "flagged": 6
+    }
+   },
+   "vram": [
+    {
+     "name": "qwen3.5:2b",
+     "size_mb": 2254,
+     "size_vram_mb": 2254
+    }
+   ]
+  }
+ ]
+}

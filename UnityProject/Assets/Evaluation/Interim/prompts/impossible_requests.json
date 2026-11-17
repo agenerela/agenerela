@@ -1,0 +1,1258 @@
+{
+  "category": "impossible_request",
+  "prompts": [
+    {
+      "id": "int_impossible_001",
+      "label": "Player",
+      "stimulus": "Quit tailing me.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The guard is not following, so there is nothing to stop.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_002",
+      "label": "Player",
+      "stimulus": "Stop trailing after me.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The guard is not following, so there is nothing to stop.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_003",
+      "label": "Player",
+      "stimulus": "No more escorting me, thanks.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The guard is not following, so there is nothing to stop.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_004",
+      "label": "Player",
+      "stimulus": "Stop shadowing me, will you.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The guard is not following, so there is nothing to stop.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_005",
+      "label": "Player",
+      "stimulus": "Enough of you following me around.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The guard is not following, so there is nothing to stop.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_006",
+      "label": "Player",
+      "stimulus": "Leave off following me.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The guard is not following, so there is nothing to stop.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_007",
+      "label": "Player",
+      "stimulus": "Give it a rest with the following.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The guard is not following, so there is nothing to stop.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_008",
+      "label": "Player",
+      "stimulus": "Don't keep following me.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The guard is not following, so there is nothing to stop.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_009",
+      "label": "Player",
+      "stimulus": "Slay the dragon on the hill.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "No dragon is registered.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_010",
+      "label": "Player",
+      "stimulus": "Bring me the king's crown.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Fetching is no action, and no crown is registered.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_011",
+      "label": "Player",
+      "stimulus": "Breathe underwater for an hour.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_012",
+      "label": "Player",
+      "stimulus": "Ride to the capital.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "note": "The capital is not a registered place.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_013",
+      "label": "Player",
+      "stimulus": "Fetch the blacksmith.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Fetching is no action, and the blacksmith is not registered.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_014",
+      "label": "Player",
+      "stimulus": "Arrest the baker.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Arresting is no action, and the baker is not registered.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_015",
+      "label": "Player",
+      "stimulus": "Turn the stream to wine.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_016",
+      "label": "Player",
+      "stimulus": "Fight the bandits.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "No bandits are registered.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_017",
+      "label": "Player",
+      "stimulus": "Attack the troll under the bridge.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "note": "The bridge is registered, the troll is not: attacking the bridge is not what was asked.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_018",
+      "label": "Player",
+      "stimulus": "Make it stop raining.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_019",
+      "label": "Player",
+      "stimulus": "Freeze time.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_020",
+      "label": "Player",
+      "stimulus": "Read my mind.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_021",
+      "label": "Player",
+      "stimulus": "Grow wings and fly over the wall.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_022",
+      "label": "Player",
+      "stimulus": "Become invisible.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_023",
+      "label": "Player",
+      "stimulus": "Summon an army.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_024",
+      "label": "Player",
+      "stimulus": "Give me a thousand gold coins.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_025",
+      "label": "Player",
+      "stimulus": "Marry me.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_026",
+      "label": "Player",
+      "stimulus": "Cook me a feast.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_027",
+      "label": "Player",
+      "stimulus": "Order the villagers to leave.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Ordering people about is no action.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_028",
+      "label": "Player",
+      "stimulus": "Ring the alarm bell.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "No bell is registered, and ringing is no action.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_029",
+      "label": "Player",
+      "stimulus": "Find my lost ring.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "note": "Searching is no action.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_030",
+      "label": "Player",
+      "stimulus": "Kill the merchant.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The merchant is not a registered target.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_031",
+      "label": "Player",
+      "stimulus": "Defeat the giant spider in the cave.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The cave is registered, the spider is not.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_032",
+      "label": "Player",
+      "stimulus": "Run to the next kingdom and back before lunch.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_033",
+      "label": "Player",
+      "stimulus": "Juggle three torches.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_034",
+      "label": "Player",
+      "stimulus": "Attack yourself.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_035",
+      "label": "Player",
+      "stimulus": "Follow the merchant home.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "follow_player follows the player, not the merchant.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_036",
+      "label": "Player",
+      "stimulus": "Follow the wolf into the woods.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "follow_player follows the player only. The wolf is registered, but following it is no action, and nobody asked to attack it.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_037",
+      "label": "Player",
+      "stimulus": "Speak to the dead.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_038",
+      "label": "Player",
+      "stimulus": "Go everywhere at once.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_039",
+      "label": "Player",
+      "stimulus": "Walk through the wall.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_040",
+      "label": "Player",
+      "stimulus": "Bring the rain back up into the clouds.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_041",
+      "label": "Player",
+      "stimulus": "Stab the well with your spear.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The well is registered but cannot be fought.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_042",
+      "label": "Player",
+      "stimulus": "Climb down into the well.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Going down the well is no action; walking to it does not do it (compare impossible_008).",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_043",
+      "label": "Player",
+      "stimulus": "Burn down the market.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Burning is no action, and it goes against the guard's goals.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_044",
+      "label": "Player",
+      "stimulus": "Unlock the cave.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Unlocking is no action; walking to the cave does not do it (compare impossible_008).",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_045",
+      "label": "Player",
+      "stimulus": "Break the lock on the cave and go in.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "note": "Neither breaking the lock nor entering is an action.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_046",
+      "label": "Player",
+      "stimulus": "Tear down the north tower.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_047",
+      "label": "Player",
+      "stimulus": "Sink the docks.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_048",
+      "label": "Player",
+      "stimulus": "Tame the wolf and make it a pet.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Taming is no action, and attacking is not what was asked.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_049",
+      "label": "Player",
+      "stimulus": "Ride the wolf to the bridge.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_050",
+      "label": "Player",
+      "stimulus": "Carry the well over to the market.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_051",
+      "label": "Player",
+      "stimulus": "Lift the village gate off its hinges.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_052",
+      "label": "Player",
+      "stimulus": "Drink the stream dry under the bridge.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_053",
+      "label": "Player",
+      "stimulus": "Pick up the campfire and bring it here.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_054",
+      "label": "Player",
+      "stimulus": "Move the shelter closer to the gate.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Moving a building is no action; move_to moves the guard.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_055",
+      "label": "Player",
+      "stimulus": "Talk the wolf into leaving.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Persuading is no action, and attacking is not what was asked.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_056",
+      "label": "Player",
+      "stimulus": "Pick a fight with the campfire.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The campfire is registered but cannot be fought.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_057",
+      "label": "Player",
+      "stimulus": "Smash the shelter's walls in.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "note": "The shelter is registered but attacking it goes against the guard's goals.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_058",
+      "label": "Player",
+      "stimulus": "Make me appear on the docks by magic.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Moving the player by magic is no action.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_059",
+      "label": "Player",
+      "stimulus": "Close the gate.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Closing is no action; walking to the gate does not do it (compare impossible_008).",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_060",
+      "label": "Player",
+      "stimulus": "Build a new bridge across the stream.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_061",
+      "label": "Player",
+      "stimulus": "Tell the wolf to sit.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_062",
+      "label": "Player",
+      "stimulus": "Rob the market stalls for me.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Stealing is no action, and it goes against the guard's goals.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_063",
+      "label": "Player",
+      "stimulus": "Hold the cave door open for me.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The cave is locked, and holding a door is no action.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_impossible_064",
+      "label": "Player",
+      "stimulus": "Throw the north tower at the wolf.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Two registered targets, neither used by any action in the way asked.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    }
+  ]
+}

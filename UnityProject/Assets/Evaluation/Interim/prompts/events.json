@@ -1,0 +1,1389 @@
+{
+  "category": "event",
+  "prompts": [
+    {
+      "id": "int_event_001",
+      "label": "Event",
+      "stimulus": "The supper bell rang.",
+      "observations": [
+        "Villagers are heading home to eat"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_event_002",
+      "label": "Event",
+      "stimulus": "A dog barked twice.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_event_003",
+      "label": "Event",
+      "stimulus": "A trader set up a new stall.",
+      "observations": [
+        "The market is calm"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_event_004",
+      "label": "Event",
+      "stimulus": "A supply boat left the docks on schedule.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_event_005",
+      "label": "Event",
+      "stimulus": "The night shift began.",
+      "observations": [
+        "Another guard took the north tower"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_event_006",
+      "label": "Event",
+      "stimulus": "A child dropped a toy into the well.",
+      "observations": [
+        "The child's mother is fishing it out with a bucket"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_event_007",
+      "label": "Event",
+      "stimulus": "The rain stopped.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_event_008",
+      "label": "Event",
+      "stimulus": "A farmer drove his cart over the bridge.",
+      "observations": [
+        "The cart crossed safely"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_event_009",
+      "label": "Event",
+      "stimulus": "The wolf ran back into the woods.",
+      "observations": [
+        "The wolf is out of sight",
+        "Nobody was hurt"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The wolf is registered, but it has gone.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_event_010",
+      "label": "Event",
+      "stimulus": "A lantern went out by the shelter.",
+      "observations": [
+        "The shelter is empty"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_event_011",
+      "label": "Event",
+      "stimulus": "Someone laughed at the campfire.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_event_012",
+      "label": "Event",
+      "stimulus": "A traveller came in off the eastern road and was greeted at the gate.",
+      "observations": [
+        "The traveller is unarmed and friendly"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_event_013",
+      "label": "Event",
+      "stimulus": "The player sneezed.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_event_014",
+      "label": "Event",
+      "stimulus": "The player bought a pie.",
+      "observations": [
+        "The player is eating it while walking"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_event_015",
+      "label": "Event",
+      "stimulus": "A crow landed on the north tower.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_event_016",
+      "label": "Event",
+      "stimulus": "The cave's lock rattled in the wind.",
+      "observations": [
+        "Nobody is near the cave"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_event_017",
+      "label": "Event",
+      "stimulus": "A guard reported all clear at the gate.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_event_018",
+      "label": "Event",
+      "stimulus": "Fireworks went off over the market.",
+      "observations": [
+        "It is the harvest festival",
+        "The crowd is cheering"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_event_019",
+      "label": "Event",
+      "stimulus": "A cart blocked the road east for a minute, then moved on.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_event_020",
+      "label": "Event",
+      "stimulus": "A villager screamed near the well.",
+      "observations": [
+        "Villagers are running from the well"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "well",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/well",
+        "codex": "move_to/well"
+      }
+    },
+    {
+      "id": "int_event_021",
+      "label": "Event",
+      "stimulus": "The harbour bell rang three times.",
+      "observations": [
+        "Three rings means trouble at the docks"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "docks",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The target is named only in the observations.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/docks",
+        "codex": "move_to/docks"
+      }
+    },
+    {
+      "id": "int_event_022",
+      "label": "Event",
+      "stimulus": "A messenger said bandits are blocking the bridge.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "bridge",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The bandits are not registered; the bridge is.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/bridge",
+        "codex": "move_to/bridge"
+      }
+    },
+    {
+      "id": "int_event_023",
+      "label": "Event",
+      "stimulus": "Someone is hammering on the village gate from outside.",
+      "observations": [
+        "It is past curfew"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "village_gate",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/village_gate",
+        "codex": "move_to/village_gate"
+      }
+    },
+    {
+      "id": "int_event_024",
+      "label": "Event",
+      "stimulus": "The shelter's roof caved in.",
+      "observations": [
+        "Two villagers are trapped under it"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "shelter",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/shelter",
+        "codex": "move_to/shelter"
+      }
+    },
+    {
+      "id": "int_event_025",
+      "label": "Event",
+      "stimulus": "Smoke was seen over the guards' camp.",
+      "observations": [
+        "Nobody is at the camp"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "campfire",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/campfire",
+        "codex": "move_to/campfire"
+      }
+    },
+    {
+      "id": "int_event_026",
+      "label": "Event",
+      "stimulus": "The lookout blew his horn.",
+      "observations": [
+        "The horn means come to the north tower"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "north_tower",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The target is named only in the observations.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/north_tower",
+        "codex": "move_to/north_tower"
+      }
+    },
+    {
+      "id": "int_event_027",
+      "label": "Event",
+      "stimulus": "A rider fell from his horse out on the eastern road.",
+      "observations": [
+        "The rider is not moving"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "eastern_road",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/eastern_road",
+        "codex": "move_to/eastern_road"
+      }
+    },
+    {
+      "id": "int_event_028",
+      "label": "Event",
+      "stimulus": "A thief grabbed a purse and vanished into the crowd.",
+      "observations": [
+        "It happened in the market",
+        "The trader is shouting for a guard"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "market",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The target is named only in the observations.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/market",
+        "codex": "move_to/market"
+      }
+    },
+    {
+      "id": "int_event_029",
+      "label": "Event",
+      "stimulus": "The captain ordered every guard to the gate.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "village_gate",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/village_gate",
+        "codex": "move_to/village_gate"
+      }
+    },
+    {
+      "id": "int_event_030",
+      "label": "Event",
+      "stimulus": "A boat crashed into the pier.",
+      "observations": [
+        "Sailors are in the water at the docks"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "docks",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/docks",
+        "codex": "move_to/docks"
+      }
+    },
+    {
+      "id": "int_event_031",
+      "label": "Event",
+      "stimulus": "A child fell off the railing.",
+      "observations": [
+        "The child is clinging to a post under the bridge"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "bridge",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The target is named only in the observations.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/bridge",
+        "codex": "move_to/bridge"
+      }
+    },
+    {
+      "id": "int_event_032",
+      "label": "Event",
+      "stimulus": "Someone smashed the lock on the cave.",
+      "observations": [
+        "Footprints lead into the cave",
+        "Its door is hanging open"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "locked_cave",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Nobody asks the guard to go in: going to the cave's entrance to see is the help it can give, as in event_011.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/locked_cave",
+        "codex": "move_to/locked_cave"
+      }
+    },
+    {
+      "id": "int_event_033",
+      "label": "Event",
+      "stimulus": "The well rope snapped.",
+      "observations": [
+        "A villager was halfway down the well"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "well",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/well",
+        "codex": "move_to/well"
+      }
+    },
+    {
+      "id": "int_event_034",
+      "label": "Event",
+      "stimulus": "A scream came from the north tower.",
+      "observations": [
+        "The tower's lookout has not answered"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "north_tower",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/north_tower",
+        "codex": "move_to/north_tower"
+      }
+    },
+    {
+      "id": "int_event_035",
+      "label": "Event",
+      "stimulus": "A brawl started outside the shelter.",
+      "observations": [
+        "The fight is at the shelter door",
+        "Children are inside"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "shelter",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/shelter",
+        "codex": "move_to/shelter"
+      }
+    },
+    {
+      "id": "int_event_036",
+      "label": "Event",
+      "stimulus": "A lookout spotted torches far down the eastern road.",
+      "observations": [
+        "Riders are coming toward the village"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "eastern_road",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/eastern_road",
+        "codex": "move_to/eastern_road"
+      }
+    },
+    {
+      "id": "int_event_037",
+      "label": "Event",
+      "stimulus": "The player's horse bolted into the market.",
+      "observations": [
+        "The horse is trampling stalls",
+        "The player is still beside you"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "market",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/market",
+        "codex": "move_to/market"
+      }
+    },
+    {
+      "id": "int_event_038",
+      "label": "Event",
+      "stimulus": "A woman called for help from the campfire.",
+      "observations": [
+        "Her child is near the flames"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "campfire",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/campfire",
+        "codex": "move_to/campfire"
+      }
+    },
+    {
+      "id": "int_event_039",
+      "label": "Event",
+      "stimulus": "Word came that a guard is needed down by the water or in the stalls.",
+      "observations": [
+        "The docks are unguarded",
+        "The market is unguarded",
+        "The captain said either needs a guard"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": [
+        "docks",
+        "market"
+      ],
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "An open choice: either place is right.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/docks",
+        "codex": "move_to/docks"
+      }
+    },
+    {
+      "id": "int_event_040",
+      "label": "Event",
+      "stimulus": "A wolf bit a villager.",
+      "observations": [
+        "The wolf is still nearby",
+        "The villager is bleeding"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_event_041",
+      "label": "Event",
+      "stimulus": "Something lunged at the player.",
+      "observations": [
+        "A wolf has its jaws on the player's cloak"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "note": "The target is named only in the observations.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_event_042",
+      "label": "Event",
+      "stimulus": "The wolf jumped the market wall.",
+      "observations": [
+        "The wolf is among the shoppers"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_event_043",
+      "label": "Event",
+      "stimulus": "A goat was dragged off from the pens.",
+      "observations": [
+        "A wolf is dragging the goat toward the woods",
+        "The farmer is chasing it"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The target is named only in the observations.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_event_044",
+      "label": "Event",
+      "stimulus": "A wolf burst out of the trees at the bridge.",
+      "observations": [
+        "A farmer is on the bridge",
+        "The wolf is charging the farmer"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_event_045",
+      "label": "Event",
+      "stimulus": "The player shouted for help.",
+      "observations": [
+        "A wolf is biting the player's leg"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "note": "The target is named only in the observations.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_event_046",
+      "label": "Event",
+      "stimulus": "The camp dog yelped and went silent.",
+      "observations": [
+        "A wolf is standing over the dog",
+        "The guards are asleep in their tents"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The target is named only in the observations.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_event_047",
+      "label": "Event",
+      "stimulus": "A wolf sprang at a trader by the gate.",
+      "observations": [
+        "The trader is on the ground",
+        "The wolf is at the village gate"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The gate is where it happens; the wolf is the target.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_event_048",
+      "label": "Event",
+      "stimulus": "A wolf ran into the square.",
+      "observations": [
+        "People are fleeing the well",
+        "The wolf is snapping at them"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_event_049",
+      "label": "Event",
+      "stimulus": "A wolf leapt onto a fishing boat.",
+      "observations": [
+        "A fisherman is fending it off with an oar"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_event_050",
+      "label": "Event",
+      "stimulus": "The player tripped while running.",
+      "observations": [
+        "A wolf is right behind the player"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "note": "The target is named only in the observations.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_event_051",
+      "label": "Event",
+      "stimulus": "The hens started squawking.",
+      "observations": [
+        "A wolf is inside the henhouse",
+        "The farmer's daughter is inside too"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The target is named only in the observations.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_event_052",
+      "label": "Event",
+      "stimulus": "A wolf charged at you.",
+      "observations": [
+        "The wolf is two steps away"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_event_053",
+      "label": "Event",
+      "stimulus": "A villager is being chased.",
+      "observations": [
+        "A wolf is chasing a villager down the eastern road"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The road is where it happens; the wolf is the target.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_event_054",
+      "label": "Event",
+      "stimulus": "A wolf got into the shelter.",
+      "observations": [
+        "Villagers are screaming inside the shelter"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_event_055",
+      "label": "Event",
+      "stimulus": "The scout came back wounded.",
+      "observations": [
+        "A wolf followed him through the gate",
+        "It is attacking him again"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The target is named only in the observations.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_event_056",
+      "label": "Event",
+      "stimulus": "The player opened the gate to leave.",
+      "observations": [
+        "The player is walking out alone",
+        "Bandits were reported last night"
+      ],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_event_057",
+      "label": "Event",
+      "stimulus": "The player said goodbye to the innkeeper and headed for the eastern road.",
+      "observations": [
+        "The player is carrying gold"
+      ],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The road is where the player is going; following is the action.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_event_058",
+      "label": "Event",
+      "stimulus": "The player signalled for you to come.",
+      "observations": [
+        "The player is walking off toward the docks"
+      ],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_event_059",
+      "label": "Event",
+      "stimulus": "The player stepped onto the night road.",
+      "observations": [
+        "The player is unarmed",
+        "It is very dark"
+      ],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_event_060",
+      "label": "Event",
+      "stimulus": "The player boarded the ferry and waved at you to join.",
+      "observations": [
+        "There is room on the ferry"
+      ],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_event_061",
+      "label": "Event",
+      "stimulus": "The player arrived at their house.",
+      "observations": [
+        "The player went inside and shut the door"
+      ],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_event_062",
+      "label": "Event",
+      "stimulus": "The player entered the temple.",
+      "observations": [
+        "Armed guards must wait outside"
+      ],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_event_063",
+      "label": "Event",
+      "stimulus": "The player lay down to sleep by the campfire.",
+      "observations": [
+        "Other guards are watching the camp"
+      ],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_event_064",
+      "label": "Event",
+      "stimulus": "The player began a long talk with the mayor.",
+      "observations": [
+        "The mayor asked for privacy"
+      ],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_event_065",
+      "label": "Event",
+      "stimulus": "The player told the captain they no longer need an escort.",
+      "observations": [
+        "The captain agreed"
+      ],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    }
+  ]
+}

@@ -1,0 +1,448 @@
+/* Painted Realm, the gilt style. The design is docs/demos/grey-box-strategy-screen.md, round 2. */
+.root { flex-grow: 1; color: rgb(234, 223, 198); font-size: 13px; }
+.panel { position: absolute; background-color: rgb(18, 15, 12); border-width: 1px; border-color: rgba(201, 164, 90, 0.55); }
+.panel-head { flex-direction: row; align-items: center; height: 30px; padding-left: 10px; padding-right: 8px; background-color: rgba(44, 35, 25, 0.9); border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.22); }
+.panel-title { font-size: 14px; -unity-font-style: bold; letter-spacing: 1px; flex-grow: 1; color: rgb(234, 223, 198); }
+.muted { color: rgb(141, 127, 102); }
+.good { color: rgb(143, 191, 122); }
+.bad { color: rgb(208, 97, 76); }
+.warn { color: rgb(216, 162, 74); }
+.icon { color: rgb(194, 179, 147); }
+
+/* top bar */
+.topbar { position: absolute; left: 0; right: 0; top: 0; height: 42px; flex-direction: row; align-items: stretch; background-color: rgb(30, 24, 17); border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.55); }
+.brand { flex-direction: row; align-items: center; padding-left: 12px; padding-right: 12px; border-right-width: 1px; border-right-color: rgba(201, 164, 90, 0.22); font-size: 15px; -unity-font-style: bold; letter-spacing: 2px; }
+.nations { flex-direction: row; flex-grow: 1; flex-shrink: 1; min-width: 0; overflow: hidden; }
+.time, .brand { flex-shrink: 0; }
+.tight .pips, .tight .stat-delta, .tight .gold-stat { display: none; }
+.tight .nation { padding-left: 6px; padding-right: 6px; }
+.nation { flex-direction: row; align-items: center; padding-left: 9px; padding-right: 9px; border-right-width: 1px; border-right-color: rgba(201, 164, 90, 0.22); }
+.nation:hover { background-color: rgba(210, 173, 98, 0.14); }
+.nation.out { opacity: 0.35; }
+.nation-name { font-size: 13px; -unity-font-style: bold; margin-left: 5px; margin-right: 6px; letter-spacing: 1px; }
+.stat { flex-direction: row; align-items: center; margin-right: 7px; }
+.stat-value { -unity-font-style: bold; margin-left: 2px; font-size: 12px; }
+.stat-delta { font-size: 11px; margin-left: 2px; }
+.pip { width: 4px; height: 9px; margin-right: 1px; background-color: rgba(141, 127, 102, 0.35); }
+.pip.on { background-color: rgb(210, 173, 98); }
+.flip { scale: 1.35 1.35; }
+.time { flex-direction: row; align-items: center; padding-left: 10px; padding-right: 10px; border-left-width: 1px; border-left-color: rgba(201, 164, 90, 0.22); }
+.phase { font-size: 11px; color: rgb(141, 127, 102); margin-right: 10px; min-width: 64px; }
+.turn { font-size: 14px; -unity-font-style: bold; letter-spacing: 1px; margin-right: 10px; }
+.tbtn { width: 26px; height: 24px; margin-left: -1px; padding: 0; align-items: center; justify-content: center; background-color: rgb(46, 36, 25); border-width: 1px; border-color: rgba(201, 164, 90, 0.55); border-radius: 0; color: rgb(234, 223, 198); }
+.tbtn:hover { border-color: rgb(210, 173, 98); }
+.tbtn.on { background-color: rgb(107, 82, 40); }
+.speed-pip { width: 4px; height: 9px; margin-left: 1px; margin-right: 1px; background-color: rgb(141, 127, 102); rotate: 15deg; }
+.speed-pip.on { background-color: rgb(210, 173, 98); }
+
+/* realm (outliner) */
+.realm { left: 8px; top: 50px; width: 232px; bottom: 8px; }
+.section-head { flex-direction: row; padding-left: 10px; padding-right: 10px; padding-top: 5px; padding-bottom: 5px; font-size: 10px; -unity-font-style: bold; letter-spacing: 2px; color: rgb(141, 127, 102); border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.22); background-color: rgba(0, 0, 0, 0.08); }
+.section-body { padding-left: 8px; padding-right: 8px; padding-top: 3px; padding-bottom: 6px; }
+.row { flex-direction: row; align-items: center; height: 24px; font-size: 12px; }
+/* A row whose text may wrap: as tall as its text. */
+.row.wraps { height: auto; min-height: 24px; padding-top: 2px; padding-bottom: 2px; align-items: flex-start; }
+.row:hover { background-color: rgba(210, 173, 98, 0.14); }
+.row-name { width: 54px; margin-left: 6px; }
+.bar { flex-grow: 1; height: 4px; background-color: rgba(127, 127, 127, 0.25); margin-left: 4px; margin-right: 6px; }
+.bar-fill { height: 4px; }
+.row-value { -unity-font-style: bold; width: 26px; -unity-text-align: middle-right; }
+
+/* chronicle */
+.chronicle { right: 8px; top: 50px; width: 340px; bottom: 8px; }
+.filters { flex-direction: row; flex-wrap: wrap; padding: 6px 8px; border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.22); }
+.chip { flex-direction: row; align-items: center; height: 20px; padding-left: 6px; padding-right: 6px; margin-right: 4px; margin-bottom: 4px; border-width: 1px; border-color: rgba(201, 164, 90, 0.22); background-color: rgba(210, 173, 98, 0.14); font-size: 11px; }
+.chip.off { opacity: 0.38; background-color: rgba(0, 0, 0, 0); }
+.list-more { font-size: 11.5px; -unity-font-style: italic; color: rgb(210, 173, 98); padding: 3px 0 2px 2px; }
+.list-more:hover { color: rgb(250, 232, 170); }
+.lg-turn { padding: 3px 10px; font-size: 11px; -unity-font-style: bold; letter-spacing: 2px; color: rgb(141, 127, 102); background-color: rgba(30, 24, 18, 0.96); border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.22); }
+.lg { flex-direction: row; padding: 5px 10px; border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.22); }
+.lg:hover { background-color: rgba(210, 173, 98, 0.14); }
+.lg.new { background-color: rgba(210, 173, 98, 0.32); transition-property: background-color; transition-duration: 1.6s; }
+.lg-body { flex-grow: 1; flex-shrink: 1; margin-left: 7px; }
+.lg-text { font-size: 12.5px; white-space: normal; -unity-font-style: bold; }
+.lg-item { font-size: 12.5px; white-space: normal; color: rgb(234, 223, 198); margin-top: 1px; }
+.lg-item:hover { color: rgb(250, 232, 170); }
+.lg-item-ref { color: rgb(214, 150, 130); }
+.lg-quote { font-size: 13px; white-space: normal; -unity-font-style: italic; color: rgb(194, 179, 147); margin-top: 2px; }
+.tag { font-size: 9px; -unity-font-style: bold; letter-spacing: 1px; padding: 1px 4px; border-width: 1px; border-color: rgba(201, 164, 90, 0.22); color: rgb(141, 127, 102); height: 16px; }
+.tag.land { color: rgb(143, 191, 122); border-color: rgb(143, 191, 122); }
+.tag.ref { color: rgb(208, 97, 76); border-color: rgb(208, 97, 76); }
+.tag.guard { color: rgb(216, 162, 74); border-color: rgb(216, 162, 74); }
+
+/* the map's own labels */
+.labels { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+.plab { position: absolute; font-size: 12px; -unity-font-style: italic; color: rgb(243, 231, 200); -unity-text-outline-width: 0.25px; -unity-text-outline-color: rgb(20, 14, 8); text-shadow: 1px 1px 2px rgba(15, 10, 5, 0.95); translate: -50% -50%; }
+.rlab { position: absolute; font-size: 13px; -unity-font-style: italic; letter-spacing: 6px; color: rgba(246, 234, 204, 0.86); text-shadow: 1px 1px 3px rgba(15, 10, 5, 0.95); translate: -50% -50%; }
+/* R3's armies: the type mark on a piece, the mix bars, the general, the recruit orders. */
+.host-type { width: 10px; height: 12px; margin-left: 3px; }
+.mix-bars { flex-direction: row; height: 4px; width: 120px; margin-top: 2px; background-color: rgba(255, 255, 255, 0.08); }
+.mix-bar { height: 4px; }
+.mix-pikes { background-color: rgb(206, 196, 168); }
+.mix-riders { background-color: rgb(214, 150, 84); }
+.mix-bows { background-color: rgb(132, 168, 112); }
+.mix-counts { font-size: 10px; color: rgb(190, 176, 146); white-space: normal; }
+.stores-name { font-size: 10px; color: rgb(190, 176, 146); margin-right: 4px; }
+.council-note { color: rgb(200, 186, 152); }
+.council-note.bad { color: rgb(232, 112, 96); }
+.army-general { font-size: 11px; -unity-font-style: italic; color: rgb(196, 182, 150); white-space: normal; }
+/* The first-turn help: a veil, notes beside what they explain, an ink line to each. */
+.help-veil { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: rgba(8, 6, 4, 0.45); }
+.help-note { position: absolute; width: 260px; padding: 8px 11px 9px 11px; background-color: rgb(34, 27, 19); border-width: 1px; border-color: rgb(214, 180, 112); border-radius: 3px; }
+.help-title { -unity-font-style: bold; font-size: 13px; color: rgb(246, 232, 196); margin-bottom: 3px; }
+.help-text { font-size: 12.5px; white-space: normal; color: rgb(230, 218, 190); }
+.help-foot { position: absolute; left: 256px; bottom: 14px; flex-direction: row; align-items: center; padding: 6px 10px; background-color: rgb(26, 21, 15); border-width: 1px; border-color: rgba(201, 164, 90, 0.6); }
+.help-done { margin-left: 12px; }
+/* The end of a game: the land chart, the timeline, the rulers in their own words. */
+.menu.end-card { width: 720px; }
+.end-chart { height: 170px; margin: 4px 0 6px 0; background-color: rgb(16, 13, 10); border-width: 1px; border-color: rgba(201, 164, 90, 0.3); }
+.end-tick { font-size: 10px; color: rgb(160, 148, 124); }
+.end-moment { flex-direction: row; align-items: center; min-height: 20px; }
+.end-when { width: 64px; font-size: 11px; color: rgb(170, 156, 128); }
+.end-text { flex-shrink: 1; white-space: normal; font-size: 12.5px; color: rgb(234, 223, 198); }
+.end-moment.fall .end-text { -unity-font-style: bold; color: rgb(232, 150, 128); }
+.end-moment.peace .end-text { color: rgb(196, 220, 180); }
+.end-ruler { flex-direction: row; align-items: flex-start; margin-bottom: 7px; }
+.end-face { width: 46px; height: 46px; margin-right: 10px; border-width: 2px; border-radius: 3px; }
+.end-name { -unity-font-style: bold; font-size: 14px; color: rgb(240, 228, 200); margin-right: 8px; }
+.end-who { font-size: 11.5px; -unity-font-style: italic; color: rgb(176, 162, 134); }
+.end-line { font-size: 12.5px; -unity-font-style: italic; white-space: normal; color: rgb(222, 206, 170); margin-top: 2px; }
+/* The advisor in the council: its counsel, then each suggestion with Take and Why. */
+.advice-counsel { -unity-font-style: italic; font-size: 12.5px; color: rgb(222, 206, 170); white-space: normal; margin: 2px 0 6px 0; }
+.advice-row { flex-direction: row; align-items: center; margin-bottom: 3px; }
+.advice-text { flex-grow: 1; flex-shrink: 1; font-size: 12.5px; white-space: normal; color: rgb(234, 223, 198); }
+.advice-take { margin-left: 6px; }
+.advice-why { width: auto; padding-left: 6px; padding-right: 6px; margin-left: 4px; }
+.advice-all { margin-top: 2px; margin-bottom: 6px; }
+/* A realm's name, zoomed out: widely spaced capitals along its land (rules v2 2.6), turned by the screen. */
+/* A marker at the map area's edge pointing to an off-screen battle or your capital (rule mode). */
+.edge-mark { position: absolute; flex-direction: row; align-items: center; translate: -50% -50%; padding: 2px 7px 2px 3px; background-color: rgb(26, 21, 15); border-width: 1px; border-color: rgba(201, 164, 90, 0.75); border-radius: 3px; }
+.edge-mark:hover { border-color: rgb(236, 205, 140); background-color: rgb(44, 35, 25); }
+.edge-mark.battle { border-color: rgb(196, 70, 52); }
+.edge-arrow { width: 16px; height: 12px; margin-right: 5px; }
+.edge-text { font-size: 12px; -unity-font-style: italic; color: rgb(240, 228, 200); }
+.next-army { align-self: flex-start; margin-top: 2px; margin-bottom: 4px; }
+.realmlab { position: absolute; font-size: 20px; -unity-font-style: bold; letter-spacing: 9px; color: rgba(255, 246, 222, 0.9); -unity-text-outline-width: 0.4px; -unity-text-outline-color: rgb(20, 14, 8); text-shadow: 1px 2px 4px rgba(10, 6, 3, 0.95); translate: -50% -50%; white-space: nowrap; }
+.clab { position: absolute; font-size: 14px; -unity-font-style: bold; letter-spacing: 2px; color: rgb(255, 244, 214); text-shadow: 1px 1px 2px rgba(15, 10, 5, 0.95); translate: -50% 0; }
+.forts { position: absolute; flex-direction: row; translate: -50% 0; }
+
+/* speech at the capital */
+.banner { position: absolute; flex-direction: row; align-items: center; max-width: 300px; padding: 5px 10px 5px 5px; background-color: rgba(30, 24, 18, 0.97); border-width: 1px; border-color: rgba(201, 164, 90, 0.55); border-left-width: 3px; translate: -50% -100%; opacity: 0; transition-property: opacity, translate; transition-duration: 0.25s; }
+.banner.on { opacity: 1; }
+.face { width: 40px; height: 40px; border-radius: 20px; border-width: 2px; overflow: hidden; flex-shrink: 0; }
+.banner-body { margin-left: 7px; flex-shrink: 1; }
+.banner-who { font-size: 10px; -unity-font-style: bold; letter-spacing: 1px; color: rgb(141, 127, 102); }
+.banner-line { font-size: 14px; -unity-font-style: italic; white-space: normal; }
+
+/* map modes */
+.modes { position: absolute; left: 248px; bottom: 8px; flex-direction: row; }
+.mode { height: 30px; padding-left: 10px; padding-right: 10px; flex-direction: row; align-items: center; background-color: rgba(18, 15, 12, 0.93); border-width: 1px; border-color: rgba(201, 164, 90, 0.55); margin-left: -1px; border-radius: 0; color: rgb(234, 223, 198); font-size: 11px; -unity-font-style: bold; }
+.mode.on { background-color: rgb(107, 82, 40); }
+.badge { position: absolute; padding: 2px 8px; background-color: rgba(18, 15, 12, 0.9); border-width: 1px; border-color: rgba(201, 164, 90, 0.55); font-size: 12px; -unity-font-style: bold; translate: -50% 0; }
+
+/* UI Toolkit's own controls, restyled: a thin scroller with a dark track and a gilt thumb,
+   no arrow buttons; buttons that never turn the default grey. */
+.unity-scroll-view__horizontal-scroller { display: none; }
+.unity-scroller--vertical { width: 8px; border-width: 0; background-color: rgba(0, 0, 0, 0.28); margin: 0; }
+.unity-scroller__low-button, .unity-scroller__high-button { display: none; }
+.unity-scroller--vertical > .unity-slider { margin: 0; padding: 0; flex-grow: 1; }
+.unity-scroller .unity-base-slider__drag-container { margin: 0; }
+.unity-scroller .unity-base-slider__tracker { background-color: rgba(0, 0, 0, 0); border-width: 0; }
+.unity-scroller .unity-base-slider__dragger { background-color: rgba(201, 164, 90, 0.55); border-width: 0; border-radius: 3px; left: 1px; right: 1px; width: 6px; }
+.unity-scroller .unity-base-slider__dragger:hover { background-color: rgb(210, 173, 98); }
+.unity-scroller .unity-base-slider__dragger-border { display: none; }
+.unity-button { -unity-font-style: normal; }
+.tbtn:hover, .mode:hover { background-color: rgb(70, 55, 34); }
+.tbtn:active, .mode:active { background-color: rgb(107, 82, 40); }
+.unity-button:focus { border-color: rgb(210, 173, 98); }
+
+/* tooltips: runtime UI Toolkit shows none of its own */
+.tip { position: absolute; max-width: 320px; padding: 6px 9px; background-color: rgba(30, 24, 18, 0.97); border-width: 1px; border-color: rgba(201, 164, 90, 0.55); font-size: 12px; white-space: normal; color: rgb(234, 223, 198); }
+
+/* the thinking indicator: the council deciding */
+.thinking { flex-direction: row; align-items: center; margin-right: 8px; display: none; }
+.thinking.on { display: flex; }
+.thinking-dot { width: 4px; height: 4px; border-radius: 2px; margin-left: 2px; background-color: rgb(210, 173, 98); opacity: 0.2; transition-property: opacity; transition-duration: 0.3s; }
+.thinking-dot.lit { opacity: 1; }
+.thinking-label { font-size: 12px; -unity-font-style: italic; color: rgb(194, 179, 147); margin-left: 5px; }
+
+/* the decision inspector */
+.inspector { right: 8px; top: 50px; width: 520px; bottom: 8px; display: none; background-color: rgb(20, 16, 12); }
+.inspector.on { display: flex; }
+.insp-head { flex-direction: row; align-items: center; padding: 9px 10px; border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.22); }
+.insp-face { width: 54px; height: 54px; border-radius: 27px; border-width: 2px; overflow: hidden; flex-shrink: 0; }
+.insp-title { font-size: 18px; -unity-font-style: bold; letter-spacing: 1px; margin-left: 4px; }
+.insp-sub { font-size: 13px; -unity-font-style: italic; color: rgb(194, 179, 147); white-space: normal; }
+.badge-outcome { font-size: 10px; -unity-font-style: bold; letter-spacing: 1px; padding: 2px 7px; border-width: 1px; margin-left: 8px; }
+.badge-outcome.ok { color: rgb(143, 191, 122); border-color: rgb(143, 191, 122); }
+.badge-outcome.ref { color: rgb(208, 97, 76); border-color: rgb(208, 97, 76); }
+.badge-outcome.guard { color: rgb(216, 162, 74); border-color: rgb(216, 162, 74); }
+.sec { padding: 7px 10px; border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.22); }
+.sec-head { flex-direction: row; font-size: 10px; -unity-font-style: bold; letter-spacing: 2px; color: rgb(141, 127, 102); margin-bottom: 5px; }
+.sec-note { margin-left: auto; letter-spacing: 0; -unity-font-style: normal; }
+.mono { font-size: 12px; white-space: normal; color: rgb(234, 223, 198); }
+.code-box { padding: 7px 9px; background-color: rgba(0, 0, 0, 0.28); border-width: 1px; border-color: rgba(201, 164, 90, 0.22); }
+.facts-box { padding: 6px 9px; background-color: rgba(0, 0, 0, 0.18); border-left-width: 2px; border-left-color: rgba(201, 164, 90, 0.55); margin-bottom: 4px; }
+.facts-box .mono { color: rgb(194, 179, 147); font-size: 11.5px; }
+.chips { flex-direction: row; flex-wrap: wrap; }
+.mchip { font-size: 11px; padding: 1px 6px; margin-right: 4px; margin-bottom: 4px; border-width: 1px; border-color: rgba(201, 164, 90, 0.22); background-color: rgba(210, 173, 98, 0.1); }
+.mchip.pick { border-color: rgb(210, 173, 98); color: rgb(210, 173, 98); }
+.why-no { font-size: 12px; color: rgb(194, 179, 147); white-space: normal; margin-bottom: 1px; }
+.src { font-size: 10.5px; color: rgb(141, 127, 102); margin-top: 4px; white-space: normal; }
+.kv { flex-direction: row; font-size: 12.5px; height: 20px; align-items: center; }
+.kv-key { color: rgb(141, 127, 102); flex-grow: 1; }
+.kv-val { -unity-font-style: bold; }
+.meter { height: 8px; background-color: rgba(127, 127, 127, 0.25); margin-top: 4px; margin-bottom: 2px; }
+.meter-fill { height: 8px; }
+.meter-mark { position: absolute; top: -3px; bottom: -3px; width: 2px; background-color: rgb(234, 223, 198); }
+.timebar { flex-direction: row; height: 16px; margin-top: 6px; border-width: 1px; border-color: rgba(201, 164, 90, 0.22); }
+.timebar-part { justify-content: center; align-items: center; font-size: 10px; -unity-font-style: bold; overflow: hidden; }
+.gline { flex-direction: row; align-items: center; font-size: 12.5px; height: 20px; }
+.gline-state { margin-left: auto; }
+.gline-detail { font-size: 11.5px; color: rgb(141, 127, 102); white-space: normal; margin-left: 16px; margin-bottom: 3px; }
+
+/* the top bar below 1600 px: crest, name, provinces, army, wars; gold and stability in the tooltip */
+.compact .gold-stat, .compact .pips, .compact .stat-delta, .compact .phase { display: none; }
+.compact .nation { padding-left: 6px; padding-right: 6px; }
+.crowded .nation-name, .crowded .gold-stat, .crowded .pips, .crowded .stat-delta { display: none; }
+/* Your own realm's name stays, however many realms share the bar. */
+.crowded .nation-name.my-name { display: flex; }
+.crowded .nation { padding-left: 5px; padding-right: 5px; }
+.crowded.compact .army-stat { display: none; }
+.compact .nation-name { font-size: 12px; margin-right: 4px; letter-spacing: 0; }
+.compact .brand { font-size: 13px; padding-left: 8px; padding-right: 8px; letter-spacing: 1px; }
+.compact .time { padding-left: 6px; padding-right: 6px; }
+.compact .turn { font-size: 13px; margin-right: 6px; }
+
+/* the side panel: a province or a country, over the realm list's right edge */
+.side { left: 248px; top: 50px; width: 310px; max-height: 80%; display: none; background-color: rgb(20, 16, 12); }
+.side.on { display: flex; }
+.compact .side { left: 50px; }
+
+/* the diplomacy view */
+.diplomacy { left: 50%; top: 18%; width: 640px; translate: -50% 0; display: none; background-color: rgb(20, 16, 12); }
+.diplomacy.on { display: flex; }
+.mx-row { flex-direction: row; }
+.mx-head { flex-grow: 1; flex-basis: 0; align-items: center; padding: 4px; border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.22); font-size: 12px; -unity-font-style: bold; }
+.mx-rowhead { width: 110px; flex-direction: row; align-items: center; font-size: 13px; -unity-font-style: bold; border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.22); }
+.mx-cell { flex-grow: 1; flex-basis: 0; min-height: 46px; align-items: center; justify-content: center; border-bottom-width: 1px; border-right-width: 1px; border-color: rgba(201, 164, 90, 0.22); }
+.mx-cell.war { color: rgb(208, 97, 76); background-color: rgba(208, 97, 76, 0.1); }
+.mx-cell.truce { color: rgb(216, 162, 74); }
+.mx-cell.peace { color: rgb(141, 127, 102); }
+.mx-cell.self { background-color: rgba(201, 164, 90, 0.08); }
+
+/* map modes */
+.legend { position: absolute; left: 248px; bottom: 46px; flex-direction: row; flex-wrap: wrap; align-items: center; padding: 5px 9px; max-width: 700px; background-color: rgba(18, 15, 12, 0.93); border-width: 1px; border-color: rgba(201, 164, 90, 0.55); font-size: 12px; }
+.compact .legend, .compact .modes { left: 50px; }
+.army-badge { position: absolute; padding: 1px 6px; font-size: 11px; -unity-font-style: bold; color: rgb(255, 255, 255); border-width: 1px; border-color: rgb(210, 173, 98); translate: -50% 0; }
+
+/* the followed country's own bar */
+.follow-bar { flex-direction: row; flex-grow: 1; align-items: stretch; display: none; overflow: hidden; }
+.nation.me { border-top-width: 2px; border-top-color: rgb(210, 173, 98); }
+.seg2 { justify-content: center; padding-left: 9px; padding-right: 9px; border-right-width: 1px; border-right-color: rgba(201, 164, 90, 0.22); }
+.seg2-label { font-size: 9px; -unity-font-style: bold; letter-spacing: 1px; color: rgb(141, 127, 102); }
+.seg2-value { font-size: 12.5px; -unity-font-style: bold; }
+.seg2.later { opacity: 0.45; }
+.compact .seg2.later { display: none; }
+.compact .seg2 { padding-left: 5px; padding-right: 5px; }
+.rivals { flex-direction: row; align-items: center; margin-left: auto; padding-left: 6px; padding-right: 6px; border-left-width: 1px; border-left-color: rgba(201, 164, 90, 0.22); }
+.riv { flex-direction: row; align-items: center; padding: 2px 5px; font-size: 12px; -unity-font-style: bold; }
+.riv:hover { background-color: rgba(210, 173, 98, 0.14); }
+.riv.war { color: rgb(208, 97, 76); }
+.riv.truce { color: rgb(216, 162, 74); }
+
+/* an open side panel pushes the map-mode bar and its legend to its right: panels and bars never overlap */
+.side-open .modes, .side-open .legend { left: 568px; }
+.compact.side-open .modes, .compact.side-open .legend { left: 370px; }
+
+/* the start menu */
+.menu-veil { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: rgba(10, 8, 6, 0.55); align-items: center; justify-content: center; }
+.menu { position: relative; width: 620px; padding: 22px 26px; background-color: rgb(20, 16, 12); }
+.menu-title { font-size: 30px; -unity-font-style: bold; letter-spacing: 6px; color: rgb(210, 173, 98); margin-bottom: 4px; }
+.menu-choice { padding: 12px 14px; margin-bottom: 10px; border-width: 1px; border-color: rgba(201, 164, 90, 0.35); background-color: rgba(210, 173, 98, 0.05); }
+.menu-button { align-self: flex-start; margin-top: 8px; height: 30px; padding-left: 18px; padding-right: 18px; font-size: 13px; -unity-font-style: bold; letter-spacing: 1px; background-color: rgb(107, 82, 40); border-width: 1px; border-color: rgb(210, 173, 98); color: rgb(234, 223, 198); border-radius: 0; }
+.menu-button:hover { background-color: rgb(130, 100, 50); }
+.menu-field { margin-right: 10px; flex-grow: 1; }
+.menu-field .unity-base-field__label { min-width: 46px; color: rgb(141, 127, 102); }
+.menu-field .unity-base-text-field__input, .menu-field .unity-text-field__input { background-color: rgba(0, 0, 0, 0.3); border-color: rgba(201, 164, 90, 0.35); color: rgb(234, 223, 198); }
+.menu-status { margin-top: 6px; font-size: 12.5px; white-space: normal; color: rgb(208, 97, 76); }
+.menu-status.busy { color: rgb(194, 179, 147); -unity-font-style: italic; }
+/* a notice across the top of the map */
+.notice { position: absolute; left: 50%; top: 50px; translate: -50% 0; max-width: 760px; flex-direction: row; align-items: center; padding: 6px 6px 6px 12px; background-color: rgba(90, 29, 20, 0.95); border-width: 1px; border-color: rgb(208, 97, 76); font-size: 13px; white-space: normal; }
+
+/* rule mode: the orders panel, bottom centre, ending in End turn */
+.orders { right: 364px; bottom: 8px; width: 520px; background-color: rgb(20, 16, 12); }
+.compact .orders { width: 470px; }
+/* A wider panel on the right (the inspector, the tales) never covers the council panel: it moves to the panel's left edge. */
+.tales-open .orders { right: 416px; }
+.insp-open .orders { right: 536px; }
+.order-line { flex-direction: row; align-items: center; height: 26px; }
+.order-chosen { font-size: 16px; -unity-font-style: bold; color: rgb(210, 173, 98); }
+.order-moves { flex-direction: row; flex-wrap: wrap; margin-top: 4px; }
+.order-move { height: 24px; margin: 0 4px 4px 0; padding-left: 8px; padding-right: 8px; font-size: 12px; background-color: rgb(46, 36, 25); border-width: 1px; border-color: rgba(201, 164, 90, 0.55); border-radius: 0; color: rgb(234, 223, 198); }
+.order-move:hover { background-color: rgb(70, 55, 34); }
+.order-move.on { background-color: rgb(70, 55, 34); border-color: rgb(210, 173, 98); }
+.order-move.pick { background-color: rgb(107, 82, 40); border-color: rgb(210, 173, 98); }
+.order-move.off { opacity: 0.4; border-color: rgba(201, 164, 90, 0.2); color: rgb(160, 148, 124); }
+.order-move.pick { -unity-font-style: bold; color: rgb(250, 232, 170); }
+.order-move.off:hover { background-color: rgb(46, 36, 25); }
+/* R3: a recruit order shows its cost and what it beats on a second line, so it is a row taller. */
+.order-move.recruit-type { height: 36px; flex-direction: column; align-items: flex-start; justify-content: center; padding-top: 2px; padding-bottom: 2px; }
+.recruit-type > Label { margin: 0; padding: 0; }
+.recruit-note { font-size: 10px; color: rgb(190, 176, 146); }
+/* R3: a siege beside the province's forts, an army's stores, and an army out of them. */
+.siege-tag { margin-left: 3px; padding: 0 3px; font-size: 10px; -unity-font-style: bold; color: rgb(40, 28, 16); background-color: rgba(240, 226, 192, 0.9); border-width: 1px; border-radius: 2px; }
+.stores { flex-direction: row; align-items: center; margin-top: 2px; }
+.store-pip { width: 7px; height: 7px; margin-right: 2px; border-width: 1px; border-color: rgba(214, 190, 140, 0.7); background-color: rgba(0, 0, 0, 0); }
+.store-pip.full { background-color: rgb(196, 168, 102); }
+.store-pip.half { background-color: rgba(196, 168, 102, 0.45); }
+.hungry-note { margin-left: 4px; font-size: 10px; -unity-font-style: bold; color: rgb(232, 112, 96); }
+.host.host-hungry { border-color: rgb(226, 84, 66); border-width: 2px; }
+.order-move.wide { align-self: stretch; -unity-text-align: middle-left; margin-right: 0; }
+.target-chip { height: 22px; margin: 0 4px 4px 0; padding-left: 7px; padding-right: 7px; font-size: 12px; background-color: rgba(210, 173, 98, 0.1); border-width: 1px; border-color: rgba(201, 164, 90, 0.35); border-radius: 0; color: rgb(234, 223, 198); }
+.target-chip:hover { border-color: rgb(210, 173, 98); }
+.target-chip.pick { background-color: rgb(107, 82, 40); border-color: rgb(210, 173, 98); }
+.orders-status { font-size: 12.5px; -unity-font-style: italic; color: rgb(194, 179, 147); white-space: normal; }
+.end-turn { margin-top: 0; margin-left: 10px; }
+.menu-button.quiet { background-color: rgb(46, 36, 25); border-color: rgba(201, 164, 90, 0.55); }
+.menu-button:disabled { opacity: 0.4; }
+.rule.compact .legend { max-width: 420px; }
+/* the envoy card: a peace offer to you */
+.offer { left: 50%; top: 22%; width: 470px; translate: -50% 0; background-color: rgb(20, 16, 12); }
+/* the menu's rule choice: five crests to pick from */
+.menu-crest { width: 64px; height: 52px; flex-shrink: 0; margin-right: 6px; margin-bottom: 4px; align-items: center; justify-content: center; background-color: rgb(46, 36, 25); border-width: 1px; border-color: rgba(201, 164, 90, 0.35); border-radius: 0; color: rgb(234, 223, 198); font-size: 11px; padding: 2px; }
+.menu-crest.pick { background-color: rgb(107, 82, 40); border-color: rgb(210, 173, 98); }
+.menu-choice, .menu-field { flex-shrink: 0; }
+.menu-field { min-height: 26px; }
+/* 1366 x 768: the menu's three choices fit without squeezing their fields */
+.compact .menu { padding: 12px 20px; }
+.compact .menu-title { font-size: 24px; margin-bottom: 0; }
+.compact .menu-choice { padding: 8px 12px; margin-bottom: 6px; }
+.compact .menu-button { margin-top: 5px; height: 26px; }
+.compact .menu .src { display: none; }
+/* rule mode: the orders panel holds the bottom centre, so the map-mode bar and its legend move to the top of the map */
+.rule .modes { top: 50px; bottom: auto; }
+.rule .legend { top: 88px; bottom: auto; }
+/* the RTX 5080 in the top bar while a game holds it or waits for it */
+.card-chip { font-size: 11px; -unity-font-style: bold; padding: 2px 7px; margin-right: 10px; border-width: 1px; border-color: rgb(143, 191, 122); color: rgb(143, 191, 122); }
+.card-chip.waiting { border-color: rgb(216, 162, 74); color: rgb(216, 162, 74); }
+/* each country's army, at its capital, in every map mode */
+.army-piece { position: absolute; flex-direction: row; align-items: center; padding: 1px 6px 1px 4px; border-width: 1px; border-color: rgb(210, 173, 98); border-radius: 3px; translate: -50% -100%; }
+/* The writs turn: an army as a piece (rules v2 3.9), its march, occupation, battles and treaties. */
+.host { position: absolute; flex-direction: row; align-items: center; padding: 1px 5px 1px 2px; border-width: 1px; border-color: rgb(210, 173, 98); border-radius: 3px; translate: -50% -100%; }
+.host-n { font-size: 12px; -unity-font-style: bold; color: rgb(243, 231, 200); margin-left: 3px; }
+.host-g { font-size: 10px; color: rgb(214, 196, 156); margin-left: 3px; -unity-font-style: italic; }
+.host-wait { position: absolute; right: -6px; top: -6px; width: 10px; height: 10px; border-radius: 5px; border-width: 2px; border-color: rgb(196, 58, 40); background-color: rgb(246, 231, 196); }
+.host.chosen { border-color: rgb(250, 232, 170); border-width: 2px; scale: 1.15 1.15; }
+.writs-row { flex-direction: row; align-items: center; margin: 2px 0 4px 0; }
+.writ-pip { width: 13px; height: 13px; border-radius: 7px; border-width: 1px; border-color: rgb(201, 164, 90); margin-right: 4px; }
+.writ-pip.on { background-color: rgb(201, 164, 90); }
+.army-row { flex-direction: row; align-items: center; padding: 3px 4px; margin: 1px 0; border-left-width: 3px; border-color: rgba(0, 0, 0, 0); }
+.army-row:hover { background-color: rgba(255, 240, 200, 0.06); }
+.army-row.pick { background-color: rgba(201, 164, 90, 0.18); }
+.army-row.needs { border-left-color: rgb(222, 178, 80); }
+.army-row.ordered { border-left-color: rgb(110, 160, 90); }
+.army-row.no-writ { border-left-color: rgb(196, 58, 40); color: rgb(220, 160, 150); }
+.pennant { position: absolute; width: 18px; height: 22px; translate: 0 -100%; }
+.march-turns { position: absolute; translate: -50% 0; font-size: 11px; -unity-font-style: bold-and-italic; color: rgb(40, 28, 16); background-color: rgba(240, 226, 192, 0.85); padding: 0 3px; border-radius: 2px; }
+.battle-card { width: 520px; }
+.battle-bar { flex-direction: row; align-items: center; margin: 2px 0; }
+.battle-bar.total { margin-top: 6px; }
+.battle-bar-label { width: 150px; font-size: 12px; color: rgb(214, 198, 160); white-space: normal; }
+.battle-track { flex-grow: 1; flex-direction: row; height: 10px; background-color: rgb(40, 32, 24); margin: 0 6px; }
+.battle-half { flex-grow: 1; flex-basis: 0; }
+.battle-fill { height: 100%; }
+.battle-bar-value { width: 74px; font-size: 12px; color: rgb(234, 223, 198); -unity-text-align: middle-right; }
+.seal { position: absolute; width: 44px; height: 44px; border-radius: 22px; background-color: rgb(146, 30, 24); border-width: 3px; border-color: rgb(96, 16, 12); align-items: center; justify-content: center; translate: -50% -50%; scale: 0.3 0.3; opacity: 0; transition-property: scale, opacity; transition-duration: 0.25s, 0.25s; }
+.seal.on { scale: 1 1; opacity: 1; }
+.army-piece-n { font-size: 12px; -unity-font-style: bold; color: rgb(243, 231, 200); margin-left: 3px; }
+/* the menus: main, New game, Settings, pause */
+.menu { max-height: 94%; }
+.menu-scroll { flex-shrink: 1; }
+.menu.main { width: 500px; padding: 22px 30px; }
+.menu.newgame, .menu.settings { width: 720px; }
+.menu.pause { width: 380px; }
+.menu-sub { font-size: 14px; -unity-font-style: italic; color: rgb(194, 179, 147); white-space: normal; -unity-text-align: middle-center; margin-bottom: 4px; }
+.menu.main .menu-title { -unity-text-align: middle-center; font-size: 34px; }
+.menu-head { font-size: 20px; -unity-font-style: bold; letter-spacing: 4px; color: rgb(210, 173, 98); margin-bottom: 4px; }
+.menu-big { flex-direction: column; align-items: flex-start; margin: 0 0 8px 0; padding: 9px 16px; background-color: rgba(210, 173, 98, 0.06); border-width: 1px; border-color: rgba(201, 164, 90, 0.4); border-radius: 0; color: rgb(234, 223, 198); font-size: 17px; -unity-font-style: bold; letter-spacing: 1px; }
+.menu-big:hover { background-color: rgba(210, 173, 98, 0.18); border-color: rgb(210, 173, 98); }
+.menu-big.pick { background-color: rgba(107, 82, 40, 0.85); border-color: rgb(210, 173, 98); }
+.menu-big-note { font-size: 12px; -unity-font-style: italic; letter-spacing: 0; color: rgb(194, 179, 147); white-space: normal; margin-top: 2px; }
+.menu-row { flex-direction: row; align-items: center; flex-wrap: wrap; }
+.menu-modes > .menu-big { flex-grow: 1; flex-basis: 0; margin-right: 8px; }
+.menu-coming { flex-direction: row; align-items: center; padding: 4px 6px; margin-bottom: 3px; opacity: 0.55; border-left-width: 2px; border-left-color: rgba(201, 164, 90, 0.35); font-size: 12.5px; }
+.set-row { flex-direction: row; align-items: center; min-height: 30px; font-size: 13px; }
+.set-steps { flex-direction: row; flex-wrap: wrap; flex-grow: 1; }
+.set-slider { flex-grow: 1; margin-left: 0; }
+.set-slider .unity-base-slider__tracker { background-color: rgba(0, 0, 0, 0.35); border-color: rgba(201, 164, 90, 0.35); height: 4px; margin-top: -2px; }
+.set-slider .unity-base-slider__dragger { background-color: rgb(210, 173, 98); border-width: 0; border-radius: 6px; width: 12px; height: 12px; margin-top: -6px; }
+.set-slider .unity-base-slider__dragger-border { display: none; }
+.compact .menu.main { padding: 12px 22px; }
+.compact .menu-big { padding: 6px 12px; margin-bottom: 5px; font-size: 15px; }
+/* the dev menu: a plain tool, not part of the look */
+.dev { position: absolute; left: 8px; top: 50px; width: 470px; max-height: 92%; background-color: rgba(8, 8, 10, 0.95); border-width: 1px; border-color: rgb(120, 180, 220); font-size: 11.5px; color: rgb(220, 225, 230); }
+.dev-head { flex-direction: row; align-items: center; padding: 3px 6px; background-color: rgb(25, 45, 60); color: rgb(160, 210, 240); }
+.dev-sec { font-size: 10px; -unity-font-style: bold; color: rgb(120, 180, 220); margin: 6px 6px 2px 6px; }
+.dev-row { flex-direction: row; flex-wrap: wrap; padding: 0 4px; }
+.dev-b { height: 20px; margin: 1px; padding: 0 6px; font-size: 11px; background-color: rgb(30, 36, 42); border-width: 1px; border-color: rgb(70, 90, 105); border-radius: 0; color: rgb(220, 225, 230); }
+.dev-b:hover { background-color: rgb(45, 60, 72); }
+.dev-b.fill { border-color: rgb(110, 100, 60); }
+.dev-mono { white-space: normal; font-size: 11px; padding: 4px 6px; color: rgb(190, 220, 200); }
+.dev-out { color: rgb(230, 210, 150); background-color: rgba(255, 255, 255, 0.04); margin: 0 4px; }
+.dev-line { flex-grow: 1; margin: 1px; }
+.dev-line .unity-text-field__input { background-color: rgb(20, 24, 28); color: rgb(230, 230, 230); border-color: rgb(70, 90, 105); font-size: 12px; }
+.dev-mark { font-size: 11px; -unity-font-style: bold; padding: 2px 7px; margin-right: 10px; color: rgb(255, 255, 255); background-color: rgb(170, 40, 40); }
+
+/* ---- the storyteller: its own voice, parchment rather than the rulers' dark speech ---- */
+.tale-banner { background-color: rgba(226, 210, 168, 0.97); border-color: rgb(120, 86, 44); border-left-width: 1px; border-width: 2px; max-width: 360px; padding: 7px 12px 7px 8px; }
+.tale-who { color: rgb(110, 70, 30); font-size: 11px; letter-spacing: 1px; }
+.tale-line { color: rgb(46, 32, 18); font-size: 14px; }
+.tale-hit { color: rgb(110, 70, 30); font-size: 11px; margin-top: 3px; white-space: normal; }
+.lg-tale { background-color: rgba(201, 164, 90, 0.10); border-left-width: 2px; border-left-color: rgb(201, 164, 90); }
+.lg-tale .lg-quote { color: rgb(226, 206, 160); }
+.tbtn.wide { width: auto; height: auto; padding: 4px 8px; margin: 3px 0; -unity-text-align: middle-left; white-space: normal; }
+.tales-button { padding: 0 8px; margin-right: 4px; font-size: 11px; letter-spacing: 1px; }
+
+.event-card { left: 50%; top: 60px; width: 480px; max-height: 80%; translate: -50% 0; background-color: rgb(24, 19, 14); border-color: rgb(201, 164, 90); }
+.event-body { padding: 10px 14px 12px 14px; }
+.event-title { font-size: 20px; -unity-font-style: bold; color: rgb(240, 222, 178); white-space: normal; }
+.event-story { font-size: 15px; -unity-font-style: italic; color: rgb(226, 212, 180); white-space: normal; margin: 8px 0 6px 0; }
+.event-row { flex-direction: row; align-items: center; flex-wrap: wrap; margin: 3px 0; }
+.event-name { font-size: 13px; -unity-font-style: bold; margin: 0 8px 0 6px; color: rgb(234, 223, 198); }
+.event-chose { font-size: 12px; color: rgb(216, 192, 140); margin-right: 8px; white-space: normal; }
+.event-effect { font-size: 12px; color: rgb(194, 179, 147); white-space: normal; }
+.event-replaced { font-size: 12px; color: rgb(216, 162, 74); }
+
+.choice-veil { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: rgba(8, 6, 4, 0.72); align-items: center; justify-content: center; }
+.choice-card { position: relative; width: 560px; max-width: 92%; padding: 16px 18px; background-color: rgb(226, 210, 168); border-width: 3px; border-color: rgb(120, 86, 44); }
+.choice-card .event-title { color: rgb(46, 32, 18); font-size: 24px; }
+.choice-card .event-story { color: rgb(60, 42, 24); font-size: 16px; }
+.choice-card .src { color: rgb(110, 70, 30); }
+.choice-head { flex-direction: row; align-items: center; }
+.choice-kicker { font-size: 11px; -unity-font-style: bold; letter-spacing: 2px; color: rgb(140, 50, 30); }
+.choice-option { margin-top: 8px; padding: 9px 12px; border-width: 2px; border-color: rgba(120, 86, 44, 0.45); background-color: rgba(255, 248, 228, 0.55); }
+.choice-option:hover { border-color: rgb(120, 86, 44); background-color: rgba(255, 248, 228, 0.85); }
+.choice-option.pick { border-color: rgb(140, 50, 30); background-color: rgb(255, 246, 222); }
+.choice-label { font-size: 16px; -unity-font-style: bold; color: rgb(46, 32, 18); flex-grow: 1; }
+.choice-option .tag { color: rgb(110, 70, 30); border-color: rgba(120, 86, 44, 0.6); }
+.choice-effect { font-size: 13px; color: rgb(80, 60, 36); margin-top: 2px; white-space: normal; }
+.choice-effect.gain { color: rgb(46, 100, 40); }
+.choice-effect.cost { color: rgb(140, 50, 30); }
+.choice-go { min-width: 220px; }
+
+.tales { right: 8px; top: 50px; width: 400px; bottom: 8px; display: none; background-color: rgb(22, 18, 13); }
+.tales.on { display: flex; }
+.tale { padding: 10px 12px; border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.3); }
+.tale.focus { background-color: rgba(201, 164, 90, 0.10); }
+.tale-title { font-size: 16px; -unity-font-style: bold; color: rgb(240, 222, 178); flex-grow: 1; white-space: normal; }
+.tale-stage { margin: 6px 0 0 6px; padding-left: 8px; border-left-width: 2px; border-left-color: rgba(201, 164, 90, 0.5); }
+.tale-stage:hover { background-color: rgba(201, 164, 90, 0.08); }
+.tale-stage-title { font-size: 12px; -unity-font-style: bold; color: rgb(216, 192, 140); }
+.tale-story { font-size: 13px; -unity-font-style: italic; color: rgb(214, 200, 170); }
+.tale-end { font-size: 12px; -unity-font-style: italic; color: rgb(141, 127, 102); margin-top: 6px; }
+
+/* the loading card while a generated world is made and drawn */
+.loading-card { position: relative; width: 520px; padding: 18px 22px; }
+.loading-bar { height: 8px; margin-top: 12px; background-color: rgba(201, 164, 90, 0.18); border-width: 1px; border-color: rgba(201, 164, 90, 0.55); }
+.loading-fill { height: 100%; width: 0; background-color: rgb(201, 164, 90); }

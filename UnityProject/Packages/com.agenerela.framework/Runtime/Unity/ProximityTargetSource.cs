@@ -9,8 +9,15 @@ namespace Agenerela
     /// within <see cref="Radius"/> of <see cref="Origin"/>, filtered by layer and category and
     /// optionally by line of sight, nearest first and capped at <see cref="Cap"/>.
     /// Each one is registered as its <see cref="Transform"/>, so an <c>[AgentAction]</c> method
-    /// that takes a <c>Transform</c> target receives it with no conversion (#50).
+    /// that takes a <c>Transform</c> target receives it with no conversion (#50), and in its
+    /// <see cref="Targetable.Category"/>, which an action's
+    /// <see cref="ActionDefinition.TargetCategories"/> reads (DR-020).
     /// </summary>
+    /// <remarks>
+    /// A Targetable an earlier source already registered as the same <see cref="Transform"/> is one
+    /// target, kept as that source registered it, and still counts toward <see cref="Cap"/>: the
+    /// nearest are offered either way. Another object under its id is an error.
+    /// </remarks>
     [Serializable]
     public sealed class ProximityTargetSource : ITargetSource, IReportsDroppedTargets
     {
@@ -88,11 +95,11 @@ namespace Agenerela
                         $"'{targetable.Id}'. Every target in one agent's resolved set needs its own id.");
                 }
 
-                if (into.Contains(targetable.Id))
+                if (into.TryGet(targetable.Id, out var earlier) && !ReferenceEquals(earlier, targetable.transform))
                 {
                     throw new InvalidOperationException(
                         $"Targetable on '{targetable.name}' has the id '{targetable.Id}', which an " +
-                        "earlier source already added. Every target in one agent's resolved set needs its own id.");
+                        "earlier source already added for another object. Every target in one agent's resolved set needs its own id.");
                 }
 
                 kept.Add(targetable.Id, targetable);
@@ -104,7 +111,8 @@ namespace Agenerela
 
                 if (i < Cap)
                 {
-                    into.Register(targetable.Id, targetable.transform);
+                    // Offer: the same Transform from an earlier source stays as it registered it.
+                    into.Offer(targetable.Id, targetable.transform, targetable.Category);
                 }
                 else
                 {

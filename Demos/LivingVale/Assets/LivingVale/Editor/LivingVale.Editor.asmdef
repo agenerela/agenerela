@@ -1,0 +1,7 @@
+{
+  "name": "LivingVale.Editor",
+  "rootNamespace": "LivingVale.Editor",
+  "references": ["LivingVale"],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": true
+}

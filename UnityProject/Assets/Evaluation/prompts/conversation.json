@@ -11,7 +11,9 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "conversation_002",
@@ -23,7 +25,9 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "conversation_003",
@@ -35,7 +39,9 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "conversation_004",
@@ -47,7 +53,9 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "conversation_005",
@@ -59,7 +67,9 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "conversation_006",
@@ -71,7 +81,9 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "conversation_007",
@@ -83,7 +95,9 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "conversation_008",
@@ -95,7 +109,9 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "conversation_009",
@@ -107,7 +123,9 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     }
   ]
 }

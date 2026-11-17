@@ -40,7 +40,7 @@ namespace Agenerela.Tests
 
             Assert.That(result.Decision.ActionId, Is.EqualTo(ActionRegistry.None));
             Assert.That(result.Decision.TargetId, Is.EqualTo(TargetRegistry.NoTarget));
-            Assert.That(result.Decision.Statement, Is.EqualTo("Right away."), "The statement is #109's to change.");
+            Assert.That(result.Decision.Statement, Is.Empty, "The model's words no longer match what the agent does (#109).");
             Assert.That(result.ModelDecision.ActionId, Is.EqualTo(action));
             Assert.That(result.ModelDecision.TargetId, Is.EqualTo(target));
             Assert.That(result.ModelDecision.Statement, Is.EqualTo("Right away."));
@@ -94,9 +94,10 @@ namespace Agenerela.Tests
 
             Assert.That(result.Decision.ActionId, Is.EqualTo(ActionRegistry.None));
             Assert.That(result.Decision.TargetId, Is.EqualTo(TargetRegistry.NoTarget));
-            Assert.That(result.Decision.Statement, Is.EqualTo("On my way."));
+            Assert.That(result.Decision.Statement, Is.Empty);
             Assert.That(result.ModelDecision.ActionId, Is.EqualTo("move_to"));
             Assert.That(result.ModelDecision.TargetId, Is.EqualTo("tower"));
+            Assert.That(result.ModelDecision.Statement, Is.EqualTo("On my way."));
 
             Assert.That(result.Verdict.Value.Kind, Is.EqualTo(GuardVerdictKind.RewriteToNone));
             Assert.That(result.Verdict.Value.Guard, Is.EqualTo("NotThatTower"));
@@ -129,8 +130,8 @@ namespace Agenerela.Tests
             Assert.That(history, Is.EqualTo(new[]
             {
                 "Player: \"Go to the tower.\"",
-                "{\"action\":\"none\",\"target\":\"no_target\",\"statement\":\"On my way.\"}",
-            }), "The agent did nothing, so the history says so.");
+                "{\"action\":\"none\",\"target\":\"no_target\",\"statement\":\"\"}",
+            }), "The agent did nothing and said nothing, so the history says so.");
 
             agent.Guards.Clear();
             await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));

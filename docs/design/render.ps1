@@ -33,10 +33,10 @@ if (-not $Names) {
 }
 New-Item -ItemType Directory -Force $out | Out-Null
 
-# The sitemap and the framework figure are not 1600 x 1000 like the six screen sheets.
+# The sitemap, screen 4 and the framework figure are not 1600 x 1000 like the other screen sheets.
 # Keep these in step with the body{width;height} rule at the top of each HTML file, or
 # the screenshot gets cropped.
-$sizes = @{ '00-sitemap' = '1800,1125'; '07-framework-design' = '1280,1280' }
+$sizes = @{ '00-sitemap' = '1800,1125'; '04-evaluation-report' = '1800,1330'; '07-framework-design' = '1280,1280' }
 
 foreach ($n in $Names) {
     $size = if ($sizes.ContainsKey($n)) { $sizes[$n] } else { '1600,1000' }

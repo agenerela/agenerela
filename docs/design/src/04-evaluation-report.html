@@ -2,148 +2,252 @@
 <html><head><meta charset="utf-8"><title>Screen 4 - Evaluation Report</title>
 <link rel="stylesheet" href="wf.css">
 <style>
-body{width:1600px;height:1000px}
-.win{overflow:visible}.bar{border-radius:5px 5px 0 0}
-.rel{position:relative}
-.setup{padding:12px 16px 14px;border-bottom:2px solid var(--line)}
-.srow{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:12.5px}
-.srow .k2{color:var(--ink2)}
-.check{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600}
-.sect{position:absolute;padding:13px 18px}
-.sect h5{margin:0 0 10px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)}
-.arm{display:flex;align-items:center;gap:10px;margin-bottom:9px}
-.arm .al2{width:104px;flex:none;font-size:12.5px;font-weight:600;line-height:1.25}
-.arm .al2 span{display:block;font-weight:400;color:var(--ink3);font-size:11px}
-.stack{display:flex;height:28px;border:1.5px solid var(--ink2);border-radius:4px;overflow:hidden;width:420px}
-.s1{background:#3a3a3a}
+/* Taller and wider than the six-screen sheets: one window at its 560 px minimum width, drawn in
+   three states side by side. Keep in step with $sizes in render.ps1. */
+body{width:1800px;height:1330px}
+.lbl{position:absolute;top:150px;font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3)}
+.win{overflow:visible}
+.clip{position:absolute;inset:0;overflow:hidden;border-radius:5px}
+.ttl{height:28px;background:var(--fill2);border-bottom:1.5px solid var(--line);display:flex;align-items:flex-end;padding:0 8px}
+.tb{height:27px;display:flex;align-items:center;gap:3px;padding:0 6px;background:var(--fill);border-bottom:1.5px solid var(--line2)}
+.tbb{height:20px;padding:0 7px;display:flex;align-items:center;font-size:11.5px;border:1.2px solid var(--line2);border-radius:3px;background:#fff;white-space:nowrap}
+.body{position:relative;padding:4px 14px 12px}
+.st{margin:12px 0 6px;font-size:10.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--ink3);display:flex;align-items:center;gap:8px}
+.st .rule{flex:1;border-top:1.5px solid var(--line3)}
+.card{border:1.5px solid var(--line3);border-radius:4px;background:var(--fill0);padding:10px 12px;margin-bottom:8px}
+.prob{display:flex;gap:8px;align-items:center;padding:6px 9px;border:1.5px solid var(--line2);border-left:4px solid var(--ink2);border-radius:4px;background:var(--fill);font-size:12px;line-height:1.35;margin:4px 0}
+.prob .btn{margin-left:auto;height:21px;font-size:11.5px}
+.step{display:flex;gap:9px;margin:7px 0;font-size:12.5px;line-height:1.35}
+.dot{width:19px;height:19px;flex:none;border-radius:50%;border:1.5px solid var(--ink3);font:700 11px/16px "Segoe UI",sans-serif;text-align:center;color:var(--ink3)}
+.dot.ok{background:var(--ink);border-color:var(--ink);color:#fff}
+.step b{display:block}
+.fr{display:flex;align-items:center;gap:7px;min-height:25px;font-size:12px;margin:2px 0}
+.fr .k{width:78px;color:var(--ink2)}
+.fr .f{min-height:21px;font-size:11.5px}
+.ind{padding-left:85px}
+.tog{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;white-space:nowrap}
+.box{width:12px;height:12px;border:1.5px solid var(--ink2);border-radius:2px;display:inline-block;text-align:center;font-size:10px;line-height:10px}
+.btn.big{height:27px;padding:0 14px;font-size:12.5px}
+.btn.dis{background:var(--fill);border-color:var(--line2);color:var(--ink4)}
+.why{font-size:11.5px;color:var(--ink2);line-height:1.35}
+.fold{display:flex;align-items:center;gap:7px;font-size:12px;margin:6px 0}
+.fold .tri{font-size:10px;color:var(--ink3);width:10px}
+.prog{height:18px;border:1.5px solid var(--ink2);border-radius:3px;position:relative;overflow:hidden;background:#fff}
+.prog i{position:absolute;left:0;top:0;bottom:0;background:var(--fill3)}
+.prog span{position:absolute;left:0;right:0;top:0;text-align:center;font-size:11px;line-height:15px;font-weight:600}
+.stack{display:flex;height:22px;border:1.5px solid var(--ink2);border-radius:3px;overflow:hidden;flex:1}
+.s1{background:#3a3a3a;color:#fff}
 .s2{background:repeating-linear-gradient(45deg,#fff,#fff 3px,#6a6a6a 3px,#6a6a6a 7px)}
 .s3{background:#b5b5b5}
 .s4{background:#e4e4e4}
 .s5{background:repeating-linear-gradient(0deg,#fff,#fff 3px,#c0c0c0 3px,#c0c0c0 5px)}
-.seg{border-right:1.5px solid var(--ink2);display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700}
+.seg{border-right:1.5px solid var(--ink2);display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700}
 .seg:last-child{border-right:none}
-.lg{display:flex;flex-wrap:wrap;gap:12px;font-size:11.5px;color:var(--ink2);margin:2px 0 10px 114px}
-.lg span{display:flex;align-items:center;gap:5px}
-.sw{width:16px;height:12px;border:1.5px solid var(--ink2);display:inline-block}
-.ot{width:100%;border-collapse:collapse;font-size:12.5px}
-.ot th{text-align:left;font-size:11px;color:var(--ink3);font-weight:600;padding:4px 6px;border-bottom:1.5px solid var(--line2)}
-.ot td{padding:5px 6px;border-bottom:1px solid var(--line3)}
-.ot td.num{text-align:right;font-variant-numeric:tabular-nums}
-.ot .d{font-weight:700}
-.noise{font-size:11px;color:var(--ink3);font-weight:400}
-.mb{display:inline-block;width:84px;height:9px;border:1.5px solid var(--line2);border-radius:5px;overflow:hidden;vertical-align:middle;margin-right:6px}
-.mb i{display:block;height:100%;background:var(--ink2)}
-.mb.b i{background:#3a3a3a}
-.ft{width:100%;border-collapse:collapse;font-size:12.5px}
-.ft td{padding:6px 6px;border-bottom:1px solid var(--line3);vertical-align:top}
-.big{font-size:40px;font-weight:700;line-height:1}
-#cat .mb{width:54px}
-#cat td{padding:4px 6px;white-space:nowrap}
-#cat th{padding:4px 6px}
+.arm{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.arm .an{width:104px;flex:none;font-size:12px;font-weight:600;line-height:1.2}
+.arm .an span{display:block;font-weight:400;color:var(--ink3);font-size:10.5px}
+.lg{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:10.5px;color:var(--ink2);margin:0 0 8px 112px}
+.lg span{display:flex;align-items:center;gap:4px}
+.sw{width:13px;height:10px;border:1.2px solid var(--ink2);display:inline-block}
+table.o{width:100%;border-collapse:collapse;font-size:11.5px}
+.o th{text-align:left;font-size:10.5px;color:var(--ink3);font-weight:600;padding:3px 4px;border-bottom:1.5px solid var(--line2);white-space:nowrap}
+.o td{padding:4px 4px;border-bottom:1px solid var(--line3);vertical-align:middle}
+.o .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.o .d{font-weight:700;white-space:nowrap;text-align:right}
+.nz{font-size:10.5px;color:var(--ink3);font-weight:400}
+.mb{display:inline-block;width:46px;height:8px;border:1.2px solid var(--line2);border-radius:4px;overflow:hidden;vertical-align:middle;margin-right:4px}
+.mb i{display:block;height:100%;background:#3a3a3a}
+.chip{height:19px;font-size:11px;padding:0 6px}
+.fl{border-bottom:1px solid var(--line3);padding:6px 0;font-size:12px;line-height:1.4}
+.fl .top{display:flex;gap:8px;align-items:flex-start}
+.fl .id{width:84px;flex:none;font-size:11px;padding-top:1px}
+.fl .btn{margin-left:auto;height:21px;font-size:11px;flex:none}
+.det{margin:6px 0 2px 92px;border:1.5px solid var(--line3);border-radius:4px;background:var(--fill0);padding:6px 9px;font-size:11px;line-height:1.5}
+.det .dk{display:inline-block;width:118px;color:var(--ink3);font-weight:600}
+.seg2{display:inline-flex;border:1.2px solid var(--line);border-radius:3px;overflow:hidden;font-size:11px}
+.seg2 span{padding:2px 9px;background:#fff}
+.seg2 span.on{background:var(--ink);color:#fff;font-weight:600}
+.scroll{position:absolute;right:3px;width:6px;border-radius:3px;background:var(--fill3)}
+.btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.btns .btn{height:22px;font-size:11.5px}
+.notes2{position:absolute;left:32px;right:32px;top:1122px;border-top:1.5px solid var(--line3);padding-top:12px}
+.notes2 h4{margin:0 0 10px;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
+.ng{display:grid;grid-template-columns:repeat(4,1fr);gap:10px 26px}
+.ng .note{margin:0}
+.ng .note p{font-size:12.5px;line-height:1.38}
+.ng .note b{font-size:13.5px}
+.sq{width:26px;height:26px;flex:none;border-radius:6px;border:2px solid var(--accent);color:var(--accent);font:700 13px/22px "Segoe UI",sans-serif;text-align:center}
+.c{width:24px;height:24px;font-size:13px;line-height:24px}
 </style></head>
 <body><div class="page">
 
 <div class="hdr">
   <div>
-    <div class="kicker">Screen 4 of 6 · Unity Editor</div>
+    <div class="kicker">Screen 4 of 6 · Unity Editor · rebuilt in UI Toolkit (#179)</div>
     <div class="title">Evaluation Report</div>
-    <div class="sub">Measures whether agents choose correctly: two set-ups, one labelled prompt set, one session</div>
+    <div class="sub">Two set-ups, one labelled prompt set, one session: how often the agent chooses correctly, and why not when it doesn't</div>
   </div>
-  <div class="meta">Agenerela · COMP 490 · Section 04<br>Opened from <b>Window ▸ Agenerela ▸ Evaluation</b><br><span class="pill">Phase 4 · before any accuracy claim</span> <span class="pill dash">Illustrative numbers</span></div>
+  <div class="meta">Agenerela · Phase 4 built it in #146; #179 moves it onto the #167 kit<br>Opened from <b>Window ▸ Agenerela ▸ Evaluation Report</b><br><span class="pill">One window, three states, each at its 560 px minimum</span> <span class="pill dash">Illustrative numbers</span></div>
 </div>
 
-<div class="wf">
-  <div class="win" style="left:0;top:0;width:1126px;height:828px">
-    <div class="bar"><div class="tabx">Evaluation</div><div class="tabx off">Decision Log</div></div>
-
-    <div class="setup rel">
-      <span class="c" style="left:-15px;top:14px">1</span>
-      <div class="srow"><span class="k2" style="width:74px">Prompt set</span><div class="f dd" style="flex:none;width:300px">village_guard.json · 212 labelled prompts</div>
-        <span class="k2" style="margin-left:14px">Model</span><div class="f dd" style="flex:none;width:210px">qwen3.5:2b · Ollama</div>
-        <span class="btn" style="margin-left:auto">Edit prompt set</span></div>
-      <div class="srow"><span class="k2" style="width:74px">Arm A</span><div class="f dd" style="flex:none;width:300px">Baseline · guards off</div>
-        <span class="k2" style="margin-left:14px">Arm B</span><div class="f dd" style="flex:none;width:300px">Treatment · grounding guard on</div>
-        <span class="btn pri" style="margin-left:auto">▶ Run A/B</span></div>
-      <div class="srow" style="margin-bottom:0">
-        <span class="check">☑ Warm up with 3 requests</span>
-        <span class="check">✓ Only one model loaded</span>
-        <span class="check">✓ No example reuses an evaluation prompt</span>
-        <span class="hint" style="margin-left:auto">Last run: today 14:20 · one session · 212 prompts × 2 arms · 9 min 40 s</span></div>
+<!-- ============ column 1: first open, and a run ============ -->
+<div class="lbl" style="left:32px">A · First open</div>
+<div class="win" style="left:32px;top:172px;width:560px;height:700px">
+  <div class="clip">
+  <div class="ttl"><div class="tabx">Evaluation Report</div></div>
+  <div class="tb"><span class="tbb">Open report…</span><span style="flex:1"></span><span class="tbb">Edit prompt set</span><span class="tbb">Project Settings</span></div>
+  <div class="body">
+    <div class="card" style="margin-top:10px">
+      <div style="font-size:15px;font-weight:700">Start here</div>
+      <div class="hint" style="margin:2px 0 8px">Measures how often your agent chooses correctly: the same labelled prompts asked in two set-ups, arm A and arm B, in one session. Your choices are remembered on this machine.</div>
+      <div style="display:flex;align-items:center;gap:10px"><span class="btn pri big">Use the project's set, profile and arms</span><span class="hint">Does steps 1 to 3 at once.</span></div>
+      <div class="step"><span class="dot ok">✓</span><div><b>Choose the prompt set</b><span class="mono" style="font-size:11.5px">Assets/Evaluation/agent.json</span> · 76 prompts</div></div>
+      <div class="step"><span class="dot ok">✓</span><div><b>Choose the profile</b>VillageGuard.</div></div>
+      <div class="step"><span class="dot">3</span><div style="flex:1"><b>Choose the two arms</b>
+        <div class="prob"><span class="ico">⚠</span><span>The project has no Arm A and Arm B in Project Settings ▸ Agenerela.</span><span class="btn">Open Project Settings</span></div></div></div>
+      <div class="step" style="margin-bottom:0"><span class="dot">4</span><div><b>Run A/B</b><span class="muted">Uses the GPU for a few minutes. It refuses to start while another model is loaded (hard rule 3).</span></div></div>
     </div>
 
-    <!-- outcomes -->
-    <div class="sect rel" style="left:0;top:138px;width:664px;height:400px;border-right:1.5px solid var(--line2);border-bottom:1.5px solid var(--line2)">
-      <span class="c" style="left:-15px;top:12px">2</span>
-      <h5>Outcomes · 212 prompts per arm</h5>
-      <div class="arm"><div class="al2">A · Baseline<span>guards off</span></div>
-        <div class="stack"><div class="seg s1" style="width:60%">60%</div><div class="seg s2" style="width:38%">38%</div><div class="seg s5" style="width:2%"></div></div></div>
-      <div class="arm"><div class="al2">B · Treatment<span>grounding guard on</span></div>
-        <div class="stack"><div class="seg s1" style="width:86%">86%</div><div class="seg s2" style="width:4%"></div><div class="seg s3" style="width:8%">8%</div><div class="seg s4" style="width:2%"></div></div></div>
-      <div class="lg">
-        <span><i class="sw s1"></i>Correct</span><span><i class="sw s2"></i>Wrong but legal</span><span><i class="sw s3"></i>Contained by a guard</span><span><i class="sw s4"></i>Rejected when an action was expected</span><span><i class="sw s5"></i>Pipeline error</span>
-      </div>
-      <table class="ot">
-        <tr><th>Outcome</th><th class="num" style="text-align:right">A</th><th class="num" style="text-align:right">B</th><th style="text-align:right">Difference</th></tr>
-        <tr><td>Correct</td><td class="num">60%</td><td class="num">86%</td><td class="num d">+26 pts</td></tr>
-        <tr><td>Wrong but legal <span class="hint">— the agent visibly misbehaves</span></td><td class="num">38%</td><td class="num">4%</td><td class="num d">−34 pts</td></tr>
-        <tr><td>Contained by a guard <span class="hint">— safety layer working</span></td><td class="num">0%</td><td class="num">8%</td><td class="num d">+8 pts</td></tr>
-        <tr><td>Rejected when an action was expected</td><td class="num">0%</td><td class="num">2%</td><td class="num"><span class="noise">+2 · within noise</span></td></tr>
-        <tr style="border-bottom:none"><td>Pipeline error</td><td class="num">2%</td><td class="num">0%</td><td class="num"><span class="noise">−2 · within noise</span></td></tr>
-      </table>
-      <div class="hint rel" style="margin-top:10px;line-height:1.45"><span class="c" style="left:-26px;top:-2px">3</span>A difference this small could be chance with 212 prompts, so the report says so instead of calling it an improvement.</div>
-    </div>
-
-    <!-- by category -->
-    <div class="sect rel" style="left:664px;right:0;top:138px;height:400px;border-bottom:1.5px solid var(--line2)">
-      <span class="c" style="right:-15px;top:12px">4</span>
-      <h5>Correct answers by prompt category</h5>
-      <table class="ot" id="cat">
-        <tr><th>Category</th><th style="text-align:right">n</th><th>A</th><th>B</th></tr>
-        <tr><td>simple_command</td><td class="num">36</td><td><span class="mb"><i style="width:83%"></i></span>83%</td><td><span class="mb b"><i style="width:92%"></i></span>92%</td></tr>
-        <tr><td>command_with_target</td><td class="num">40</td><td><span class="mb"><i style="width:70%"></i></span>70%</td><td><span class="mb b"><i style="width:90%"></i></span>90%</td></tr>
-        <tr><td>impossible_request</td><td class="num">48</td><td><span class="mb"><i style="width:25%"></i></span>25%</td><td><span class="mb b"><i style="width:85%"></i></span>85%</td></tr>
-        <tr><td>conversation</td><td class="num">30</td><td><span class="mb"><i style="width:80%"></i></span>80%</td><td><span class="mb b"><i style="width:83%"></i></span>83%</td></tr>
-        <tr><td>situation <span class="hint">“what now?”</span></td><td class="num">30</td><td><span class="mb"><i style="width:60%"></i></span>60%</td><td><span class="mb b"><i style="width:80%"></i></span>80%</td></tr>
-        <tr><td>event <span class="hint">reported by the game</span></td><td class="num">28</td><td><span class="mb"><i style="width:54%"></i></span>54%</td><td><span class="mb b"><i style="width:82%"></i></span>82%</td></tr>
-      </table>
-      <div class="hint" style="margin-top:12px;line-height:1.45">Categories exist so the headline number is never measured on player chat alone: our agents are also asked by timers and game events, and a country reads reports.</div>
-      <div class="help" style="margin-top:12px"><span class="ico">⚠</span><span><b>impossible_request is the one that matters.</b> Substituting a legal target for one the player never named is the failure that looks worst in a demo.</span></div>
-    </div>
-
-    <!-- failures -->
-    <div class="sect rel" style="left:0;top:540px;width:664px;bottom:0;border-right:1.5px solid var(--line2)">
-      <span class="c" style="left:-15px;top:12px">5</span>
-      <h5>Wrong but legal in arm B · 9 prompts</h5>
-      <table class="ft">
-        <tr><td class="mono" style="width:76px">con_019</td><td>Player: “The tower looks lovely today.”<br><span class="hint">expected <span class="mono">none</span> · got <span class="mono">move_to · tower</span> — the target was named, so no guard fired</span></td><td style="width:96px;text-align:right"><span class="btn">Open ↗</span></td></tr>
-        <tr><td class="mono">cmd_031</td><td>Player: “Walk with me to the bridge.”<br><span class="hint">expected <span class="mono">follow_player</span> · got <span class="mono">move_to · bridge</span></span></td><td style="text-align:right"><span class="btn">Open ↗</span></td></tr>
-        <tr><td class="mono">evt_012</td><td>Event: “An enemy was spotted near the bridge.”<br><span class="hint">expected <span class="mono">move_to · bridge</span> · got <span class="mono">none</span></span></td><td style="text-align:right"><span class="btn">Open ↗</span></td></tr>
-      </table>
-      <div class="hint" style="margin-top:8px">+ 6 more · “Open” shows the whole decision in the Decision Log (screen 3).</div>
-    </div>
-
-    <!-- labels -->
-    <div class="sect rel" style="left:664px;right:0;top:540px;bottom:0">
-      <span class="c" style="right:-15px;top:12px">6</span>
-      <h5>Labelling and export</h5>
-      <div style="display:flex;gap:18px;align-items:flex-start">
-        <div><div class="big">88%</div><div class="hint" style="margin-top:4px;line-height:1.4">agreement between<br>our two labellers</div></div>
-        <div style="font-size:12.5px;line-height:1.6">80 of 212 prompts were labelled twice, by two<br>different people.<br><b>3 disagreements still to resolve.</b></div>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:14px"><span class="btn">Review disagreements</span><span class="btn">Copy summary for findings.md</span></div>
-      <div class="hint" style="margin-top:14px;line-height:1.45;border-top:1.5px solid var(--line3);padding-top:10px">Every accuracy claim we make has to come from a run like this one: a control arm, the same model, the same machine, the same session.</div>
-    </div>
+    <div class="st">① Run set-up<span class="rule"></span></div>
+    <div class="fr"><span class="k">Prompt set</span><div class="f obj">agent.json</div></div>
+    <div class="fr"><span class="k">Profile</span><div class="f obj">VillageGuard</div></div>
+    <div class="fr"><span class="k">Arm A</span><div class="f obj muted">None (Provider Config)</div></div>
+    <div class="fr ind"><div class="f" style="flex:none;width:200px"></div><span class="tog"><i class="box"></i>Grounding guard</span></div>
+    <div class="fr"><span class="k">Arm B</span><div class="f obj muted">None (Provider Config)</div></div>
+    <div class="fr ind"><div class="f" style="flex:none;width:200px"></div><span class="tog"><i class="box"></i>Grounding guard</span></div>
+    <div class="fr"><span class="k">Order</span><div class="f dd" style="flex:none;width:200px">Interleaved</div></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:8px"><span class="btn big dis">▶ Run A/B</span><span class="why">Choose the two arms' provider configs (step 3).</span></div>
   </div>
+  </div>
+  <span class="sq" style="position:absolute;left:-13px;top:80px;background:#fff">A</span>
+  <span class="c" style="left:-12px;top:404px">1</span>
 </div>
 
-<div class="notes">
-  <h4>What the numbers point to</h4>
-  <div class="note"><span class="n">1</span><div><b>Run set-up</b><p>The same prompts and model for both set-ups (arm A and arm B), in one session, after a warm-up, with only one model loaded.</p></div></div>
-  <div class="note"><span class="n">2</span><div><b>Five outcomes, not one score</b><p>Correct, wrong but legal, contained by a guard, rejected when an action was expected, pipeline error. Each one needs a different fix.</p></div></div>
-  <div class="note"><span class="n">3</span><div><b>Noise check</b><p>Differences too small to trust at this number of prompts are marked, so nobody reports an improvement that isn't real.</p></div></div>
-  <div class="note"><span class="n">4</span><div><b>By category</b><p>Commands, impossible requests, conversation, situations and events, so accuracy is never measured on chat alone.</p></div></div>
-  <div class="note"><span class="n">5</span><div><b>Failures</b><p>The prompts the agent got wrong, with expected vs. actual. “Open” jumps to that decision in the Decision Log.</p></div></div>
-  <div class="note"><span class="n">6</span><div><b>Labels and export</b><p>How often our two labellers agreed, and a one-click summary to paste into our findings page.</p></div></div>
+<div class="win" style="left:32px;top:890px;width:560px;height:212px">
+  <div class="clip">
+  <div class="ttl"><div class="tabx">Evaluation Report</div></div>
+  <div class="body" style="padding-top:8px">
+    <div class="fold"><span class="tri">▸</span><b>① Run set-up</b><span class="muted">agent.json · VillageGuard · control vs guards-on · interleaved</span></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+      <span class="btn big">Cancel</span>
+      <div style="flex:1"><div class="prog"><i style="width:24%"></i><span>Asking · guards-on · 37 of 152 answers</span></div>
+      <div class="hint" style="margin-top:3px">1 min 20 s so far. The Editor stays usable; scripts do not recompile until the run ends.</div></div>
+    </div>
+    <div class="hint" style="margin:12px 0 4px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:10.5px">After Cancel</div>
+    <div class="prob"><span class="ico">⚠</span><span>Cancelled after 37 of 152 answers. The set was not asked whole, so nothing here is an accuracy result. The partial report is saved to <span class="mono">Logs/Evaluation</span>.</span></div>
+  </div>
+  </div>
+  <span class="sq" style="position:absolute;left:-13px;top:40px;background:#fff">B</span>
+</div>
+
+<!-- ============ column 2: a report, top ============ -->
+<div class="lbl" style="left:620px">C · A report</div>
+<div class="win" style="left:620px;top:172px;width:560px;height:930px">
+  <div class="clip">
+  <div class="ttl"><div class="tabx">Evaluation Report</div></div>
+  <div class="tb"><span class="tbb">Use the project's set, profile and arms</span><span class="tbb">Open report…</span><span style="flex:1"></span><span class="tbb">Edit prompt set</span><span class="tbb">Project Settings</span></div>
+  <div class="scroll" style="top:62px;height:300px"></div>
+  <div class="body">
+    <div class="fold" style="margin-top:10px"><span class="tri">▸</span><b>① Run set-up</b><span class="muted">agent.json · VillageGuard · control vs guards-on</span><span class="btn pri" style="margin-left:auto;height:22px">▶ Run A/B</span></div>
+    <div class="hint" style="margin:-2px 0 6px 17px">Folded once a report is shown; opens to the same fields as A.</div>
+
+    <div style="font-size:12.5px;font-weight:700" class="mono">2026-11-05_14-20-00_control_vs_guards-on</div>
+    <div class="hint">Run 5 Nov 2026 14:20 · 76 prompts × 2 arms · interleaved · 4 min 12 s</div>
+    <div class="prob"><span class="ico">⚠</span><span>Arm 'guards-on': qwen3.5:2b was not fully on the GPU after warm-up, 1712 of 2254 MB in VRAM, so its latencies are not comparable.</span></div>
+    <div class="fold"><span class="tri">▾</span><b>Conditions this run was measured under</b></div>
+    <div style="font-size:11px;line-height:1.45;color:var(--ink2);margin-left:17px">
+      Interleaved: each prompt in arm A, then in arm B, so drift hit both alike.<br>
+      Arm A, control: OllamaLocal, <span class="mono">qwen3.5:2b</span>, Ollama 0.40.14, grounding guard off, … 3 warm-up requests.<br>
+      <span class="muted">&nbsp;&nbsp;Before warm-up: no model loaded. After: qwen3.5:2b fully on the GPU, 2254 of 2254 MB.</span><br>
+      Set: agent.json, last changed in commit <span class="mono">3dbcc69</span>. <span class="muted">… 4 more lines</span>
+    </div>
+    <div class="st">② Outcomes · 76 prompts per arm<span class="rule"></span></div>
+    <div class="arm"><div class="an">control<span>qwen3.5:2b · guard off</span></div>
+      <div class="stack"><div class="seg s1" style="width:61%">61%</div><div class="seg s2" style="width:37%">37%</div><div class="seg s5" style="width:2%"></div></div></div>
+    <div class="arm"><div class="an">guards-on<span>qwen3.5:2b · guard on</span></div>
+      <div class="stack"><div class="seg s1" style="width:70%">70%</div><div class="seg s2" style="width:17%">17%</div><div class="seg s3" style="width:11%">11%</div><div class="seg s4" style="width:2%"></div></div></div>
+    <div class="lg"><span><i class="sw s1"></i>Correct</span><span><i class="sw s2"></i>Wrong but legal</span><span><i class="sw s3"></i>Contained by a guard</span><span><i class="sw s4"></i>Rejected when expected</span><span><i class="sw s5"></i>Pipeline error</span></div>
+    <table class="o">
+      <tr><th>Outcome</th><th class="num">control</th><th class="num">guards-on</th><th class="num">Difference</th></tr>
+      <tr><td><b>Correct</b></td><td class="num">61% (46)</td><td class="num">70% (53)</td><td class="d">+9.2 pts · <span class="nz">beyond noise</span></td></tr>
+      <tr><td>Wrong but legal <span class="nz">— visibly misbehaves</span></td><td class="num">37% (28)</td><td class="num">17% (13)</td><td class="d">−19.7 pts</td></tr>
+      <tr><td>Contained by a guard <span class="nz">— safety layer working</span></td><td class="num">0% (0)</td><td class="num">11% (8)</td><td class="d">+10.5 pts</td></tr>
+      <tr><td>Rejected when expected <span class="nz">— good request refused</span></td><td class="num">0% (0)</td><td class="num">3% (2)</td><td class="d">+2.6 pts</td></tr>
+      <tr><td>Pipeline error</td><td class="num">3% (2)</td><td class="num">0% (0)</td><td class="d">−2.6 pts</td></tr>
+    </table>
+    <div class="st">③ Noise check<span class="rule"></span></div>
+    <div class="card" style="font-size:12px;line-height:1.4;padding:7px 10px">Arm B's accuracy minus arm A's is <b>+9.2 points</b>, beyond the noise floor at 76 prompts, <b>8.1</b>: larger than the drift between identical runs.
+      <div class="hint" style="margin-top:3px">Floor: 10 × √(50 / n), scaled from the prototype's 10-point drift at n = 50. Checked on accuracy only.</div></div>
+    <div class="st">④ Correct answers by prompt category<span class="rule"></span></div>
+    <table class="o">
+      <tr><th>Category</th><th class="num">n</th><th>control</th><th>guards-on</th><th class="num">Difference</th></tr>
+      <tr><td><span class="chip">command_with_target</span></td><td class="num">24</td><td><span class="mb"><i style="width:71%"></i></span>71%</td><td><span class="mb"><i style="width:75%"></i></span>75%</td><td class="d">+4.2 <span class="nz">within noise</span></td></tr>
+      <tr><td><span class="chip">impossible_request</span></td><td class="num">18</td><td><span class="mb"><i style="width:22%"></i></span>22%</td><td><span class="mb"><i style="width:61%"></i></span>61%</td><td class="d">+38.9 <span class="nz">beyond</span></td></tr>
+      <tr><td><span class="chip">situation</span></td><td class="num">16</td><td><span class="mb"><i style="width:69%"></i></span>69%</td><td><span class="mb"><i style="width:69%"></i></span>69%</td><td class="d">±0.0 <span class="nz">within noise</span></td></tr>
+    </table>
+    <div class="hint" style="margin-top:4px">… 3 more categories. A small category needs a large difference before it says anything.</div>
+  </div>
+  </div>
+  <span class="c" style="left:-12px;top:70px">1</span>
+  <span class="c" style="left:-12px;top:300px">2</span>
+  <span class="c" style="left:-12px;top:646px">3</span>
+  <span class="c" style="left:-12px;top:764px">4</span>
+</div>
+
+<!-- ============ column 3: the same report, scrolled down ============ -->
+<div class="lbl" style="left:1208px">D · The same report, scrolled down</div>
+<div class="win" style="left:1208px;top:172px;width:560px;height:930px">
+  <div class="clip">
+  <div class="ttl"><div class="tabx">Evaluation Report</div></div>
+  <div class="tb"><span class="tbb">Use the project's set, profile and arms</span><span class="tbb">Open report…</span><span style="flex:1"></span><span class="tbb">Edit prompt set</span><span class="tbb">Project Settings</span></div>
+  <div class="scroll" style="top:420px;height:300px"></div>
+  <div class="body">
+    <div class="st">⑤ Not correct in arm B · 23 prompts<span class="rule"></span></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <span class="seg2"><span>A · control</span><span class="on">B · guards-on</span></span>
+      <div class="f dd" style="flex:none;width:210px;min-height:21px;font-size:11.5px">Every outcome but correct</div>
+    </div>
+    <div class="fl"><div class="top"><span class="id mono">target_014</span><div style="flex:1">Player: “Go stand by the well.”<br><span class="hint">expected <span class="chip">none</span> <span class="chip">no_target</span> · model said <span class="chip">move_to</span> <span class="chip">bridge</span>, stopped by TargetGrounding · contained</span></div><span class="btn">Close ▾</span></div>
+      <div class="det">
+        <span class="dk">State told to the model</span>isFollowing: false.<br>
+        <span class="dk">Its statement</span>“I'll head to the bridge.”<br>
+        <span class="dk">After the guards</span><span class="mono">none · no_target</span><br>
+        <span class="dk">Guard</span>TargetGrounding, RewriteToNone: 0.41 of the target's probability stayed on the list.<br>
+        <span class="dk">Model</span>qwen3.5:2b, 0.84 s
+      </div></div>
+    <div class="fl"><div class="top"><span class="id mono">target_031</span><div style="flex:1">Player: “Walk with me to the bridge.”<br><span class="hint">expected <span class="chip">follow_player</span> <span class="chip">no_target</span> · got <span class="chip">move_to</span> <span class="chip">bridge</span> · wrong but legal</span></div><span class="btn">Open ▸</span></div></div>
+    <div class="fl"><div class="top"><span class="id mono">situation_012</span><div style="flex:1">Event: “An enemy was spotted near the bridge.”<br><span class="hint">expected <span class="chip">move_to</span> <span class="chip">bridge</span> · got <span class="chip">none</span> <span class="chip">no_target</span> · wrong but legal</span></div><span class="btn">Open ▸</span></div></div>
+    <div class="fl" style="border-bottom:none"><div class="top"><span class="id mono">situation_019</span><div style="flex:1">Situation: “The square is empty.”<br><span class="hint">expected <span class="chip">none</span> <span class="chip">no_target</span> · no decision: Timeout · pipeline error</span></div><span class="btn">Open ▸</span></div></div>
+    <div class="hint">… 19 more, in the order they were asked.</div>
+    <div class="st" style="margin-top:18px">⑥ Labelling and export<span class="rule"></span></div>
+    <div style="display:flex;gap:14px;align-items:flex-start">
+      <div style="font-size:30px;font-weight:700;line-height:1">88%</div>
+      <div style="font-size:12px;line-height:1.45"><b>35 of 40 prompts answered by two or more people got the same answer from all (88%).</b><br>5 prompts split their labellers: the Prompt Set window's Agreement tab lists and settles them.<br><span class="hint">From the set's label files as they are now, which may have changed since the run.</span></div>
+    </div>
+    <div class="btns"><span class="btn">Review disagreements</span><span class="btn">Copy summary for findings.md</span><span class="btn">Show files</span><span class="btn">Save a copy…</span></div>
+    <div class="hint" style="margin-top:10px;line-height:1.45;border-top:1.5px solid var(--line3);padding-top:8px">Every accuracy claim has to come from a run like this one: a control arm, the same model, the same machine, the same session (hard rule 2). Read <span class="mono">docs/llm-wiki/measuring.md</span> before writing a number down.</div>
+
+    <div class="hint" style="margin:18px 0 4px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:10.5px">Saved reports</div>
+    <div class="hint" style="line-height:1.45">Every run, finished or cancelled, is saved to <span class="mono">Logs/Evaluation/&lt;run&gt;/</span>, which git ignores. <b>Open report…</b> reads one back and shows it exactly as above.</div>
+  </div>
+  </div>
+  <span class="c" style="left:-12px;top:67px">5</span>
+  <span class="c" style="left:-12px;top:514px">6</span>
+</div>
+
+<!-- ============ notes ============ -->
+<div class="notes2">
+  <h4>What the letters and numbers point to</h4>
+  <div class="ng">
+    <div class="note"><span class="sq">A</span><div><b>First open</b><p>Until it can run, the window says how to start. One primary button fills steps 1 to 3; what the project lacks shows as a problem box with its fix.</p></div></div>
+    <div class="note"><span class="sq">B</span><div><b>A run</b><p>Progress per answer, and Cancel. A cancelled run keeps its partial report, marked as no result.</p></div></div>
+    <div class="note"><span class="n">1</span><div><b>Run set-up</b><p>Set, profile, two arms with a name and the grounding guard each, the order. <strong>Run A/B</strong> is greyed with the reason under it. New in #179: folded once a report is shown.</p></div></div>
+    <div class="note"><span class="n">2</span><div><b>Five outcomes, not one score</b><p>A bar per arm and each outcome's share, with the difference. Fills come from the kit's variables, so both skins read.</p></div></div>
+    <div class="note"><span class="n">3</span><div><b>Noise check</b><p>One sentence, on accuracy: a difference smaller than the floor at this n is no result.</p></div></div>
+    <div class="note"><span class="n">4</span><div><b>By category</b><p>Each with its own n and noise check, so the headline is never measured on player chat alone. Ids are the kit's chips.</p></div></div>
+    <div class="note"><span class="n">5</span><div><b>Not correct</b><p>Either arm, filtered by outcome. <strong>Open</strong> expands the whole answer in place, until the Decision Log (#172) can show it.</p></div></div>
+    <div class="note"><span class="n">6</span><div><b>Labels and export</b><p>Agreement in the Prompt Set window's own counts, and the export buttons. The same as #146, in the kit's look.</p></div></div>
+  </div>
 </div>
 
 </div></body></html>

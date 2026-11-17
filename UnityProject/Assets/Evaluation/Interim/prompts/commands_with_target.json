@@ -1,0 +1,1300 @@
+{
+  "category": "command_with_target",
+  "prompts": [
+    {
+      "id": "int_target_001",
+      "label": "Player",
+      "stimulus": "Get yourself over to the bridge.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "bridge",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/bridge",
+        "codex": "move_to/bridge"
+      }
+    },
+    {
+      "id": "int_target_002",
+      "label": "Player",
+      "stimulus": "gate. now.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "village_gate",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/village_gate",
+        "codex": "move_to/village_gate"
+      }
+    },
+    {
+      "id": "int_target_003",
+      "label": "Player",
+      "stimulus": "Run to the campfire!",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "campfire",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/campfire",
+        "codex": "move_to/campfire"
+      }
+    },
+    {
+      "id": "int_target_004",
+      "label": "Player",
+      "stimulus": "Could you head down to the docks for me?",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "docks",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/docks",
+        "codex": "move_to/docks"
+      }
+    },
+    {
+      "id": "int_target_005",
+      "label": "Player",
+      "stimulus": "Make your way to the shelter, please.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "shelter",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/shelter",
+        "codex": "move_to/shelter"
+      }
+    },
+    {
+      "id": "int_target_006",
+      "label": "Player",
+      "stimulus": "Go see if anyone's on the eastern road.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "eastern_road",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/eastern_road",
+        "codex": "move_to/eastern_road"
+      }
+    },
+    {
+      "id": "int_target_007",
+      "label": "Player",
+      "stimulus": "Patrol by the well for a bit.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "well",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/well",
+        "codex": "move_to/well"
+      }
+    },
+    {
+      "id": "int_target_008",
+      "label": "Player",
+      "stimulus": "Up to the north tower with you.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "north_tower",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/north_tower",
+        "codex": "move_to/north_tower"
+      }
+    },
+    {
+      "id": "int_target_009",
+      "label": "Player",
+      "stimulus": "market, go",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "market",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/market",
+        "codex": "move_to/market"
+      }
+    },
+    {
+      "id": "int_target_010",
+      "label": "Player",
+      "stimulus": "Go wait for me at the docks.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "docks",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "note": "A wait command with a place: walking there is the action.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/docks",
+        "codex": "move_to/docks"
+      }
+    },
+    {
+      "id": "int_target_011",
+      "label": "Player",
+      "stimulus": "hurry up n get to teh bridge",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "bridge",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "note": "Typos kept on purpose.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/bridge",
+        "codex": "move_to/bridge"
+      }
+    },
+    {
+      "id": "int_target_012",
+      "label": "Player",
+      "stimulus": "Hurry to the village gate, someone's knocking.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "village_gate",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/village_gate",
+        "codex": "move_to/village_gate"
+      }
+    },
+    {
+      "id": "int_target_013",
+      "label": "Player",
+      "stimulus": "I need you at the market.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "market",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/market",
+        "codex": "move_to/market"
+      }
+    },
+    {
+      "id": "int_target_014",
+      "label": "Player",
+      "stimulus": "Take up a post at the north tower.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "north_tower",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/north_tower",
+        "codex": "move_to/north_tower"
+      }
+    },
+    {
+      "id": "int_target_015",
+      "label": "Player",
+      "stimulus": "Get to the shelter before the storm hits.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "shelter",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/shelter",
+        "codex": "move_to/shelter"
+      }
+    },
+    {
+      "id": "int_target_016",
+      "label": "Player",
+      "stimulus": "Walk down to the stream crossing.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "bridge",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The bridge named by what it is, not by its name.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/bridge",
+        "codex": "move_to/bridge"
+      }
+    },
+    {
+      "id": "int_target_017",
+      "label": "Player",
+      "stimulus": "Go to where the supply boats unload.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "docks",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The docks named by what they are, not by their name.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/docks",
+        "codex": "move_to/docks"
+      }
+    },
+    {
+      "id": "int_target_018",
+      "label": "Player",
+      "stimulus": "Head for the guards' camp.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "campfire",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The campfire named by the camp it is in.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/campfire",
+        "codex": "move_to/campfire"
+      }
+    },
+    {
+      "id": "int_target_019",
+      "label": "Player",
+      "stimulus": "The stone well. Get over there, quickly.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "well",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/well",
+        "codex": "move_to/well"
+      }
+    },
+    {
+      "id": "int_target_020",
+      "label": "Player",
+      "stimulus": "Station yourself on the road out east.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "eastern_road",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/eastern_road",
+        "codex": "move_to/eastern_road"
+      }
+    },
+    {
+      "id": "int_target_021",
+      "label": "Player",
+      "stimulus": "Off to the market with you, and be quick about it.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "market",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/market",
+        "codex": "move_to/market"
+      }
+    },
+    {
+      "id": "int_target_022",
+      "label": "Player",
+      "stimulus": "Could you be a dear and go keep watch by the main gate?",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "village_gate",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/village_gate",
+        "codex": "move_to/village_gate"
+      }
+    },
+    {
+      "id": "int_target_023",
+      "label": "Player",
+      "stimulus": "You. Tower. Move.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "north_tower",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/north_tower",
+        "codex": "move_to/north_tower"
+      }
+    },
+    {
+      "id": "int_target_024",
+      "label": "Player",
+      "stimulus": "go 2 the well",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "well",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "note": "Typo kept on purpose.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/well",
+        "codex": "move_to/well"
+      }
+    },
+    {
+      "id": "int_target_025",
+      "label": "Player",
+      "stimulus": "Meet me at the campfire.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "campfire",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/campfire",
+        "codex": "move_to/campfire"
+      }
+    },
+    {
+      "id": "int_target_026",
+      "label": "Player",
+      "stimulus": "Get down to the docks and see what the shouting's about.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "docks",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/docks",
+        "codex": "move_to/docks"
+      }
+    },
+    {
+      "id": "int_target_027",
+      "label": "Player",
+      "stimulus": "Don't follow me, go to the shelter instead.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "shelter",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "note": "Two requests: stop following and go to the shelter. Walking to the shelter is the one action that does both.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/shelter",
+        "codex": "move_to/shelter"
+      }
+    },
+    {
+      "id": "int_target_028",
+      "label": "Player",
+      "stimulus": "Forget the gate, go to the bridge.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "bridge",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The gate is named and taken back.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/bridge",
+        "codex": "move_to/bridge"
+      }
+    },
+    {
+      "id": "int_target_029",
+      "label": "Player",
+      "stimulus": "Not the market, the docks. Go to the docks.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "docks",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The market is named and taken back.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/docks",
+        "codex": "move_to/docks"
+      }
+    },
+    {
+      "id": "int_target_030",
+      "label": "Player",
+      "stimulus": "I want you standing watch at the eastern road until sunrise.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "eastern_road",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/eastern_road",
+        "codex": "move_to/eastern_road"
+      }
+    },
+    {
+      "id": "int_target_031",
+      "label": "Player",
+      "stimulus": "Go to the market and buy me some apples.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "market",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Two requests: buying is no action, walking to the market is.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/market",
+        "codex": "move_to/market"
+      }
+    },
+    {
+      "id": "int_target_032",
+      "label": "Player",
+      "stimulus": "Head to the well and fetch me a bucket of water.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "well",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Two requests: fetching water is no action, walking to the well is.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/well",
+        "codex": "move_to/well"
+      }
+    },
+    {
+      "id": "int_target_033",
+      "label": "Player",
+      "stimulus": "Go up the north tower and light the signal fire.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "north_tower",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Two requests: lighting the fire is no action, going to the tower is.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/north_tower",
+        "codex": "move_to/north_tower"
+      }
+    },
+    {
+      "id": "int_target_034",
+      "label": "Player",
+      "stimulus": "Get over to the campfire and warm up, you look frozen.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "campfire",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/campfire",
+        "codex": "move_to/campfire"
+      }
+    },
+    {
+      "id": "int_target_035",
+      "label": "Player",
+      "stimulus": "Move it! Bridge! Now!",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "bridge",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/bridge",
+        "codex": "move_to/bridge"
+      }
+    },
+    {
+      "id": "int_target_036",
+      "label": "Player",
+      "stimulus": "Please return to the shelter.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "shelter",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/shelter",
+        "codex": "move_to/shelter"
+      }
+    },
+    {
+      "id": "int_target_037",
+      "label": "Player",
+      "stimulus": "would u mind heading out to the eastern road",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "eastern_road",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/eastern_road",
+        "codex": "move_to/eastern_road"
+      }
+    },
+    {
+      "id": "int_target_038",
+      "label": "Player",
+      "stimulus": "There's a crowd forming in the market, get over there.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "market",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/market",
+        "codex": "move_to/market"
+      }
+    },
+    {
+      "id": "int_target_039",
+      "label": "Player",
+      "stimulus": "Over to the gate, quick.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "village_gate",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/village_gate",
+        "codex": "move_to/village_gate"
+      }
+    },
+    {
+      "id": "int_target_040",
+      "label": "Player",
+      "stimulus": "Walk me to... no, wait, just go to the docks yourself.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "docks",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "A follow request taken back in the same line.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/docks",
+        "codex": "move_to/docks"
+      }
+    },
+    {
+      "id": "int_target_041",
+      "label": "Player",
+      "stimulus": "Go guard one of the ways in, the gate or the east road, your pick.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": [
+        "village_gate",
+        "eastern_road"
+      ],
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "An open choice: either place is right.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/village_gate",
+        "codex": "move_to/village_gate"
+      }
+    },
+    {
+      "id": "int_target_042",
+      "label": "Player",
+      "stimulus": "Go keep watch somewhere near the water.",
+      "observations": [
+        "The docks are on the river",
+        "The bridge crosses the stream"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": [
+        "bridge",
+        "docks"
+      ],
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "An open choice: either place by the water is right.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/bridge",
+        "codex": "move_to/docks"
+      }
+    },
+    {
+      "id": "int_target_043",
+      "label": "Player",
+      "stimulus": "Kill that wolf before it gets away!",
+      "observations": [],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_target_044",
+      "label": "Player",
+      "stimulus": "Get that wolf.",
+      "observations": [],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_target_045",
+      "label": "Player",
+      "stimulus": "Take the wolf down.",
+      "observations": [],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_target_046",
+      "label": "Player",
+      "stimulus": "wolf!! kill it",
+      "observations": [],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_target_047",
+      "label": "Player",
+      "stimulus": "Put that beast down before it bites someone.",
+      "observations": [
+        "A wolf is prowling near the houses"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_target_048",
+      "label": "Player",
+      "stimulus": "Go after the wolf.",
+      "observations": [],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_target_049",
+      "label": "Player",
+      "stimulus": "Fight the wolf off.",
+      "observations": [],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_target_050",
+      "label": "Player",
+      "stimulus": "Draw your sword on the wolf.",
+      "observations": [],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_target_051",
+      "label": "Player",
+      "stimulus": "Deal with that wolf, now.",
+      "observations": [],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_target_052",
+      "label": "Player",
+      "stimulus": "Run the wolf through.",
+      "observations": [],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_target_053",
+      "label": "Player",
+      "stimulus": "Chase off the wolf with your spear.",
+      "observations": [],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_target_054",
+      "label": "Player",
+      "stimulus": "I said attack the damn wolf!",
+      "observations": [],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_target_055",
+      "label": "Player",
+      "stimulus": "slay teh wolf",
+      "observations": [],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Typo kept on purpose.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_target_056",
+      "label": "Player",
+      "stimulus": "Protect me from the wolf!",
+      "observations": [
+        "A wolf is running at the player"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_target_057",
+      "label": "Player",
+      "stimulus": "Hack at that wolf till it runs.",
+      "observations": [],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_target_058",
+      "label": "Player",
+      "stimulus": "Don't just stand there, the wolf! Get it!",
+      "observations": [],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_target_059",
+      "label": "Player",
+      "stimulus": "Forget the market, kill the wolf first.",
+      "observations": [],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The market is named and put aside.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_target_060",
+      "label": "Player",
+      "stimulus": "Attack the wolf and then make me supper.",
+      "observations": [],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Two requests: supper is no action, attacking the wolf is.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_target_061",
+      "label": "Player",
+      "stimulus": "The wolf is eating our chickens, take care of it.",
+      "observations": [],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_target_062",
+      "label": "Player",
+      "stimulus": "Show that wolf the end of your blade.",
+      "observations": [],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_target_063",
+      "label": "Player",
+      "stimulus": "Wolf, by the bridge. Go kill it.",
+      "observations": [],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "note": "The bridge is where the wolf is, not the target.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_target_064",
+      "label": "Player",
+      "stimulus": "Slay it.",
+      "observations": [
+        "A wolf is snarling at the player"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The target is named only in the observations.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_target_065",
+      "label": "Player",
+      "stimulus": "Get rid of it!",
+      "observations": [
+        "A wolf is creeping toward the market stalls"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "note": "The target is named only in the observations.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    },
+    {
+      "id": "int_target_066",
+      "label": "Player",
+      "stimulus": "Don't let it near the kids!",
+      "observations": [
+        "A wolf is slinking toward the children by the well"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The target is named only in the observations; the well is where the wolf is.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "attack_target/wolf",
+        "codex": "attack_target/wolf"
+      }
+    }
+  ]
+}

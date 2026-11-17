@@ -7,7 +7,8 @@ namespace Agenerela.Editor
 {
     /// <summary>
     /// <b>Project Settings → Agenerela</b>: names the provider config every agent without one of its
-    /// own uses (DR-013). It holds nothing else; the evaluation arms join it in Phase 4.
+    /// own uses, and the two an evaluation run compares, arm A and arm B (DR-013, #145). It holds
+    /// nothing else.
     /// </summary>
     /// <remarks>
     /// The value is kept in <see cref="AgenerelaSettings"/>, which this page creates at
@@ -22,6 +23,21 @@ namespace Agenerela.Editor
         private static readonly GUIContent DefaultLabel = new GUIContent("Default Provider",
             "The provider config every agent without one of its own uses.");
 
+        private static readonly GUIContent ArmALabel = new GUIContent("Arm A",
+            "The provider config an evaluation run asks first, such as OllamaLocal. Agents never read it.");
+
+        private static readonly GUIContent ArmBLabel = new GUIContent("Arm B",
+            "The provider config an evaluation run compares against arm A, such as OllamaLocal-noGuards " +
+            "or a second model. Agents never read it.");
+
+        /// <summary>Which of the settings' provider configs a change sets.</summary>
+        internal enum Slot
+        {
+            Default,
+            ArmA,
+            ArmB,
+        }
+
         [SettingsProvider]
         private static SettingsProvider Create()
         {
@@ -29,7 +45,7 @@ namespace Agenerela.Editor
             {
                 label = "Agenerela",
                 guiHandler = _ => Draw(),
-                keywords = new[] { "Agenerela", "Provider", "Default Provider", "Model", "Ollama" },
+                keywords = new[] { "Agenerela", "Provider", "Default Provider", "Model", "Ollama", "Evaluation", "Arm A", "Arm B" },
             };
         }
 
@@ -70,10 +86,33 @@ namespace Agenerela.Editor
                     MessageType.Info);
             }
 
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Evaluation", EditorStyles.boldLabel);
+            settings = ArmField(settings, ArmALabel, Slot.ArmA, readOnly);
+            settings = ArmField(settings, ArmBLabel, Slot.ArmB, readOnly);
+            EditorGUILayout.HelpBox(
+                "An A/B run asks every prompt of a set in arm A and in arm B, in one session: two configs, " +
+                "or one config twice with different options, such as the grounding guard off. Arms on two " +
+                "models must run one after the other (hard rule 3).",
+                MessageType.None);
+
             if (settings != null)
             {
                 EditorGUILayout.LabelField("Saved in", AssetDatabase.GetAssetPath(settings), EditorStyles.miniLabel);
             }
+        }
+
+        private static AgenerelaSettings ArmField(AgenerelaSettings settings, GUIContent label, Slot slot, bool readOnly)
+        {
+            var current = settings == null ? null : slot == Slot.ArmA ? settings.EvaluationArmA : settings.EvaluationArmB;
+            EditorGUI.BeginChangeCheck();
+            ProviderConfig chosen;
+            using (new EditorGUI.DisabledScope(readOnly))
+            {
+                chosen = (ProviderConfig)EditorGUILayout.ObjectField(label, current, typeof(ProviderConfig), false);
+            }
+
+            return EditorGUI.EndChangeCheck() && !readOnly ? Set(slot, chosen, AssetPath) ?? settings : settings;
         }
 
         /// <summary>The project's settings, found the way a player finds them; null when there are none.</summary>
@@ -89,7 +128,16 @@ namespace Agenerela.Editor
         /// </summary>
         /// <returns>The settings, or null when there were none and nothing needed saving.</returns>
         /// <exception cref="System.InvalidOperationException">The settings found are in a read-only package.</exception>
-        internal static AgenerelaSettings SetDefault(ProviderConfig config, string createAt)
+        internal static AgenerelaSettings SetDefault(ProviderConfig config, string createAt) => Set(Slot.Default, config, createAt);
+
+        /// <summary>
+        /// Sets <paramref name="slot"/> to <paramref name="config"/> and saves it, as
+        /// <see cref="SetDefault"/> does: creating the settings at <paramref name="createAt"/> when the
+        /// project has none, and nothing when a slot that was never set is cleared.
+        /// </summary>
+        /// <returns>The settings, or null when there were none and nothing needed saving.</returns>
+        /// <exception cref="System.InvalidOperationException">The settings found are in a read-only package.</exception>
+        internal static AgenerelaSettings Set(Slot slot, ProviderConfig config, string createAt)
         {
             var settings = Find();
             if (settings != null && IsReadOnly(settings))
@@ -111,8 +159,24 @@ namespace Agenerela.Editor
                 AssetDatabase.CreateAsset(settings, createAt);
             }
 
-            Undo.RecordObject(settings, "Set Agenerela Default Provider");
-            settings.DefaultProvider = config;
+            switch (slot)
+            {
+                case Slot.Default:
+                    Undo.RecordObject(settings, "Set Agenerela Default Provider");
+                    settings.DefaultProvider = config;
+                    break;
+                case Slot.ArmA:
+                    Undo.RecordObject(settings, "Set Agenerela Evaluation Arm A");
+                    settings.EvaluationArmA = config;
+                    break;
+                case Slot.ArmB:
+                    Undo.RecordObject(settings, "Set Agenerela Evaluation Arm B");
+                    settings.EvaluationArmB = config;
+                    break;
+                default:
+                    throw new System.ArgumentOutOfRangeException(nameof(slot), slot, null);
+            }
+
             EditorUtility.SetDirty(settings);
             AssetDatabase.SaveAssetIfDirty(settings);
             return settings;

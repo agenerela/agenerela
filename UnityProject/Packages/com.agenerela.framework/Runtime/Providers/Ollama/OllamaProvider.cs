@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Threading;
 using Newtonsoft.Json;
@@ -15,7 +16,7 @@ namespace Agenerela.Providers
     /// <summary>
     /// The development backend: a model served by Ollama on the developer's own machine, asked
     /// through its <c>/api/chat</c> endpoint. <c>new Agent(profile, new OllamaProvider(new
-    /// OllamaSettings()))</c> decides against <c>qwen3.5:2b</c> at <c>http://127.0.0.1:11434</c>.
+    /// OllamaSettings()))</c> decides against <c>qwen3.5:4b</c> at <c>http://127.0.0.1:11434</c>.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -32,6 +33,12 @@ namespace Agenerela.Providers
     /// it, so <c>Agent</c> carries on there.
     /// </para>
     /// <para>
+    /// A server that wants a key, such as the RTX 5080 behind <c>tools/ollama-server/</c>'s gateway,
+    /// gets <see cref="OllamaSettings.ApiKey"/> as an <c>Authorization: Bearer</c> header on every
+    /// request. An HTTP 401 is <see cref="ProviderErrorKind.Rejected"/>, and its message says
+    /// whether a key was sent; no message names the key.
+    /// </para>
+    /// <para>
     /// Failures throw <see cref="ProviderException"/>: <see cref="ProviderErrorKind.Unreachable"/>
     /// when nothing answers, <see cref="ProviderErrorKind.ModelNotFound"/> when the server lacks
     /// the model, <see cref="ProviderErrorKind.Timeout"/> after
@@ -40,12 +47,18 @@ namespace Agenerela.Providers
     /// <see cref="ProviderErrorKind.MalformedResponse"/> for a reply that is not Ollama's chat
     /// envelope.
     /// </para>
+    /// <para>
+    /// It manages its server's models too (<see cref="IModelLifecycle"/>, DR-019): the models
+    /// installed, from <c>/api/tags</c>; a warm-up that loads its model, an <c>/api/generate</c>
+    /// with no prompt and the context size its decisions send; and an unload, <c>keep_alive: 0</c>, which waits until
+    /// <c>/api/ps</c> no longer lists the model. Each is one short request, with the same
+    /// <see cref="OllamaSettings.TimeoutSeconds"/> and the same failures.
+    /// </para>
     /// </remarks>
-    public sealed class OllamaProvider : ILLMProvider
+    public sealed class OllamaProvider : ILLMProvider, IModelLifecycle
     {
-        // How many alternatives each token's probabilities carry. Five was enough in the probe
-        // (DR-016), and Ollama refuses more than 20.
-        private const int TopLogprobs = 5;
+        // How long UnloadAsync waits for /api/ps to stop listing the model.
+        private const float UnloadWaitSeconds = 15f;
 
         // The longest server text a message quotes: enough to see what went wrong.
         private const int Longest = 200;
@@ -58,7 +71,9 @@ namespace Agenerela.Providers
         private readonly string model;
         private readonly int contextSize;
         private readonly float temperature;
+        private readonly int tokenAlternatives;
         private readonly float timeoutSeconds;
+        private readonly bool sendsKey;
         private readonly JsonSchemaSerializer serializer = new JsonSchemaSerializer();
 
         /// <summary>A provider asking the server and model <paramref name="settings"/> name.</summary>
@@ -66,7 +81,7 @@ namespace Agenerela.Providers
         /// <exception cref="ArgumentNullException"><paramref name="settings"/> is null.</exception>
         /// <exception cref="ArgumentException">
         /// The endpoint is not an absolute http or https address without a query, the model is empty, or the
-        /// context size, temperature or timeout is out of range.
+        /// context size, temperature, timeout or token alternatives is out of range.
         /// </exception>
         public OllamaProvider(OllamaSettings settings)
             : this(settings, new HttpClientHandler())
@@ -100,7 +115,7 @@ namespace Agenerela.Providers
 
             if (string.IsNullOrWhiteSpace(settings.Model))
             {
-                throw new ArgumentException("OllamaSettings.Model is empty. Name a model, such as qwen3.5:2b.", nameof(settings));
+                throw new ArgumentException("OllamaSettings.Model is empty. Name a model, such as qwen3.5:4b.", nameof(settings));
             }
 
             if (settings.ContextSize <= 0)
@@ -120,14 +135,36 @@ namespace Agenerela.Providers
                     $"OllamaSettings.TimeoutSeconds is {settings.TimeoutSeconds}. It must be above 0.", nameof(settings));
             }
 
+            // The key goes into a header, so a line break in it could add a header of its own.
+            // The key itself is never named (hard rule 1).
+            string apiKey = (settings.ApiKey ?? "").Trim();
+            foreach (char c in apiKey)
+            {
+                if (char.IsWhiteSpace(c) || char.IsControl(c))
+                {
+                    throw new ArgumentException(
+                        "OllamaSettings.ApiKey contains a space, a line break or another control character. " +
+                        "A key is one word, such as the 64 hex characters tools/ollama-server/setup.ps1 writes.",
+                        nameof(settings));
+                }
+            }
+
             // Named in messages without any user name or password the address carried, since
             // messages are logged and kept in telemetry (hard rule 1).
             // Authority is the host and port alone.
             string path = chatUri.AbsolutePath;
             endpoint = chatUri.Scheme + "://" + chatUri.Authority + path.Substring(0, path.Length - "/api/chat".Length);
+            if (settings.TokenAlternatives < 1 || settings.TokenAlternatives > OllamaSettings.MaxTokenAlternatives)
+            {
+                throw new ArgumentException(
+                    $"OllamaSettings.TokenAlternatives is {settings.TokenAlternatives}. It must be from 1 to {OllamaSettings.MaxTokenAlternatives}, "
+                  + "the most Ollama accepts; the default is 5.", nameof(settings));
+            }
+
             model = settings.Model.Trim();
             contextSize = settings.ContextSize;
             temperature = settings.Temperature;
+            tokenAlternatives = settings.TokenAlternatives;
             timeoutSeconds = settings.TimeoutSeconds;
 
             // The provider's own timeout runs on a token, so it can be told apart from the caller's
@@ -136,6 +173,13 @@ namespace Agenerela.Providers
 
             // Without this, a POST can wait for a "100 Continue" before sending its body.
             client.DefaultRequestHeaders.ExpectContinue = false;
+
+            // On every request, the decision and the lifecycle calls alike.
+            sendsKey = apiKey.Length > 0;
+            if (sendsKey)
+            {
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+            }
 
             Capabilities = new ProviderCapabilities
             {
@@ -257,6 +301,255 @@ namespace Agenerela.Providers
             }
         }
 
+        // ---- Model lifecycle (DR-019) -----------------------------------------------------------
+
+        /// <summary>
+        /// The models the server has pulled, from <c>/api/tags</c>, with their sizes on disk. Ollama
+        /// names each with its tag, so <c>qwen3.5</c> is listed as <c>qwen3.5:latest</c>.
+        /// </summary>
+        /// <exception cref="ProviderException">
+        /// Nothing answered (<see cref="ProviderErrorKind.Unreachable"/>), no reply in time, an HTTP
+        /// error, or a reply that is not a list of models (<see cref="ProviderErrorKind.MalformedResponse"/>).
+        /// </exception>
+        public async Awaitable<IReadOnlyList<ModelInfo>> ListModelsAsync(CancellationToken ct)
+        {
+            var root = await GetObject("/api/tags", ct);
+            var installed = new List<ModelInfo>();
+            if (root["models"] == null || root["models"].Type == JTokenType.Null)
+            {
+                return installed;
+            }
+
+            if (!(root["models"] is JArray models))
+            {
+                throw Malformed("its /api/tags models is not a list", root.ToString(Formatting.None));
+            }
+
+            foreach (var entry in models)
+            {
+                if (!(entry is JObject fields) || !(fields["name"] is JValue name) || name.Type != JTokenType.String
+                    || string.IsNullOrWhiteSpace((string)name))
+                {
+                    throw Malformed("an /api/tags entry has no name", root.ToString(Formatting.None));
+                }
+
+                installed.Add(new ModelInfo((string)name, Bytes(fields["size"])));
+            }
+
+            return installed;
+        }
+
+        /// <summary>
+        /// Loads this provider's model now: an <c>/api/generate</c> naming it with no prompt, which
+        /// Ollama answers once the model is in memory. A model already loaded answers at once.
+        /// </summary>
+        /// <remarks>
+        /// It sends the same <c>num_ctx</c> as every decision (<see cref="OllamaSettings.ContextSize"/>).
+        /// Ollama loads a model for one context size, and reloads it when a request asks for another,
+        /// so a warm-up at the server's default would leave the first decision to load it again.
+        /// </remarks>
+        /// <exception cref="ProviderException">
+        /// <see cref="ProviderErrorKind.ModelNotFound"/> when the server has not pulled it, and the
+        /// failures <see cref="RequestAsync"/> has, within the same timeout.
+        /// </exception>
+        public async Awaitable WarmUpAsync(CancellationToken ct)
+        {
+            string body = new JObject
+            {
+                ["model"] = model,
+                ["options"] = new JObject { ["num_ctx"] = contextSize },
+            }.ToString(Formatting.None);
+            string text = await Call(HttpMethod.Post, "/api/generate", body, ct);
+            try
+            {
+                ParseObject(text);
+            }
+            catch (JsonException e)
+            {
+                throw Malformed($"its /api/generate is not one JSON object ({e.Message})", text, e);
+            }
+        }
+
+        /// <summary>
+        /// Unloads this provider's model now (<c>keep_alive: 0</c>), then waits until
+        /// <c>/api/ps</c> no longer lists it, at most 15 s. False when it is still listed after that.
+        /// </summary>
+        /// <exception cref="ProviderException">
+        /// <see cref="ProviderErrorKind.ModelNotFound"/> when the server has not pulled it, and the
+        /// failures <see cref="RequestAsync"/> has.
+        /// </exception>
+        public Awaitable<bool> UnloadAsync(CancellationToken ct)
+        {
+            return UnloadAsync(ct, UnloadWaitSeconds);
+        }
+
+        // ---- For the evaluation runner (#145) --------------------------------------------------
+        // Internal, so Runtime/Evaluation knows no Ollama address: it asks the provider, and the
+        // provider knows its server. Each failure throws a ProviderException, as RequestAsync does.
+
+        /// <summary>The model this provider asks for, as its settings name it.</summary>
+        internal string Model => model;
+
+        // What top_logprobs is sent as, for the evaluation report's conditions (#244).
+        internal int TokenAlternatives => tokenAlternatives;
+
+        /// <summary>The server's address, without any user name or password it carried.</summary>
+        internal string Endpoint => endpoint;
+
+        /// <summary>The server's own version, from <c>/api/version</c>, such as <c>0.40.14</c>.</summary>
+        internal async Awaitable<string> ReadVersionAsync(CancellationToken ct)
+        {
+            var root = await GetObject("/api/version", ct);
+            return root["version"] is JValue version && version.Type == JTokenType.String
+                ? (string)version
+                : throw Malformed("its /api/version has no version text", root.ToString(Formatting.None));
+        }
+
+        /// <summary>
+        /// Every model the server holds in memory now, from <c>/api/ps</c>: its name, its whole size
+        /// and how much of that is in GPU memory, both in bytes. Hard rule 3 is checked against it.
+        /// </summary>
+        internal async Awaitable<List<(string Name, long Size, long SizeVram)>> ReadResidentAsync(CancellationToken ct)
+        {
+            var root = await GetObject("/api/ps", ct);
+            var resident = new List<(string, long, long)>();
+            if (root["models"] == null || root["models"].Type == JTokenType.Null)
+            {
+                return resident;
+            }
+
+            if (!(root["models"] is JArray models))
+            {
+                throw Malformed("its /api/ps models is not a list", root.ToString(Formatting.None));
+            }
+
+            foreach (var entry in models)
+            {
+                if (!(entry is JObject fields) || !(fields["name"] is JValue name) || name.Type != JTokenType.String)
+                {
+                    throw Malformed("an /api/ps entry has no name", root.ToString(Formatting.None));
+                }
+
+                resident.Add(((string)name, Bytes(fields["size"]), Bytes(fields["size_vram"])));
+            }
+
+            return resident;
+        }
+
+        /// <summary>
+        /// Asks the server to unload this provider's model now (<c>keep_alive: 0</c>), then waits
+        /// until <c>/api/ps</c> no longer lists it, at most <paramref name="waitSeconds"/>. Returns
+        /// false when it is still listed after that. What the public <see cref="UnloadAsync(CancellationToken)"/> calls.
+        /// </summary>
+        internal async Awaitable<bool> UnloadAsync(CancellationToken ct, float waitSeconds)
+        {
+            string body = new JObject { ["model"] = model, ["keep_alive"] = 0 }.ToString(Formatting.None);
+            await Call(HttpMethod.Post, "/api/generate", body, ct);
+
+            var clock = Stopwatch.StartNew();
+            while (true)
+            {
+                bool listed = false;
+                foreach (var resident in await ReadResidentAsync(ct))
+                {
+                    listed |= SameModel(resident.Name, model);
+                }
+
+                if (!listed)
+                {
+                    return true;
+                }
+
+                if (clock.Elapsed.TotalSeconds >= waitSeconds)
+                {
+                    return false;
+                }
+
+                await System.Threading.Tasks.Task.Delay(250, ct);
+            }
+        }
+
+        /// <summary>
+        /// True when two model names are one model as Ollama lists it: <c>qwen3.5</c> is
+        /// <c>qwen3.5:latest</c>. Case is ignored, as Ollama's own names are lower case.
+        /// </summary>
+        internal static bool SameModel(string a, string b)
+        {
+            string Tagged(string n) => n == null ? "" : (n.Trim().IndexOf(':') < 0 ? n.Trim() + ":latest" : n.Trim());
+            return string.Equals(Tagged(a), Tagged(b), StringComparison.OrdinalIgnoreCase);
+        }
+
+        private async Awaitable<JObject> GetObject(string path, CancellationToken ct)
+        {
+            string text = await Call(HttpMethod.Get, path, null, ct);
+            try
+            {
+                return ParseObject(text);
+            }
+            catch (JsonException e)
+            {
+                throw Malformed($"its {path} is not one JSON object ({e.Message})", text, e);
+            }
+        }
+
+        // One short request to another endpoint than /api/chat, failing as Send does.
+        private async Awaitable<string> Call(HttpMethod method, string path, string body, CancellationToken ct)
+        {
+            // Beside /api/chat, so a server under a path prefix keeps it.
+            string chat = chatUri.AbsoluteUri;
+            var uri = new Uri(chat.Substring(0, chat.Length - "api/chat".Length) + path.TrimStart('/'));
+            using (var timeout = new CancellationTokenSource())
+            using (var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, timeout.Token))
+            using (var message = new HttpRequestMessage(method, uri))
+            {
+                if (body != null)
+                {
+                    message.Content = new StringContent(body, Utf8, "application/json");
+                }
+
+                timeout.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
+                int status;
+                string text;
+                try
+                {
+                    using (var response = await client.SendAsync(message, linked.Token))
+                    {
+                        status = (int)response.StatusCode;
+                        text = Utf8.GetString(await response.Content.ReadAsByteArrayAsync());
+                    }
+                }
+                catch (Exception e) when (ct.IsCancellationRequested)
+                {
+                    throw new OperationCanceledException($"The caller cancelled the request to Ollama's {path}.", e, ct);
+                }
+                catch (Exception e) when (timeout.IsCancellationRequested)
+                {
+                    throw new ProviderException(ProviderErrorKind.Timeout, Name,
+                        $"Ollama at {endpoint} sent no reply to {path} within {Seconds(timeoutSeconds)} s.", e);
+                }
+                catch (Exception e) when (e is HttpRequestException || e is IOException || e is System.Net.WebException
+                                          || e is System.Net.Sockets.SocketException)
+                {
+                    throw new ProviderException(ProviderErrorKind.Unreachable, Name,
+                        $"Nothing answered at {endpoint}. Is Ollama running there? " +
+                        $"({Excerpt(FirstLine(e.GetBaseException().Message))})", e);
+                }
+
+                if (status < 200 || status > 299)
+                {
+                    throw Refusal(status, text);
+                }
+
+                return text;
+            }
+        }
+
+        // A byte count /api/ps may leave out, which then reads as 0.
+        private static long Bytes(JToken token)
+        {
+            return token != null && token.Type == JTokenType.Integer ? Math.Max(0L, (long)token) : 0L;
+        }
+
         // The request body, its fields in the order the issue tables them (#88).
         private string Body(DecisionRequest req)
         {
@@ -302,16 +595,31 @@ namespace Agenerela.Providers
                 json.WritePropertyName("options");
                 json.WriteStartObject();
                 json.WritePropertyName("temperature");
-                json.WriteValue(temperature);
+                json.WriteValue(req.Temperature ?? temperature);
                 json.WritePropertyName("num_ctx");
                 json.WriteValue(contextSize);
+
+                // Only when the call set them, so a call that did not sends what it always sent
+                // (#266 item 7, #244 item 11).
+                if (req.Seed.HasValue)
+                {
+                    json.WritePropertyName("seed");
+                    json.WriteValue(req.Seed.Value);
+                }
+
+                if (req.MaxReplyTokens.HasValue)
+                {
+                    json.WritePropertyName("num_predict");
+                    json.WriteValue(req.MaxReplyTokens.Value);
+                }
+
                 json.WriteEndObject();
 
                 // For the grounding guard (DR-016).
                 json.WritePropertyName("logprobs");
                 json.WriteValue(true);
                 json.WritePropertyName("top_logprobs");
-                json.WriteValue(TopLogprobs);
+                json.WriteValue(tokenAlternatives);
 
                 json.WriteEndObject();
             }
@@ -364,7 +672,12 @@ namespace Agenerela.Providers
                     $"Ollama at {endpoint} failed with HTTP {status}: {said}");
             }
 
-            string hint = status == 404 ? " Is that address an Ollama server?" : "";
+            // 401 is the gateway in tools/ollama-server/ wanting a key; Ollama itself never sends it.
+            string hint = status == 404 ? " Is that address an Ollama server?"
+                : status == 401 && sendsKey ? " The server refused this provider's key: OllamaSettings.ApiKey (an " +
+                                              "OllamaProviderConfig's API Key Variable) must hold the one the server expects."
+                : status == 401 ? " The server wants a key: set OllamaSettings.ApiKey, or an OllamaProviderConfig's API Key Variable."
+                : "";
             return new ProviderException(ProviderErrorKind.Rejected, Name,
                 $"Ollama at {endpoint} refused the request with HTTP {status}: {said}{hint}");
         }

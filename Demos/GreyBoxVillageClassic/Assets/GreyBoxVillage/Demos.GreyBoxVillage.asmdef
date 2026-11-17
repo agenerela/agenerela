@@ -1,0 +1,11 @@
+{
+  "name": "GreyBoxVillage",
+  "rootNamespace": "Demos.GreyBoxVillage",
+  "references": [
+    "Demos.Shared",
+    "Agenerela",
+    "Unity.InputSystem"
+  ],
+  "overrideReferences": true,
+  "precompiledReferences": []
+}

@@ -1,0 +1,1249 @@
+{
+  "category": "conversation",
+  "prompts": [
+    {
+      "id": "int_conversation_001",
+      "label": "Player",
+      "stimulus": "The market was packed today.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "A registered place mentioned, nothing asked.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_002",
+      "label": "Player",
+      "stimulus": "Is the well water safe to drink?",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "A question about a registered place, nothing asked.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_003",
+      "label": "Player",
+      "stimulus": "Who built the north tower, anyway?",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_004",
+      "label": "Player",
+      "stimulus": "Ever been down the eastern road?",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_005",
+      "label": "Player",
+      "stimulus": "I hear the docks flood every spring.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_006",
+      "label": "Player",
+      "stimulus": "That wolf yesterday gave me a right fright.",
+      "observations": [
+        "No wolf is in sight"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The wolf is mentioned, not present.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_007",
+      "label": "Player",
+      "stimulus": "you ok? you seem quiet",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_008",
+      "label": "Player",
+      "stimulus": "What's your name?",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_009",
+      "label": "Player",
+      "stimulus": "Thanks for earlier.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_010",
+      "label": "Player",
+      "stimulus": "I'm starving.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_011",
+      "label": "Player",
+      "stimulus": "Do you like being a guard?",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_012",
+      "label": "Player",
+      "stimulus": "This bridge creaks every time I cross it.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_013",
+      "label": "Player",
+      "stimulus": "ugh my back aches",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_014",
+      "label": "Player",
+      "stimulus": "Nice sword.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_015",
+      "label": "Player",
+      "stimulus": "The campfire smells wonderful tonight.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_016",
+      "label": "Player",
+      "stimulus": "My grandmother used to sell cloth at that market.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_017",
+      "label": "Player",
+      "stimulus": "What do you reckon is in the locked cave?",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_018",
+      "label": "Player",
+      "stimulus": "I'm not scared of wolves, you know.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_019",
+      "label": "Player",
+      "stimulus": "The boats are late again.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_020",
+      "label": "Player",
+      "stimulus": "Sorry about shouting at you before.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_021",
+      "label": "Player",
+      "stimulus": "Have you eaten?",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_022",
+      "label": "Player",
+      "stimulus": "lol",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_023",
+      "label": "Player",
+      "stimulus": "What do you think of the new captain?",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_024",
+      "label": "Player",
+      "stimulus": "Hmm.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_025",
+      "label": "Player",
+      "stimulus": "Do you ever sleep?",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_026",
+      "label": "Player",
+      "stimulus": "I used to climb that tower as a kid.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_027",
+      "label": "Player",
+      "stimulus": "Colder than yesterday, isn't it.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_028",
+      "label": "Player",
+      "stimulus": "I wish I'd brought a cloak.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_029",
+      "label": "Player",
+      "stimulus": "Long day, huh?",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_030",
+      "label": "Player",
+      "stimulus": "Is the shelter big enough for everyone?",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_031",
+      "label": "Player",
+      "stimulus": "Bet you've seen a lot of travellers come in off the eastern road.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_032",
+      "label": "Player",
+      "stimulus": "You're a terrible guard, you know that?",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_033",
+      "label": "Player",
+      "stimulus": "Why'd they put a lock on that cave?",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_034",
+      "label": "Player",
+      "stimulus": "The stars are out.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_035",
+      "label": "Player",
+      "stimulus": "Do you think the wolf will come back?",
+      "observations": [
+        "No wolf is in sight"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_036",
+      "label": "Player",
+      "stimulus": "Thank you for walking with me.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "note": "Thanks for following, not a request to change it.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_037",
+      "label": "Player",
+      "stimulus": "So there I was at the docks, right, and this boatman swears blind the north tower is haunted, and I tell him that's nonsense, and he bets me a silver piece, so now I have to find out, don't I?",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "A long story naming two registered places, with no request.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_038",
+      "label": "Player",
+      "stimulus": "I appreciate it, but I don't need anyone walking with me tonight.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "A negation from a player the guard is not following.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "none/no_target",
+        "codex": "none/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_039",
+      "label": "Player",
+      "stimulus": "I could use some company on the road.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "An indirect request to come along.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_040",
+      "label": "Player",
+      "stimulus": "It'd be nice not to walk alone tonight.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "An indirect request to come along.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_041",
+      "label": "Player",
+      "stimulus": "Mind keeping me company for a bit?",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_042",
+      "label": "Player",
+      "stimulus": "I don't feel safe heading out by myself.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "An indirect request to come along.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_043",
+      "label": "Player",
+      "stimulus": "You coming or what?",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_044",
+      "label": "Player",
+      "stimulus": "I'm off to the woods. A sword beside me wouldn't hurt.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "An indirect request to come along.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_045",
+      "label": "Player",
+      "stimulus": "Would you watch my back while I run some errands?",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_046",
+      "label": "Player",
+      "stimulus": "im scared to go alone",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "An indirect request to come along.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_047",
+      "label": "Player",
+      "stimulus": "Two are safer than one, aren't they? Let's go.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_048",
+      "label": "Player",
+      "stimulus": "I'd feel a lot better with you beside me on the way home.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "An indirect request to come along.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_049",
+      "label": "Player",
+      "stimulus": "Keep me safe on the walk, would you?",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "follow_player/no_target",
+        "codex": "follow_player/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_050",
+      "label": "Player",
+      "stimulus": "You've walked enough today, rest your legs here.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "note": "An indirect request to stop following.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_051",
+      "label": "Player",
+      "stimulus": "I can manage on my own from here.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "note": "An indirect request to stop following.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_052",
+      "label": "Player",
+      "stimulus": "I need a moment alone, if you don't mind.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "note": "An indirect request to stop following.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_053",
+      "label": "Player",
+      "stimulus": "No need to trail me any longer, I'm home.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_054",
+      "label": "Player",
+      "stimulus": "Thanks for the escort, this is where we part.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_055",
+      "label": "Player",
+      "stimulus": "I'll be fine now, you don't have to keep walking with me.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_056",
+      "label": "Player",
+      "stimulus": "Give me some space, would you.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "note": "An indirect request to stop following.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_057",
+      "label": "Player",
+      "stimulus": "Honestly, you hovering behind me is getting on my nerves.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "note": "An indirect request to stop following.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "stop_following/no_target",
+        "codex": "stop_following/no_target"
+      }
+    },
+    {
+      "id": "int_conversation_058",
+      "label": "Player",
+      "stimulus": "Someone ought to keep an eye on the gate tonight.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "village_gate",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "An indirect request, to the only guard asked.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/village_gate",
+        "codex": "move_to/village_gate"
+      }
+    },
+    {
+      "id": "int_conversation_059",
+      "label": "Player",
+      "stimulus": "I'd sleep better knowing someone was up the north tower.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "north_tower",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "An indirect request, to the only guard asked.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/north_tower",
+        "codex": "move_to/north_tower"
+      }
+    },
+    {
+      "id": "int_conversation_060",
+      "label": "Player",
+      "stimulus": "The docks could really use a guard right now.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "docks",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "An indirect request, to the only guard asked.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/docks",
+        "codex": "move_to/docks"
+      }
+    },
+    {
+      "id": "int_conversation_061",
+      "label": "Player",
+      "stimulus": "If I were you, I'd be checking on the bridge.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "bridge",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "note": "An indirect request.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/bridge",
+        "codex": "move_to/bridge"
+      }
+    },
+    {
+      "id": "int_conversation_062",
+      "label": "Player",
+      "stimulus": "The shelter door keeps banging open, somebody should take a look.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "shelter",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "An indirect request.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/shelter",
+        "codex": "move_to/shelter"
+      }
+    },
+    {
+      "id": "int_conversation_063",
+      "label": "Player",
+      "stimulus": "Folk at the market would feel safer seeing a guard about.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "market",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "note": "An indirect request.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/market",
+        "codex": "move_to/market"
+      }
+    },
+    {
+      "id": "int_conversation_064",
+      "label": "Player",
+      "stimulus": "There's been trouble out on the eastern road lately, might be worth a look.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "eastern_road",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "An indirect request.",
+      "labelledBy": [
+        "claude",
+        "codex"
+      ],
+      "labels": {
+        "claude": "move_to/eastern_road",
+        "codex": "move_to/eastern_road"
+      }
+    }
+  ]
+}

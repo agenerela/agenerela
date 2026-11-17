@@ -1,0 +1,583 @@
+{
+  "palette": "Assets/LivingVale/Art/Textures/LV_Palette.png",
+  "assets": {
+    "cottage_a": {
+      "triangles": 482,
+      "vertices": 320,
+      "height": 5.75,
+      "bounds": {
+        "min": [
+          -3.0,
+          0.0,
+          -2.45
+        ],
+        "max": [
+          3.0,
+          5.75,
+          2.8
+        ]
+      }
+    },
+    "cottage_b": {
+      "triangles": 758,
+      "vertices": 488,
+      "height": 5.13,
+      "bounds": {
+        "min": [
+          -3.8,
+          0.0,
+          -3.45
+        ],
+        "max": [
+          2.6,
+          5.13,
+          3.7
+        ]
+      }
+    },
+    "market_stall": {
+      "triangles": 546,
+      "vertices": 321,
+      "height": 2.92,
+      "bounds": {
+        "min": [
+          -2.05,
+          0.0,
+          -1.15
+        ],
+        "max": [
+          2.05,
+          2.92,
+          0.97
+        ]
+      }
+    },
+    "well": {
+      "triangles": 582,
+      "vertices": 376,
+      "height": 2.658,
+      "bounds": {
+        "min": [
+          -1.3,
+          0.0,
+          -1.055
+        ],
+        "max": [
+          1.3,
+          2.658,
+          1.055
+        ]
+      }
+    },
+    "fence_segment": {
+      "triangles": 36,
+      "vertices": 24,
+      "height": 1.1,
+      "bounds": {
+        "min": [
+          -1.33,
+          0.0,
+          -0.08
+        ],
+        "max": [
+          1.251,
+          1.1,
+          0.08
+        ]
+      }
+    },
+    "fence_post": {
+      "triangles": 18,
+      "vertices": 13,
+      "height": 1.2,
+      "bounds": {
+        "min": [
+          -0.09,
+          0.0,
+          -0.09
+        ],
+        "max": [
+          0.09,
+          1.2,
+          0.09
+        ]
+      }
+    },
+    "crate": {
+      "triangles": 180,
+      "vertices": 80,
+      "height": 0.7,
+      "bounds": {
+        "min": [
+          -0.365,
+          0.0,
+          -0.35
+        ],
+        "max": [
+          0.35,
+          0.7,
+          0.365
+        ]
+      }
+    },
+    "barrel": {
+      "triangles": 236,
+      "vertices": 130,
+      "height": 1.01,
+      "bounds": {
+        "min": [
+          -0.39,
+          0.0,
+          -0.41
+        ],
+        "max": [
+          0.39,
+          1.01,
+          0.41
+        ]
+      }
+    },
+    "sack": {
+      "triangles": 116,
+      "vertices": 64,
+      "height": 0.6,
+      "bounds": {
+        "min": [
+          -0.249,
+          0.0,
+          -0.204
+        ],
+        "max": [
+          0.249,
+          0.6,
+          0.185
+        ]
+      }
+    },
+    "signpost": {
+      "triangles": 154,
+      "vertices": 97,
+      "height": 2.351,
+      "bounds": {
+        "min": [
+          -1.0,
+          0.0,
+          -0.303
+        ],
+        "max": [
+          0.995,
+          2.351,
+          0.316
+        ]
+      }
+    },
+    "wagon": {
+      "triangles": 648,
+      "vertices": 404,
+      "height": 1.53,
+      "bounds": {
+        "min": [
+          -0.84,
+          0.0,
+          -1.26
+        ],
+        "max": [
+          0.84,
+          1.53,
+          3.049
+        ]
+      }
+    },
+    "wagon_wrecked": {
+      "triangles": 690,
+      "vertices": 433,
+      "height": 1.654,
+      "bounds": {
+        "min": [
+          -0.792,
+          0.0,
+          -1.642
+        ],
+        "max": [
+          2.278,
+          1.654,
+          2.897
+        ]
+      }
+    },
+    "tree_pine": {
+      "triangles": 56,
+      "vertices": 36,
+      "height": 7.0,
+      "bounds": {
+        "min": [
+          -1.56,
+          0.0,
+          -1.6
+        ],
+        "max": [
+          1.56,
+          7.0,
+          1.442
+        ]
+      }
+    },
+    "tree_broadleaf": {
+      "triangles": 156,
+      "vertices": 94,
+      "height": 6.185,
+      "bounds": {
+        "min": [
+          -1.98,
+          0.0,
+          -1.646
+        ],
+        "max": [
+          1.932,
+          6.185,
+          1.681
+        ]
+      }
+    },
+    "rock_a": {
+      "triangles": 80,
+      "vertices": 42,
+      "height": 1.409,
+      "bounds": {
+        "min": [
+          -1.439,
+          0.0,
+          -0.947
+        ],
+        "max": [
+          1.504,
+          1.409,
+          0.897
+        ]
+      }
+    },
+    "rock_b": {
+      "triangles": 80,
+      "vertices": 42,
+      "height": 0.717,
+      "bounds": {
+        "min": [
+          -0.722,
+          0.0,
+          -0.641
+        ],
+        "max": [
+          0.862,
+          0.717,
+          0.649
+        ]
+      }
+    },
+    "herb_plant": {
+      "triangles": 124,
+      "vertices": 82,
+      "height": 0.481,
+      "bounds": {
+        "min": [
+          -0.292,
+          0.0,
+          -0.3
+        ],
+        "max": [
+          0.292,
+          0.481,
+          0.27
+        ]
+      }
+    },
+    "ashwatch_gate": {
+      "triangles": 700,
+      "vertices": 468,
+      "height": 7.0,
+      "bounds": {
+        "min": [
+          -4.6,
+          0.0,
+          -2.648
+        ],
+        "max": [
+          4.6,
+          7.0,
+          1.54
+        ]
+      }
+    },
+    "ashwatch_wall": {
+      "triangles": 180,
+      "vertices": 120,
+      "height": 5.0,
+      "bounds": {
+        "min": [
+          -3.0,
+          0.0,
+          -1.1
+        ],
+        "max": [
+          3.0,
+          5.0,
+          1.1
+        ]
+      }
+    },
+    "ruin_wall": {
+      "triangles": 504,
+      "vertices": 336,
+      "height": 2.671,
+      "bounds": {
+        "min": [
+          -2.482,
+          0.0,
+          -1.539
+        ],
+        "max": [
+          2.495,
+          2.671,
+          1.557
+        ]
+      }
+    },
+    "camp_tent": {
+      "triangles": 148,
+      "vertices": 98,
+      "height": 1.95,
+      "bounds": {
+        "min": [
+          -1.25,
+          0.0,
+          -2.33
+        ],
+        "max": [
+          1.25,
+          1.95,
+          2.33
+        ]
+      }
+    },
+    "campfire": {
+      "triangles": 302,
+      "vertices": 185,
+      "height": 0.638,
+      "bounds": {
+        "min": [
+          -0.603,
+          0.0,
+          -0.587
+        ],
+        "max": [
+          0.59,
+          0.638,
+          0.581
+        ]
+      }
+    },
+    "humanoid_player": {
+      "triangles": 662,
+      "vertices": 387,
+      "height": 1.81,
+      "bounds": {
+        "min": [
+          -0.332,
+          0.0,
+          -0.2
+        ],
+        "max": [
+          0.332,
+          1.81,
+          0.17
+        ]
+      }
+    },
+    "humanoid_villager": {
+      "triangles": 634,
+      "vertices": 371,
+      "height": 1.81,
+      "bounds": {
+        "min": [
+          -0.332,
+          0.0,
+          -0.12
+        ],
+        "max": [
+          0.332,
+          1.81,
+          0.17
+        ]
+      }
+    },
+    "humanoid_healer": {
+      "triangles": 690,
+      "vertices": 403,
+      "height": 1.81,
+      "bounds": {
+        "min": [
+          -0.332,
+          0.0,
+          -0.195
+        ],
+        "max": [
+          0.332,
+          1.81,
+          0.175
+        ]
+      }
+    },
+    "humanoid_raider": {
+      "triangles": 738,
+      "vertices": 427,
+      "height": 1.86,
+      "bounds": {
+        "min": [
+          -0.332,
+          0.0,
+          -0.172
+        ],
+        "max": [
+          0.332,
+          1.86,
+          0.17
+        ]
+      }
+    },
+    "humanoid_guard": {
+      "triangles": 758,
+      "vertices": 443,
+      "height": 1.85,
+      "bounds": {
+        "min": [
+          -0.332,
+          0.0,
+          -0.139
+        ],
+        "max": [
+          0.332,
+          1.85,
+          0.17
+        ]
+      }
+    },
+    "sword": {
+      "triangles": 90,
+      "vertices": 57,
+      "height": 0.975,
+      "bounds": {
+        "min": [
+          -0.11,
+          -0.135,
+          -0.026
+        ],
+        "max": [
+          0.11,
+          0.84,
+          0.026
+        ]
+      }
+    },
+    "wolf": {
+      "triangles": 334,
+      "vertices": 211,
+      "height": 0.99,
+      "bounds": {
+        "min": [
+          -0.176,
+          0.0,
+          -0.802
+        ],
+        "max": [
+          0.176,
+          0.99,
+          0.87
+        ]
+      }
+    },
+    "humanoid_patient_seated": {
+      "triangles": 702,
+      "vertices": 411,
+      "height": 1.39,
+      "bounds": {
+        "min": [
+          -0.332,
+          0.0,
+          -0.369
+        ],
+        "max": [
+          0.332,
+          1.39,
+          0.4
+        ]
+      }
+    },
+    "mountain_a": {
+      "triangles": 100,
+      "vertices": 54,
+      "height": 109.826,
+      "bounds": {
+        "min": [
+          -50.602,
+          0.0,
+          -37.213
+        ],
+        "max": [
+          52.968,
+          109.826,
+          47.39
+        ]
+      }
+    },
+    "mountain_b": {
+      "triangles": 100,
+      "vertices": 54,
+      "height": 79.841,
+      "bounds": {
+        "min": [
+          -62.554,
+          0.0,
+          -64.278
+        ],
+        "max": [
+          79.71,
+          79.841,
+          60.402
+        ]
+      }
+    },
+    "cliff": {
+      "triangles": 150,
+      "vertices": 93,
+      "height": 23.71,
+      "bounds": {
+        "min": [
+          -10.8,
+          0.0,
+          -5.0
+        ],
+        "max": [
+          10.8,
+          23.71,
+          7.827
+        ]
+      }
+    },
+    "cobbles": {
+      "triangles": 1452,
+      "vertices": 968,
+      "height": 0.079,
+      "bounds": {
+        "min": [
+          -5.0,
+          0.0,
+          -5.0
+        ],
+        "max": [
+          5.0,
+          0.079,
+          5.0
+        ]
+      }
+    }
+  }
+}
