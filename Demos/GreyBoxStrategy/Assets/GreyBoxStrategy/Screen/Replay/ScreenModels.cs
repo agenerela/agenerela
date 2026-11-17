@@ -257,17 +257,61 @@ namespace GreyBoxStrategy.Replay
         public enum MapClick { Nothing, CloseInspector, OrderMarch, OpenProvince, ClearSelection }
 
         /// <summary>
-        /// A left click (not a drag) on the screen. A click on a panel is the panel's. With the inspector open, a click on
-        /// the map outside it only closes it, as Esc does, so dismissing the window never also orders a march. Otherwise a
-        /// province with one of your armies chosen in your council orders its march, any other province opens, and the
-        /// sea clears the choice.
+        /// A left click (not a drag) on the screen: it selects, and never orders (the lead, 17 November: right click
+        /// orders the march, left click selects). A click on a panel is the panel's. With the inspector open, a click on
+        /// the map outside it only closes it, as Esc does. Otherwise a province opens, and the sea clears the choice.
         /// </summary>
-        public static MapClick OnMapClick(bool overPanel, bool inspectorOpen, int province, bool armyChosen)
+        public static MapClick OnMapClick(bool overPanel, bool inspectorOpen, int province)
         {
             if (overPanel) return MapClick.Nothing;
             if (inspectorOpen) return MapClick.CloseInspector;
-            if (province < 0) return MapClick.ClearSelection;
-            return armyChosen ? MapClick.OrderMarch : MapClick.OpenProvince;
+            return province < 0 ? MapClick.ClearSelection : MapClick.OpenProvince;
+        }
+
+        /// <summary>A right click (not a drag) on the map: with any of your armies chosen, it orders them to the province.</summary>
+        public static MapClick OnRightClick(bool overPanel, int province, int armiesChosen) =>
+            !overPanel && province >= 0 && armiesChosen > 0 ? MapClick.OrderMarch : MapClick.Nothing;
+
+        /// <summary>A press and release closer than this many pixels is a click; farther, a drag (the box, or a pan).</summary>
+        public const float DragPixels = 6f;
+
+        public static bool IsDrag(float dx, float dy) => dx * dx + dy * dy >= DragPixels * DragPixels;
+
+        /// <summary>
+        /// The armies a box selects: each of yours whose piece stands inside it, in the order given (the outliner's).
+        /// With <paramref name="add"/> (Shift held) they join the armies already chosen; otherwise they replace them.
+        /// </summary>
+        public static List<string> BoxSelect(IEnumerable<(string id, string owner, float x, float y)> pieces, string you, Box box,
+            IEnumerable<string> chosen, bool add)
+        {
+            var inside = pieces.Where(p => p.owner == you && p.x >= box.xMin && p.x <= box.xMax && p.y >= box.yMin && p.y <= box.yMax)
+                .Select(p => p.id).ToList();
+            if (!add) return inside;
+            var all = chosen.ToList();
+            foreach (var id in inside) if (!all.Contains(id)) all.Add(id);
+            return all;
+        }
+
+        /// <summary>A click on one of your army's pieces: alone it chooses that army; with Shift it adds or removes it.</summary>
+        public static List<string> ClickArmy(string id, IEnumerable<string> chosen, bool shift)
+        {
+            var all = chosen.ToList();
+            if (!shift) return all.Count == 1 && all[0] == id ? new List<string>() : new List<string> { id };
+            if (!all.Remove(id)) all.Add(id);
+            return all;
+        }
+
+        /// <summary>
+        /// Edge scrolling: the pan direction, -1, 0 or 1 on each axis (y up), while the pointer touches the window's border
+        /// within <paramref name="margin"/> pixels. Never when it is off, the window has no focus, or the pointer is over a
+        /// panel or outside the window.
+        /// </summary>
+        public static (int x, int y) EdgeScroll(float px, float py, float width, float height, bool on, bool focused, bool overPanel, float margin = 4)
+        {
+            if (!on || !focused || overPanel || px < 0 || py < 0 || px > width || py > height) return (0, 0);
+            int x = px <= margin ? -1 : px >= width - margin ? 1 : 0;
+            int y = py <= margin ? -1 : py >= height - margin ? 1 : 0;
+            return (x, y);
         }
 
         /// <summary>A panel's or a banner's box on the screen, in the root's coordinates (this assembly has no UnityEngine).</summary>

@@ -77,7 +77,7 @@ namespace GreyBoxStrategy.Realm
                 {
                     if (!hosts.TryGetValue(a.Id, out var piece) || piece.style.display == DisplayStyle.None || !Measured(piece, out float w, out float h)) continue;
                     var p = PlacedPoint(a);
-                    float sc = HostScale * (a.Id == SelectedArmy ? 1.15f : 1f);
+                    float sc = HostScale * (IsChosen(a.Id) ? 1.15f : 1f);
                     Add(new MapItem(MapItemKind.Piece, p.x - w * sc / 2, p.y - h * sc, p.x + w * sc / 2, p.y), null);
                 }
             // March tags: centred under their point.

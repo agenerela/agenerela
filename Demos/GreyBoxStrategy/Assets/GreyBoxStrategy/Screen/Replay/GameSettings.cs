@@ -30,6 +30,8 @@ namespace GreyBoxStrategy.Replay
         public bool VSync = true;
         public int FrameCap;
         public float PlaybackSpeed = 1f;
+        /// <summary>The map pans while the pointer touches the window's edge (the lead, 17 November: on by default).</summary>
+        public bool EdgeScroll = true;
         public float MasterVolume = 0.8f, MusicVolume = 0.6f, EffectsVolume = 0.8f, VoiceVolume = 0.8f;
         /// <summary>Which storyteller events open a window in the middle of the screen: all, those striking your realm, none.</summary>
         public EventWindows EventWindows = EventWindows.All;

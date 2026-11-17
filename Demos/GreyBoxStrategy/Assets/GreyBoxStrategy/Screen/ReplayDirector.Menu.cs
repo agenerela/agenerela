@@ -248,6 +248,7 @@ namespace GreyBoxStrategy.Realm
             if (ui.EventOpen) { ui.DismissEvent(); return; }
             if (ui.BattleOpen) { ui.CloseBattle(); return; }
             if (ui.TalesOpen) { ui.CloseTales(); return; }
+            if (ui.ChosenArmies.Count > 0 && !ui.InspectorOpen) { Choose(null, open: false); ui.CloseSide(); return; } // the chosen armies first
             if (ui.InspectorOpen || ui.SideOpen || ui.DiplomacyOpen)
             {
                 ui.CloseInspector(); ui.CloseSide(); ui.CloseDiplomacy(); map.SetSelected(-1);

@@ -101,11 +101,12 @@ namespace GreyBoxStrategy.Realm
             {
                 var a = shown?.Army(id);
                 if (a == null) return;
-                // Rule mode: your army with a writ is chosen for orders; anything else opens where it stands.
-                if (rule != null && rule.Writs && ui.OrdersRequest != null && a.Owner == rule.You && (ui.ArmiesWithWrits(ui.OrdersRequest).Contains(id) || ui.CanRecall(ui.OrdersRequest, id)))
+                // Rule mode: your army is chosen for orders (Shift adds or removes it); anything else opens where it stands.
+                if (rule != null && ui.OrdersRequest != null && a.Owner == rule.You)
                 {
-                    if (ui.SelectedArmy != id) { ui.SelectedArmy = id; ApplyMode(); lastOrdersStatus = null; RuleTick(); }
-                    ui.ShowArmy(id, shown, played);
+                    bool shift = UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.shiftKey.isPressed;
+                    Choose(ScreenModels.ClickArmy(id, ui.ChosenArmies, shift));
+                    if (ui.ChosenArmies.Count == 0) ui.ShowArmy(id, shown, played);
                     return;
                 }
                 // The UI draft (#20): an army opens its own panel on the left, as a province does.
