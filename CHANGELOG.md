@@ -37,6 +37,11 @@ phase table and the open issues, not here.
   the cursor, eased over about a tenth of a second, and either unit reads as the same notch; a trackpad's small
   readings are fractions of one.
 
+- **Painted Realm: the senior general leads a merged army, and a split-off army gets a general** (#20). A merge now
+  keeps the army of the general longest in command (`General.CommandSince`; ties to the larger army, then the lower
+  id), not the largest, so splitting off the majority and merging back never rerolls a general. A split-off army is
+  given a general at once, as a newly raised army is. Human orders only; nothing a model reads changes.
+
 - **Painted Realm: the inspector window and the council's foot** (#20). With the decision inspector open, a click
   on the map outside it only closes it, as Esc does, so dismissing it never also orders a march. End turn stays
   inside the council's frame at every size: the council's foot no longer shrinks when the panel reaches its height.

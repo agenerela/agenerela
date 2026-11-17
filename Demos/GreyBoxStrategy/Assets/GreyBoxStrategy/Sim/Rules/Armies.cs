@@ -323,6 +323,11 @@ namespace GreyBoxStrategy
         public List<string> Traits = new List<string>();
         /// <summary>Battles won, toward a second trait.</summary>
         public int Wins;
+        /// <summary>
+        /// The turn this general took command (the army raised, or a successor named). The senior general, the lowest,
+        /// leads a merged army (<see cref="ArmyOrders"/>), so splitting and merging back never rerolls a general.
+        /// </summary>
+        public int CommandSince;
 
         public bool Has(string trait) => Traits.Contains(trait);
         /// <summary>"Maren the Wary", or "Maren the Wary and Bold".</summary>
@@ -347,7 +352,7 @@ namespace GreyBoxStrategy
         {
             string first = a.Id.EndsWith("_host", StringComparison.Ordinal) ? a.Id.Substring(0, a.Id.Length - 5) : a.Id;
             first = new string(first.TakeWhile(char.IsLetter).ToArray());
-            var g = new General { Name = char.ToUpperInvariant(first[0]) + first.Substring(1) };
+            var g = new General { Name = char.ToUpperInvariant(first[0]) + first.Substring(1), CommandSince = w.Turn };
             var pool = Pool(w.Rules);
             g.Traits.Add(pool[Dice.Int(w.Seed, w.Turn, a.Id, "general-trait" + salt, 0, pool.Length)]);
             return g;
@@ -360,7 +365,7 @@ namespace GreyBoxStrategy
             int start = Dice.Int(w.Seed, w.Turn, a.Id, "successor", 0, ArmyNames.Generals.Length);
             string name = Enumerable.Range(0, ArmyNames.Generals.Length).Select(k => ArmyNames.Generals[(start + k) % ArmyNames.Generals.Length])
                 .Select(n => char.ToUpperInvariant(n[0]) + n.Substring(1)).FirstOrDefault(n => !used.Contains(n)) ?? "Anon";
-            var g = new General { Name = name };
+            var g = new General { Name = name, CommandSince = w.Turn };
             var pool = Pool(w.Rules);
             g.Traits.Add(pool[Dice.Int(w.Seed, w.Turn, a.Id, "successor-trait", 0, pool.Length)]);
             return g;
