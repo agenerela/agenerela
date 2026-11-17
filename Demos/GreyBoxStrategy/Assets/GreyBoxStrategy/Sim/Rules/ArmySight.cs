@@ -35,8 +35,16 @@ namespace GreyBoxStrategy
         public static bool Sees(World w, string countryId, string provinceId) => Seen(w, countryId).Contains(provinceId);
 
         /// <summary>"about 40", rounded to the nearest 10; "a few" under 5.</summary>
-        public static string About(int soldiers) =>
-            soldiers < 5 ? "a few" : $"about {(int)Math.Round(soldiers / 10.0, MidpointRounding.AwayFromZero) * 10}";
+        public static string About(int soldiers) => soldiers < 5 ? "a few" : $"about {Rounded(soldiers)}";
+
+        /// <summary>
+        /// The same rounding for a short label, such as a rival army's piece on the map: "~40", and "&lt;5" under 5, so an
+        /// army that exists never reads as zero. Screen and court share it, so they never disagree (45 is ~50 to both).
+        /// </summary>
+        public static string Short(int soldiers) => soldiers < 5 ? "<5" : $"~{Rounded(soldiers)}";
+
+        /// <summary>A total rounded to the nearest 10, halves up: what fog lets a realm know of a rival's soldiers.</summary>
+        public static int Rounded(int soldiers) => (int)Math.Round(soldiers / 10.0, MidpointRounding.AwayFromZero) * 10;
 
         /// <summary>Whether one of our armies with riders stands in or beside the province: then we see a rival army's mix there.</summary>
         public static bool Scouts(World w, string countryId, string provinceId) =>
