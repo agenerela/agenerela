@@ -677,6 +677,12 @@ generals with traits; fog of war with totals visible.
   with barracks or at the capital. It raises one company of 10 (two with barracks level 2, three at
   level 3), cut to what the treasury pays. The company joins an army of ours in that province, or
   forms a new one with a new general.
+- **Merging and splitting** (built 16 November, the human player's council only). Two or more armies of
+  one realm in one province, none marching, merge into the largest: soldiers and types add up, to the
+  100 cap; stores are the soldier-weighted average, rounded down; the largest army's general leads and
+  the others are dismissed. An army not marching splits 1 to size less one soldiers off as a new army
+  there: types in proportion, the same stores, no general. Neither costs a writ. No model court is
+  offered either yet; offering them is a later A/B.
 - **Provinces without an army** defend with a militia of 5 plus 10 per walls level (*to tune*).
   Today's rule, where every province defends with 70% of the whole army, goes, since armies are now
   in places.

@@ -175,6 +175,55 @@ namespace GreyBoxStrategy
             return null;
         }
 
+        // Merge and split (#20): the same window as a recall, while the council sits and before the court's first order.
+        private string CouncilOpenFor(string countryId)
+        {
+            if (Rules.Turn != TurnStyle.Writs || phase != Phase.AwaitingCouncil || dockets == null) return "the council is not sitting";
+            if (!dockets.TryGetValue(countryId ?? "", out var d)) return $"{countryId} has no council this turn";
+            if (d.FirstCourt != null) return "the court has already given its first order this turn";
+            return null;
+        }
+
+        /// <summary>
+        /// Whether the armies can merge now (<see cref="ArmyOrders"/>): null, or why not. The writs turn, after
+        /// <see cref="BeginTurn"/> and before the country's first court answer, as <see cref="Recall"/>.
+        /// </summary>
+        public string CanMerge(string countryId, IReadOnlyList<string> armyIds) => CouncilOpenFor(countryId) ?? ArmyOrders.WhyNotMerge(World, countryId, armyIds);
+
+        /// <summary>Whether the army can give <paramref name="soldiers"/> to a new army now: null, or why not.</summary>
+        public string CanSplit(string countryId, string armyId, int soldiers) => CouncilOpenFor(countryId) ?? ArmyOrders.WhyNotSplit(World, countryId, armyId, soldiers);
+
+        /// <summary>
+        /// Merges the armies into the largest (<see cref="ArmyOrders"/>). Costs no writ. Returns null, or why not and
+        /// nothing changes. No model court is offered it: it is the human player's order, and a replay gives it again
+        /// where the recording shows it was given. What it did is in <see cref="ArmyOrdersGiven"/> and the turn's
+        /// <see cref="TurnReport.ArmyOrders"/>.
+        /// </summary>
+        public string Merge(string countryId, IReadOnlyList<string> armyIds)
+        {
+            if (CanMerge(countryId, armyIds) is string why) return why;
+            Given(ArmyOrders.Merge(World, countryId, armyIds));
+            return null;
+        }
+
+        /// <summary>Splits <paramref name="soldiers"/> off the army as a new army there (<see cref="ArmyOrders"/>). Costs no writ. Null, or why not.</summary>
+        public string Split(string countryId, string armyId, int soldiers)
+        {
+            if (CanSplit(countryId, armyId, soldiers) is string why) return why;
+            Given(ArmyOrders.Split(World, countryId, armyId, soldiers));
+            return null;
+        }
+
+        /// <summary>This turn's merges and splits so far, in the order given.</summary>
+        public IReadOnlyList<ArmyOrderRecord> ArmyOrdersGiven => report?.ArmyOrders ?? new List<ArmyOrderRecord>();
+
+        private void Given(ArmyOrderRecord record)
+        {
+            report.ArmyOrders.Add(record);
+            // An army merged away is no longer asked, even if the court recalled it.
+            foreach (var d in dockets.Values) d.Recalled.RemoveAll(id => World.FindArmy(id) == null);
+        }
+
         /// <summary>How many armies a country may still be asked about this turn: its writs, less one kept for the court.</summary>
         public int ArmyWrits(string countryId) => dockets != null && dockets.TryGetValue(countryId ?? "", out var d) ? Math.Max(0, d.Writs - 1) : 0;
 

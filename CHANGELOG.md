@@ -34,6 +34,13 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: merging and splitting armies, the rules** (#20). The human player's council can merge two or more
+  armies standing together into the largest (types add up, stores the soldier-weighted average, the largest's
+  general leads and the others are dismissed) and split an army in two (types in proportion, the same stores, no
+  general for the new one), each at once and for no writ. `RuleSession.CanMerge`, `Merge`, `CanSplit` and `Split`
+  are the screen's calls; the buttons follow. Recorded and replayed; older recordings replay as before. No model is
+  offered either, and a test pins that every request a model reads is byte for byte as before.
+
 - **Land traditions measured on generated worlds** (#20). Twelve paired games on `qwen3.5:4b`: a court buys 8 points
   more of its land's type with the rule on ([+2.4, +13.4]), as on Classic, and the counter 8 points less often
   ([−13.5, −3.5]), which Classic did not show (findings, 16 November). `LandTraditions` stays off.
