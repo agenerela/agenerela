@@ -748,6 +748,29 @@ a hungry one none from its hunger line.
   tag, every turn's end tags each siege with the game's own turns, every army has its stores at every moment, and a
   hungry army shows the warning to you and not to a rival (broken by not reading the line of a siege that ended).
 
+### The screen, variant B: the inspector and the council (16 November)
+
+Slice 3, the last of variant B.
+- **The inspector is a window** in the middle of the screen, 760 px wide (640 at 1366 × 768). It has a gilt frame,
+  sits above the map's legend and modes, and is as tall as its tab needs, up to 88% of the screen.
+- **Five tabs**, built with the panel kit, opening on **Answer**:
+  - **Answer:** what the model returned, in its field order;
+  - **Offered:** every move on its menu, and why others were not;
+  - **Told:** what its court told it;
+  - **Guards:** what the guards did, and its memory;
+  - **Model:** the model and its timings.
+
+  Only the shown tab is built. While you rule, a rival's Offered and Told tabs stay private, as before.
+- **Speech:** a click on a ruler's words opens that decision in the inspector. While the inspector is open, words
+  that would fall under it move to the nearer side with room, or below it on a small screen, so it never hides them.
+- **The council:** each writ is a seal, red once your plan spends it and dim while it is left. End turn is larger
+  and gilt-framed.
+- **For tests and the CLI:** `ScreenUI.InspectorTabs()`, `ShowInspectorTab(name)` and `InspectorText()`.
+- **Tests** (`InspectorWindowTests`), each seen failing once against a deliberate break:
+  - a card opens on Answer, each tab holds its part, and every offered move is listed (broken by dropping a move);
+  - a rival's court stays private while you rule and opens while you watch (broken by treating every report as
+    known).
+
 ### The screen, variant B: the panels (16 November)
 
 Slice 2: the province, army and realm views on the left are built from one kit (`ScreenUI.Rows.cs`).
@@ -2841,6 +2864,9 @@ the decision behind it in six numbered sections, from the recorded telemetry onl
   the move landed;
 - memory;
 - model, tokens, and queue time against model time.
+
+Since variant B's slice 3 these are five tabs (Answer, Offered, Told, Guards with memory, Model) in a framed window
+in the middle of the screen; see [variant B: the inspector and the council](#the-screen-variant-b-the-inspector-and-the-council-16-november).
 
 `DecisionCard` builds the inspector's content in plain C#. Esc closes it. The rest of the screen:
 - The painting fades into a tile of its own open sea (`Art/sea-tile.jpg`), so the map fills

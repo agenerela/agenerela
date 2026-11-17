@@ -119,7 +119,31 @@ namespace GreyBoxStrategy.Realm
             sub.AddToClassList("insp-sub"); hb.Add(sub);
             head.Add(hb);
             inspectorBody.Add(head);
+            bool report = Fog.KnowsReport(c.Country, GameOver);
+            sectionTarget = null;
+            KitTabs(inspectorBody, "inspector",
+                (IconKind.Seal, "Answer", page => { sectionTarget = page; CardAnswer(c); }),
+                (IconKind.Eye, "Offered", page => { sectionTarget = page; CardOffered(c, report); }),
+                (IconKind.Quill, "Told", page => { sectionTarget = page; CardTold(c, report, look); }),
+                (IconKind.Shield, "Guards", page => { sectionTarget = page; CardGuards(c); }),
+                (IconKind.Hourglass, "Model", page => { sectionTarget = page; CardModel(c, teller, player, look); }));
+            sectionTarget = null;
 
+            var foot = new Label("Everything on this card comes from DecisionFeed.Recorded: the DecisionResult and its DecisionTelemetry, recorded when the table played. The game adds only the layout.");
+            foot.AddToClassList("src"); foot.style.paddingLeft = 10; foot.style.paddingRight = 10; foot.style.paddingBottom = 10;
+            inspectorBody.Add(foot);
+
+            inspector.AddToClassList("on");
+            inspector.BringToFront(); // a window over the map: above the legend and the map's modes
+            Root.AddToClassList("insp-open");
+            inspectorBody.scrollOffset = Vector2.zero;
+        }
+
+        // The section a card's tab is building into; null: the inspector's body.
+        private VisualElement sectionTarget;
+
+        private void CardAnswer(DecisionCard c)
+        {
             // 1 the answer
             var s1 = Section("1 · WHAT THE MODEL ANSWERED", "action, then target, then statement");
             var box = new VisualElement(); box.AddToClassList("code-box");
@@ -127,7 +151,10 @@ namespace GreyBoxStrategy.Realm
             s1.Add(box);
             if (c.ModelWrote != null) s1.Add(Note($"Before the guard, the model wrote {c.ModelWrote}."));
             if (c.Outcome == CardOutcome.Contained) s1.Add(Note("A guard contained it: the agent ran none instead, and no statement was shown."));
+        }
 
+        private void CardOffered(DecisionCard c, bool report)
+        {
             // 2 the menu
             var s2 = Section("2 · THE MOVES IT WAS OFFERED", $"{c.Offered.Count}, from its state");
             var chips = new VisualElement(); chips.AddToClassList("chips");
@@ -138,7 +165,6 @@ namespace GreyBoxStrategy.Realm
                 chips.Add(chip);
             }
             s2.Add(chips);
-            bool report = Fog.KnowsReport(c.Country, GameOver);
             if (c.NotOffered.Count > 0 && report)
             {
                 s2.Add(Note("Not offered, so absent from its schema:"));
@@ -146,13 +172,16 @@ namespace GreyBoxStrategy.Realm
                 if (c.NotOffered.Count > 14) s2.Add(Note($"and {c.NotOffered.Count - 14} more"));
             }
             s2.Add(Src("TargetsUnavailable · ITargetAvailability, each with its reason"));
+            if (!report) s2.Add(Note("Why other moves were not offered is its court's business: it shows the treasury."));
+        }
 
+        private void CardTold(DecisionCard c, bool report, CountryLook look)
+        {
             // 3 what it was told
             var s3 = Section("3 · WHAT IT WAS TOLD", report ? $"{c.Standing.Count} standing + {c.ThisTurn.Count} this turn" : "private");
             if (!report)
             {
-                s2.Add(Note("Why other moves were not offered is its court's business: it shows the treasury."));
-                s3.Add(Note($"What {look.Name}'s court told it holds its treasury, stability and plans, so it stays private while the game runs. It opens when the game is over. What it did and said is above."));
+                s3.Add(Note($"What {look.Name}'s court told it holds its treasury, stability and plans, so it stays private while the game runs. It opens when the game is over. What it did and said is on the Answer tab."));
             }
             else
             {
@@ -162,7 +191,10 @@ namespace GreyBoxStrategy.Realm
             var f2 = new VisualElement(); f2.AddToClassList("facts-box"); f2.Add(Mono(string.Join("\n", c.ThisTurn))); s3.Add(f2);
             s3.Add(Src($"ObservationsDropped: {c.ObservationsDropped}"));
             }
+        }
 
+        private void CardGuards(DecisionCard c)
+        {
             // 4 guards
             var s4 = Section("4 · GUARDS, AND THE RE-CHECK WHEN IT LANDED", "");
             foreach (var g in c.Guards)
@@ -191,7 +223,10 @@ namespace GreyBoxStrategy.Realm
             s5.Add(KeyValue("Exchanges sent with this call", c.MemorySent.ToString()));
             s5.Add(KeyValue("Held but left out", c.MemoryDropped.ToString()));
             s5.Add(Src("HistoryTurnsSent · HistoryTurnsDropped. Only moves that landed are remembered."));
+        }
 
+        private void CardModel(DecisionCard c, bool teller, RecordedPlayer player, CountryLook look)
+        {
             // 6 model and time
             var s6 = Section("6 · MODEL AND TIME", "");
             s6.Add(KeyValue("Model", c.Model ?? "?"));
@@ -210,14 +245,32 @@ namespace GreyBoxStrategy.Realm
             tb.Add(m);
             s6.Add(tb);
             s6.Add(Src("QueueWaitSeconds · LatencySeconds · PromptTokens · CompletionTokens · Model"));
+        }
 
-            var foot = new Label("Everything on this card comes from DecisionFeed.Recorded: the DecisionResult and its DecisionTelemetry, recorded when the table played. The game adds only the layout.");
-            foot.AddToClassList("src"); foot.style.paddingLeft = 10; foot.style.paddingRight = 10; foot.style.paddingBottom = 10;
-            inspectorBody.Add(foot);
+        /// <summary>For tests and the CLI: the inspector's tabs and the one shown.</summary>
+        public (List<string> tabs, string on) InspectorTabs()
+        {
+            var names = new List<string>(); string on = null;
+            inspector.Query(className: "ktab").ForEach(t => { var l = t.Q<Label>(); names.Add(l?.text); if (t.ClassListContains("on")) on = l?.text; });
+            return (names, on);
+        }
 
-            inspector.AddToClassList("on");
-            Root.AddToClassList("insp-open"); // the council panel moves left of it
-            inspectorBody.scrollOffset = Vector2.zero;
+        /// <summary>For tests and the CLI: shows an inspector tab by name, as a click on it does.</summary>
+        public bool ShowInspectorTab(string name)
+        {
+            VisualElement hit = null;
+            inspector.Query(className: "ktab").ForEach(t => { if (t.Q<Label>()?.text == name) hit = t; });
+            if (!(hit?.userData is Action show)) return false;
+            show();
+            return true;
+        }
+
+        /// <summary>For tests: every label's text on the inspector, in order.</summary>
+        public List<string> InspectorText()
+        {
+            var t = new List<string>();
+            inspector.Query<Label>().ForEach(l => t.Add(l.text));
+            return t;
         }
 
         private VisualElement Section(string title, string note)
@@ -227,7 +280,7 @@ namespace GreyBoxStrategy.Realm
             h.Add(new Label(title));
             if (!string.IsNullOrEmpty(note)) { var n = new Label(note); n.AddToClassList("sec-note"); h.Add(n); }
             s.Add(h);
-            inspectorBody.Add(s);
+            (sectionTarget ?? inspectorBody).Add(s);
             return s;
         }
 

@@ -123,7 +123,12 @@ namespace GreyBoxStrategy.Realm
             }
             else
             {
-                for (int k = 0; k < req.Writs; k++) { var pip = new VisualElement(); pip.AddToClassList("writ-pip"); pip.EnableInClassList("on", k < used); writs.Add(pip); }
+                // Each writ a seal: red once your plan spends it, dim while it is left.
+                for (int k = 0; k < req.Writs; k++)
+                {
+                    var seal = new Icon(IconKind.Seal, 20) { Tint = k < used ? new Color32(181, 64, 44, 255) : new Color32(90, 70, 40, 255), tooltip = k < used ? "A writ spent" : "A writ left" };
+                    seal.AddToClassList("writ-seal"); writs.Add(seal);
+                }
                 writs.Add(new Label($"{used} of {req.Writs} used") { style = { marginLeft = 6, fontSize = 12, color = new Color(0.86f, 0.8f, 0.66f) } });
                 writs.tooltip = $"Writs a turn: {w.Rules.BaseWrits} + 1 for every {w.Rules.ProvincesPerWrit} provinces you own, at most {w.Rules.MaxWrits}. " +
                                 "The court's order takes one; each army awaiting orders takes one, the most urgent first, until one is left for the court; unused writs are lost.";

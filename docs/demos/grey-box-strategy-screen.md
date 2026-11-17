@@ -165,7 +165,7 @@ feature takes the home its object already has, so nothing is bolted on later.
 | **This turn's orders** (rule) | **The orders panel**, bottom centre, ending in **End turn** | The moves the rules offer you, then the order and End turn | Several orders a turn, if the rules allow them, as a short queue above End turn. Each order still comes from a panel; the orders panel only collects them |
 | **Talking to a ruler** | **A conversation panel** that replaces the orders panel while it is open | Advise mode's counsel box | Negotiation with a rival in free text (decision 10) uses the same panel, with the rival's face and replies in character. The deal it reaches lands as ordinary moves the rules check |
 | **Something that happened** | **The chronicle**, and the map where it happened | Lines, filters, click to locate, the inspector | Events from the game master appear here as lines, with a banner at the province they touch |
-| **Why a ruler did something** | **The decision inspector**, from any line, banner or panel | The six sections | Unchanged: it is the framework's window, and grows only as the framework records more |
+| **Why a ruler did something** | **The decision inspector**, from any line, banner or panel | The six sections, as five tabs since variant B (Answer, Offered, Told, Guards with memory, Model) | Unchanged: it is the framework's window, and grows only as the framework records more |
 | **How you look at the map** | **The map-mode bar**, bottom left, keys 1 to 9 | Political, armies, forts, reach, terrain | Development, trade, alliances and fog of war (decision 13) become modes; the political mode keeps capitals, forts and armies on it (decision 19) |
 
 **Keys.** Every panel and every map mode has one. Space plays and pauses. Enter ends the turn
@@ -356,10 +356,11 @@ B is built in three slices:
   - The chronicle is a one-line feed with All, Me, War and Land filters. An entry opens in place, with a link to
     find it on the map and to its decision.
   - Every panel has a gilt frame.
-- **2, the panels (built).** A row kit (icon, label, bar or pips, value) for the province, army and rival views,
+- **2, the panels (built, #343).** A row kit (icon, label, bar or pips, value) for the province, army and rival views,
   tabs with icons, and portrait frames in the panel headers. Fog decides what a row shows.
-- **3, the inspector and the council.** The inspector becomes a framed window with tabs. Writs show as seals,
-  End turn becomes larger, and speech bubbles open their decision.
+- **3, the inspector and the council (built).** The inspector is a framed window in the middle of the screen, with
+  five tabs: Answer, Offered, Told, Guards, Model. Writs show as seals, End turn is larger, and a click on a speech
+  bubble opens its decision. While the inspector is open, the bubbles stay beside it, never under it.
 
 The numbers, the outliner's rows and the feed's filters come from `ScreenModels`, which `ScreenModelsTests` checks
 without a scene.
