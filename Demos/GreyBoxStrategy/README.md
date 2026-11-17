@@ -792,13 +792,14 @@ Variant B's empty picture frames are filled, from an art pack made ahead of time
 The lead, after playing variant B: "a possibility to unify armies and separate". The rules are in the Sim; the
 buttons come in the screen's own pull request, built on the calls below.
 
-- **Merge.** Two or more of your armies in one province, none marching, become the largest of them (ties: the
-  lower id). Soldiers and each type add up, at most 100 (an army's cap, `ArmyMax`). Stores are the soldier-weighted
-  average in half-turns, rounded down. The largest army's general leads; the others are dismissed, and the chronicle
-  says so. A siege goes on where it was, since its progress belongs to the province.
+- **Merge.** Two or more of your armies in one province, none marching, become the army of the senior general, the one
+  longest in command (ties: the larger army, then the lower id), so splitting and merging back never rerolls a
+  general. Soldiers and each type add up, at most 100 (an army's cap, `ArmyMax`). Stores are the soldier-weighted
+  average in half-turns, rounded down. The other generals are dismissed, and the chronicle says so. A siege goes on where it was, since its progress belongs to the province.
 - **Split.** One army, not marching, gives 1 to its size less one soldiers to a new army in the same province. Each
   type goes in proportion, the remainder to the largest fractions, as losses are taken, so the totals hold. Both
-  keep the same stores level. The general stays with the original; the new army has none, and holds.
+  keep the same stores level. The general stays with the original; the new army gets a general of its own,
+  named as a newly raised army's is (every army has one), and holds.
 - **When.** On the writs turn, while the game waits for your orders and before they are given. Neither costs a writ.
   A merged or new army is ordered like any other, for its writ.
 - **Only yours.** No model court or marshal is offered either, and nothing a model reads changes:
@@ -812,7 +813,7 @@ For the screen (`RuleSession`, each returns null, or why not):
 | Call | Does |
 |---|---|
 | `CanMerge(armyIds)` | whether these armies can merge now |
-| `Merge(armyIds)` | merges them into the largest |
+| `Merge(armyIds)` | merges them into the senior general's army |
 | `CanSplit(armyId, soldiers)` | whether this army can split that many off now |
 | `Split(armyId, soldiers)` | splits them off; the new army's id is `Game.ArmyOrdersGiven.Last().Others[0]` |
 
