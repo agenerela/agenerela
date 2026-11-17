@@ -134,12 +134,15 @@ namespace GreyBoxStrategy.Tests
             woken.Wake.Clear();
             woken.Wake.Add("war declared");
             var step = g.World.Neighbours(g.World.Province(due.Location)).First(p => WritLegality.Passable(g.World, "valen", p));
-            var marching = new Army("yan_host", "valen", due.Location, 10, next - 5) { Destination = step.Id, StepTurnsLeft = 1 };
+            var marching = new Army("yan_host", "valen", due.Location, 10, next - 1) { Destination = step.Id, StepTurnsLeft = 1 };
             marching.Wake.Clear();
             marching.Path.Add(step.Id);
+            var recent = new Army("xan_host", "valen", due.Location, 10, next - 1); // held since last turn: keeps its order
+            recent.Wake.Clear();
+            g.World.Armies.Add(recent);
             g.World.Armies.Add(woken);
             g.World.Armies.Add(marching);
-            g.World.Country("valen").Army += 20;
+            g.World.Country("valen").Army += 30;
 
             var asked = Turn(g).Where(r => r.CountryId == "valen" && r.Moment == Moment.Army).Select(r => r.ArmyId).ToList();
             Assert.That(asked, Is.EquivalentTo(new[] { due.Id, "zed_host" }),
@@ -166,6 +169,7 @@ namespace GreyBoxStrategy.Tests
             Turn(g);
             var a = g.World.ArmiesOf("valen").First();
             a.Wake.Clear();
+            a.OrderedOnTurn = g.World.Turn - 10; // long past the holding timer: only the siege keeps it from being asked
             g.World.Province(a.Location).SiegedBy = "valen";
             Assert.That(Game.AskedFreely(g.World, a), Is.False);
             a.Wake.Add("war declared");

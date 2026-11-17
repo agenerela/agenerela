@@ -293,5 +293,41 @@ namespace GreyBoxStrategy.Screen.Tests
             Assert.That(under.Overlaps(Inspector1366), Is.False, "under the inspector at 1366");
             Assert.That(under.yMax, Is.LessThanOrEqualTo(768 - 8), "off the screen at 1366");
         }
+
+        [Test]
+        public void A_notch_of_the_wheel_is_a_clear_step_toward_the_cursor_and_the_full_range_takes_about_twelve()
+        {
+            // The default uniform reading (1 a notch) and Windows' own range (120) are the same notch.
+            Assert.That(ScreenModels.WheelNotches(1), Is.EqualTo(1f));
+            Assert.That(ScreenModels.WheelNotches(120), Is.EqualTo(1f));
+            Assert.That(ScreenModels.WheelNotches(-240), Is.EqualTo(-2f));
+            // A trackpad's small readings are fractions; a frame never jumps more than three notches.
+            Assert.That(ScreenModels.WheelNotches(0.1f), Is.EqualTo(0.1f).Within(1e-6));
+            Assert.That(ScreenModels.WheelNotches(9), Is.EqualTo(3f));
+            Assert.That(ScreenModels.WheelNotches(0), Is.EqualTo(0f));
+
+            // One notch in: a step between 12% and 25% of the size, the same at any zoom.
+            float min = 1.6f, max = 13.5f;
+            foreach (var size in new[] { 3f, 8f })
+            {
+                float step = 1 - ScreenModels.ZoomTarget(size, 1, min, max) / size;
+                Assert.That(step, Is.InRange(0.12f, 0.25f), $"a notch at size {size}");
+            }
+            // A trackpad's tenth of a notch is a small step, not nothing.
+            Assert.That(1 - ScreenModels.ZoomTarget(8, 0.1f, min, max) / 8, Is.InRange(0.01f, 0.03f));
+            // Out to in, the range the game gives (0.16 to 1.35 of the fitted map): 8 to 13 notches.
+            int notches = 0; float s = max;
+            while (s > min && notches < 100) { s = ScreenModels.ZoomTarget(s, 1, min, max); notches++; }
+            Assert.That(notches, Is.InRange(8, 13));
+            Assert.That(ScreenModels.ZoomTarget(min, 1, min, max), Is.EqualTo(min), "clamped at the closest");
+
+            // The ease: about 95% of the way in a tenth of a second, at 60 or at 30 frames a second.
+            foreach (var fps in new[] { 60, 30 })
+            {
+                float cur = 8, target = 8 / 1.2f;
+                for (int f = 0; f < fps / 10; f++) cur = ScreenModels.EaseZoom(cur, target, 1f / fps);
+                Assert.That((8 - cur) / (8 - target), Is.GreaterThan(0.9f), $"{fps} fps");
+            }
+        }
     }
 }

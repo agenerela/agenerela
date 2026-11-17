@@ -85,6 +85,8 @@ namespace GreyBoxStrategy.Realm
             // Five countries in full can outgrow a 1080p bar and push Menu off the right edge: the bar then drops
             // each country's lesser stats ("tight") rather than clip the controls.
             root.schedule.Execute(FitTopBar).Every(400);
+            // Nothing is cut off at the bottom: windows fitted to the screen, scrolling lists shaded (ScreenUI.Layout.cs).
+            root.schedule.Execute(KeepLayout).Every(250);
 
             // ---- realm ----
             var realm = Panel("REALM", "realm");
@@ -408,7 +410,8 @@ namespace GreyBoxStrategy.Realm
                 // The storyteller's events carry its crest, not the country they struck.
                 row.Add(new Crest(told ? CountryLook.Storyteller : CountryLook.Of(l.Country), 16));
                 // What kind of entry it is, at a glance: a battle, land, a treaty, gold, a building, a story.
-                var kind = new Icon(KindIcon(l.Category), 12) { Tint = KindTint(l.Category) }; kind.AddToClassList("lg-kind"); row.Add(kind);
+                // The storyteller's own mark, a scroll in gilt: a ruler's orders carry the quill.
+                var kind = new Icon(told ? IconKind.Scroll : KindIcon(l.Category), told ? 14 : 12) { Tint = told ? new Color32(236, 200, 120, 255) : KindTint(l.Category) }; kind.AddToClassList("lg-kind"); row.Add(kind);
                 if (told) row.AddToClassList("lg-tale");
                 var body = new VisualElement(); body.AddToClassList("lg-body");
                 var t = new Label(l.Text); t.AddToClassList("lg-text"); body.Add(t);

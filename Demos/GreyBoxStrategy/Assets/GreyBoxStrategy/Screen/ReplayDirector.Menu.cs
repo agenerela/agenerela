@@ -245,7 +245,7 @@ namespace GreyBoxStrategy.Realm
             if (ui.HelpOpen) { ui.CloseHelp(); return; }
             if (ui.MenuOpen) { ui.MenuBack?.Invoke(); return; }
             // The choice card closes only by choosing: Esc opens the pause menu over it.
-            if (ui.EventOpen) { ui.CloseEvent(); return; }
+            if (ui.EventOpen) { ui.DismissEvent(); return; }
             if (ui.BattleOpen) { ui.CloseBattle(); return; }
             if (ui.TalesOpen) { ui.CloseTales(); return; }
             if (ui.InspectorOpen || ui.SideOpen || ui.DiplomacyOpen)
