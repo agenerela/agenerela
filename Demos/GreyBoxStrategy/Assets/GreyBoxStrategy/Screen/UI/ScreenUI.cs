@@ -557,7 +557,7 @@ namespace GreyBoxStrategy.Realm
             var e = new VisualElement { pickingMode = onClick != null ? PickingMode.Position : PickingMode.Ignore, tooltip = onClick != null ? "Click: why this move, its decision in the inspector" : null }; e.AddToClassList("banner");
             if (onClick != null) e.RegisterCallback<ClickEvent>(_ => onClick());
             e.style.borderLeftColor = (Color)look.Colour;
-            var face = new Image { image = portraits, uv = Faces.Uv(player?.Persona, look.Slot % 2), scaleMode = ScaleMode.ScaleAndCrop };
+            var face = RulerFace(country);
             face.AddToClassList("face"); face.style.borderTopColor = face.style.borderBottomColor = face.style.borderLeftColor = face.style.borderRightColor = (Color)look.Colour;
             e.Add(face);
             var body = new VisualElement(); body.AddToClassList("banner-body");

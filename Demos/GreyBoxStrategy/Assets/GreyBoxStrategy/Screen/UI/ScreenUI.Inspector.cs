@@ -102,7 +102,7 @@ namespace GreyBoxStrategy.Realm
             if (teller) head.Add(new Crest(look, 44)); // the chronicler has no face
             else
             {
-                var face = new Image { image = portraits, uv = Faces.Uv(player?.Persona, look.Slot % 2), scaleMode = ScaleMode.ScaleAndCrop };
+                var face = RulerFace(c.Country);
                 face.AddToClassList("insp-face");
                 face.style.borderTopColor = face.style.borderBottomColor = face.style.borderLeftColor = face.style.borderRightColor = (Color)look.Colour;
                 head.Add(face);
