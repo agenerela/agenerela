@@ -180,6 +180,10 @@ namespace Agenerela
             return handler;
         }
 
+        // Asked of every definition before it is stored, after the registry's own checks: the agent
+        // that owns this registry refuses one its provider could not be sent (DR-023). Throws to refuse.
+        internal Action<ActionDefinition> Accepting;
+
         // Throws for anything Register refuses. Stores nothing.
         private void Check(ActionDefinition definition, IActionHandler handler)
         {
@@ -234,6 +238,8 @@ namespace Agenerela
             {
                 throw new InvalidOperationException($"Action already registered: {definition.Id}");
             }
+
+            Accepting?.Invoke(definition);
         }
 
         private void Add(ActionDefinition definition, IActionHandler handler)

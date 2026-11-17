@@ -145,5 +145,21 @@ namespace Agenerela.Providers
         /// </para>
         /// </remarks>
         public bool ReportsTokenProbabilities;
+
+        /// <summary>
+        /// Whether the provider can be sent a paired schema (DR-020): a root <c>anyOf</c> of complete
+        /// objects, one per branch, as <see cref="JsonSchemaSerializer"/> writes
+        /// <see cref="DecisionSchema.Pairs"/>. True by default, and true for Ollama. A provider whose
+        /// API refuses that shape, as OpenAI's strict structured outputs refuse a root <c>anyOf</c>,
+        /// sets it false.
+        /// </summary>
+        /// <remarks>
+        /// An action that declares a parameter is offered only in a paired schema (DR-023), so an
+        /// agent refuses such an action on a provider that says false: at construction, when the
+        /// action is registered or bound, and when <see cref="Agent.Provider"/> is set. A call that
+        /// asks for <see cref="DecideOptions.PairTargetsWithActions"/> on such a provider ends as a
+        /// <see cref="PipelineErrorKind.RequestPreparation"/> error and nothing is sent.
+        /// </remarks>
+        public bool SupportsPairedSchema = true;
     }
 }

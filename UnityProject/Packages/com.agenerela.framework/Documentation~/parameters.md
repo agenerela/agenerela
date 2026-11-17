@@ -98,8 +98,18 @@ With no target registered, the schema is still paired and has no `target` field.
 
 **Key order on some models.** Ollama's native chat path sorts a schema's keys alphabetically
 (findings, 5 November 2026), which would put `strength` after `statement`. The `qwen3.5` family
-takes the path that keeps the order. Detecting a lost order is not built yet; check a new model
-with `tools/benchmarks/closed_choice_grammar_probe.py` before trusting parameters on it.
+takes the path that keeps the order. A reply whose fields came in another order than the schema's
+is **flagged, not refused**: `DecisionTelemetry.OrderLost` is true and the decision log's line
+carries `orderLost`. The values are still legal, since the grammar held them, so the decision
+stands; what is lost is that the statement was written before the value. If you see the flag on a
+model, expect statements that do not match the parameter, and prefer a model that keeps the order.
+`tools/benchmarks/closed_choice_grammar_probe.py` checks a model before you rely on it.
+
+**A provider that cannot take a paired schema.** `ProviderCapabilities.SupportsPairedSchema` is
+true by default and for Ollama. On a provider that says false, an agent refuses an action with a
+parameter when it is set up, with an `InvalidOperationException` that names the action and the
+provider: at construction, when the action is registered or bound, and when `Agent.Provider` is
+set. Never at the first decision.
 
 ## Values that depend on the game
 
@@ -161,6 +171,7 @@ every value, or it is refused. A guard of your own reads `input.Decision.Argumen
 | `DecisionTelemetry.Arguments` | The decision's values by name; empty for a stopped decision |
 | `DecisionTelemetry.ArgumentsDefaulted` | The parameters that took their default |
 | `DecisionTelemetry.ValuesUnavailable` | Each value a per-value check rejected, with its reason |
+| `DecisionTelemetry.OrderLost` | Whether the reply's fields came in another order than the schema's; `orderLost` in the log, left out when the order held |
 | The decision log | `arguments` inside `decision` and `modelDecision`; `argumentsDefaulted` and `valuesUnavailable` on the line; all left out when empty ([logging-decisions.md](logging-decisions.md)) |
 | `AgentPreview` | `ValuesUnavailable`, an action left out for a parameter with no value in `LeftOut`, and each branch's parameters with the values offered now in `Request.Schema.Pairs[i].Parameters` |
 | Memory | A remembered decision keeps its arguments before the statement, and `RollingHistory.Remembers = Move` keeps them with the move |
@@ -181,9 +192,9 @@ every value, or it is refused. A guard of your own reads `input.Decision.Argumen
 
 - An open number range, and free text.
 - `target` plus `also_targets`.
-- Detecting a reply whose key order was lost (Ollama's native path).
-- A provider saying it cannot take a paired schema: none but Ollama exists yet. Gemini takes
-  `anyOf`; OpenAI's strict mode refuses a root `anyOf`.
+- Another schema shape for a provider that cannot take a paired one: such a provider cannot be
+  given parameters at all yet. Only Ollama exists; Gemini takes `anyOf`, OpenAI's strict mode
+  refuses a root `anyOf`.
 - A parameter on a `Choice`.
 
 ## For an A/B
