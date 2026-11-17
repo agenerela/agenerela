@@ -37,7 +37,8 @@ namespace GreyBoxStrategy.Realm.Editor
             {
                 t.sRGBTexture = true;
                 t.filterMode = FilterMode.Bilinear;
-                t.mipmapEnabled = name == "sea-chart-map" || name == "sea-tile";
+                // The art pack (#20) is drawn far below its size, a portrait in a 62 px frame: mipmaps keep it from shimmering.
+                t.mipmapEnabled = name == "sea-chart-map" || name == "sea-tile" || assetPath.Contains("/ArtPack/");
                 if (name == "sea-tile") t.wrapMode = TextureWrapMode.Repeat;
             }
         }
