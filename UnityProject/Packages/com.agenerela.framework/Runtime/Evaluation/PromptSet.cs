@@ -136,7 +136,7 @@ namespace Agenerela.Evaluation
                 }
             }
 
-            set.Actions.Add(new DeclaredAction { Id = ActionRegistry.None, NeedsTarget = false });
+            set.Actions.Add(new DeclaredAction { Id = ActionRegistry.None, TakesNoTarget = true });
             return set;
         }
 

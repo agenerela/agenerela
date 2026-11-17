@@ -104,8 +104,7 @@ namespace Agenerela.Editor.Evaluation
 
             action = actions[EditorGUILayout.Popup("Action", Array.IndexOf(actions, action), actions)];
 
-            bool needsTarget = choices.NeedsTarget(action);
-            var targets = needsTarget ? choices.Targets.ToArray() : new[] { TargetRegistry.NoTarget };
+            var targets = choices.TargetsFor(action).ToArray();
             if (targets.Length == 0)
             {
                 EditorGUILayout.HelpBox($"{action} needs a target, and the set declares none.", MessageType.Warning);
@@ -117,7 +116,7 @@ namespace Agenerela.Editor.Evaluation
                 target = targets[0];
             }
 
-            using (new EditorGUI.DisabledScope(!needsTarget))
+            using (new EditorGUI.DisabledScope(targets.Length == 1))
             {
                 target = targets[EditorGUILayout.Popup("Target", Array.IndexOf(targets, target), targets)];
             }

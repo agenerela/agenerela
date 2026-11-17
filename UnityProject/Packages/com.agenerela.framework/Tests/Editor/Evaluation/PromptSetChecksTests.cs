@@ -279,6 +279,14 @@ namespace Agenerela.Tests.Evaluation
             Assert.That(set.FindAction("move_to").NeedsTarget, Is.False, "The set is left as it was.");
         }
 
+        [Test]
+        public void ADifferenceInTakingNoTargetIsReported()
+        {
+            set.FindAction("follow_player").TakesNoTarget = true;
+
+            Assert.That(PromptSetChecks.CompareWithProfile(set, profile), Has.Some.Contains("follow_player"));
+        }
+
         // ---- An example that carries its situation (#216 item 1) ----------------------------------
 
         [Test]

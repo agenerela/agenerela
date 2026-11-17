@@ -64,7 +64,7 @@ namespace Agenerela.Evaluation
 
         /// <summary>
         /// Where <paramref name="profile"/> and the actions <paramref name="set"/> declares disagree:
-        /// an action only one of them has, or one whose need for a target differs. <c>none</c> is in
+        /// an action only one of them has, or one whose target differs: required, optional or never taken. <c>none</c> is in
         /// every set and no profile. The window shows these and never fixes them.
         /// </summary>
         public static IReadOnlyList<string> CompareWithProfile(PromptSet set, AgentProfile profile)
@@ -84,6 +84,12 @@ namespace Agenerela.Evaluation
                     differences.Add(action.RequiresTarget
                         ? $"'{action.Id}' requires a target in the profile, but the set says it does not"
                         : $"'{action.Id}' does not require a target in the profile, but the set says it does");
+                }
+                else if (declared.TakesNoTarget != action.TakesNoTarget)
+                {
+                    differences.Add(action.TakesNoTarget
+                        ? $"'{action.Id}' takes no target in the profile, but the set says it may take one"
+                        : $"'{action.Id}' may take a target in the profile, but the set says it takes none");
                 }
             }
 

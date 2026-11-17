@@ -52,11 +52,22 @@ namespace Agenerela.Evaluation
                 .ToList();
         }
 
-        /// <summary>True when <paramref name="actionId"/> takes a registered target rather than <c>no_target</c>.</summary>
-        public bool NeedsTarget(string actionId)
+        /// <summary>
+        /// The targets an annotator may give <paramref name="actionId"/>, the three states of DR-020
+        /// that <see cref="PromptSetChecks"/> holds a prompt to: every declared target when it requires
+        /// one, <c>no_target</c> alone when it never takes one, and <c>no_target</c> then every
+        /// declared target when it is optional. <c>none</c>, and an id the set does not declare,
+        /// take <c>no_target</c> alone.
+        /// </summary>
+        public IReadOnlyList<string> TargetsFor(string actionId)
         {
             var action = actions.FirstOrDefault(a => a.Id == actionId);
-            return action != null && action.NeedsTarget;
+            if (action == null || action.Id == ActionRegistry.None || action.TakesNoTarget)
+            {
+                return new[] { TargetRegistry.NoTarget };
+            }
+
+            return action.NeedsTarget ? Targets : new[] { TargetRegistry.NoTarget }.Concat(Targets).ToList();
         }
     }
 }
