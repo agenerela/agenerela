@@ -55,6 +55,10 @@ namespace GreyBoxStrategy.Realm
             followBar = new VisualElement(); followBar.AddToClassList("follow-bar");
             nations.parent.Insert(nations.parent.IndexOf(nations) + 1, followBar);
 
+            // The showcase in the date block, one click away in every mode: the decisions the framework recorded.
+            var insp = new Button(() => InspectPressed?.Invoke()) { tooltip = "The decisions: what each ruler was told, offered and chose, as the framework recorded it (I)" };
+            insp.AddToClassList("tbtn"); insp.AddToClassList("insp-btn"); insp.Add(new Icon(IconKind.Eye, 13)); insp.Add(new Label("Decisions"));
+            playButton.parent.Add(insp);
             var diplo = new Button(() => DiplomacyPressed?.Invoke()) { tooltip = "Diplomacy (D): who is at war, at truce or at peace with whom" };
             diplo.AddToClassList("tbtn"); diplo.Add(new Icon(IconKind.Peace, 12)); diplo.style.marginLeft = 8;
             playButton.parent.Add(diplo);
@@ -65,6 +69,123 @@ namespace GreyBoxStrategy.Realm
                 armyBadges[i] = new Label { pickingMode = PickingMode.Ignore }; armyBadges[i].AddToClassList("army-badge");
                 armyBadges[i].style.display = DisplayStyle.None; labels.Add(armyBadges[i]);
             }
+        }
+
+        // ---- the outliner (variant B, #20) ----
+
+        private VisualElement outliner;
+        private string filtersForYou;
+        private ScrollView outlinerBody;
+
+        /// <summary>
+        /// Your armies (stores as loaves, what each is doing), the sieges you lay or suffer, your wars with their scores,
+        /// and the ledgers behind a button. Watching, every siege and war.
+        /// </summary>
+        public void RenderOutliner(ReplayState s)
+        {
+            if (outlinerBody == null || s == null) return;
+            // The feed's "Me" exists only once you rule: its filters are rebuilt when the fog comes on or goes.
+            if (filtersForYou != You) { filtersForYou = You; RenderFilters(); }
+            outlinerBody.Clear();
+            string me = Fog.On ? You : Followed;
+            var o = ScreenModels.OutlinerOf(s, me, ProvinceIds, Cap, TurnsLeft);
+            if (me != null)
+            {
+                OutHead(IconKind.Army, "ARMIES", o.Armies.Count.ToString());
+                foreach (var a in o.Armies)
+                {
+                    var row = new VisualElement(); row.AddToClassList("ol-row"); if (a.Hungry) row.AddToClassList("hungry");
+                    row.tooltip = $"{a.Name}: {a.Soldiers} soldiers, {a.Doing}. Click: its panel.";
+                    var top = new VisualElement(); top.AddToClassList("ol-top");
+                    top.Add(new Icon(a.Besieging ? IconKind.Fort : a.Marching ? IconKind.Province : IconKind.Army, 14) { Tint = new Color32(196, 204, 214, 255) });
+                    top.Add(new Label(a.Name) { name = "ol-name" });
+                    if (a.Loaves > 0)
+                    {
+                        var loaves = new VisualElement(); loaves.AddToClassList("ol-loaves");
+                        for (int k = 0; k < a.Loaves; k++)
+                            loaves.Add(new Icon(IconKind.Loaf, 11) { Tint = k < a.Full ? new Color32(217, 168, 90, 255) : k < a.Full + a.Half ? new Color32(160, 124, 70, 255) : new Color32(70, 58, 40, 255) });
+                        top.Add(loaves);
+                    }
+                    var n = new Label(a.Soldiers.ToString()); n.AddToClassList("ol-n"); top.Add(n);
+                    row.Add(top);
+                    var doing = new Label(a.Hungry ? "no stores · " + a.Doing : a.Doing); doing.AddToClassList("ol-sub"); if (a.Hungry) doing.AddToClassList("bad"); row.Add(doing);
+                    string id = a.Id;
+                    row.RegisterCallback<ClickEvent>(_ => HostPressed?.Invoke(id));
+                    outlinerBody.Add(row);
+                }
+                if (o.Armies.Count == 0) OutNote("No armies: recruit at your capital.");
+            }
+            OutHead(IconKind.Fort, "SIEGES", o.Sieges.Count.ToString());
+            foreach (var x in o.Sieges)
+            {
+                var row = new VisualElement(); row.AddToClassList("ol-row");
+                var top = new VisualElement(); top.AddToClassList("ol-top");
+                top.Add(new Crest(CountryLook.Of(x.Besieger), 14));
+                top.Add(new Label($"{Cap(ProvinceIds[x.Province])}") { name = "ol-name" });
+                var n = new Label(x.Tag ?? "siege"); n.AddToClassList("ol-n"); if (x.Side < 0) n.AddToClassList("bad"); else if (x.Side > 0) n.AddToClassList("good"); top.Add(n);
+                row.Add(top);
+                row.tooltip = $"{CountryLook.NameOf(x.Besieger)} besieges {Cap(ProvinceIds[x.Province])}, {(x.Holder == null ? "neutral" : CountryLook.NameOf(x.Holder) + "'s")}. Click: the province.";
+                int at = x.Province;
+                row.RegisterCallback<ClickEvent>(_ => ProvincePressed?.Invoke(at));
+                outlinerBody.Add(row);
+            }
+            if (o.Sieges.Count == 0) OutNote("None.");
+            OutHead(IconKind.Swords, "WARS", o.Wars.Count.ToString());
+            foreach (var w in o.Wars)
+            {
+                var row = new VisualElement(); row.AddToClassList("ol-row");
+                var top = new VisualElement(); top.AddToClassList("ol-top");
+                var pair = w.Other.Split('|');
+                foreach (var id in pair) top.Add(new Crest(CountryLook.Of(id), 14));
+                top.Add(new Label(pair.Length == 2 ? $"{CountryLook.NameOf(pair[0])} – {CountryLook.NameOf(pair[1])}" : CountryLook.NameOf(w.Other)) { name = "ol-name" });
+                var n = new Label($"{w.Score:+0;-0;0}"); n.AddToClassList("ol-n"); if (w.Score < 0) n.AddToClassList("bad"); else if (w.Score > 0) n.AddToClassList("good"); top.Add(n);
+                row.Add(top);
+                row.tooltip = $"War score from {(pair.Length == 2 ? CountryLook.NameOf(pair[0]) + "'s" : "your")} side: positive, winning. Click: {(pair.Length == 2 ? "the first realm" : "the realm")}.";
+                string who = pair[0];
+                row.RegisterCallback<ClickEvent>(_ => CountryPressed?.Invoke(who));
+                outlinerBody.Add(row);
+            }
+            if (o.Wars.Count == 0) OutNote(me != null ? "At peace with every realm." : "No wars.");
+            OutHead(IconKind.Scroll, "LEDGERS", "");
+            var buttons = new VisualElement(); buttons.AddToClassList("ol-buttons");
+            var ledger = new Button(ToggleLedger) { text = "Realms", tooltip = "Every realm's standing, wars, truces, armies, and the neutral land" }; ledger.AddToClassList("tbtn"); ledger.AddToClassList("ol-btn");
+            var diplo = new Button(() => DiplomacyPressed?.Invoke()) { text = "Diplomacy", tooltip = "Who is at war, truce or peace with whom (D)" }; diplo.AddToClassList("tbtn"); diplo.AddToClassList("ol-btn");
+            buttons.Add(ledger); buttons.Add(diplo);
+            outlinerBody.Add(buttons);
+        }
+
+        private void OutHead(IconKind icon, string title, string note)
+        {
+            var h = new VisualElement(); h.AddToClassList("ol-head");
+            h.Add(new Icon(icon, 12) { Tint = new Color32(226, 194, 122, 255) });
+            h.Add(new Label(title) { style = { marginLeft = 6, flexGrow = 1 } });
+            if (note.Length > 0) h.Add(new Label(note) { style = { color = (Color)new Color32(141, 127, 102, 255) } });
+            outlinerBody.Add(h);
+        }
+
+        private void OutNote(string text) { var l = new Label(text); l.AddToClassList("ol-note"); outlinerBody.Add(l); }
+
+        /// <summary>The realms' ledger opens on the left, where a province or an army would; the left is empty otherwise.</summary>
+        public void ToggleLedger()
+        {
+            bool open = !Root.ClassListContains("ledger-open");
+            if (open) CloseSide();
+            Root.EnableInClassList("ledger-open", open);
+        }
+
+        /// <summary>Gilt corners on every panel, once each.</summary>
+        public void Ornament()
+        {
+            Root.Query(className: "panel").ForEach(p =>
+            {
+                if (p.ClassListContains("ornate")) return;
+                p.AddToClassList("ornate");
+                foreach (var c in new[] { "tl", "tr", "bl", "br" })
+                {
+                    var e = new VisualElement { pickingMode = PickingMode.Ignore }; e.AddToClassList("corner"); e.AddToClassList(c);
+                    p.Add(e);
+                }
+            });
         }
 
         // ---- map modes ----
@@ -131,6 +252,7 @@ namespace GreyBoxStrategy.Realm
             followBar.Clear();
             bool on = Followed != null;
             nations.style.display = on ? DisplayStyle.None : DisplayStyle.Flex;
+            Root.EnableInClassList("following", on && Writs);
             followBar.style.display = on ? DisplayStyle.Flex : DisplayStyle.None;
             if (!on) return;
             var me = Followed; var c = s.Countries[me]; var look = CountryLook.Of(me);
@@ -138,7 +260,17 @@ namespace GreyBoxStrategy.Realm
             var head = new VisualElement(); head.AddToClassList("nation"); head.AddToClassList("me");
             head.tooltip = Fog.On ? $"You rule {look.Name}. Click: your panel. Your rivals are on the right." : $"Following {look.Name}. Click: its panel. The other rulers are on the right.";
             head.RegisterCallback<ClickEvent>(_ => CountryPressed?.Invoke(me));
-            head.Add(new Crest(look)); var nm = new Label(look.Name.ToUpperInvariant()); nm.AddToClassList("nation-name"); nm.AddToClassList("my-name"); head.Add(nm);
+            if (Writs)
+            {
+                // Variant B (#20): the realm's banner hangs below the bar, the ruler's portrait frame beside it.
+                var banner = new RealmBanner(look) { tooltip = head.tooltip }; banner.RegisterCallback<ClickEvent>(_ => CountryPressed?.Invoke(me));
+                followBar.Add(banner);
+                followBar.Add(new PortraitSlot(58, 66, $"{look.Name}'s ruler: a portrait will hang here") { name = "my-portrait" });
+                StatBar(s, me, c, look, n, net);
+                RenderOutliner(s);
+                return;
+            }
+            head.Add(new Crest(look, 30) { name = "my-crest" }); var nm = new Label(look.Name.ToUpperInvariant()); nm.AddToClassList("nation-name"); nm.AddToClassList("my-name"); head.Add(nm);
             followBar.Add(head);
             Segment("PROVINCES", $"{n} / {WinAt}", Conquest ? $"{n} of {ProvinceIds.Count} provinces. Conquest: the last realm standing wins." : $"{n} of {ProvinceIds.Count} provinces; {WinAt} wins. {Math.Max(0, WinAt - n)} to go.");
             int hostCount = s.Armies.Count(a => a.Owner == me);
@@ -171,6 +303,59 @@ namespace GreyBoxStrategy.Realm
             var stop = new Button(() => FollowPressed?.Invoke(null)) { text = "×", tooltip = "Stop following: every country again" }; stop.AddToClassList("tbtn"); stop.style.marginLeft = 4; followBar.Add(stop);
         }
 
+        // The UI draft (#20): each number with its icon and colour, the breakdown in its tooltip, rivals on the right.
+        private static readonly Dictionary<string, (IconKind icon, string cls, string caption)> StatLook = new Dictionary<string, (IconKind, string, string)>
+        {
+            ["gold"] = (IconKind.Gold, "st-gold", "gold"), ["army"] = (IconKind.Army, "st-army", "soldiers"), ["land"] = (IconKind.Province, "st-land", "provinces"),
+            ["writ"] = (IconKind.Seal, "st-writ", "writs left"), ["stab"] = (IconKind.Scales, "st-stab", "stability"), ["war"] = (IconKind.Swords, "st-war", "wars"), ["truce"] = (IconKind.Truce, "st-truce", "truces"),
+        };
+
+        private void StatBar(ReplayState s, string me, CountryState c, CountryLook look, int n, int net)
+        {
+            (int, int)? writs = OrdersRequest != null && OrdersRequest.CountryId == me && OrdersRequest.Writs != GameRules.UnlimitedWrits ? (OrdersRequest.Writs, WritsUsed(OrdersRequest)) : ((int, int)?)null;
+            foreach (var st in ScreenModels.TopBar(s, me, Queries?.Rules?.IncomePerProvince ?? 10, Conquest, WinAt, writs, CountryLook.NameOf, Cap))
+            {
+                var (icon, cls, caption) = StatLook[st.Key];
+                var e = new VisualElement { tooltip = st.Tip }; e.AddToClassList("bstat"); e.AddToClassList(cls); if (st.Key == "gold") e.AddToClassList("first");
+                var i = new Icon(icon, 30); i.AddToClassList("bstat-icon"); e.Add(i);
+                var col = new VisualElement(); col.AddToClassList("bstat-col");
+                var line = new VisualElement(); line.AddToClassList("bstat-line");
+                var v = new Label(st.Value); v.AddToClassList("bstat-value"); line.Add(v);
+                var u = new Label(st.Sub); u.AddToClassList("bstat-sub"); if (st.Tone > 0) u.AddToClassList("good"); else if (st.Tone < 0) u.AddToClassList("bad"); line.Add(u);
+                col.Add(line);
+                var cap = new Label(caption.ToUpperInvariant()); cap.AddToClassList("bstat-cap"); col.Add(cap);
+                e.Add(col);
+                if (st.Key == "stab")
+                {
+                    var pips = new VisualElement(); pips.AddToClassList("pips"); pips.style.flexDirection = FlexDirection.Row;
+                    for (int k = 1; k <= 5; k++) { var pip = new VisualElement(); pip.AddToClassList("pip"); pip.EnableInClassList("on", k <= c.Stability); pips.Add(pip); }
+                    e.Add(pips);
+                }
+                followBar.Add(e);
+            }
+            RivalCrests(s, me, look);
+        }
+
+        private void RivalCrests(ReplayState s, string me, CountryLook look)
+        {
+            var rivals = new VisualElement(); rivals.AddToClassList("rivals");
+            foreach (var o in CountryIds.Where(o => o != me).OrderByDescending(o => s.ProvinceCount(o)))
+            {
+                var r = s.Relation(me, o)?.Kind;
+                var chip = new VisualElement(); chip.AddToClassList("riv"); if (r != null) chip.AddToClassList(r);
+                chip.tooltip = $"{CountryLook.NameOf(o)}: {s.ProvinceCount(o)} provinces, {(r == "war" ? $"at war with you, war score {s.WarScore(me, o):+0;-0;0}" : r == "truce" ? "at truce with you" : "at peace with you")}. Click: its panel.";
+                chip.RegisterCallback<ClickEvent>(_ => CountryPressed?.Invoke(o));
+                chip.Add(new Crest(CountryLook.Of(o), 26));
+                if (r == "war") { var x = new Icon(IconKind.Swords, 10); x.AddToClassList("riv-war"); chip.Add(x); }
+                chip.Add(new Label(s.ProvinceCount(o).ToString()) { style = { marginLeft = 3 } });
+                rivals.Add(chip);
+            }
+            followBar.Add(rivals);
+        }
+
+        /// <summary>Opens the inspector on the newest decision you may read (the top bar's Decisions, or I).</summary>
+        public Action InspectPressed;
+
         private VisualElement Segment(string label, string value, string tip)
         {
             var e = new VisualElement { tooltip = tip }; e.AddToClassList("seg2");
@@ -191,13 +376,72 @@ namespace GreyBoxStrategy.Realm
         {
             side.Clear();
             var head = new VisualElement(); head.AddToClassList("panel-head");
+            // The left panel holds one thing at a time: back to your realm, or close.
+            var back = new Button(CloseSide) { text = "‹ Realm", tooltip = "Back to the realm (Esc)" }; back.AddToClassList("tbtn"); back.AddToClassList("side-back"); head.Add(back);
             var t = new Label(title); t.AddToClassList("panel-title"); head.Add(t);
             var close = new Button(CloseSide) { text = "×", tooltip = "Close (Esc)" }; close.AddToClassList("tbtn"); head.Add(close);
             side.Add(head);
             var body = new ScrollView(); body.style.flexGrow = 1; side.Add(body);
+            Root.RemoveFromClassList("ledger-open");
             side.AddToClassList("on");
             Root.AddToClassList("side-open");
             return body;
+        }
+
+        /// <summary>
+        /// An army in the left panel: who leads it, what it is made of, its stores, what it is doing and where. A rival's
+        /// shows what your court sees of it, as its piece does.
+        /// </summary>
+        public void ShowArmy(string id, ReplayState s, IEnumerable<ReplayEvent> history)
+        {
+            var a = s?.Army(id);
+            if (a == null) return;
+            bool rival = Fog.On && a.Owner != You;
+            var body = SideHead("ARMY");
+            var hdr = new VisualElement(); hdr.AddToClassList("insp-head");
+            hdr.Add(new Crest(CountryLook.Of(a.Owner), 30));
+            var hb = new VisualElement { style = { marginLeft = 10 } };
+            var name = new Label(Chronicle.Host(a.Id)); name.AddToClassList("insp-title"); hb.Add(name);
+            var sub = new Label($"{CountryLook.NameOf(a.Owner)} · {(rival ? ArmySight.About(a.Soldiers) : a.Soldiers.ToString())} soldiers"); sub.AddToClassList("insp-sub"); hb.Add(sub);
+            hdr.Add(hb); body.Add(hdr);
+
+            var str = Sec(body, "STRENGTH", rival ? "what your court sees" : "");
+            if (a.HasMix && !rival) { str.Add(new MixBars(a)); str.Add(KeyValue("Made of", ArmyLook.Mix(a))); }
+            else if (a.HasMix) str.Add(KeyValue("Mostly", ArmyLook.Mostly(a) ?? "not known"));
+            str.Add(KeyValue("Soldiers", rival ? ArmySight.About(a.Soldiers) : a.Soldiers.ToString()));
+            if (ArmyLook.Leader(a) is string leader)
+            {
+                var gen = Sec(body, "GENERAL", "");
+                var gt = new Label(ReplayBuilder.Title(a)); gt.AddToClassList("insp-title"); gt.style.fontSize = 14; gen.Add(gt);
+                gen.Add(Note(leader));
+            }
+            if (!rival && a.HasStores)
+            {
+                var sup = Sec(body, "STORES", a.Hungry ? "none left" : "");
+                sup.Add(Note(ArmyLook.Stores(a)));
+            }
+            var doing = Sec(body, "ORDERS", "");
+            string what = a.Marching ? $"Marching to {Cap(a.Destination)}" + (TurnsLeft != null ? $", {TurnsLeft(a)} turn{(TurnsLeft(a) == 1 ? "" : "s")}" : "") + "."
+                : a.Awaiting ? $"Awaiting orders at {Cap(a.Location)}: {string.Join(", ", a.Wake)}." : $"Holding at {Cap(a.Location)}.";
+            doing.Add(Note(what));
+            int at = IndexOf(a.Location);
+            if (ArmyLook.SiegeTag(s, at) is string siege && s.SiegedBy[at] == a.Owner) doing.Add(KeyValue("Besieging", $"{Cap(a.Location)}: {siege}"));
+            var where = new Label($"At {Cap(a.Location)}: click to open the province") { tooltip = "Open the province" }; where.AddToClassList("list-more");
+            where.RegisterCallback<ClickEvent>(_ => { if (at >= 0) ProvincePressed?.Invoke(at); });
+            doing.Add(where);
+            var fought = history.Where(e => e.Kind == ReplayEventKind.Battle && e.Battle != null && (e.Battle.AttackerArmies.Contains(id) || e.Battle.DefenderArmies.Contains(id))).ToList();
+            if (fought.Count > 0)
+            {
+                var bat = Sec(body, "BATTLES", fought.Count.ToString());
+                foreach (var e in fought.AsEnumerable().Reverse().Take(8))
+                {
+                    var row = new VisualElement(); row.AddToClassList("row"); row.AddToClassList("wraps");
+                    row.Add(new Icon(IconKind.Swords, 12) { Tint = (e.Battle.AttackerWon == e.Battle.AttackerArmies.Contains(id)) ? new Color32(150, 200, 120, 255) : new Color32(226, 110, 90, 255) });
+                    row.Add(new Label($"Turn {e.Turn} · {Cap(e.Battle.Province ?? "the border")} · {(e.Battle.AttackerWon == e.Battle.AttackerArmies.Contains(id) ? "won" : "lost")}") { style = { marginLeft = 6 } });
+                    var ev = e; row.tooltip = "Click: the battle report"; row.RegisterCallback<ClickEvent>(_ => ShowBattle(ev));
+                    bat.Add(row);
+                }
+            }
         }
 
         public void ShowProvince(int p, ReplayState s, IEnumerable<ReplayEvent> history)
