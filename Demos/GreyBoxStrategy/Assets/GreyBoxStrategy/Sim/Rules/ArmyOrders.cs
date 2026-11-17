@@ -16,7 +16,7 @@ namespace GreyBoxStrategy
         public string Kind;
         public string Country;
         public string Province;
-        /// <summary>A merge: the army that stays, the largest. A split: the army split.</summary>
+        /// <summary>A merge: the army that stays, the senior general's. A split: the army split.</summary>
         public string Army;
         /// <summary>A merge: the armies that joined <see cref="Army"/> and are gone. A split: the new army alone.</summary>
         public List<string> Others = new List<string>();
@@ -40,10 +40,11 @@ namespace GreyBoxStrategy
     /// <remarks>
     /// A merge: two or more armies of one realm in one province, none marching, become the largest of them (ties: the
     /// lower id). Soldiers and each type add up, at most <see cref="GameRules.ArmyMax"/>; the half-stores are the
-    /// soldier-weighted average, rounded down; the largest army's general leads and the others are dismissed. A siege's
+    /// soldier-weighted average, rounded down; the senior general leads (<see cref="Keeper"/>) and the others are dismissed. A siege's
     /// progress belongs to the province, so it carries on.
     /// A split: an army not marching gives 1 to size − 1 soldiers to a new army in the same province, each type in
-    /// proportion (the remainder to the largest fractions, as losses are taken), the same stores level, no general.
+    /// proportion (the remainder to the largest fractions, as losses are taken), the same stores level, and a general of
+    /// its own, named as a newly raised army's is.
     /// </remarks>
     public static class ArmyOrders
     {
@@ -79,9 +80,14 @@ namespace GreyBoxStrategy
             return null;
         }
 
-        /// <summary>The army a merge keeps: the largest, ties to the lower id.</summary>
+        /// <summary>
+        /// The army a merge keeps: the one whose general has held command longest (<see cref="General.CommandSince"/>; an
+        /// army with no general comes after any with one), then the larger, then the lower id. So a general split off
+        /// and merged back never outranks the one who led before.
+        /// </summary>
         public static Army Keeper(IEnumerable<Army> armies) =>
-            armies.OrderByDescending(a => a.Soldiers).ThenBy(a => a.Id, StringComparer.Ordinal).First();
+            armies.OrderBy(a => a.General == null ? 1 : 0).ThenBy(a => a.General?.CommandSince ?? 0)
+                .ThenByDescending(a => a.Soldiers).ThenBy(a => a.Id, StringComparer.Ordinal).First();
 
         /// <summary>Merges the armies; <see cref="WhyNotMerge"/> must be null. Returns what happened.</summary>
         public static ArmyOrderRecord Merge(World w, string countryId, IReadOnlyList<string> armyIds)
@@ -133,7 +139,7 @@ namespace GreyBoxStrategy
             fresh.Wake.Clear();
             foreach (var t in Units.All) fresh.Add(t, take[(int)t]);
             fresh.HalfStores = a.HalfStores;
-            fresh.General = null;
+            if (w.Rules.Generals) fresh.General = GeneralTraits.For(w, fresh);
 
             // The original keeps the rest, type by type.
             var rest = new UnitMix { Pikes = a.Pikes - take[0], Riders = a.Riders - take[1], Bows = a.Bows - take[2] };
@@ -145,7 +151,8 @@ namespace GreyBoxStrategy
             {
                 Turn = w.Turn, Kind = ArmyOrderRecord.SplitKind, Country = countryId, Province = a.Location, Army = a.Id,
                 Others = { fresh.Id }, Soldiers = soldiers,
-                Text = $"{countryId} split {soldiers} soldiers from {a.Id} at {a.Location} as {fresh.Id}, with no general; {a.Id} keeps {a.Soldiers}.",
+                Text = $"{countryId} split {soldiers} soldiers from {a.Id} at {a.Location} as {fresh.Id}"
+                       + (fresh.General != null ? $", led by {fresh.General.Title}" : "") + $"; {a.Id} keeps {a.Soldiers}.",
                 After = { new ArmySnapshot(a), new ArmySnapshot(fresh) },
             };
         }
