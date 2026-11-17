@@ -79,6 +79,9 @@ At 1920 × 1080 and 1366 × 768, in `grey-box-strategy-screen/ui-shots/`:
 
 ### The screen
 
+*Round 2's layout. The layout built since 16 November, with the outliner top right and the chronicle as a feed,
+is in [the UI rework: variant B](#the-ui-rework-variant-b-16-november-2026), below.*
+
 The map fills the screen. Everything else floats over it, small and dense, with a tooltip on
 every number and icon.
 

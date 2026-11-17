@@ -1132,7 +1132,7 @@ war score from your side, with Accept and Refuse.
 
 **Fog of war** (v2 3.8, `WritsSight`): your court sees its own and controlled provinces, every province
 with one of its armies, and the provinces bordering all of them. A rival army beyond that is not
-drawn; one inside it shows its size rounded to ten ("~30"), and its march line only while it is seen.
+drawn; one inside it shows its size rounded to ten ("~30", and "<5" under five soldiers, `ArmySight.Short`), and its march line only while it is seen.
 
 **A ruler saying the same thing again** (`RepeatFilter`): on the writs turn a country speaks several
 times a turn, and the measured rulers repeat lines word for word (35% against 5% in the one-move game).
@@ -1505,7 +1505,7 @@ distance attrition). `GameRules.Supply`, on by default since 15 November (off un
 **R3, part six: what a country sees of a rival army** (14 November; rules v2 3.8, the lead's answer 12).
 `GameRules.Fog`, on by default since 15 November (off until then), as rules data (`ArmySight`; the screen keeps its own `Fog`):
 - A country sees its own land and its armies' provinces, and every province bordering them.
-- There a rival army shows its position, general and size rounded to 10 ("orsk's caspar_host, about 40, led by
+- There a rival army shows its position, general and size rounded to 10 (a few under 5; "orsk's caspar_host, about 40, led by
   Caspar the Bold, at corwick"); in forest only "an army of orsk's at corwick"; its mix only when one of our
   armies with riders stands in or beside it. Nothing deeper in.
 - The rulers' facts gain "Rival armies we see: …" (at most 5, the nearest enemies first); each rival's line gives
