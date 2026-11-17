@@ -28,6 +28,13 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: merging and splitting armies, the rules** (#20). The human player's council can merge two or more
+  armies standing together into the largest (types add up, stores the soldier-weighted average, the largest's
+  general leads and the others are dismissed) and split an army in two (types in proportion, the same stores, no
+  general for the new one), each at once and for no writ. `RuleSession.CanMerge`, `Merge`, `CanSplit` and `Split`
+  are the screen's calls; the buttons follow. Recorded and replayed; older recordings replay as before. No model is
+  offered either, and a test pins that every request a model reads is byte for byte as before.
+
 - **GreyBoxStrategy's storyteller can choose an event's strength, in two forms, for DR-023's A/B** (#20).
   `GameRules.EventStrength` (off by default; the default game is unchanged) lets four events strike `minor`
   (about half) or `major` (about one and a half times), never two majors in a row. `+strength-bundled` registers

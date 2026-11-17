@@ -100,6 +100,8 @@ namespace GreyBoxStrategy.Realm
         private Exception failure;
         private readonly List<string> devQueue = new List<string>();
         private readonly List<DevEdit> devApplied = new List<DevEdit>();
+        // Your merges and splits (#20), as the recording keeps them.
+        private readonly List<GreyBoxStrategy.Replay.RecordedArmyOrder> armyOrders = new List<GreyBoxStrategy.Replay.RecordedArmyOrder>();
         private DecisionLog log;
         private readonly string arm;
         private readonly StoryRules story;
@@ -326,6 +328,47 @@ namespace GreyBoxStrategy.Realm
             }
             var p = pendingPlan; pendingPlan = null;
             p.SetResult(plan);
+        }
+
+        // Merge and split (#20): while the writs turn waits for your orders, before they are given.
+        private string OrdersOpen() =>
+            !Writs ? "armies merge and split only on the writs turn"
+            : WaitingFor != Waiting.Orders || pendingPlan == null ? "the game is not waiting for your orders" : null;
+
+        /// <summary>
+        /// Whether your armies can merge now: null, or why not. Two or more of your armies in one province, none
+        /// marching, at most <see cref="GameRules.ArmyMax"/> soldiers together (<see cref="ArmyOrders"/>).
+        /// </summary>
+        public string CanMerge(IReadOnlyList<string> armyIds) => OrdersOpen() ?? Game.CanMerge(You, armyIds);
+
+        /// <summary>Whether your army can split <paramref name="soldiers"/> (1 to its size − 1) off as a new army now: null, or why not.</summary>
+        public string CanSplit(string armyId, int soldiers) => OrdersOpen() ?? Game.CanSplit(You, armyId, soldiers);
+
+        /// <summary>
+        /// Merges your armies into the largest, at once and for no writ; its general leads, the others are dismissed.
+        /// Null, or why not and nothing changed. Give it before <see cref="Plan"/>: the plan then orders the merged army.
+        /// Recorded, so the replay gives it again.
+        /// </summary>
+        public string Merge(IReadOnlyList<string> armyIds)
+        {
+            if (CanMerge(armyIds) is string why) return why;
+            var ids = armyIds.Distinct(StringComparer.Ordinal).ToList();
+            why = Game.Merge(You, ids);
+            if (why == null) armyOrders.Add(new GreyBoxStrategy.Replay.RecordedArmyOrder { Turn = Game.World.Turn, Kind = ArmyOrderRecord.MergeKind, Country = You, Armies = ids });
+            return why;
+        }
+
+        /// <summary>
+        /// Splits <paramref name="soldiers"/> off your army as a new army in the same province, at once and for no writ;
+        /// the new army has no general and holds. Null, or why not. Its id is the last of
+        /// <see cref="Game.ArmyOrdersGiven"/>' <see cref="ArmyOrderRecord.Others"/>. Recorded, so the replay gives it again.
+        /// </summary>
+        public string Split(string armyId, int soldiers)
+        {
+            if (CanSplit(armyId, soldiers) is string why) return why;
+            why = Game.Split(You, armyId, soldiers);
+            if (why == null) armyOrders.Add(new GreyBoxStrategy.Replay.RecordedArmyOrder { Turn = Game.World.Turn, Kind = ArmyOrderRecord.SplitKind, Country = You, Armies = { armyId }, Soldiers = soldiers });
+            return why;
         }
 
         /// <summary>Your answer to the peace offer.</summary>
@@ -796,6 +839,7 @@ namespace GreyBoxStrategy.Realm
                     w.Decisions.AddRange(GreyBoxStrategy.Replay.Recording.FromDecisionLog(lines, Seed, Players).Decisions.Where(d => d.IsStory || d.IsTitle));
                 w.Decisions.AddRange(recorder.Decisions(lines));
                 w.DevEdits.AddRange(devApplied);
+                w.ArmyOrders.AddRange(armyOrders);
                 w.Dev = Dev;
                 if (story != null) w.StoryArm = arm;
                 return w;

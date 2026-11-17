@@ -748,6 +748,42 @@ a hungry one none from its hunger line.
   tag, every turn's end tags each siege with the game's own turns, every army has its stores at every moment, and a
   hungry army shows the warning to you and not to a rival (broken by not reading the line of a siege that ended).
 
+### Merging and splitting armies: the rules (16 November)
+
+The lead, after playing variant B: "a possibility to unify armies and separate". The rules are in the Sim; the
+buttons come in the screen's own pull request, built on the calls below.
+
+- **Merge.** Two or more of your armies in one province, none marching, become the largest of them (ties: the
+  lower id). Soldiers and each type add up, at most 100 (an army's cap, `ArmyMax`). Stores are the soldier-weighted
+  average in half-turns, rounded down. The largest army's general leads; the others are dismissed, and the chronicle
+  says so. A siege goes on where it was, since its progress belongs to the province.
+- **Split.** One army, not marching, gives 1 to its size less one soldiers to a new army in the same province. Each
+  type goes in proportion, the remainder to the largest fractions, as losses are taken, so the totals hold. Both
+  keep the same stores level. The general stays with the original; the new army has none, and holds.
+- **When.** On the writs turn, while the game waits for your orders and before they are given. Neither costs a writ.
+  A merged or new army is ordered like any other, for its writ.
+- **Only yours.** No model court or marshal is offered either, and nothing a model reads changes:
+  `ArmyOrderTests` pins a hash of every request of a 30-turn game, facts and offered moves, taken on the commit
+  before.
+- **Recorded.** A recording keeps them under `armyOrders`, and the replay gives each again in its turn's council,
+  before the plan's recalls. A recording without them saves and replays as before.
+
+For the screen (`RuleSession`, each returns null, or why not):
+
+| Call | Does |
+|---|---|
+| `CanMerge(armyIds)` | whether these armies can merge now |
+| `Merge(armyIds)` | merges them into the largest |
+| `CanSplit(armyId, soldiers)` | whether this army can split that many off now |
+| `Split(armyId, soldiers)` | splits them off; the new army's id is `Game.ArmyOrdersGiven.Last().Others[0]` |
+
+The rules themselves are `Game.CanMerge`, `Merge`, `CanSplit` and `Split`, and `ArmyOrders` on a `World`. The replay
+shows each as an `ArmiesMerged` or `ArmySplit` event, with the armies as the order left them.
+
+**Tests**, each seen failing once against a deliberate break: `ArmyOrderTests` (the rules, the window, the siege,
+the writs, the hash) and `ArmyOrderReplayTests` (a rule game that merges and splits, its replay, and the recording
+saved and loaded).
+
 ### The screen, variant B: the inspector and the council (16 November)
 
 Slice 3, the last of variant B.

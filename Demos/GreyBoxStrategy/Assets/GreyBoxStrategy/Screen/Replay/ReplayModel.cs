@@ -72,6 +72,10 @@ namespace GreyBoxStrategy.Replay
         SiegeTaken,
         /// <summary>R3's supply: an army with no stores lost soldiers to hunger, or starved.</summary>
         Hunger,
+        /// <summary>The human player merged armies in the council (#20): <see cref="ReplayEvent.ArmyOrder"/> has what it did.</summary>
+        ArmiesMerged,
+        /// <summary>The human player split an army in the council (#20): <see cref="ReplayEvent.ArmyOrder"/> has what it did.</summary>
+        ArmySplit,
     }
 
     /// <summary>An army at one moment, as the map draws its piece.</summary>
@@ -208,6 +212,8 @@ namespace GreyBoxStrategy.Replay
     {
         public int Turn;
         public ReplayEventKind Kind;
+        /// <summary>A merge or a split (#20): what the order did, the armies as they stood after it.</summary>
+        public ArmyOrderRecord ArmyOrder;
         /// <summary>Whose move or whose event this is.</summary>
         public string Country;
         /// <summary>The province it concerns, or null.</summary>
