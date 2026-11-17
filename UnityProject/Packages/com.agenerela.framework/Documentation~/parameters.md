@@ -7,10 +7,15 @@ model picks one, the framework checks it, and the handler receives it (DR-023, f
 Off unless you declare one. An agent whose actions declare no parameter sends exactly the request
 it sent before, and a test holds the evaluation set's schema to that.
 
-**Unmeasured as a default.** Declaring a parameter changes what the model is sent (below). The
-first A/B, on the evaluation sets with one harmless parameter, is in `docs/llm-wiki/findings.md`
-(16 November 2026); GreyBoxStrategy's storyteller is the measurement DR-023 names before anything
-is recommended.
+**Not a default, and not a way to make a small model more accurate.** Declaring a parameter changes
+what the model is sent (below). Two A/Bs on `qwen3.5:4b`, both in `docs/llm-wiki/findings.md`
+(16 November 2026), say what it costs: one harmless parameter on the evaluation sets ("One declared
+parameter on the evaluation sets") lost 5.7 points on the interim set, and GreyBoxStrategy's
+storyteller, the measurement DR-023 names ("The storyteller's strength as a parameter against bundled
+ids"), found the parameter form does nothing the bundled ids do not, for about a tenth more time and
+output tokens; a per-value check cannot see the target. So **on a small model prefer bundled ids**
+(`blight_minor`, `blight_major`), and use a parameter to keep a long action list short. No default
+changed, and `also_targets` is not scheduled.
 
 ## Declaring one
 

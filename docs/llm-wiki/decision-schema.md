@@ -151,6 +151,10 @@ a schema that breaks any of these.
 
 ### A branch with parameters (DR-023, first step)
 
+*Guidance, from the two A/Bs of 16 November (`findings.md`, "One declared parameter on the evaluation sets" and
+"The storyteller's strength as a parameter against bundled ids"): on a small model, prefer bundled ids; use a
+parameter to keep a long action list short. No default changed, and `also_targets` is not scheduled.*
+
 An action may declare closed choices beside its target (`ActionDefinition.Parameters`): a set of
 words (`minor`, `major`) or a number list (`1`, `2`, `3`). Offering one such action makes the
 call's schema paired whatever `PairTargetsWithActions` says, because only a branch can ask one
