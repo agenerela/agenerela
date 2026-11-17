@@ -606,3 +606,16 @@
 .legend, .rule .legend { max-width: 1000px; }
 .compact .legend, .rule.compact .legend { padding: 4px 6px; font-size: 11px; max-width: 1000px; }
 .compact .legend > * { margin-right: 6px; }
+
+/* ==== Variant B, slice 3: the inspector as a framed window, the council's polish (#20) ==== */
+.inspector { left: 50%; right: auto; translate: -50% 0; top: 84px; bottom: auto; width: 760px; min-height: 420px; max-height: 88%; border-width: 2px; border-color: rgb(138, 106, 56); }
+.compact .inspector { width: 640px; min-height: 360px; max-height: 90%; }
+.insp-open .orders { right: 8px; }
+.insp-open.tales-open .orders { right: 416px; }
+.inspector .ktabs { padding-top: 8px; }
+.inspector .sec { margin-top: 2px; flex-shrink: 0; }
+.inspector .sec > * { flex-shrink: 0; }
+.writ-seal { margin-right: 3px; }
+.end-turn { font-size: 17px; height: 40px; padding-left: 22px; padding-right: 22px; -unity-font-style: bold; border-width: 2px; border-color: rgb(201, 164, 90); background-color: rgb(92, 66, 30); }
+.end-turn:hover { background-color: rgb(120, 88, 40); }
+.orders .panel-head { height: 38px; }

@@ -554,7 +554,7 @@ namespace GreyBoxStrategy.Realm
             if (Repeats(country, line)) return null;
             var look = CountryLook.Of(country);
             var player = Players?.GetValueOrDefault(country);
-            var e = new VisualElement { pickingMode = onClick != null ? PickingMode.Position : PickingMode.Ignore, tooltip = onClick != null ? "Click: why this move" : null }; e.AddToClassList("banner");
+            var e = new VisualElement { pickingMode = onClick != null ? PickingMode.Position : PickingMode.Ignore, tooltip = onClick != null ? "Click: why this move, its decision in the inspector" : null }; e.AddToClassList("banner");
             if (onClick != null) e.RegisterCallback<ClickEvent>(_ => onClick());
             e.style.borderLeftColor = (Color)look.Colour;
             var face = new Image { image = portraits, uv = Faces.Uv(player?.Persona, look.Slot % 2), scaleMode = ScaleMode.ScaleAndCrop };
@@ -586,9 +586,25 @@ namespace GreyBoxStrategy.Realm
             // no panel, the inspector included, ever hides a ruler's words.
             var p = ProvinceToPanel(b.Province);
             float half = Mathf.Max(60, b.Element.resolvedStyle.width) / 2, height = Mathf.Max(40, b.Element.resolvedStyle.height);
-            float minX = 248 + half, maxX = Root.layout.width - (InspectorOpen ? 536 : 356) - half; // the inspector is wider than the chronicle
-            b.Element.style.left = maxX > minX ? Mathf.Clamp(p.x, minX, maxX) : p.x;
-            b.Element.style.top = Mathf.Max(50 + height, p.y - 26);
+            float minX = 248 + half, maxX = Root.layout.width - 356 - half;
+            float x = maxX > minX ? Mathf.Clamp(p.x, minX, maxX) : p.x;
+            float bottom = Mathf.Max(50 + height, p.y - 26); // the banner hangs above this line (translate -100%)
+            if (InspectorOpen)
+            {
+                // The inspector is a window in the middle: the words go to the nearer side of it that has
+                // room, or below it when neither side has (a small screen).
+                var w = Root.WorldToLocal(inspector.worldBound);
+                if (x + half > w.xMin && x - half < w.xMax && bottom > w.yMin && bottom - height < w.yMax)
+                {
+                    float left = w.xMin - 8 - half, right = w.xMax + 8 + half;
+                    bool leftFits = left >= minX, rightFits = right <= maxX;
+                    if (leftFits && (!rightFits || x - left <= right - x)) x = left;
+                    else if (rightFits) x = right;
+                    else bottom = w.yMax + 8 + height;
+                }
+            }
+            b.Element.style.left = x;
+            b.Element.style.top = bottom;
         }
 
         // ---- battle marks: the arrow, the swords and the score ----

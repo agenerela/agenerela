@@ -28,6 +28,11 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm UI, variant B: the inspector and the council** (#20). The decision inspector is a framed window in
+  the middle of the screen with five tabs: Answer, Offered, Told, Guards, Model. A click on a ruler's words opens
+  their decision there, and the words keep clear of the window. The council's writs are seals, and End turn is
+  larger.
+
 - **Painted Realm UI, variant B: the panels** (#20). The province, army and realm views on the left share one kit: a
   header band with crest and portrait frame, tabs with icons, and rows of icon, bar or pips, and value, with the
   explaining sentence as a tooltip. Fog decides what a rival's rows show. An icon's own tint now wins over the

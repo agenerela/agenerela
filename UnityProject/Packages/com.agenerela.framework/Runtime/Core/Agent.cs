@@ -92,6 +92,7 @@ namespace Agenerela
 
             this.profile = profile;
             Identity = profile.Identity;
+            RequirePairedSchemaFor(provider, Definitions());
         }
 
         // A profile's agent that reads another identity instead of the profile's, so EvalRunner can
@@ -138,6 +139,7 @@ namespace Agenerela
             }
 
             Identity = identity;
+            RequirePairedSchemaFor(provider, definitions);
         }
 
         private Agent(ILLMProvider provider)
@@ -149,6 +151,8 @@ namespace Agenerela
 
             this.provider = provider;
             Actions = new ActionRegistry();
+            // Read at each registration, so it is the provider of that moment.
+            Actions.Accepting = definition => RequirePairedSchemaFor(this.provider, new[] { definition });
             Targets = new TargetRegistry();
             TargetSources = new List<ITargetSource>();
             ObservationSources = new List<IObservationSource>();
@@ -213,7 +217,40 @@ namespace Agenerela
         public ILLMProvider Provider
         {
             get => provider;
-            set => provider = value ?? throw new ArgumentNullException(nameof(value));
+            set
+            {
+                if (value == null)
+                {
+                    throw new ArgumentNullException(nameof(value));
+                }
+
+                // Before it replaces the old one, so a refused provider leaves the agent as it was.
+                RequirePairedSchemaFor(value, Definitions());
+                RequirePairedSchemaFor(value, Actions.Definitions);
+                provider = value;
+            }
+        }
+
+        // An action that declares a parameter is sent only in a paired schema (DR-023), so an agent
+        // on a provider that cannot take one refuses the action here, at setup, with the fix in the
+        // message, rather than failing at the first decision.
+        private void RequirePairedSchemaFor(ILLMProvider candidate, IEnumerable<ActionDefinition> actions)
+        {
+            if (candidate.Capabilities == null || candidate.Capabilities.SupportsPairedSchema)
+            {
+                return;
+            }
+
+            foreach (var definition in actions)
+            {
+                if (definition != null && definition.DeclaresParameters)
+                {
+                    throw new InvalidOperationException(
+                        $"{Who()}: the action '{definition.Id}' declares a parameter, which is sent only in a paired schema, " +
+                        $"and the provider '{candidate.Name}' says it cannot take one (ProviderCapabilities.SupportsPairedSchema). " +
+                        "Give the agent a provider that can, or remove the parameter.");
+                }
+            }
         }
 
         /// <summary>
@@ -1368,13 +1405,14 @@ namespace Agenerela
             telemetry.PromptTokens = reply.PromptTokens;
             telemetry.CompletionTokens = reply.CompletionTokens;
 
-            if (!DecisionParser.TryParse(reply.Text, request.Schema, out var decision, out string problem))
+            if (!DecisionParser.TryParse(reply.Text, request.Schema, out var decision, out string problem, out bool orderLost))
             {
                 return Failed(telemetry, PipelineErrorKind.UnreadableReply, $"{problem} The reply was: {Excerpt(reply.Text)}", call.Correlation, request, reply);
             }
 
             // Before the guards, so neither they nor a handler see a target the action never takes
             // (#244 item 2). The model's own answer stays in ModelDecision.
+            telemetry.OrderLost = orderLost;
             var answered = decision;
             decision = DropStrayTarget(decision, ctx, request, telemetry);
             decision = DefaultArguments(decision, ctx, request, telemetry);
@@ -1503,6 +1541,16 @@ namespace Agenerela
             }
 
             seen?.SetActions(ctx, call.Choices != null ? ctx.Actions.Definitions : Definitions(), availability, available);
+
+            // A safety net behind the checks at setup, and the only check for a call that asks for
+            // pairing itself: a provider that says it cannot take a paired schema is never sent one.
+            if (paired && provider.Capabilities != null && !provider.Capabilities.SupportsPairedSchema &&
+                (ctx.Targets.Count > 0 || parameters))
+            {
+                throw new InvalidOperationException(
+                    $"The provider '{provider.Name}' says it cannot take a paired schema (ProviderCapabilities.SupportsPairedSchema), " +
+                    "and this call needs one: it asked for PairTargetsWithActions, or offers an action that declares a parameter.");
+            }
 
             var schema = DecisionSchema.Build(ctx, available, paired, availability, call.AskForStatement);
             string fewShot = FewShotBuilder.Build(available, ctx.Targets, options, availability);
