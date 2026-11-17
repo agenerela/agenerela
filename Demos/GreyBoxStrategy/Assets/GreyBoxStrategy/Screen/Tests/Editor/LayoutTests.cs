@@ -14,8 +14,9 @@ namespace GreyBoxStrategy.Screen.Tests
     /// </summary>
     public class LayoutTests
     {
-        // The game-view sizes of the audit: 1080p, 16:10, 1440p, a 1080p laptop at 125%, and the two small ones.
-        private static readonly (int w, int h)[] Sizes = { (1920, 1080), (1920, 1200), (2560, 1440), (1536, 864), (1366, 768), (1280, 720) };
+        // The game-view sizes of the audit: 1080p, 16:10, 1440p, a 1080p laptop at 125%, the two small ones, and the lead's
+        // own 16:10 laptop panel at about 150% (1707 x 1067 from 2560 x 1600; 2560 x 1600 itself).
+        private static readonly (int w, int h)[] Sizes = { (1920, 1080), (1920, 1200), (2560, 1440), (1536, 864), (1366, 768), (1280, 720), (1707, 1067), (2560, 1600) };
         // Where a window starts: under the top bar (84), and a card a fifth of the way down the screen.
         private const float UnderTopBar = 84;
 
