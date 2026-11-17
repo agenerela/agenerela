@@ -36,7 +36,13 @@ namespace GreyBoxStrategy.Realm
             public Move Court = Move.Hold;
             public readonly Dictionary<string, Move> Armies = new Dictionary<string, Move>(StringComparer.Ordinal);
             public Move Court2 = Move.Hold;
+            /// <summary>
+            /// Free orders (<see cref="GameRules.FreeOrders"/>): every court order, in order. When it has any, the court's
+            /// requests take these one by one and then none; <see cref="Court"/> and <see cref="Court2"/> are not read.
+            /// </summary>
+            public readonly List<Move> Courts = new List<Move>();
             internal bool CourtTaken;
+            internal int CourtsTaken;
             /// <summary>The armies whose orders the rules asked for and this plan answered, this turn.</summary>
             internal readonly HashSet<string> Asked = new HashSet<string>(StringComparer.Ordinal);
 
@@ -57,6 +63,7 @@ namespace GreyBoxStrategy.Realm
                     m = r.ArmyId != null && Armies.TryGetValue(r.ArmyId, out var a) ? a : Move.Hold;
                     if (r.ArmyId != null) Asked.Add(r.ArmyId);
                 }
+                else if (Courts.Count > 0) m = CourtsTaken < Courts.Count ? Courts[CourtsTaken++] ?? Move.Hold : Move.Hold;
                 else if (!CourtTaken) { CourtTaken = true; m = Court ?? Move.Hold; }
                 else m = Court2 ?? Move.Hold;
                 // Only what the rules offer on this request lands; anything else holds, as for a model.
@@ -89,6 +96,18 @@ namespace GreyBoxStrategy.Realm
         public TimeSpan RoundTimeout { get; set; } = TimeSpan.FromSeconds(150);
 
         public const string YourModel = "you";
+        /// <summary>Free orders: the court orders your court may give a turn, as good as no limit: gold decides.</summary>
+        public const int YourCourtOrders = 1000;
+
+        /// <summary>Free orders: how many model rulers are still deciding this council (the screen's "2 rulers still deciding").</summary>
+        public int RulersDeciding => rulersDeciding.Count;
+        /// <summary>Free orders: the model rulers still deciding this council, by country id.</summary>
+        public IReadOnlyCollection<string> RulersStillDeciding => rulersDeciding.ToList();
+        /// <summary>Free orders: seconds the last End turn waited after your orders were in, treaty answers included.</summary>
+        public double EndTurnWaitSeconds { get; private set; }
+        /// <summary>Free orders: of <see cref="EndTurnWaitSeconds"/>, the seconds spent on treaty answers.</summary>
+        public double TreatyWaitSeconds { get; private set; }
+        private readonly HashSet<string> rulersDeciding = new HashSet<string>(StringComparer.Ordinal);
 
         private readonly TableDefinition table;
         private readonly Func<string, World, ILLMProvider> providerFor;
@@ -211,6 +230,12 @@ namespace GreyBoxStrategy.Realm
             map = map ?? MapDefinition.Standard();
             this.map = map;
             if (map.Countries.All(c => c.Id != you)) throw new ArgumentException($"No country '{you}'.", nameof(you));
+            // Free orders: your court follows gold alone; the model courts keep MaxCourtOrders, their pacing.
+            if (rules != null && rules.FreeOrders)
+            {
+                rules = rules.Clone();
+                rules.CourtOrdersOverride[you] = YourCourtOrders;
+            }
             Game = new Game(seed, map, rules);
             recorder = new WritsRecorder(seed);
             this.arm = arm;
@@ -544,6 +569,7 @@ namespace GreyBoxStrategy.Realm
         // are answered from one plan you give at the first, while the model rulers decide theirs.
         private async Awaitable PlayWritsTurn()
         {
+            if (Game.Rules.FreeOrders) { await PlayFreeTurn(); return; }
             ApplyDev();
             if (story != null)
             {
@@ -602,6 +628,95 @@ namespace GreyBoxStrategy.Realm
             foreach (var seat in writSeats.Values) seat.EndTurn();
             WaitingFor = Waiting.Nothing;
             Resolved++;
+        }
+
+        // Free orders: the model rulers decide from the moment the council opens, while you plan; End turn waits only for
+        // what is left, then the treaty answers, then the turn lands.
+        private async Awaitable PlayFreeTurn()
+        {
+            ApplyDev();
+            if (story != null)
+            {
+                if (!devApplied.Any(d => d.Turn == Game.NextTurn && DevEdits.QueuesEvent(d.Command))) await Tell();
+                if (Game.PendingChoices.Count > 0) await WritsChoices();
+            }
+            var requests = Game.BeginTurn();
+            if (story == null) DevEdits.AfterBeginTurn(Game);
+            var models = DecideFreely(requests.Where(r => writSeats.ContainsKey(r.CountryId)).ToList());
+
+            WritsPlan plan = null;
+            var mine = requests.FirstOrDefault(r => r.CountryId == You);
+            if (mine != null)
+            {
+                Advise(mine);
+                plan = await AskPlan(mine);
+                EndAdvice();
+                planRefusals.Clear();
+                foreach (string id in plan.Armies.Keys)
+                    if (Game.Recall(You, id) is string why) planRefusals.Add($"{id}: {why}");
+                for (var r = mine; r != null;)
+                {
+                    var move = plan.For(r);
+                    recorder.Person(r, move, YourModel);
+                    r = Game.Answer(new CountryAnswer(r, move));
+                }
+                foreach (var m in plan.Courts.Skip(plan.CourtsTaken))
+                    planRefusals.Add($"court: {m} was not given; the court's orders ended before it");
+            }
+            var endTurn = DateTime.UtcNow;
+            WaitingFor = Waiting.Models;
+            WaitingSince = endTurn;
+            await models;
+
+            // Treaty terms ordered this turn, put to the other side: the rulers' in one call each, yours on a card.
+            var treatyStart = DateTime.UtcNow;
+            var envoys = Game.TreatyRequests.ToList();
+            var answers = new List<CountryAnswer>();
+            answers.AddRange(await DecideWrits(envoys.Where(r => writSeats.ContainsKey(r.CountryId)).ToList()));
+            foreach (var r in envoys.Where(r => r.CountryId == You))
+            {
+                OfferStatement = writSeats.TryGetValue(r.OfferedBy, out var by)
+                    ? by.Decisions.LastOrDefault(d => d.Turn == r.Turn && Actions.IsTerm(d.Action))?.Statement : null;
+                var move = await Ask(Waiting.Envoy, () => Offer = r);
+                Offer = null; OfferStatement = null;
+                answers.Add(new CountryAnswer(r, move));
+                recorder.Person(r, move, YourModel);
+            }
+            if (envoys.Count > 0) Game.Submit(answers);
+            TreatyWaitSeconds = (DateTime.UtcNow - treatyStart).TotalSeconds;
+            EndTurnWaitSeconds = (DateTime.UtcNow - endTurn).TotalSeconds;
+
+            if (plan != null)
+                foreach (string id in plan.Armies.Keys.Where(id => !plan.Asked.Contains(id) && !PlanRefusals.Any(x => x.StartsWith(id + ":", StringComparison.Ordinal))))
+                    planRefusals.Add($"{id}: the rules did not ask for its orders this turn");
+            var report = Game.Resolve();
+            foreach (var seat in writSeats.Values) seat.Learn(report);
+            foreach (var seat in writSeats.Values) seat.EndTurn();
+            WaitingFor = Waiting.Nothing;
+            Resolved++;
+        }
+
+        // Free orders: each model ruler's requests one after another, the rulers taken in turn by country id, each answer
+        // giving that ruler's next request; done when none is left.
+        private async Awaitable DecideFreely(List<CountryRequest> first)
+        {
+            var open = first.OrderBy(r => r.CountryId, StringComparer.Ordinal).ToList();
+            rulersDeciding.Clear();
+            foreach (var r in open) rulersDeciding.Add(r.CountryId);
+            ModelsThinking = open.Count > 0;
+            while (open.Count > 0)
+            {
+                var next = new List<CountryRequest>();
+                foreach (var r in open)
+                {
+                    var answer = (await DecideWrits(new List<CountryRequest> { r }))[0];
+                    var following = Game.Answer(answer);
+                    if (following != null) next.Add(following);
+                    else rulersDeciding.Remove(r.CountryId);
+                }
+                open = next;
+            }
+            ModelsThinking = false;
         }
 
         private async Awaitable<WritsPlan> AskPlan(CountryRequest court)
@@ -840,6 +955,7 @@ namespace GreyBoxStrategy.Realm
                     w.Decisions.AddRange(GreyBoxStrategy.Replay.Recording.FromDecisionLog(lines, Seed, Players).Decisions.Where(d => d.IsStory || d.IsTitle));
                 w.Decisions.AddRange(recorder.Decisions(lines));
                 w.DevEdits.AddRange(devApplied);
+                w.FreeOrders = Game.Rules.FreeOrders;
                 w.ArmyOrders.AddRange(armyOrders);
                 w.Dev = Dev;
                 if (story != null) w.StoryArm = arm;

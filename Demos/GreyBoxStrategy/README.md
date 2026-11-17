@@ -807,6 +807,22 @@ screen's side, come next.
 - `Submit` keeps its shape: each answer returns that realm's next request. So the headless runners, the tables
   (`-strategyRules FreeOrders=true`) and the replay play a free game with no change.
 
+**Rule mode with free orders** (`RuleSession`, the second part). The model rulers decide from the moment your council
+opens, while you plan, each ruler's requests one after another and the rulers taken in turn. End turn waits only
+for what is left, then the treaty answers. Each ruler's answer goes through `Game.Answer`, which returns that
+ruler's next request, so no ruler waits for another or for you. Your court gives any number of orders gold allows
+(`WritsPlan.Courts`, in order); the model courts keep their pacing. For the screen:
+
+| `RuleSession` | Is |
+|---|---|
+| `RulersDeciding` | how many model rulers are still deciding ("2 rulers still deciding") |
+| `RulersStillDeciding` | which, by country id |
+| `EndTurnWaitSeconds` | how long the last End turn waited after your orders were in, treaty answers included |
+| `TreatyWaitSeconds` | of that, the treaty answers |
+
+A recording of such a game says `"freeOrders": true` (written only then), and the replay plays it with free orders
+whatever rules it is given. A writs recording replays as before.
+
 **Tests**, each seen failing once against a deliberate break: `FreeOrderTests` (the court until none and the cap, the
 override, gold held back, orders not offered twice, which armies are asked and the holding timer, a whole game) and `FreeOrderReplayTests`
 (a scripted free game replays with no drift).

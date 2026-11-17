@@ -26,6 +26,12 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: free orders in rule mode, the rulers deciding while you plan** (#20, the turn rework's first
+  slice, second part). With `FreeOrders` on, the model rulers decide from the moment the council opens, and End turn
+  waits only for what is left. Your court gives as many orders as gold allows. `Game.Answer` takes one ruler's
+  answer at a time; `RuleSession.RulersDeciding`, `RulersStillDeciding` and `EndTurnWaitSeconds` are for the screen.
+  Recordings say `freeOrders` and replay so.
+
 - **Painted Realm: free orders, the rules** (#20, the turn rework's first slice). `GameRules.FreeOrders` (off) plays the
   writs turn without writs: a court gives orders until it answers none (three at most, a realm's own number by
   override), its gold held back as it goes; an army is asked when woken or after holding three turns unasked. Off, the game and what
