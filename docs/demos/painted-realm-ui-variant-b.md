@@ -5,8 +5,12 @@ colours, a shield and a left panel that holds one thing. The tech lead's read wa
 the lead called strange, with icons added. Variant B goes as far as the lead asked: "completely refactor it and make
 sure it matches EU4 or EU5 or victoria".
 
-B is pictures only. Each one is drawn over a real frame of the game, a medium generated world with all four army rules
-on, at turn 8. None of it is built in Unity. The lead chooses A, B or a mix, and only that is built.
+**Status, 16 November: B was chosen and is built**, in three slices (#340, #343, #348); the build is described in
+[`grey-box-strategy-screen.md`](grey-box-strategy-screen.md#the-ui-rework-variant-b-16-november-2026) and the demo README.
+What follows is the proposal as it was shown, before the lead chose.
+
+B was shown as pictures only. Each one is drawn over a real frame of the game, a medium generated world with all four army rules
+on, at turn 8. None of it was built in Unity then. The lead was to choose A, B or a mix, and only that would be built.
 
 It matches those games in structure and density and copies none of their art. The emblems are drawn by code in one
 style for the dark sea chart. Portrait slots are framed placeholders; generated portraits and banners come later.
