@@ -87,6 +87,27 @@ namespace GreyBoxStrategy.Screen.Tests
             Assert.That(ScreenUI.FoldHeight(64, 0), Is.Null);
         }
 
+        [TestCase(0, 1800, 1700, 0, TestName = "Top bar: full form while the stats fit")]
+        [TestCase(0, 1700, 1700, 1, TestName = "Top bar: sub-labels go before anything touches")]
+        [TestCase(1, 1400, 1500, 2, TestName = "Top bar: still too wide bare, the squeezed step")]
+        [TestCase(2, 1300, 1500, 3, TestName = "Top bar: still too wide squeezed, the icons go")]
+        [TestCase(3, 800, 1500, 3, TestName = "Top bar: never past the last step")]
+        [TestCase(1, 1800, 1600, 1, TestName = "Top bar: a step is kept while the width stays")]
+        public void The_top_bar_steps_down_before_anything_touches(int step, float room, float need, int next)
+        {
+            Assert.That(ScreenUI.StatsStep(step, room, need), Is.EqualTo(next));
+        }
+
+        [Test]
+        public void An_opened_feed_entry_is_scrolled_into_view_whole()
+        {
+            // A 200 px feed scrolled to 100: an entry at 250 to 330 ends below its foot (300), so the feed scrolls 30.
+            Assert.That(ScreenUI.EntryScroll(250, 80, 200, 100), Is.EqualTo(130));
+            Assert.That(ScreenUI.EntryScroll(150, 80, 200, 100), Is.EqualTo(100), "already whole: the feed stays put");
+            Assert.That(ScreenUI.EntryScroll(60, 80, 200, 100), Is.EqualTo(60), "above the top: its top at the top");
+            Assert.That(ScreenUI.EntryScroll(250, 320, 200, 100), Is.EqualTo(250), "taller than the feed: from its top, the rest by scrolling");
+        }
+
         private static ReplayGame game;
         private static ReplayGame Game()
         {

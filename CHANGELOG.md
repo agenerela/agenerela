@@ -41,6 +41,11 @@ phase table and the open issues, not here.
 
 ### Changed
 
+- **Painted Realm: the top bar never overlaps, and an opened feed entry shows whole** (#20). At 1707 × 1067 the
+  stats' sub-labels ran into the next stat's icon. Stats no longer shrink into each other; between the full and the
+  compact form the bar takes measured steps (sub-labels go, then smaller numbers and icons, then the icons), decided by
+  the stats' width against the bar's, never by a breakpoint. An entry opened at the feed's foot now scrolls into view
+  whole. `LayoutTests`.
 - **Painted Realm: the storyteller's events and tales are impossible to miss** (#20). Every event now opens a window in
   the middle of the screen, in the style of a grand strategy game's: the art pack's picture, the title, the story, each
   realm struck with its effect as icons, and So be it. Every event, tales too, stops the turn until dismissed, ruling or
