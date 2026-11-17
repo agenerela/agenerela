@@ -5,6 +5,17 @@ using System.Text.RegularExpressions;
 
 namespace GreyBoxStrategy
 {
+    /// <summary>How the storyteller says how hard an event strikes (<see cref="GameRules.EventStrength"/>).</summary>
+    public enum EventStrengthForm
+    {
+        /// <summary>It does not: every event has the game's one amount (today's game).</summary>
+        None,
+        /// <summary>In the action's id, two actions an event: <c>windfall_minor</c>, <c>windfall_major</c>.</summary>
+        Bundled,
+        /// <summary>As a parameter of the action, <c>strength: minor | major</c> (DR-023).</summary>
+        Parameter,
+    }
+
     /// <summary>What kind of thing an event template takes as its target.</summary>
     [Flags]
     public enum EventTargetKind
@@ -92,6 +103,9 @@ namespace GreyBoxStrategy
         /// <summary>The title from a second call (<c>+title-call</c>), or null when the statement carries it.</summary>
         public string Title { get; }
 
+        /// <summary><see cref="EventRules.Minor"/> or <see cref="EventRules.Major"/> when the game asks a strength (<see cref="GameRules.EventStrength"/>), else null.</summary>
+        public string Strength { get; set; }
+
         public string Template { get; }
         public string Target { get; }
         /// <summary>The model's statement: "A title: one or two sentences."</summary>
@@ -139,8 +153,10 @@ namespace GreyBoxStrategy
 
         // --- Stage S2 ---
 
-        /// <summary>The storyteller's action when it was not the effect itself (begin_&lt;skeleton&gt;); else the template.</summary>
+        /// <summary>The storyteller's action when it was not the effect itself (begin_&lt;skeleton&gt;, windfall_major); else the template.</summary>
         public string Action;
+        /// <summary>How hard it struck, when the game asks a strength (<see cref="GameRules.EventStrength"/>); else null.</summary>
+        public string Strength;
         /// <summary>The title the model wrote (before a colon, or from the title call); null when it wrote none.</summary>
         public string ModelTitle;
         /// <summary>For a dilemma: the option each country hit took.</summary>
@@ -758,6 +774,79 @@ namespace GreyBoxStrategy
             if (rules == null || !rules.IsS2) return Open(w, ledger, turn);
             var ids = TargetIds(w, ledger).ToList();
             return TemplatesFor(rules).SelectMany(t => ids.Where(id => WhyNot(w, ledger, turn, t.Id, id, rules) == null).Select(id => (t.Id, id))).ToList();
+        }
+
+        // --- How hard: a strength (DR-023's A/B) -------------------------------------------------
+
+        public const string Minor = "minor";
+        public const string Major = "major";
+        public static readonly IReadOnlyList<string> Strengths = new[] { Minor, Major };
+
+        /// <summary>The events with an amount to scale; the others (stability, a fort) keep theirs and take no strength.</summary>
+        public static bool TakesStrength(string template) =>
+            template == Windfall || template == BadHarvest || template == Plague || template == Volunteers;
+
+        /// <summary>What a strength multiplies the event's amount by: half for minor, one and a half for major.</summary>
+        public static double StrengthFactor(string strength) =>
+            strength == Minor ? 0.5 : strength == Major ? 1.5 : 1.0;
+
+        /// <summary>The action id of an event and a strength in the bundled form: <c>windfall_major</c>.</summary>
+        public static string BundledId(string template, string strength) => template + "_" + strength;
+
+        /// <summary>An action id of the bundled form split into its event and strength; false for any other id.</summary>
+        public static bool TryParseBundled(string id, out string template, out string strength)
+        {
+            template = strength = null;
+            if (id == null) return false;
+            foreach (string s in Strengths)
+                if (id.EndsWith("_" + s, StringComparison.Ordinal) && TakesStrength(id.Substring(0, id.Length - s.Length - 1)))
+                {
+                    template = id.Substring(0, id.Length - s.Length - 1);
+                    strength = s;
+                    return true;
+                }
+            return false;
+        }
+
+        /// <summary>
+        /// Why this strength may not go with this event now, or null. In a game that asks none
+        /// (<see cref="EventStrengthForm.None"/>), none may be given; in one that does, an event with an
+        /// amount needs one and the others take none. A major event is never followed by another (the
+        /// storyteller's last event decides it, whoever it struck): the rule needs no target, so it is
+        /// the same in both forms, a target's availability in the bundled one and a value's in the parameter one.
+        /// </summary>
+        public static string WhyNotStrength(World w, EventLedger ledger, string template, string strength)
+        {
+            var form = w.Rules.EventStrength;
+            if (form == EventStrengthForm.None)
+                return strength == null ? null : $"this game asks no strength, and {template} was given {strength}";
+            if (!TakesStrength(template)) return strength == null ? null : $"{template} takes no strength";
+            if (strength == null) return $"{template} needs a strength";
+            if (!Strengths.Contains(strength)) return $"{strength} is not a strength";
+            if (strength == Major && ledger.LastTold(1).FirstOrDefault()?.Strength == Major) return "two major events in a row";
+            return null;
+        }
+
+        /// <summary><see cref="Plan(World, string, string)"/> with a strength: the amount scaled by <see cref="StrengthFactor"/>, at least 1.</summary>
+        public static (int amount, int value, string effect) Plan(World w, string template, string countryId, string strength)
+        {
+            var (amount, value, effect) = Plan(w, template, countryId);
+            if (strength == null || !TakesStrength(template)) return (amount, value, effect);
+            var r = w.Rules;
+            var c = w.Country(countryId);
+            int scaled = Math.Max(1, (int)Math.Round(amount * StrengthFactor(strength), MidpointRounding.AwayFromZero));
+            switch (template)
+            {
+                case Windfall: return (scaled, scaled, $"{scaled} gold");
+                case BadHarvest:
+                    scaled = Math.Min(scaled, w.Income(c));
+                    return (scaled, -scaled, $"{scaled} gold of income");
+                case Plague:
+                    scaled = Math.Min(scaled, c.Army);
+                    return (scaled, -scaled * r.GoldPerSoldier, $"{scaled} soldiers");
+                case Volunteers: return (scaled, scaled * r.GoldPerSoldier, $"{scaled} soldiers");
+                default: return (amount, value, effect);
+            }
         }
 
         // --- How strong, and what it does --------------------------------------------------------

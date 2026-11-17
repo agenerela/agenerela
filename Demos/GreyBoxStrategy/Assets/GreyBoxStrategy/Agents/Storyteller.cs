@@ -41,6 +41,13 @@ namespace GreyBoxStrategy
         /// <summary>The title call's answer and seconds (<c>+title-call</c>); null and 0 without one.</summary>
         public string TitleStatement;
         public float TitleLatencySeconds;
+        /// <summary>The strength the model asked (from the action id or the parameter), and the one decided; null without one (DR-023's A/B).</summary>
+        public string ModelStrength;
+        public string Strength;
+        /// <summary>How many parameters took their default, and how many values a per-value check left out, from the telemetry.</summary>
+        public int ArgumentsDefaulted;
+        public int ValuesUnavailable;
+        public int CompletionTokens;
         /// <summary>True when the preset's chance to act said not this turn: no call was made.</summary>
         public bool Skipped;
 
@@ -272,8 +279,34 @@ namespace GreyBoxStrategy
         /// <summary>Every call, in order.</summary>
         public List<StorytellerDecision> Decisions { get; } = new List<StorytellerDecision>();
 
+        /// <summary>The strength parameter of an event in the parameter form (DR-023): its line in the prompt says what each value does.</summary>
+        public static ActionParameter StrengthParameter() => new ActionParameter
+        {
+            Name = "strength",
+            Description = "how hard it strikes: minor about half of that, major about one and a half times",
+            Values = EventRules.Strengths.ToArray(),
+        };
+
+        /// <summary>The bundled form's description of one strength of an event: the event's own line and what the strength does to it.</summary>
+        public static string BundledDescription(EventTemplate t, string strength) =>
+            t.Description + (strength == EventRules.Minor ? " Minor: about half of that." : " Major: about one and a half times that.");
+
+        // An event with an amount in a game that asks a strength (GameRules.EventStrength): two actions in the
+        // bundled form, one with a parameter in the other. Every other event is registered as before.
         private void Register(EventTemplate t)
         {
+            var form = game.Rules.EventStrength;
+            if (form == EventStrengthForm.Bundled && EventRules.TakesStrength(t.Id))
+            {
+                foreach (string s in EventRules.Strengths) Register(t, EventRules.BundledId(t.Id, s), BundledDescription(t, s), s);
+                return;
+            }
+            Register(t, t.Id, t.Description, null);
+        }
+
+        private void Register(EventTemplate t, string actionId, string description, string strength)
+        {
+            bool parameter = game.Rules.EventStrength == EventStrengthForm.Parameter && EventRules.TakesStrength(t.Id);
             var categories = new List<string>();
             bool taleOnly = t.TaleOnly || t.Feature == EventFeature.ChainDilemma;
             if (!taleOnly && (t.Takes & EventTargetKind.Country) != 0) categories.Add(CountryCategory);
@@ -282,28 +315,64 @@ namespace GreyBoxStrategy
             if (rules.Chains != ChainMode.None && t.Skeleton == null) categories.Add(TaleCategory);
             var definition = new ActionDefinition
             {
-                Id = t.Id,
-                Description = t.Description,
+                Id = actionId,
+                Description = description,
                 RequiresTarget = true,
                 TargetCategories = categories.ToArray(),
+                Parameters = parameter ? new[] { StrengthParameter() } : null,
             };
             var handler = DelegateActionHandler.WithResult(
-                ctx => EventRules.TargetIds(game.World, game.Events).Any(id => game.WhyNotEvent(t.Id, id) == null),
+                // In the parameter form the action is open when some target is; the strength is the value check's.
+                ctx => EventRules.TargetIds(game.World, game.Events).Any(id => game.WhyNotEvent(t.Id, id, strength) == null
+                                                                              || (parameter && game.WhyNotEvent(t.Id, id) == null)),
                 (ctx, d) =>
                 {
-                    game.QueueEvent(new StoryEvent(d.ActionId, d.TargetId, d.Statement, calledTitle)
+                    string s = strength;
+                    if (parameter) d.TryGetArgument("strength", out s);
+                    game.QueueEvent(new StoryEvent(t.Id, d.TargetId, d.Statement, calledTitle)
                     {
                         HistoryReplaced = historyReplaced,
                         ModelStatement = historyReplaced != null ? modelStatement : null,
+                        Strength = s,
                     });
                     return ActionResult.Done();
                 });
             handler.IsAvailableFor = (ctx, target) =>
             {
-                string why = game.WhyNotEvent(t.Id, target);
+                string why = parameter ? game.WhyNotEvent(t.Id, target) : game.WhyNotEvent(t.Id, target, strength);
                 return why == null ? Availability.Yes : Availability.No(why);
             };
+            if (parameter)
+                handler.IsAvailableValue = (ctx, name, value) =>
+                {
+                    string why = EventRules.WhyNotStrength(game.World, game.Events, t.Id, value);
+                    return why == null ? Availability.Yes : Availability.No(why);
+                };
             Agent.Actions.Register(definition, handler);
+        }
+
+        /// <summary>
+        /// Every event open now as the model sees it, as (action id, target) pairs: S1's list in a game
+        /// that asks no strength; the bundled ids (<c>windfall_major</c>) with their strength's rule in the
+        /// bundled form; the event's own id, open when some strength is, in the parameter form.
+        /// </summary>
+        public List<(string action, string target)> OpenActions()
+        {
+            var open = EventRules.Open(game.World, game.Events, game.NextTurn, rules);
+            var form = game.Rules.EventStrength;
+            if (form == EventStrengthForm.None) return open;
+            var list = new List<(string, string)>();
+            foreach (var (template, target) in open)
+            {
+                if (!EventRules.TakesStrength(template)) list.Add((template, target));
+                else if (form == EventStrengthForm.Bundled)
+                {
+                    foreach (string s in EventRules.Strengths)
+                        if (EventRules.WhyNotStrength(game.World, game.Events, template, s) == null) list.Add((EventRules.BundledId(template, s), target));
+                }
+                else if (EventRules.Strengths.Any(s => EventRules.WhyNotStrength(game.World, game.Events, template, s) == null)) list.Add((template, target));
+            }
+            return list;
         }
 
         // --- What it reads --------------------------------------------------------------------
@@ -334,15 +403,21 @@ namespace GreyBoxStrategy
         /// <summary>The events open now, by template, in the game's words: the N1 workaround, as the rulers' moves line is.</summary>
         public string OpenLine()
         {
-            var open = EventRules.Open(game.World, game.Events, game.NextTurn, rules);
+            var open = OpenActions();
             if (open.Count == 0) return null;
             var parts = new List<string>();
             foreach (var t in EventRules.TemplatesFor(rules))
             {
-                var targets = open.Where(o => o.template == t.Id).Select(o => o.target).ToList();
-                if (targets.Count == 0) continue;
-                string list = targets.Count == 1 ? targets[0] : string.Join(", ", targets.Take(targets.Count - 1)) + " or " + targets[targets.Count - 1];
-                parts.Add($"{t.Id} {((t.Takes & EventTargetKind.Province) != 0 ? "in" : "on")} {list}");
+                var ids = game.Rules.EventStrength == EventStrengthForm.Bundled && EventRules.TakesStrength(t.Id)
+                    ? EventRules.Strengths.Select(s => EventRules.BundledId(t.Id, s)).ToList()
+                    : new List<string> { t.Id };
+                foreach (string id in ids)
+                {
+                    var targets = open.Where(o => o.action == id).Select(o => o.target).ToList();
+                    if (targets.Count == 0) continue;
+                    string list = targets.Count == 1 ? targets[0] : string.Join(", ", targets.Take(targets.Count - 1)) + " or " + targets[targets.Count - 1];
+                    parts.Add($"{id} {((t.Takes & EventTargetKind.Province) != 0 ? "in" : "on")} {list}");
+                }
             }
             return "Events open now: " + string.Join("; ", parts) + ".";
         }
@@ -414,9 +489,17 @@ namespace GreyBoxStrategy
         /// <summary>What the scribe is asked: the event in the game's words, and the story.</summary>
         public string TitleStimulus(AgentDecision d)
         {
-            var t = EventRules.Template(d.ActionId);
+            var t = EventRules.Template(EventRules.TryParseBundled(d.ActionId, out string bundled, out _) ? bundled : d.ActionId);
             string story = EventRules.SplitTitle(d.Statement ?? "").story;
             return $"Title this event. {t?.Description} The story: \"{(story.Length > 0 ? story : d.Statement)}\"";
+        }
+
+        // The strength a decision carries: in the id (bundled) or as the parameter; null when none.
+        private string StrengthOf(AgentDecision d)
+        {
+            if (d == null) return null;
+            if (EventRules.TryParseBundled(d.ActionId, out _, out string s)) return s;
+            return d.TryGetArgument("strength", out s) ? s : null;
         }
 
         public async Awaitable<StorytellerDecision> TellAsync(CancellationToken ct = default)
@@ -429,7 +512,7 @@ namespace GreyBoxStrategy
                 Decisions.Add(skipped);
                 return skipped;
             }
-            var open = EventRules.Open(game.World, game.Events, game.NextTurn, rules);
+            var open = OpenActions();
             if (open.Count == 0) return null;
 
             var result = await Agent.DecideAsync(Stimulus(), OptionsForCall(), ct);
@@ -452,9 +535,17 @@ namespace GreyBoxStrategy
                 Guard = t != null && t.GuardsFired.Count > 0 ? t.GuardsFired[0] : null,
                 Error = result == null ? PipelineErrorKind.ProviderFailed : t?.ErrorKind,
             };
+            record.ModelStrength = StrengthOf(result?.ModelDecision);
+            record.Strength = StrengthOf(result?.Decision);
+            record.ArgumentsDefaulted = t?.ArgumentsDefaulted?.Count ?? 0;
+            record.ValuesUnavailable = t?.ValuesUnavailable?.Count ?? 0;
+            record.CompletionTokens = t?.CompletionTokens ?? 0;
             string asked = record.ModelAction;
+            // Legal: an event offered on that target, and in the parameter form a strength offered for it.
             record.ModelAnswerLegal = asked != null && (asked == ActionRegistry.None
-                || open.Any(o => o.template == asked && o.target == record.ModelTarget));
+                || (open.Any(o => o.action == asked && o.target == record.ModelTarget)
+                    && (game.Rules.EventStrength != EventStrengthForm.Parameter || !EventRules.TakesStrength(asked)
+                        || (record.ModelStrength != null && EventRules.WhyNotStrength(game.World, game.Events, asked, record.ModelStrength) == null))));
             Decisions.Add(record);
 
             var d = result?.Decision;

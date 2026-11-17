@@ -100,6 +100,13 @@ namespace GreyBoxStrategy
         /// <summary>Why this event may not happen at the next upkeep, or null (<see cref="EventRules.WhyNot"/>).</summary>
         public string WhyNotEvent(string template, string target) => EventRules.WhyNot(World, Events, NextTurn, template, target, story);
 
+        /// <summary>
+        /// <see cref="WhyNotEvent(string, string)"/> with a strength (<see cref="GameRules.EventStrength"/>):
+        /// the event's rules, then the strength's (<see cref="EventRules.WhyNotStrength"/>).
+        /// </summary>
+        public string WhyNotEvent(string template, string target, string strength) =>
+            WhyNotEvent(template, target) ?? EventRules.WhyNotStrength(World, Events, template, strength);
+
         /// <summary>Every chain of the game (S2): the screen follows a tale through these.</summary>
         public IReadOnlyList<Chain> Chains => Events.Chains;
 
@@ -213,7 +220,8 @@ namespace GreyBoxStrategy
             draft = null;
             draftTemplate = null;
             pendingChoices.Clear();
-            if (t == null || EventRules.WhyNot(World, Events, turn, q.Template, q.Target, story) != null) return; // refused at upkeep
+            if (t == null || EventRules.WhyNot(World, Events, turn, q.Template, q.Target, story) != null
+                || EventRules.WhyNotStrength(World, Events, t.Id, q.Strength) != null) return; // refused at upkeep
 
             var chain = Events.Chain(q.Target);
             var (hit, spared) = EventRules.ReachFor(World, Events, turn, t, q.Target, story);
@@ -228,6 +236,7 @@ namespace GreyBoxStrategy
                 Target = q.Target,
                 Province = province,
                 Statement = q.ModelStatement ?? q.Statement,
+                Strength = q.Strength,
             };
             e.Hit.AddRange(hit);
             e.Spared.AddRange(spared);
@@ -436,7 +445,8 @@ namespace GreyBoxStrategy
                 ApplyDraft(q);
                 return;
             }
-            string why = EventRules.WhyNot(World, Events, World.Turn, q.Template, q.Target);
+            string why = EventRules.WhyNot(World, Events, World.Turn, q.Template, q.Target)
+                         ?? EventRules.WhyNotStrength(World, Events, q.Template, q.Strength);
             if (why != null)
             {
                 report.EventRefused = $"{q.Template} on {q.Target}: {why}";
@@ -458,11 +468,12 @@ namespace GreyBoxStrategy
             foreach (var other in World.Alive) e.ProvincesAtTime[other.Id] = World.ProvinceCount(other.Id);
             (e.Title, e.Story, e.StoryVerdict) = EventRules.CheckStory(World, t, e.Hit, e.Province, q.Statement);
             e.ModelTitle = EventRules.SplitTitle(q.Statement).title;
-            e.Action = q.Template;
+            e.Action = q.Strength != null && Rules.EventStrength == EventStrengthForm.Bundled ? EventRules.BundledId(q.Template, q.Strength) : q.Template;
+            e.Strength = q.Strength;
 
             foreach (string id in e.Hit)
             {
-                var (amount, value, effect) = ApplyS1(t, id, e.Province);
+                var (amount, value, effect) = ApplyS1(t, id, e.Province, e.Strength);
                 e.Value[id] = value;
                 e.Effect[id] = effect;
                 Tell(id, 1, EventRules.HitLine(e, id, amount));
@@ -476,10 +487,10 @@ namespace GreyBoxStrategy
         }
 
         // One of S1's eight templates on one country, as S1 applied it.
-        private (int amount, int value, string effect) ApplyS1(EventTemplate t, string id, string province)
+        private (int amount, int value, string effect) ApplyS1(EventTemplate t, string id, string province, string strength = null)
         {
             var c = World.Country(id);
-            var (amount, value, effect) = EventRules.Plan(World, t.Id, id);
+            var (amount, value, effect) = EventRules.Plan(World, t.Id, id, strength);
             switch (t.Id)
             {
                 case EventRules.Windfall: c.Gold += amount; break;
@@ -544,7 +555,7 @@ namespace GreyBoxStrategy
                 }
                 else
                 {
-                    var (amount, v, text) = ApplyS1(t, id, e.Province);
+                    var (amount, v, text) = ApplyS1(t, id, e.Province, e.Strength);
                     value = v;
                     effect = text;
                     line = EventRules.HitLine(e, id, amount);

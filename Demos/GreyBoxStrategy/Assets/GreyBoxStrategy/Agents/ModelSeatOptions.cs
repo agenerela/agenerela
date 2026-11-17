@@ -133,6 +133,13 @@ namespace GreyBoxStrategy
         /// <summary><c>+preset-&lt;name&gt;</c> (<see cref="StorytellerSettings.Presets"/>); null keeps S1's settings.</summary>
         public string Preset;
 
+        /// <summary>
+        /// <c>+strength-bundled</c> or <c>+strength-param</c>: the storyteller chooses how hard an event
+        /// strikes, in the action's id or as a parameter (<see cref="GameRules.EventStrength"/>, DR-023's
+        /// A/B). The table sets it on the game; <see cref="EventStrengthForm.None"/> otherwise.
+        /// </summary>
+        public EventStrengthForm EventStrength = EventStrengthForm.None;
+
         /// <summary>The game's <see cref="StoryRules"/> for these options.</summary>
         public StoryRules StoryRules() => new StoryRules
         {
@@ -255,6 +262,8 @@ namespace GreyBoxStrategy
                     else if (modifier == "history") options.History = true;
                     else if (modifier == "traits") options.Traits = true;
                     else if (modifier == "title-call") options.TitleCall = true;
+                    else if (modifier == "strength-bundled") options.EventStrength = EventStrengthForm.Bundled;
+                    else if (modifier == "strength-param") options.EventStrength = EventStrengthForm.Parameter;
                     else if (modifier == "chains-free") options.Chains = ChainMode.Free;
                     else if (modifier == "chains-skeleton") options.Chains = ChainMode.Skeleton;
                     else if (modifier.StartsWith("preset-") && StorytellerSettings.Named(modifier.Substring("preset-".Length)) != null)
