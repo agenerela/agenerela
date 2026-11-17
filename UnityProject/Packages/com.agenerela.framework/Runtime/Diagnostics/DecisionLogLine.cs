@@ -188,6 +188,12 @@ namespace Agenerela
         [JsonProperty("targetIgnored")] public string TargetIgnored;
 
         /// <summary>
+        /// True when the reply's fields came in an order other than the schema's
+        /// (<see cref="DecisionTelemetry.OrderLost"/>, DR-023); left out when the order held.
+        /// </summary>
+        [JsonProperty("orderLost")] public bool? OrderLost;
+
+        /// <summary>
         /// The parameters that took their declared default because the model left them out or gave a
         /// value not offered (<see cref="DecisionTelemetry.ArgumentsDefaulted"/>, DR-023); left out
         /// when none did. The values themselves are in each decision's <c>arguments</c>.
@@ -327,6 +333,7 @@ namespace Agenerela
             }
 
             line.TargetIgnored = telemetry.TargetIgnored;
+            line.OrderLost = telemetry.OrderLost ? true : (bool?)null;
 
             if (telemetry.ChoicesOffered != null && telemetry.ChoicesOffered.Count > 0)
             {

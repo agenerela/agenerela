@@ -22,6 +22,7 @@ namespace Agenerela{
         public List<string> ObservationsDropped = new List<string>(); // Observation lines a source had but the request does not carry, in source order: for each source, its lines Agent.MaxObservations cut, then those its own cap left out, from IReportsDroppedObservations (#91)
         public List<string> ChoicesOffered = new List<string>(); // The ids of DecideOptions.Choices this call offered, in the order given, none left out; empty for a call that gave no choices (DR-022)
         public List<UnavailableChoice> ChoicesUnavailable = new List<UnavailableChoice>(); // Each choice the call gave as unavailable, with its reason, in the order given; empty when none was (DR-022)
+        public bool OrderLost; // Whether the reply's fields came in an order other than the schema's, such as statement before target or a parameter after the statement, as a provider that sorts the schema's keys produces (Ollama's native chat path). The decision is still read and judged as any other; false when the order held or the reply could not be read (DR-023)
         public string TargetIgnored; // The target the model named for an action that takes none (ActionDefinition.TakesNoTarget), dropped before the guards so the decision's target is no_target; null when nothing was dropped (#244 item 2)
         public List<UnavailableTarget> TargetsUnavailable = new List<UnavailableTarget>(); // Each action and target pair a per-target check (ITargetAvailability) rejected when the request was prepared, with its reason, in registry then target order; empty for an agent with no such check (#190 LV #19)
         public Dictionary<string, string> Arguments = new Dictionary<string, string>(); // The value the decision holds for each parameter of its action, by name (AgentDecision.Arguments), after any default was applied and the guards ran, in no promised order (AgentDecision.Arguments keeps the declared one); empty for an action that declares none, and for a decision a guard stopped (DR-023)
@@ -69,6 +70,7 @@ namespace Agenerela{
             ObservationsDropped = new List<string>();
             ChoicesOffered = new List<string>();
             ChoicesUnavailable = new List<UnavailableChoice>();
+            OrderLost = false;
             TargetIgnored = null;
             TargetsUnavailable = new List<UnavailableTarget>();
             Arguments = new Dictionary<string, string>();

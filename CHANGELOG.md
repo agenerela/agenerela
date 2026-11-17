@@ -20,6 +20,12 @@ phase table and the open issues, not here.
 
 ## [Unreleased]
 
+### Changed
+
+- **Painted Realm: an army sees the forts where it stands** (#20). Under the screen's fog, a province beyond your
+  borders showed its garrison and forts as "not known" even with your army besieging it or passing through.
+  `Fog.KnowsProvince` now knows a province where one of your armies stands. The rulers' facts never hid forts.
+
 ### Added
 
 - **Painted Realm UI, variant B: the inspector and the council** (#20). The decision inspector is a framed window in

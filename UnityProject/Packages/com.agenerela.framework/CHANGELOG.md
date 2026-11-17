@@ -10,6 +10,19 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **A reply out of the schema's field order is flagged** (#266 item 2, DR-023).
+  `DecisionTelemetry.OrderLost`, and `orderLost` in the decision log, are true when the reply's
+  fields came in another order than the schema's: `statement` before `target`, or a parameter
+  after the statement, as Ollama's native chat path produces by sorting the schema's keys
+  (findings, 5 November 2026). Flagged, never refused: the decision is read and judged as any
+  other, and the log line has no such key when the order held. Nothing sent to a model changes.
+- **`ProviderCapabilities.SupportsPairedSchema`** (#266 item 2, DR-023), true by default and for
+  Ollama. On a provider that says false, an agent refuses an action that declares a parameter at
+  setup, with an `InvalidOperationException` naming the action and the provider: at construction,
+  when the action is registered or bound, and when `Agent.Provider` is set, which then keeps the
+  old provider. A call that asks for `PairTargetsWithActions` on such a provider ends as a
+  `RequestPreparation` pipeline error and sends nothing. No provider says false yet.
+
 - **Parameters: a closed choice beside the target** (#266 item 2, DR-023, first step). An action
   declares them in `ActionDefinition.Parameters` (`ActionParameter`: a name, a description, the
   values, an optional `Default` and `ExampleValue`), with `[AgentParameter]` on an `[AgentAction]`

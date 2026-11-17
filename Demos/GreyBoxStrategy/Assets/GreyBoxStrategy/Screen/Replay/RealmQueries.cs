@@ -32,6 +32,9 @@ namespace GreyBoxStrategy.Replay
         public int CapitalIndex(string country) => game.IndexOf(CapitalOf(country));
         public bool IsCapital(int province) => capitalOf.ContainsValue(game.ProvinceIds[province]);
 
+        /// <summary>A province's id from its index.</summary>
+        public string ProvinceId(int province) => game.ProvinceIds[province];
+
         public IEnumerable<int> Neighbours(int province) => map.Neighbours(game.ProvinceIds[province]).Select(game.IndexOf);
 
         /// <summary>Why <paramref name="country"/> may not attack the province, or null when it may: <c>Legality</c>'s rule for <c>attack</c>.</summary>

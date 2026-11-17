@@ -55,7 +55,25 @@ namespace Agenerela
         /// <param name="problem">Why the reply was rejected, or null.</param>
         public static bool TryParse(string reply, DecisionSchema schema, out AgentDecision decision, out string problem)
         {
+            return TryParse(reply, schema, out decision, out problem, out _);
+        }
+
+        /// <summary>
+        /// Reads <paramref name="reply"/> as the other overload does, and says in
+        /// <paramref name="orderLost"/> whether the reply's fields came in an order other than the
+        /// schema's (DR-023): <c>statement</c> before <c>target</c>, or a parameter after
+        /// <c>statement</c>, as a provider that sorts the schema's keys produces (Ollama's native chat
+        /// path, findings of 5 November 2026). Only the fields the schema asked of the chosen action
+        /// count, among those the reply holds; false for a reply that could not be read.
+        /// </summary>
+        /// <remarks>
+        /// The reply is still read: fields are found by name. The order matters to the model, which
+        /// writes left to right, so a statement written before a parameter was written without it.
+        /// </remarks>
+        public static bool TryParse(string reply, DecisionSchema schema, out AgentDecision decision, out string problem, out bool orderLost)
+        {
             decision = null;
+            orderLost = false;
 
             if (!TryReadObject(reply, out var answer, out problem))
             {
@@ -123,8 +141,45 @@ namespace Agenerela
             }
 
             decision = new AgentDecision(action, target, statement, arguments);
+            orderLost = OutOfOrder(answer, schema, action);
             problem = null;
             return true;
+        }
+
+        // Whether the reply's fields, among those the schema asked of this action, came in another
+        // order than the schema's: its fields, with the action's parameters before the statement,
+        // or last when it asked for none.
+        private static bool OutOfOrder(JObject answer, DecisionSchema schema, string action)
+        {
+            var expected = new List<string>();
+            var parameters = DecisionSchema.ParametersOf(schema, action);
+            bool placed = false;
+            foreach (var field in schema.Fields)
+            {
+                if (field.Name == DecisionSchema.StatementFieldName && !placed)
+                {
+                    foreach (var parameter in parameters) expected.Add(parameter.Name);
+                    placed = true;
+                }
+
+                expected.Add(field.Name);
+            }
+
+            if (!placed)
+            {
+                foreach (var parameter in parameters) expected.Add(parameter.Name);
+            }
+
+            int last = -1;
+            foreach (var property in answer.Properties())
+            {
+                int at = expected.IndexOf(property.Name);
+                if (at < 0) continue;
+                if (at < last) return true;
+                last = at;
+            }
+
+            return false;
         }
 
         /// <summary>

@@ -89,7 +89,8 @@ language model through the framework, fighting over 25 provinces on a painted se
    - A peace offer to you opens the envoy's card: **Accept** or **Refuse**.
    - **Report** shows what your court tells you, the same lines a model ruler reads.
    - **Fog of war:** you see what your court knows. Other countries' treasuries and stability
-     are hidden, and so are garrisons and forts beyond your borders. What rivals do and say is
+     are hidden, and so are garrisons and forts beyond your borders, except where one of your
+     armies stands, besieging or passing through: it sees the walls. What rivals do and say is
      shown as it happens: their decisions open in the inspector during the game. What their
      courts tell them (their treasuries) opens when the game is over. The design page has the
      full rule.

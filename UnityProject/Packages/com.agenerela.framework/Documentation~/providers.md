@@ -60,12 +60,19 @@ Two rules sit above every implementation:
 | Rate limit | none | **~15/min, 1000/day** | none |
 | Rejects empty enum values | no | **yes** | no |
 | Reports token probabilities | yes | by model | not yet known |
+| Takes a paired schema | yes | `anyOf` yes (OpenAI strict: no) | not yet known |
 
 Bold marks where one backend differs from the other two, and most of it falls in the middle
 column — which is the point. Gemini is the vendor whose quirks the prototype actually hit, so
 it is the worked example and doubles as the conformance reference for the next vendor.
 
-The last row is `ReportsTokenProbabilities`, which the grounding guard depends on (build plan
+`SupportsPairedSchema` says whether the provider can be sent a root `anyOf` of complete objects,
+the paired schema of DR-020. It is true unless a provider sets it false. An action that declares a
+parameter is sent only in that shape, so an agent refuses one on a provider that says false when
+the agent is set up, and a call that asks for `PairTargetsWithActions` there ends as a
+`RequestPreparation` error with nothing sent ([parameters.md](parameters.md)).
+
+The row above it is `ReportsTokenProbabilities`, which the grounding guard depends on (build plan
 §2.5, DR-016). A provider sets it only if every reply carries the probabilities taken
 **before** the schema's mask. After the mask they always sit on the target list, so the guard
 would pass everything.
@@ -89,7 +96,11 @@ Schema and Ollama compiles it to a sampling grammar internally, so property orde
 inferred from the schema and needs no separate statement. No quota, no key, no budget.
 
 `Capabilities`: constrained decoding yes, explicit ordering no, dialect `JsonSchema`,
-`RateLimit` null, rejects empty enum values no, reports token probabilities yes.
+`RateLimit` null, rejects empty enum values no, reports token probabilities yes, takes a paired
+schema yes.
+
+On Ollama's native chat path a schema's keys come back sorted (findings, 5 November 2026). The
+framework detects that from the reply, whatever the provider: `DecisionTelemetry.OrderLost`.
 
 **What was built (#88).** `new Agent(profile, new OllamaProvider(new OllamaSettings()))`
 decides against `qwen3.5:4b` at `http://127.0.0.1:11434`. `OllamaSettings` is a plain class
