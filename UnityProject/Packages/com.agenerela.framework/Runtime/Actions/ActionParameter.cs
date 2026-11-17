@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using Newtonsoft.Json;
 using UnityEngine;
 
 namespace Agenerela
@@ -30,15 +31,15 @@ namespace Agenerela
     {
         /// <summary>snake_case, the key the model writes the value under, such as <c>strength</c>.</summary>
         [Tooltip("snake_case. The key the model writes the value under, such as 'strength'.")]
-        public string Name;
+        [JsonProperty("name")] public string Name;
 
         /// <summary>What the value means, shown beside the values in the prompt's action list. Optional.</summary>
         [Tooltip("Optional. What the value means, such as 'how hard it strikes'. Shown in the action list.")]
-        public string Description;
+        [JsonProperty("description", NullValueHandling = NullValueHandling.Ignore)] public string Description;
 
         /// <summary>The values the model may pick, in the order the schema and the prompt list them. At least one.</summary>
         [Tooltip("The values the model may pick, such as 'minor' and 'major', or '1', '2' and '3'.")]
-        public string[] Values;
+        [JsonProperty("values")] public string[] Values;
 
         /// <summary>
         /// The value a decision takes when the reply leaves this parameter out or names a value not
@@ -47,22 +48,23 @@ namespace Agenerela
         /// </summary>
         [Tooltip("Optional. The value used when the reply leaves this out or names one not offered. " +
                  "Leave empty to reject such a reply instead.")]
-        public string Default;
+        [JsonProperty("default", NullValueHandling = NullValueHandling.Ignore)] public string Default;
 
         /// <summary>
         /// The value this action's example shows, so the few-shot block demonstrates the field. Empty,
         /// the default, shows <see cref="Default"/>, else the first value offered.
         /// </summary>
         [Tooltip("Optional. The value this action's example shows. Never an evaluation prompt's answer.")]
-        public string ExampleValue;
+        [JsonProperty("exampleValue", NullValueHandling = NullValueHandling.Ignore)] public string ExampleValue;
 
         /// <summary>Whether <see cref="Default"/> names a value.</summary>
-        public bool HasDefault => !string.IsNullOrEmpty(Default);
+        [JsonIgnore] public bool HasDefault => !string.IsNullOrEmpty(Default);
 
         /// <summary>
         /// Whether every value reads as a whole number in the invariant culture, so a handler may take
         /// this parameter as an <c>int</c>.
         /// </summary>
+        [JsonIgnore]
         public bool IsNumber
         {
             get

@@ -510,6 +510,18 @@ namespace Agenerela.Tests
             Assert.That(new AgentDecision("blight", "orsk", "").Arguments, Is.Empty);
         }
 
+        [Test]
+        public void AnEvaluationArmsParametersAreWrittenInTheReportByTheirFields()
+        {
+            var legality = new Agenerela.Evaluation.EvalLegality { Name = "pace" };
+            legality.ActionParameters["move_to"] = new[] { Strength("minor") };
+
+            string json = Newtonsoft.Json.JsonConvert.SerializeObject(legality);
+
+            Assert.That(json, Does.Contain(
+                "\"actionParameters\":{\"move_to\":[{\"name\":\"strength\",\"description\":\"how hard it strikes\",\"values\":[\"minor\",\"major\"],\"default\":\"minor\"}]}"));
+        }
+
         // ---- Memory -----------------------------------------------------------------------------
 
         [Test]
