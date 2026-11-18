@@ -7,6 +7,9 @@ request.
 
 **Before any run:**
 - Read [`llm-wiki/measuring.md`](llm-wiki/measuring.md).
+- For the 5080 box, check the run queue there (`python tools/live-runs/runner/runq.py status`) and
+  pause it while you use the card. A run it can play itself needs only a `run.json` beside its
+  request ([`run-requests/README.md`](run-requests/README.md#runjson-a-request-the-runner-can-play)).
 - Take the lock for the machine you run on, from the lead's laptop: `.scratch/ollama-5080-lock/`
   for the 5080 box, `.scratch/ollama-lock/` for the laptop's own Ollama. Each folder's README has
   the commands.

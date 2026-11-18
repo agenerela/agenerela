@@ -1,7 +1,8 @@
 # A run queue on the RTX 5080 machine: design
 
 **Status:** design accepted by the lead, 18 November 2026; written by the framework tech lead at
-his request. Nothing here is built. It is written for the agent that will build it **on the RTX 5080 machine**, who has
+his request. **Built** on 18 November (steps 1, 3 and 4 below, and step 2's two checks): how to use
+it is [`README.md`](README.md); what differs from this page is in "As built" at the end. It is written for the agent that will build it **on the RTX 5080 machine**, who has
 not seen the conversations behind it. Read [`AGENTS.md`](../../../AGENTS.md) first, then
 [`tools/ollama-server/README.md`](../../ollama-server/README.md), then this page.
 
@@ -140,11 +141,11 @@ already says, with one more file the runner reads:
   "project": "Demos/GreyBoxStrategy",
   "method": "GreyBoxStrategy.Editor.StrategyTableMenu.RunInterleavedFromCommandLine",
   "model": "qwen3.5:4b",
-  "common_args": "-strategyTable personas -strategyTurn writs -strategyCap 40 -strategyRules FreeOrders=true",
+  "common_args": "-strategyTable personas -strategyTurn writs -strategyCap 40",
   "blocks": [
-    { "name": "c1", "arm": "default",                "seed": 1, "index": 0, "games": 1, "extra": "",                                     "minutes": 6 },
-    { "name": "f1", "arm": "default",                "seed": 1, "index": 0, "games": 1, "extra": "-strategyRules CourtTurnFacts=true",   "minutes": 6 },
-    { "name": "w1", "arm": "default",                "seed": 1, "index": 0, "games": 1, "extra": "-strategyRules CourtNoneWording=true", "minutes": 6 }
+    { "name": "c1", "arm": "default", "seed": 1, "index": 0, "games": 1, "extra": "-strategyRules FreeOrders=true",                       "minutes": 6 },
+    { "name": "f1", "arm": "default", "seed": 1, "index": 0, "games": 1, "extra": "-strategyRules FreeOrders=true;CourtTurnFacts=true",   "minutes": 6 },
+    { "name": "w1", "arm": "default", "seed": 1, "index": 0, "games": 1, "extra": "-strategyRules FreeOrders=true;CourtNoneWording=true", "minutes": 6 }
   ],
   "done_when": "{block}/summary.md",
   "smallest_slice": ["c1", "f1", "w1"],
@@ -335,3 +336,38 @@ runner, I will start the changes there"):
 3. **While the queue runs, asset generation and live editor checks pause the queue first.**
 4. **Raw logs on the machine are kept 30 days**; everything `keep` names stays on the results
    branches for good.
+
+## As built (18 November 2026)
+
+Built on the RTX 5080 machine in one pull request rather than one a step: steps 3 and 4 build on
+step 1's modules, and the tests for all three run in one suite. What differs from the page above:
+
+- **A flag goes in once.** The game's `Arg()` returns the first copy of a repeated flag, so the first
+  example above, with `-strategyRules` in both `common_args` and `extra`, would have played every arm
+  as `FreeOrders` alone. The example is corrected, and `runq.py check` refuses a request that repeats
+  a flag, including one the runner sets itself (`-strategyModel`, `-strategyOut`, ...).
+- **Three more request fields:** `block_args` (the per-block template; the default is the command in
+  Part 1), `command` (a whole command instead of `project` and `method`, used by the tests), and
+  `invalid_if_log` (the log text that makes a block `invalid: provider`; the default is the
+  framework's `ProviderFailed`). `model` may be empty, for scripted players: such a request neither
+  waits for the card nor takes it.
+- **The lead's own ComfyUI is noticed by memory**, since it is another container the runner must not
+  inspect: the card's memory in use beyond what Ollama reports must be under
+  `AGENERELA_RUNNER_MAX_OTHER_MB` (6000 by default; the desktop alone uses about 3,000).
+- **`runq.py run` refuses while the queue is running** (`--ignore-queue` overrides), so a laptop run
+  never races the runner. It takes `--on-server` on the RTX 5080 machine, `--push` to push its results
+  as `serve` does, and `--checkout` to play in a checkout already at the commit.
+- **An interrupted try is not a try.** A block cut short by a crash, a reboot or Ctrl+C goes back to
+  `planned` with its tries unchanged and a note in `interrupted`; only timeouts, failures and missing
+  output count towards the one retry.
+- **`pause`, `resume` and `front` commit in a throwaway worktree** at `origin/test`, so the caller's
+  checkout and branch are untouched, and retry once if `test` moved. `--yes` skips the question, for
+  an agent that has the user's yes in the chat.
+- **`serve` does not update its own code**; AGENT_SETUP.md says how to pause, pull and restart.
+
+**Step 2, by hand:** a scripted block and a model pair (the 16 November `n1` and `l1` at 42e0ec8)
+both played through `runq.py run --on-server`; the pair's results are on `runs/901-runner-model-pair-check`
+(findings, 18 November, "The run queue's first blocks"). The laptop-driven pair of the same seed on
+the same day is still owed. **Step 3 on the real queue**, a pause and a switch through `QUEUE.json`
+on `test`, needs a request on `test` and is owed; the same paths are proven on fake blocks by the tests.
+**Step 5**, moving the first owed runs onto it, is for the sessions that own them.
