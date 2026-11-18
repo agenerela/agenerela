@@ -26,6 +26,10 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: the turn strip** (#20). After each turn, one row a realm above the chronicle: what it did as icons with
+  counts, its persona, and a shield where a guard of the framework stopped one of its decisions; a click opens a card
+  of its decisions with Why? for the inspector and the guard's line in plain words. Fog counts a rival's army orders out
+  of sight without telling them. From the recorded events only. `TurnSummary`, `TurnSummaryTests`.
 - **Painted Realm: the advisor's advice into the free court list, and the first first-turn hint** (#20). With free
   orders, Take and Take the advice add the advisor's court orders to the court list (each once; one no longer offered
   is named). The council opens with a one-line hint on what free orders change, closed once for good (`HintsSeen` in

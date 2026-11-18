@@ -417,6 +417,16 @@ What is offered and what an order costs come from the rules (`WritLegality.Court
 `CourtList` keeps the order and the reasons, and `CourtListTests` checks it without a scene. With the switch off the
 writs council is drawn exactly as before.
 
+**The turn strip (18 November).** After each resolution, above the chronicle, one row a realm, yours first and marked:
+its crest, name, persona (folded away on a narrow screen), and an icon for each kind of thing it did (recruit, fortify,
+tax, war, peace, cede, demand, march, hold, siege, attack), with a count when several. A shield marks a realm one of
+whose decisions a guard stopped. A click opens a card beside the strip: each decision as a line in the chronicle's
+words, the ruler's line, **Why?** for the inspector, and the guard's line in plain words ("The legality guard stopped
+“declare_war valen”: … It held instead. This is the framework's point …"). Under fog a rival's court orders are news
+to every court, but an order to an army beyond your sight is only counted, with an eye. While the strip shows, the
+left panels end above it. `TurnSummary` reads only the turn's recorded events and decisions; `TurnSummaryTests`
+checks it without a scene. A click also calls `TurnRowPressed(country, turn)`, for replaying the turn on the map.
+
 The numbers, the outliner's rows and the feed's filters come from `ScreenModels`, which `ScreenModelsTests` checks
 without a scene.
 

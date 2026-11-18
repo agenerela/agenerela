@@ -791,3 +791,32 @@
 .hint-line { flex-direction: row; align-items: center; margin: 0 0 6px 0; padding: 5px 6px 5px 9px; background-color: rgba(226, 194, 122, 0.14); border-left-width: 3px; border-left-color: rgb(226, 194, 122); flex-shrink: 0; }
 .hint-text { flex-grow: 1; flex-shrink: 1; white-space: normal; font-size: 12.5px; color: rgb(240, 224, 186); }
 .hint-x { width: 22px; height: 20px; margin-left: 6px; flex-shrink: 0; }
+
+/* ==== The turn strip (#20, the lead's turn summary): one row a realm above the chronicle, a card beside it on a click ==== */
+.turn-strip { left: 8px; bottom: 288px; width: 440px; max-height: 150px; padding: 2px 0; }
+.compact .turn-strip { bottom: 236px; width: 380px; }
+.strip-on .realm, .strip-on .side { bottom: 448px; }
+.compact.strip-on .realm, .compact.strip-on .side { bottom: 394px; }
+.turn-strip-body { flex-shrink: 1; }
+.turn-strip-head { font-size: 10px; -unity-font-style: bold; letter-spacing: 2px; color: rgb(160, 146, 118); padding: 2px 8px 1px 8px; }
+.turn-row { flex-direction: row; align-items: center; height: 22px; padding: 0 8px; border-left-width: 3px; border-left-color: rgba(0, 0, 0, 0); }
+.turn-row:hover { background-color: rgba(226, 194, 122, 0.08); }
+.turn-row.mine { background-color: rgba(226, 194, 122, 0.10); border-left-color: rgb(226, 194, 122); }
+.turn-row.open { background-color: rgba(226, 194, 122, 0.2); }
+.turn-row-name { margin-left: 6px; font-size: 12.5px; -unity-font-style: bold; color: rgb(236, 224, 196); flex-shrink: 0; }
+.turn-row-persona { margin-left: 5px; font-size: 11px; -unity-font-style: italic; color: rgb(168, 151, 122); flex-shrink: 1; overflow: hidden; }
+.compact .turn-row-persona { display: none; }
+.turn-row-icons { flex-direction: row; align-items: center; margin-left: auto; padding-left: 6px; flex-shrink: 0; }
+.turn-row-kind { flex-direction: row; align-items: center; margin-left: 5px; }
+.turn-row-count { font-size: 10px; -unity-font-style: bold; color: rgb(236, 224, 196); margin-left: 1px; }
+.turn-row-none { font-size: 11px; -unity-font-style: italic; color: rgb(141, 127, 102); }
+.turn-row-shield { margin-left: 6px; flex-shrink: 0; }
+.turn-card { left: 456px; bottom: 288px; width: 400px; max-height: 60%; background-color: rgb(20, 15, 10); }
+.compact .turn-card { left: 396px; bottom: 236px; width: 360px; }
+.turn-card-body { padding: 6px 10px 8px 10px; flex-shrink: 1; }
+.tc-line { flex-direction: row; align-items: flex-start; padding: 4px 0; border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.12); }
+.tc-col { margin-left: 7px; flex-grow: 1; flex-shrink: 1; }
+.tc-text { font-size: 12.5px; color: rgb(234, 223, 198); }
+.tc-why { width: auto; padding-left: 7px; padding-right: 7px; margin-left: 6px; flex-shrink: 0; }
+.tc-guard { flex-direction: row; align-items: flex-start; margin-top: 3px; padding: 4px 6px; background-color: rgba(226, 194, 122, 0.12); border-left-width: 2px; border-left-color: rgb(226, 194, 122); }
+.tc-guard-text { margin-left: 5px; flex-shrink: 1; font-size: 12px; color: rgb(240, 224, 186); }
