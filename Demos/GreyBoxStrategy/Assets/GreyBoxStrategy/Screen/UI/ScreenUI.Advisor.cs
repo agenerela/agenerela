@@ -40,6 +40,10 @@ namespace GreyBoxStrategy.Realm
                 // A model's counsel can run to ten lines: three, then "more" opens the rest in place.
                 body.Add(Fold(counsel));
             }
+            // Free orders: the court's advice goes into the court list, as many orders as it proposes.
+            bool free = req.World.Rules.FreeOrders;
+            var court = free ? Court(req) : null;
+            var advisedCourt = advice.Items.Where(i => i.Request.Moment != Moment.Army).Select(i => i.Move).ToList();
             foreach (var item in advice.Items)
             {
                 bool army = item.Request.Moment == Moment.Army;
@@ -48,7 +52,7 @@ namespace GreyBoxStrategy.Realm
                     ? (item.Move.Action == Actions.March ? "march to " + Cap(item.Move.Target) : "hold")
                     : Describe(item.Move);
                 bool taken = army ? Plan.Armies.TryGetValue(item.Request.ArmyId, out var given) && given.Equals(item.Move)
-                                  : Plan.Court != null && Plan.Court.Equals(item.Move);
+                                  : free ? court.Holds(advisedCourt, item.Move) : Plan.Court != null && Plan.Court.Equals(item.Move);
                 var row = new VisualElement(); row.AddToClassList("advice-row");
                 var l = new Label($"{who}: {Lowered(what)}"); l.AddToClassList("advice-text"); row.Add(l);
                 if (!item.AsAsked) l.tooltip = "Your advisor named a move the rules do not offer here; the advice holds instead.";
@@ -62,11 +66,12 @@ namespace GreyBoxStrategy.Realm
             }
             bool all = advice.Items.All(i => i.Request.Moment == Moment.Army
                 ? Plan.Armies.TryGetValue(i.Request.ArmyId, out var g) && g.Equals(i.Move)
-                : Plan.Court != null && Plan.Court.Equals(i.Move));
+                : free ? court.Holds(advisedCourt, i.Move) : Plan.Court != null && Plan.Court.Equals(i.Move));
             var takeAll = new Button(() =>
             {
                 var plan = RuleSession.WritsPlan.From(advice);
-                Plan.Court = plan.Court;
+                if (free) Refused(court.Take(advisedCourt));
+                else Plan.Court = plan.Court;
                 foreach (var kv in plan.Armies) Plan.Armies[kv.Key] = kv.Value;
                 PlanChanged?.Invoke();
                 ShowOrders(ordersStatus?.text);
@@ -79,9 +84,17 @@ namespace GreyBoxStrategy.Realm
         private void TakeAdvice(AdviceItem item)
         {
             if (item.Request.Moment == Moment.Army) Plan.Armies[item.Request.ArmyId] = item.Move;
+            // Free orders: the court's advice joins the court list, if the rules still offer it after your other orders.
+            else if (OrdersRequest?.World.Rules.FreeOrders == true) { if (item.Move.Action != Actions.None) Refused(Court(OrdersRequest).Take(new[] { item.Move })); }
             else Plan.Court = item.Move;
             PlanChanged?.Invoke();
             ShowOrders(ordersStatus?.text);
+        }
+
+        // An advised court order the rules no longer offer after your other orders: said, not silently dropped.
+        private void Refused(System.Collections.Generic.List<Move> refused)
+        {
+            if (refused.Count > 0) lastCourtNote = "Not added, no longer offered after your other orders: " + string.Join(", ", refused.Select(Describe)) + ".";
         }
     }
 }

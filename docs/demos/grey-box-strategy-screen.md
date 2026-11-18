@@ -408,6 +408,11 @@ orders (new turn, in testing)", rule mode only, off by default) the council has 
 - **End turn**: beside it, the crests of the rulers still deciding in the background and "2 rulers still deciding";
   pressed while they decide, the button says "Waiting for 2…" until the turn resolves.
 - The top bar shows no writs stat, and the date block says "Orders" with no writ count.
+- The advisor's **Take** and **Take the advice** put its court orders into the court list, as many as it proposes,
+  each only once; one the rules no longer offer after your other orders is named, not added.
+- The first of the first-turn hints, one line at the top of the council: "No writs: give as many orders as your gold
+  allows; right-click a province to march the armies you have selected." Closed once, it stays closed (saved in
+  `settings.json` as `HintsSeen`).
 What is offered and what an order costs come from the rules (`WritLegality.CourtMovesAfter`, `CourtOrderCost`);
 `CourtList` keeps the order and the reasons, and `CourtListTests` checks it without a scene. With the switch off the
 writs council is drawn exactly as before.

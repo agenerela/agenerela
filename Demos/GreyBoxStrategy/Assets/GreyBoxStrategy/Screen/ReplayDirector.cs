@@ -111,6 +111,9 @@ namespace GreyBoxStrategy.Realm
             {
                 ArtSeed = game.Seed,
                 ProvinceToPanel = ProvinceToPanel,
+                // The first-turn hints: dismissed once, gone for good (saved with the settings).
+                HintSeen = id => settings != null && settings.HintSeen(id),
+                DismissHint = id => { if (settings == null) return; settings.SeeHint(id); settingsStore?.Save(settings); },
                 PlayPressed = () => { playing = !playing; ui.SetPlaying(playing, speed); },
                 StepPressed = () => { playing = false; stepOnce = true; ui.SetPlaying(false, speed); },
                 SpeedPressed = () => { speed = speed >= 4 ? 1 : speed * 2; ui.SetPlaying(playing, speed); },

@@ -51,6 +51,35 @@ namespace GreyBoxStrategy.Replay
         }
 
         /// <summary>
+        /// Takes advice: adds each advised court order the list does not hold yet, in order (an order advised twice, a
+        /// levy say, is added until the list holds it twice); none is skipped. Returns the advised orders the rules no
+        /// longer offer, which are not added.
+        /// </summary>
+        public List<Move> Take(IEnumerable<Move> advised)
+        {
+            var refused = new List<Move>();
+            var seen = new List<Move>();
+            foreach (var m in advised ?? Enumerable.Empty<Move>())
+            {
+                if (m == null || m.Action == Actions.None) continue;
+                seen.Add(m);
+                int wanted = seen.Count(x => Same(x, m)), held = Orders.Count(x => Same(x, m));
+                if (held >= wanted) continue;
+                if (!Add(m)) refused.Add(m);
+            }
+            return refused;
+        }
+
+        /// <summary>Whether the list holds this advised order (as many times as it was advised).</summary>
+        public bool Holds(IReadOnlyList<Move> advised, Move m)
+        {
+            if (m == null || m.Action == Actions.None) return true;
+            return Orders.Count(x => Same(x, m)) >= advised.Count(x => Same(x, m));
+        }
+
+        private static bool Same(Move a, Move b) => a.Action == b.Action && a.Target == b.Target;
+
+        /// <summary>
         /// Removes an order. The ones after it stay, each kept only if the rules still offer it after those before it (an
         /// order may have relied on gold or a term the removed one set up); returns the orders dropped that way.
         /// </summary>

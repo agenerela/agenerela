@@ -787,3 +787,7 @@
 .deciding > .crest { margin-right: 2px; }
 .deciding > Label { margin-left: 4px; font-size: 12px; -unity-font-style: italic; color: rgb(226, 194, 122); }
 .end-turn.waiting { background-color: rgb(60, 46, 26); color: rgb(226, 194, 122); }
+/* the first-turn hints: one line at the top of a panel, until closed once */
+.hint-line { flex-direction: row; align-items: center; margin: 0 0 6px 0; padding: 5px 6px 5px 9px; background-color: rgba(226, 194, 122, 0.14); border-left-width: 3px; border-left-color: rgb(226, 194, 122); flex-shrink: 0; }
+.hint-text { flex-grow: 1; flex-shrink: 1; white-space: normal; font-size: 12.5px; color: rgb(240, 224, 186); }
+.hint-x { width: 22px; height: 20px; margin-left: 6px; flex-shrink: 0; }

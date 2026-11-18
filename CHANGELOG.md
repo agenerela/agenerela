@@ -26,6 +26,10 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: the advisor's advice into the free court list, and the first first-turn hint** (#20). With free
+  orders, Take and Take the advice add the advisor's court orders to the court list (each once; one no longer offered
+  is named). The council opens with a one-line hint on what free orders change, closed once for good (`HintsSeen` in
+  the settings). `CourtListTests`.
 - **Painted Realm: the council for free orders** (#20), behind `GameRules.FreeOrders`, off by default, with a New game
   switch (Rules, "Free orders (new turn, in testing)") so the lead can play it. No writs: the court is a list you build,
   as many orders as gold allows, with each order's cost, gold committed and left, and the reason a button is shut;

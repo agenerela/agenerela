@@ -37,6 +37,11 @@ namespace GreyBoxStrategy.Replay
         public float InterfaceVolume = 0.6f;
         /// <summary>Which storyteller events open a window in the middle of the screen: all, those striking your realm, none.</summary>
         public EventWindows EventWindows = EventWindows.All;
+        /// <summary>The first-turn hints you have dismissed, by id, comma-separated: each shows until you close it once.</summary>
+        public string HintsSeen = "";
+
+        public bool HintSeen(string id) => !string.IsNullOrEmpty(id) && ("," + (HintsSeen ?? "") + ",").Contains("," + id + ",");
+        public void SeeHint(string id) { if (!string.IsNullOrEmpty(id) && !HintSeen(id)) HintsSeen = string.IsNullOrEmpty(HintsSeen) ? id : HintsSeen + "," + id; }
 
         public GameSettings Clone() => (GameSettings)MemberwiseClone();
 
@@ -51,6 +56,7 @@ namespace GreyBoxStrategy.Replay
             s.FrameCap = (int)Nearest(Array.ConvertAll(FrameCaps, x => (float)x), s.FrameCap);
             s.PlaybackSpeed = Nearest(Speeds, s.PlaybackSpeed);
             if (!Enum.IsDefined(typeof(EventWindows), s.EventWindows)) s.EventWindows = EventWindows.All;
+            s.HintsSeen = s.HintsSeen ?? "";
             s.MasterVolume = Clamp01(s.MasterVolume); s.MusicVolume = Clamp01(s.MusicVolume);
             s.EffectsVolume = Clamp01(s.EffectsVolume); s.VoiceVolume = Clamp01(s.VoiceVolume);
             s.InterfaceVolume = Clamp01(s.InterfaceVolume);

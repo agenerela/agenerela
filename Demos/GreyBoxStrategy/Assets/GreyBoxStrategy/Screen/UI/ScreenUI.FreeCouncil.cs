@@ -18,6 +18,14 @@ namespace GreyBoxStrategy.Realm
         /// <summary>The model rulers still deciding this council, by country id (<c>RuleSession.RulersStillDeciding</c>).</summary>
         public Func<IReadOnlyCollection<string>> Deciding;
 
+        /// <summary>Whether a first-turn hint was dismissed for good, by id; and dismissing one. Null: every hint shows.</summary>
+        public Func<string, bool> HintSeen;
+        public Action<string> DismissHint;
+
+        /// <summary>The first first-turn hint: what free orders change, at the top of the council.</summary>
+        public const string FreeOrdersHint = "free-orders";
+        public const string FreeOrdersHintText = "No writs: give as many orders as your gold allows; right-click a province to march the armies you have selected.";
+
         // End turn was pressed while rulers still decide: the button says so until the turn resolves.
         private bool endWaiting;
         private CountryRequest endWaitingFor;
@@ -43,6 +51,15 @@ namespace GreyBoxStrategy.Realm
             orders.Add(head);
             var body = new ScrollView(ScrollViewMode.Vertical) { horizontalScrollerVisibility = ScrollerVisibility.Hidden, style = { paddingLeft = 10, paddingRight = 10, paddingTop = 7, paddingBottom = 8, maxHeight = 560 } };
             orders.Add(body);
+            // The first of the first-turn hints: one line, until you close it once.
+            if (HintSeen?.Invoke(FreeOrdersHint) != true)
+            {
+                var hint = new VisualElement(); hint.AddToClassList("hint-line");
+                var hl = new Label(FreeOrdersHintText); hl.AddToClassList("hint-text"); hint.Add(hl);
+                var hx = new Button(() => { DismissHint?.Invoke(FreeOrdersHint); hint.RemoveFromHierarchy(); }) { text = "×", tooltip = "Got it: do not show this again" };
+                hx.AddToClassList("tbtn"); hx.AddToClassList("hint-x"); hint.Add(hx);
+                body.Add(hint);
+            }
             if (showReport)
             {
                 var f = new VisualElement(); f.AddToClassList("facts-box");
