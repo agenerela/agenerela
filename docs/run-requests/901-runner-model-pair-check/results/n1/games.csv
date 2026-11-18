@@ -1,0 +1,2 @@
+seed,winner,winner_kind,ending,turns,territory_changes,battles,stale_refusals,peace_offers,peace_made,valen_kind,valen_provinces,orsk_kind,orsk_provinces,merrow_kind,merrow_provinces,kesh_kind,kesh_provinces,ilvar_kind,ilvar_provinces
+1,kesh,qwen3.5:4b merchant,Unfinished,40,10,95,14,0,3,qwen3.5:4b warmonger,5,qwen3.5:4b builder,3,qwen3.5:4b opportunist,6,qwen3.5:4b merchant,6,qwen3.5:4b proud,5

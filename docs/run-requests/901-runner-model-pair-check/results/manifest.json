@@ -1,0 +1,32 @@
+{
+  "id": "901-runner-model-pair-check",
+  "commit": "42e0ec86cc9a4561b118c20e2d04b92bd8b8cebb",
+  "runner": "unity-editor-batch on the RTX 5080 machine (DraganoiderPC2), gateway on 127.0.0.1",
+  "ollama": {
+    "model": "qwen3.5:4b",
+    "version": "0.40.14",
+    "size_vram": 3140495604,
+    "size": 3140495604
+  },
+  "created": "2026-11-18T09:23:55-08:00",
+  "blocks": [
+    {
+      "name": "n1",
+      "status": "done",
+      "started": "2026-11-18T09:23:55-08:00",
+      "tries": 1,
+      "ended": "2026-11-18T09:30:17-08:00",
+      "minutes": 6.38
+    },
+    {
+      "name": "l1",
+      "status": "done",
+      "started": "2026-11-18T09:30:17-08:00",
+      "tries": 1,
+      "ended": "2026-11-18T09:35:49-08:00",
+      "minutes": 5.52
+    }
+  ],
+  "updated": "2026-11-18T09:35:49-08:00",
+  "finished": "2026-11-18T09:35:49-08:00"
+}
