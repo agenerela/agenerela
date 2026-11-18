@@ -89,6 +89,19 @@ namespace GreyBoxStrategy.Tests
         }
 
         [Test]
+        public void ARecruitShortOfMen_SaysManpower_AndOneShortOfGold_SaysGold()
+        {
+            var g = New();
+            var me = g.World.Country("valen");
+            me.Gold = 10000;
+            me.Manpower = 2;
+            Assert.That(WritLegality.WhyNotCourt(g.World, "valen", new Move(Actions.Recruit)), Is.EqualTo($"recruiting needs {g.Rules.MinLevy} manpower; we have 2"));
+            me.Manpower = 100;
+            me.Gold = 1;
+            Assert.That(WritLegality.WhyNotCourt(g.World, "valen", new Move(Actions.Recruit)), Does.Contain("gold"), "gold short: the reason says gold");
+        }
+
+        [Test]
         public void Income_IsEachHeldProvincesYield_ByTerrainAndCoast_ThenTheTaxLevel()
         {
             var g = New();

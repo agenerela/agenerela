@@ -32,7 +32,7 @@ namespace GreyBoxStrategy
                     if (rules.UnitTypes) return "with unit types, recruit pikes, riders or bows";
                     if (move.Target != null) return "recruit takes no target";
                     if (RecruitSite(world, countryId) == null) return "we hold no province of ours to recruit in";
-                    return world.Levy(me) >= rules.MinLevy ? null : $"recruiting needs {rules.MinLevy * rules.GoldPerSoldier} gold";
+                    return world.Levy(me) >= rules.MinLevy ? null : ShortOfMen(world, me) ?? $"recruiting needs {rules.MinLevy * rules.GoldPerSoldier} gold";
 
                 case Actions.RecruitPikes:
                 case Actions.RecruitRiders:
@@ -43,7 +43,7 @@ namespace GreyBoxStrategy
                     if (RecruitSite(world, countryId) == null) return "we hold no province of ours to recruit in";
                     var type = Actions.RecruitsType(move.Action).Value;
                     return world.Levy(me, type) >= rules.MinLevy ? null
-                        : $"recruiting {Units.Name(type)} needs {rules.MinLevy * rules.GoldPerSoldier * Units.CostFactor(rules, type)} gold";
+                        : ShortOfMen(world, me) ?? $"recruiting {Units.Name(type)} needs {rules.MinLevy * rules.GoldPerSoldier * Units.CostFactor(rules, type)} gold";
                 }
 
                 case Actions.BuildMarket:
@@ -194,6 +194,18 @@ namespace GreyBoxStrategy
         }
 
         private static bool IsBuildOrder(string action) => action == Actions.Fortify || Actions.BuildsWhat(action) != null;
+
+        /// <summary>
+        /// Economy: why a levy is too small when manpower, not gold, is what runs short ("recruiting needs 5 manpower; we
+        /// have 2"), or null. The screen shows this reason to the player.
+        /// </summary>
+        private static string ShortOfMen(World world, Country me)
+        {
+            var r = world.Rules;
+            if (!r.EconomyOn) return null;
+            int men = me.Manpower - me.ReservedManpower;
+            return men < r.MinLevy ? $"recruiting needs {r.MinLevy} manpower; we have {System.Math.Max(0, men)}" : null;
+        }
 
         /// <summary>Every legal court order, the actions in <see cref="Actions.Court"/>'s order, targets in id order, none last.</summary>
         public static List<Move> CourtMoves(World world, string countryId)

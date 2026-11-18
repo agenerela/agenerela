@@ -220,7 +220,6 @@ namespace GreyBoxStrategy
         }
 
         public static string PairKey(string a, string b) => Key(a, b);
-        /// <summary>Gold a turn to keep the army; with unit types a rider counts <see cref="GameRules.RiderCostFactor"/> times.</summary>
         /// <summary>
         /// Economy: the gold a held province yields its owner a turn before taxes: the base, plus plains (farmland), hills
         /// and mountains (mines), and a coast (trade).
@@ -254,6 +253,7 @@ namespace GreyBoxStrategy
         /// <summary>Economy, E2: how many held provinces of a realm have this building.</summary>
         public int Held(string countryId, Building b) => ProvinceList.Count(p => p.Owner == countryId && p.Occupier == null && p.Has(b));
 
+        /// <summary>Gold a turn to keep the army; with unit types a rider counts <see cref="GameRules.RiderCostFactor"/> times.</summary>
         public int Upkeep(Country c) =>
             (c.Army + (Rules.UnitTypes ? Armies.Where(a => a.Owner == c.Id).Sum(a => a.Riders) * (Rules.RiderCostFactor - 1) : 0))
             / Rules.SoldiersPerUpkeepGold;
