@@ -1,7 +1,7 @@
 # A run queue on the RTX 5080 machine: design
 
-**Status:** design, 18 November 2026, by the framework tech lead at the lead's request. Nothing
-here is built. It is written for the agent that will build it **on the RTX 5080 machine**, who has
+**Status:** design accepted by the lead, 18 November 2026; written by the framework tech lead at
+his request. Nothing here is built. It is written for the agent that will build it **on the RTX 5080 machine**, who has
 not seen the conversations behind it. Read [`AGENTS.md`](../../../AGENTS.md) first, then
 [`tools/ollama-server/README.md`](../../ollama-server/README.md), then this page.
 
@@ -324,14 +324,14 @@ ends with something a person can run.
 - A block that hangs is killed at twice its estimate, the model is unloaded, and the queue goes on.
 - No key appears in any commit, log, manifest or status file.
 
-## Questions for the lead
+## The lead's answers (18 November 2026)
 
-1. **May Unity be installed and signed in on the RTX 5080 machine?** Proposed: yes; it is the one
-   thing this needs there beside what the Ollama stack already has.
-2. **May the runner push to `runs/*` branches with your GitHub login on that machine?** Proposed:
-   yes, those branches only.
-3. **While the queue runs, should asset generation and live editor checks wait for a pause, or
-   may short ones cut in between blocks by themselves?** Proposed: they pause the queue first, so
-   one rule covers everything.
-4. **Should the machine's own results folder be kept forever, or trimmed?** Proposed: keep 30
-   days of raw logs, and everything `keep` names for good on the results branches.
+The lead accepted all four proposed answers ("Your question answers are okay regarding the rtx 5080
+runner, I will start the changes there"):
+
+1. **Unity may be installed and signed in on the RTX 5080 machine.**
+2. **The runner may push to `runs/*` branches** with the lead's GitHub login on that machine, and
+   to those branches only.
+3. **While the queue runs, asset generation and live editor checks pause the queue first.**
+4. **Raw logs on the machine are kept 30 days**; everything `keep` names stays on the results
+   branches for good.
