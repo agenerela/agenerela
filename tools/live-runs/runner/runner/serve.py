@@ -23,7 +23,7 @@ IDLE_SECONDS = 60
 
 
 class Server:
-    def __init__(self, repo, work, card, runner, status, push=True, idle=IDLE_SECONDS, once=False):
+    def __init__(self, repo, work, card, runner, status, push=True, idle=IDLE_SECONDS, once=False, local=None):
         self.repo = Path(repo)
         self.work = Path(work)
         self.card = card
@@ -34,19 +34,30 @@ class Server:
         self.once = once           # tests: return when there is nothing to do instead of waiting
         self.last_push = {}
         self.pause_file = self.work / "pause"
+        if card.pause_file is None:  # the machine's own controls always live in the work folder
+            card.pause_file, card.stop_file = self.pause_file, self.work / "stop"
+        self.local = Path(local) if local else None  # read the queue and requests here, not from origin/test
 
     # ---- reading what is owed --------------------------------------------------------------
 
     def read(self):
         """(queue, {id: Request or an error string}) at origin/test, after a fetch."""
-        try:
-            gitio.fetch(self.repo)
-        except RunnerError as e:
-            say(f"warning: fetch failed, using what is here: {e}")
-        queue = queuefile.parse(gitio.queue_text(self.repo))
+        if self.local is None:
+            try:
+                gitio.fetch(self.repo)
+            except RunnerError as e:
+                say(f"warning: fetch failed, using what is here: {e}")
+
+        def text_of(relative):
+            if self.local is None:
+                return gitio.show(self.repo, "origin/test", Path("docs/run-requests") / relative)
+            path = self.local / relative
+            return path.read_text(encoding="utf-8") if path.is_file() else None
+
+        queue = queuefile.parse(text_of("QUEUE.json"))
         requests = {}
         for request_id in queue["order"]:
-            text = gitio.run_json(self.repo, request_id)
+            text = text_of(Path(request_id) / "run.json")
             if not text:
                 requests[request_id] = f"no docs/run-requests/{request_id}/run.json on test"
                 continue
@@ -81,8 +92,9 @@ class Server:
         return (good[chosen] if chosen else None), errors
 
     def stop_reason(self, queue=None):
-        if self.pause_file.exists():
-            return f"paused on this machine ({self.pause_file})"
+        card_says = self.card.stop_reason()
+        if card_says:
+            return card_says
         if queue and queue["paused"]:
             return "paused in QUEUE.json" + (f": {queue['pause_reason']}" if queue["pause_reason"] else "")
         return None
@@ -90,8 +102,13 @@ class Server:
     # ---- the loop --------------------------------------------------------------------------
 
     def serve(self):
-        say(f"runner: serving the queue from {self.repo}, work in {self.work}")
+        say(f"runner: serving the queue from {self.local or self.repo}, work in {self.work}")
+        self.card.clear_stop()  # a Stop now left from before this start must not kill the first block
         while True:
+            if self.card.parent_gone():
+                self.status.write(state="stopped", request=None, block=None, waiting="the tray app closed", card_in_use=False)
+                say("runner: the tray app closed; stopping")
+                return
             try:
                 did = self.step()
             except RunnerError as e:
@@ -101,7 +118,16 @@ class Server:
             if not did:
                 if self.once:
                     return
-                time.sleep(self.idle)
+                self.nap()
+
+    def nap(self):
+        """Wait up to idle seconds, waking early when a local pause is lifted or the tray closes."""
+        paused = self.pause_file.exists()
+        deadline = time.monotonic() + self.idle
+        while time.monotonic() < deadline:
+            if self.card.parent_gone() or (paused and not self.pause_file.exists()):
+                return
+            time.sleep(min(2, self.idle))
 
     def step(self):
         """Play the chosen request until it finishes, pauses or is switched. False when there was nothing to do."""

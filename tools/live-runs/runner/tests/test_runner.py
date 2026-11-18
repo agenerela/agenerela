@@ -7,6 +7,7 @@ import json
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import unittest
 from pathlib import Path
@@ -236,12 +237,69 @@ class PauseTests(Temp):
             pause_file.write_text("", encoding="utf-8")
             return played(block)
         p.play_block = play_block
-        self.assertEqual(p.play(), ("stopped", f"paused by {pause_file}"))
+        self.assertEqual(p.play(), ("stopped", f"paused on this machine: {pause_file}"))
         pause_file.unlink()
         self.assertEqual(plays(p.out), ["a", "start", "a", "end"])
         resumed = self.player(data)
         self.assertEqual(resumed.play(), ("finished", None))
         self.assertEqual(plays(p.out), ["a", "start", "a", "end", "b", "start", "b", "end", "c", "start", "c", "end"])
+
+
+class StopNowTests(Temp):
+    def test_stop_now_kills_the_block_in_seconds_sets_it_aside_and_pauses(self):
+        data = fake_request("009-s", [("long", {"extra": "60", "minutes": 5}), ("next", "0")])
+        work = self.root / "work"
+        work.mkdir()
+        card = NullCard(work / "pause")
+        p = self.player(data, card=card)
+        p.status = Status(work / "status.json", "test")
+        threading.Timer(1.5, lambda: (work / "stop").write_text("by: game\nwhy: game mode: fakegame.exe\n",
+                                                                 encoding="utf-8")).start()
+        started = time.monotonic()
+        result = p.play()
+        self.assertLess(time.monotonic() - started, 15, "Stop now did not kill the block")
+        self.assertEqual(result[0], "stopped")
+        e = p.manifest.entry("long")
+        self.assertEqual((e["status"], e.get("tries")), ("planned", 0))
+        self.assertIn("game mode: fakegame.exe", e["interrupted"][0])
+        self.assertFalse((work / "stop").exists(), "the stop file was not cleared")
+        self.assertTrue((work / "pause").exists(), "Stop now did not also pause")
+        status = json.loads((work / "status.json").read_text(encoding="utf-8"))
+        self.assertEqual((status["state"], status["card_in_use"]), ("paused", False))
+        self.assertIn("fakegame.exe", status["waiting"])
+        self.assertEqual(len(list((p.out / "_aside").glob("long-*"))), 1)
+        (work / "pause").unlink()
+        data["blocks"][0]["extra"] = "0"
+        self.assertEqual(self.player(data, card=NullCard(work / "pause")).play(), ("finished", None))
+        self.assertEqual(plays(p.out).count("long"), 3)  # started, cut short; then start and end
+
+    def test_when_the_tray_closes_the_block_is_killed_and_the_runner_stops(self):
+        tray = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(2)"])
+        data = fake_request("010-s", [("long", {"extra": "60", "minutes": 5})])
+        p = self.player(data, card=NullCard(self.root / "pause", parent_pid=tray.pid))
+        started = time.monotonic()
+        result = p.play()
+        tray.wait()
+        self.assertLess(time.monotonic() - started, 15)
+        self.assertEqual(result, ("stopped", "the tray app closed"))
+        self.assertEqual(p.manifest.status("long"), "planned")
+        self.assertFalse((self.root / "pause").exists(), "a closed tray must not leave a pause behind")
+
+
+class LocalQueueTests(Temp):
+    def test_serve_reads_a_local_folder_instead_of_origin_test(self):
+        local = self.root / "local"
+        write_request(local, fake_request("a", [("a1", "0")]))
+        (local / "QUEUE.json").write_text(json.dumps({"paused": False, "order": ["a"], "hold": []}), encoding="utf-8")
+        saved = gitio.worktree
+        gitio.worktree = lambda repo, work, sha: self.checkout
+        try:
+            s = Server(self.root, self.root / "work", NullCard(), "test", Status(None, "test"), push=False,
+                       idle=0, once=True, local=local)
+            s.serve()
+        finally:
+            gitio.worktree = saved
+        self.assertEqual(plays(self.root / "work" / "results" / "a"), ["a1", "start", "a1", "end"])
 
 
 class FakeServer(Server):

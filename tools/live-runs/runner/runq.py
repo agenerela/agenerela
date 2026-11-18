@@ -150,10 +150,22 @@ def cmd_run(args):
 def cmd_serve(args):
     work = work_dir(args)
     work.mkdir(parents=True, exist_ok=True)
-    card = Card("server", pause_file=work / "pause")
+    if args.log:
+        log = open(args.log, "a", encoding="utf-8", buffering=1)
+        sys.stdout = sys.stderr = log
+    card = Card("server", pause_file=work / "pause", parent_pid=args.parent_pid)
     runner = describe_runner("server")
-    server = Server(REPO, work, card, runner, Status(work / "status.json", runner), push=not args.no_push)
+    server = Server(REPO, work, card, runner, Status(work / "status.json", runner),
+                    push=not args.no_push and not args.local, local=args.local)
     server.serve()
+    return 0
+
+
+def cmd_where(args):
+    """Where this machine's runner keeps its files, as JSON (tray.ps1 reads it)."""
+    work = work_dir(args)
+    print(json.dumps({"work": str(work), "repo": str(REPO), "status": str(work / "status.json"),
+                      "results": str(work / "results"), "python": sys.executable}))
     return 0
 
 
@@ -259,6 +271,10 @@ def main(argv=None):
 
     p = with_work(sub.add_parser("serve", help="on the RTX 5080 machine: play the queue"))
     p.add_argument("--no-push", action="store_true", help="keep results on this machine")
+    p.add_argument("--parent-pid", type=int, help="stop when this process ends (tray.ps1 passes its own)")
+    p.add_argument("--log", help="write what serve prints to this file")
+    p.add_argument("--local", help="read QUEUE.json and the requests from this folder instead of origin/test, "
+                                   "and push nothing (for trying the runner out)")
     p = with_work(sub.add_parser("run", help="play one request, resumably"))
     p.add_argument("request", help="the request folder, such as docs/run-requests/007-name")
     p.add_argument("--on-server", action="store_true", help="this is the RTX 5080 machine: use the gateway on 127.0.0.1")
@@ -266,6 +282,7 @@ def main(argv=None):
     p.add_argument("--ignore-queue", action="store_true", help="play although the queue is running (only with the lead's yes)")
     p.add_argument("--checkout", help="play in this checkout, which must be at the request's commit, instead of a worktree")
     with_work(sub.add_parser("status", help="the queue and each request's progress"))
+    with_work(sub.add_parser("where", help="where this machine's runner keeps its files, as JSON"))
     p = sub.add_parser("check", help="check a run.json without running it")
     p.add_argument("request")
     p = sub.add_parser("pause", help="pause the queue after the block in hand (a commit on test)")
@@ -280,7 +297,7 @@ def main(argv=None):
     p.add_argument("--yes", action="store_true")
     args = parser.parse_args(argv)
     commands = {"serve": cmd_serve, "run": cmd_run, "status": cmd_status, "check": cmd_check,
-                "pause": cmd_pause, "resume": cmd_resume, "front": cmd_front}
+                "pause": cmd_pause, "resume": cmd_resume, "front": cmd_front, "where": cmd_where}
     try:
         return commands[args.command](args)
     except RunnerError as e:

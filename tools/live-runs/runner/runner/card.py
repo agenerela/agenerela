@@ -43,12 +43,30 @@ def main_checkout(start=REPO):
         return Path(start)
 
 
+def note_reason(path, default):
+    """The why: line of a pause or stop file (written by tray.ps1 or a person), else default."""
+    try:
+        for line in Path(path).read_text(encoding="utf-8", errors="replace").splitlines():
+            if line.lower().startswith("why:") and line[4:].strip():
+                return line[4:].strip()
+    except OSError:
+        pass
+    return default
+
+
 class NullCard:
-    """No model and no lock: for a request whose blocks need no GPU, and for the kit's tests."""
+    """No model and no lock: for a request whose blocks need no GPU, and for the kit's tests.
+
+    Every card also answers the machine's own controls, which tray.ps1 writes in the work folder:
+    pause (stop after the block in hand), stop (kill the block in hand now, which is set aside and
+    played again later), and the tray's process id (when the tray is gone, the runner stops too).
+    """
     kind = "none"
 
-    def __init__(self, pause_file=None):
+    def __init__(self, pause_file=None, parent_pid=None):
         self.pause_file = Path(pause_file) if pause_file else None
+        self.stop_file = self.pause_file.with_name("stop") if self.pause_file else None
+        self.parent_pid = parent_pid
         self.waiting = ""
         self.in_use = False
 
@@ -67,15 +85,38 @@ class NullCard:
     def unity_env(self):
         return clean_env()
 
+    def parent_gone(self):
+        if self.parent_pid is None:
+            return False
+        from .process import running
+        return not running(self.parent_pid)
+
+    def stop_now(self):
+        """A reason to kill the block in hand at once, or None. Checked every second while a block plays."""
+        if self.stop_file and self.stop_file.exists():
+            return "stopped now: " + note_reason(self.stop_file, "Stop now")
+        if self.parent_gone():
+            return "stopped now: the tray app closed"
+        return None
+
+    def clear_stop(self):
+        if self.stop_file:
+            try:
+                self.stop_file.unlink()
+            except OSError:
+                pass
+
     def stop_reason(self):
+        if self.parent_gone():
+            return "the tray app closed"
         if self.pause_file and self.pause_file.exists():
-            return f"paused by {self.pause_file}"
+            return "paused on this machine: " + note_reason(self.pause_file, str(self.pause_file))
         return None
 
 
 class Card(NullCard):
-    def __init__(self, kind, pause_file=None, lock_dir=None, max_other_mb=None, owner=None):
-        super().__init__(pause_file)
+    def __init__(self, kind, pause_file=None, lock_dir=None, max_other_mb=None, owner=None, parent_pid=None):
+        super().__init__(pause_file, parent_pid)
         self.kind = kind                                  # "server" or "laptop"
         self.lock_dir = Path(lock_dir) if lock_dir else main_checkout() / ".scratch" / "ollama-5080-lock"
         self.max_other_mb = int(max_other_mb or os.environ.get("AGENERELA_RUNNER_MAX_OTHER_MB", "6000"))
@@ -173,8 +214,9 @@ class Card(NullCard):
         self.in_use = True
 
     def release(self, model):
+        """Unload this request's model (never another client's) and let the card go."""
         try:
-            names = [m.get("name") for m in self.resident()]
+            names = [m.get("name") for m in self.resident() if model and self.ollama.same_model(m.get("name"), model)]
             if names:
                 self.ollama.unload(self.server, names)
         except self.ollama.Failure as e:

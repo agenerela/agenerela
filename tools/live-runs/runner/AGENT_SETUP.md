@@ -15,7 +15,8 @@ and [`DESIGN.md`](DESIGN.md) first.
    through `docker`. Never stop, restart or prune a container, WSL or Docker Desktop.
 3. **Push only `runs/*`.** The runner pushes branches named `runs/<request id>` and nothing else:
    never `test`, `main` or a tag. A person merges findings in a pull request.
-4. **Install nothing system-wide without the lead's yes**, and that includes a scheduled task.
+4. **Install nothing system-wide without the lead's yes**, and that includes a scheduled task or a
+   service. The runner runs from the tray app, by the lead's choice.
 5. **One Unity process and one model at a time** (hard rule 3). `serve` does that by itself; do
    not run a second `serve`, or a `run`, beside it.
 
@@ -41,7 +42,8 @@ it is installed somewhere other than the Hub's default folder.
 Run them from `C:\agenerela-runs\repo`:
 
 ```bash
-python -m unittest discover -s tools/live-runs/runner/tests        # 23 tests, no GPU, about 20 s
+python -m unittest discover -s tools/live-runs/runner/tests        # 26 tests, no GPU, about 20 s
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/live-runs/runner/tray.ps1 -SelfTest
 python tools/live-runs/runner/runq.py status                       # the queue, read from origin/test
 python tools/ollama-server/ollama_remote.py ps                     # "none" while nobody plays
 ```
@@ -53,25 +55,30 @@ a new worktree spends several minutes importing; give it a generous estimate.
 
 ## Running the queue
 
-```bash
-python tools/live-runs/runner/runq.py serve
-```
+**The lead runs it from the tray app**: `tools/live-runs/runner/tray.cmd` (README.md, "On the RTX
+5080 machine: the tray app"). The tray starts `runq.py serve`, shows what it does, and stops it when
+the tray closes; game mode frees the GPU while the lead plays. The lead decided on this on
+18 November rather than a background service: the runner runs only while the lead can see it.
+Never register a scheduled task or service for it; the tray's own "Start with Windows" is the
+lead's switch.
 
-in a terminal the lead leaves open, or as a scheduled task at logon if the lead agrees (rule 4).
-It prints one line a block and writes `C:\agenerela-runs\work\status.json`. It never exits on its
-own; an error is written to the status file and it tries again a minute later.
+`runq.py serve` alone, in a terminal, is for checks. It prints one line a block and writes
+`C:\agenerela-runs\work\status.json`. It never exits on its own; an error is written to the status
+file and it tries again a minute later. Never run it beside the tray: one runner at a time.
 
 **The card is shared.** Before each block the runner waits until Ollama holds no other model, the
 asset server's queue is empty (it then frees the asset server's models), and the card's memory
 beyond Ollama's is under `AGENERELA_RUNNER_MAX_OTHER_MB` (6000 by default), which is how it notices
 the lead's own ComfyUI. The status file says what it waits for.
 
-**Pausing at the machine:** create `C:\agenerela-runs\work\pause` (an empty file). The runner stops
-after the block in hand and waits; delete the file to continue. The queue's own pause is
+**Pausing at the machine:** the tray's menu, or a file `C:\agenerela-runs\work\pause` (its `why:`
+line is shown in the status). The runner stops after the block in hand and waits; delete the file
+to continue. A file `stop` beside it kills the block in hand at once (it is set aside and planned
+again) and pauses; a script writes `stop` to `tray-command` instead when the tray is open. The queue's own pause is
 `runq.py pause "<why>"`, which anyone can do from anywhere.
 
-**Updating the runner's code:** create the pause file, wait for `status.json` to say `paused`, stop
-`serve` with Ctrl+C, `git pull` in `C:\agenerela-runs\repo`, start `serve`, delete the pause file.
+**Updating the runner's code:** Quit the tray (it stops the block in hand and frees the GPU),
+`git pull` in `C:\agenerela-runs\repo`, start the tray again.
 A request always plays its own pinned commit, so updating the runner never changes what a block
 plays. Stopping `serve` mid-block is safe too: the block is set aside and planned again.
 

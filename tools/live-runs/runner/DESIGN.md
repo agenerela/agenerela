@@ -365,6 +365,16 @@ step 1's modules, and the tests for all three run in one suite. What differs fro
   an agent that has the user's yes in the chat.
 - **`serve` does not update its own code**; AGENT_SETUP.md says how to pause, pull and restart.
 
+**The tray app (18 November, the lead's request).** The lead did not want a background service
+using the card while he plays, so the runner runs from a tray app, `tray.ps1` (Windows PowerShell
+and WinForms, nothing to install), and only while it is open. It adds three controls the runner
+reads in its work folder: `pause` (as above), `stop` (kill the block in hand now; it is set aside,
+planned again with its tries unchanged, and the runner pauses), and the tray's process id
+(`serve --parent-pid`: when the tray is gone, the block in hand is stopped and `serve` exits).
+Game mode in the tray writes `stop` and `pause` when a game runs and lifts the pause when it closes.
+`serve --local <folder>` reads the queue from a folder, for trying the tray without touching `test`.
+A finished block also unloads only its own model now, never another client's.
+
 **Step 2, by hand:** a scripted block and a model pair (the 16 November `n1` and `l1` at 42e0ec8)
 both played through `runq.py run --on-server`; the pair's results are on `runs/901-runner-model-pair-check`
 (findings, 18 November, "The run queue's first blocks"). The laptop-driven pair of the same seed on

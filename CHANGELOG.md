@@ -22,6 +22,7 @@ phase table and the open issues, not here.
 
 ### Tools
 
+- **The run queue's tray app** (`tools/live-runs/runner/tray.cmd`): runs the runner on the RTX 5080 machine only while it is open, with a coloured dot for its state, a menu to pause after the block, stop now (the GPU free within seconds; the block replays later), resume and quit, a queue window, and game mode, which stops the block in hand while a game runs and resumes after. The runner gains Stop now, stops when the tray closes (`--parent-pid`), reads a local queue for trials (`--local`), and unloads only its own model.
 - **A run queue on the RTX 5080 machine** (`tools/live-runs/runner/`, designed in its `DESIGN.md`): live runs played on that machine beside Ollama, resumable block by block, with a queue on `test` (`docs/run-requests/QUEUE.json`) that can be paused, reordered and switched. `runq.py` serves the queue, plays one request anywhere, checks a request's `run.json`, and reports status; results come back on branches `runs/<request id>`, the only branches it pushes. A block still running at twice its estimate is killed, the model unloaded, and tried once more. `check` refuses a flag given twice, since the game reads only its first copy. Standard-library tests prove resume after a hard kill, the timeout, pause and switch.
 
 ### Framework
