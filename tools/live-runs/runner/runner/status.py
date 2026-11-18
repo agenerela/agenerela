@@ -23,7 +23,8 @@ class Status:
 
     def progress(self, request, manifest, card=None, **fields):
         counts = manifest.counts()
-        self.write(request=request.id, blocks_done=counts["done"], blocks_total=len(request.blocks),
-                   minutes_left=round(manifest.minutes_left(request), 1),
-                   card_in_use=bool(card and card.in_use), waiting=getattr(card, "waiting", "") if card else "",
-                   **fields)
+        data = dict(request=request.id, blocks_done=counts["done"], blocks_total=len(request.blocks),
+                    minutes_left=round(manifest.minutes_left(request), 1),
+                    card_in_use=bool(card and card.in_use), waiting=getattr(card, "waiting", "") if card else "")
+        data.update(fields)  # what the caller says wins, such as why it is waiting
+        self.write(**data)

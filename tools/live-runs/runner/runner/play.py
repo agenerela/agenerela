@@ -117,7 +117,18 @@ class Player:
             m.set_pid(block.name, proc.pid, process.image(proc.pid))
             self.write_status(state="running", block=block.name, started=now())
             limit = TIMEOUT_FACTOR * 60 * float(block.minutes)
-            kind, code = process.watch(proc, limit, poll=self.poll)
+            kind, code = process.watch(proc, limit, poll=self.poll, interrupt=card.stop_now)
+            if kind == "stopped":
+                card.release(r.model)
+                set_aside(self.out, block.name)
+                m.back_to_planned(block.name, code)
+                card.clear_stop()
+                if card.pause_file and not card.pause_file.exists() and not card.parent_gone():
+                    # Stop now also pauses, or the runner would start the same block again at once
+                    card.pause_file.write_text(f"by: stop\nwhy: {code}\nsince: {now()}\n", encoding="utf-8")
+                say(f"{r.id}: block {block.name} {code}; set aside, it plays again from its start later")
+                self.write_status(state="paused", block=None, waiting=code)
+                return "stopped"
             if r.model:
                 info = card.ollama_info(r.model)
                 if info.get("size_vram"):

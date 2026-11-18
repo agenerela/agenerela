@@ -6,7 +6,8 @@ RTX 5080 one) that wants a live run played, or needs the card for something else
 
 ## Rules
 
-1. **While the queue runs, the card is the runner's.** Before a live check in the editor, a run of
+1. **While the queue runs, the card is the runner's**, and the runner runs only while the lead's
+   tray app is open on the RTX 5080 machine: `runq.py status` says when it last wrote. Before a live check in the editor, a run of
    your own, or a picture, model or sound from the asset server, pause the queue
    (`runq.py pause "<why>"`), wait until `runq.py status` says `paused`, take the laptop's lock as
    usual, and resume the queue when you are done (`runq.py resume`). The lead's decision,

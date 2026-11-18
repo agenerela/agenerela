@@ -51,13 +51,22 @@ def start(args, env, cwd, stdout_path=None):
             out.close()
 
 
-def watch(proc, limit_seconds, poll=1.0, tick=None):
-    """Wait for the process; ("exit", code), or ("timeout", None) after killing it at the limit."""
+def watch(proc, limit_seconds, poll=1.0, tick=None, interrupt=None):
+    """Wait for the process; ("exit", code), ("timeout", None) after killing it at the limit, or
+    ("stopped", why) after killing it because interrupt() gave a reason (Stop now, the tray closing)."""
     started = time.monotonic()
     while True:
         code = proc.poll()
         if code is not None:
             return "exit", code
+        why = interrupt() if interrupt else None
+        if why:
+            kill(proc.pid)
+            try:
+                proc.wait(timeout=30)
+            except subprocess.TimeoutExpired:
+                pass
+            return "stopped", why
         if time.monotonic() - started > limit_seconds:
             kill(proc.pid)
             try:
@@ -91,6 +100,30 @@ def image(pid):
         return Path(os.readlink(f"/proc/{pid}/exe")).name
     except OSError:
         return None
+
+
+def running(pid):
+    """Whether a process id is still running; cheap enough to ask every second (no tasklist)."""
+    if not pid:
+        return False
+    if WINDOWS:
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        handle = kernel32.OpenProcess(0x1000, False, int(pid))  # PROCESS_QUERY_LIMITED_INFORMATION
+        if not handle:
+            return False
+        try:
+            code = ctypes.c_ulong()
+            return bool(kernel32.GetExitCodeProcess(handle, ctypes.byref(code))) and code.value == 259  # STILL_ACTIVE
+        finally:
+            kernel32.CloseHandle(handle)
+    try:
+        os.kill(int(pid), 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
 
 
 def alive(pid, exe=None):
