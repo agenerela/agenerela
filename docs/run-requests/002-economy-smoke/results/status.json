@@ -1,0 +1,15 @@
+{
+  "runner": "unity-editor-batch on the RTX 5080 machine (DraganoiderPC2), gateway on 127.0.0.1",
+  "state": "finished",
+  "request": "002-economy-smoke",
+  "block": null,
+  "blocks_done": 2,
+  "blocks_total": 2,
+  "minutes_left": 0,
+  "card_in_use": false,
+  "waiting": "",
+  "last_error": "",
+  "time": "2026-11-18T10:53:04-08:00",
+  "started": "2026-11-18T10:42:08-08:00",
+  "slice_done": true
+}

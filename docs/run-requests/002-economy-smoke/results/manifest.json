@@ -1,0 +1,32 @@
+{
+  "id": "002-economy-smoke",
+  "commit": "e56f97325f14c9867106a76571d7078ec26a9334",
+  "runner": "unity-editor-batch on the RTX 5080 machine (DraganoiderPC2), gateway on 127.0.0.1",
+  "ollama": {
+    "model": "qwen3.5:4b",
+    "version": "0.40.14",
+    "size_vram": 3140495604,
+    "size": 3140495604
+  },
+  "created": "2026-11-18T10:31:45-08:00",
+  "blocks": [
+    {
+      "name": "x1",
+      "status": "done",
+      "started": "2026-11-18T10:31:45-08:00",
+      "tries": 1,
+      "ended": "2026-11-18T10:42:07-08:00",
+      "minutes": 10.38
+    },
+    {
+      "name": "e1",
+      "status": "done",
+      "started": "2026-11-18T10:42:08-08:00",
+      "tries": 1,
+      "ended": "2026-11-18T10:53:04-08:00",
+      "minutes": 10.93
+    }
+  ],
+  "updated": "2026-11-18T10:53:04-08:00",
+  "finished": "2026-11-18T10:53:04-08:00"
+}
