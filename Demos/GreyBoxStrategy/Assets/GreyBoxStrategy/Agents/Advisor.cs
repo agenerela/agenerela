@@ -31,6 +31,11 @@ namespace GreyBoxStrategy
         /// <summary>What the advisor says, in a sentence: the court decision's statement.</summary>
         public string Counsel;
         public readonly List<AdviceItem> Items = new List<AdviceItem>();
+        /// <summary>
+        /// Free orders (<see cref="GameRules.FreeOrders"/>): every court order the advisor proposes, in order, none left
+        /// out; <see cref="Court"/> is the first. Empty on the writs turn.
+        /// </summary>
+        public readonly List<Move> Courts = new List<Move>();
     }
 
     /// <summary>
@@ -79,6 +84,11 @@ namespace GreyBoxStrategy
                 advice.Items.Add(c);
                 advice.Court = c.Move;
                 ordered.Add(c.Move.ToString());
+                if (world.Rules.FreeOrders)
+                {
+                    await AdviseFreely(court, c, advice, ordered, ct);
+                    return advice;
+                }
 
                 int slots = court.Writs >= GameRules.UnlimitedWrits ? int.MaxValue : Math.Max(0, court.Writs - 1);
                 foreach (var army in WritLegality.Awaiting(world, CountryId).Take(slots))
@@ -107,6 +117,49 @@ namespace GreyBoxStrategy
                 ruler.EndTurn();
             }
             return advice;
+        }
+
+        // Free orders: the rest of the turn as a model court plays it. Court orders one at a time on the moves left after
+        // the earlier ones (WritLegality.CourtMovesAfter), until none or the model seats' pacing cap; then an order for each
+        // army a model realm would be asked about (Game.AskedFreely), each told the orders before it.
+        private async Awaitable AdviseFreely(CountryRequest court, AdviceItem first, Advice advice, List<string> ordered, CancellationToken ct)
+        {
+            var given = new List<Move>();
+            var last = first;
+            while (last.Move.Action != Actions.None)
+            {
+                given.Add(last.Move);
+                advice.Courts.Add(last.Move);
+                if (given.Count >= world.Rules.MaxCourtOrders) break;
+                ct.ThrowIfCancellationRequested();
+                var next = new CountryRequest(Moment.Council, court.Turn, CountryId, world, court.StandingFacts, court.TurnFacts,
+                    WritLegality.CourtMovesAfter(world, CountryId, given))
+                {
+                    Ordered = ordered.ToList(),
+                    Writ = court.Writ + advice.Items.Count,
+                    Writs = court.Writs,
+                };
+                last = await Ask(next, ct);
+                advice.Items.Add(last);
+                ordered.Add(last.Move.ToString());
+            }
+            foreach (var army in world.ArmiesOf(CountryId).Where(a => Game.AskedFreely(world, a)).OrderBy(a => a.Id, StringComparer.Ordinal).ToList())
+            {
+                ct.ThrowIfCancellationRequested();
+                var facts = new List<string> { $"{army.Id}: {army.Soldiers} soldiers at {army.Location}; " + (army.Wake.Count > 0 ? "awaiting orders: " + string.Join(", ", army.Wake) : "") + "." };
+                facts.AddRange(court.TurnFacts.Take(Facts.MaxTurnFacts - 1));
+                var r = new CountryRequest(Moment.Army, court.Turn, CountryId, world, court.StandingFacts, facts, WritLegality.ArmyMoves(world, CountryId, army.Id))
+                {
+                    ArmyId = army.Id,
+                    Ordered = ordered.ToList(),
+                    Writ = court.Writ + advice.Items.Count,
+                    Writs = court.Writs,
+                };
+                var a = await Ask(r, ct);
+                advice.Items.Add(a);
+                advice.Armies[army.Id] = a.Move;
+                ordered.Add(a.Move.Action == Actions.March ? $"{army.Id} to march to {a.Move.Target}" : $"{army.Id} to hold");
+            }
         }
 
         private async Awaitable<AdviceItem> Ask(CountryRequest r, CancellationToken ct)
