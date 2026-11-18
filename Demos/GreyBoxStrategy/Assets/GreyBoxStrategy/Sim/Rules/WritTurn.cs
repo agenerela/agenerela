@@ -272,9 +272,7 @@ namespace GreyBoxStrategy
         private List<Move> CourtMovesFor(Docket d)
         {
             var moves = WritLegality.CourtMoves(World, d.Country);
-            if (!Rules.FreeOrders || d.CourtGiven.Count == 0) return moves;
-            return moves.Where(m => m.Action == Actions.None || m.Action == Actions.Recruit || Actions.RecruitsType(m.Action) != null
-                                    || !d.CourtGiven.Any(g => g.Action == m.Action && (m.Action == Actions.RaiseTaxes || g.Target == m.Target))).ToList();
+            return Rules.FreeOrders ? WritLegality.NotGivenAgain(moves, d.CourtGiven) : moves;
         }
 
         /// <summary>How many armies a country may still be asked about this turn: its writs, less one kept for the court; with free orders, every army.</summary>
@@ -287,10 +285,7 @@ namespace GreyBoxStrategy
             if (order.Action != Actions.None)
             {
                 d.CourtGiven.Add(order);
-                if (Actions.RecruitsType(order.Action) is UnitType type)
-                    me.Reserved += World.Levy(me, type) * Rules.GoldPerSoldier * Units.CostFactor(Rules, type);
-                else if (order.Action == Actions.Recruit) me.Reserved += World.Levy(me) * Rules.GoldPerSoldier;
-                else if (order.Action == Actions.Fortify) me.Reserved += Rules.FortCost;
+                me.Reserved += WritLegality.CourtOrderCost(World, d.Country, order);
             }
             if (order.Action == Actions.None || d.CourtGiven.Count >= Rules.CourtOrdersFor(d.Country)) d.CourtDone = true;
         }

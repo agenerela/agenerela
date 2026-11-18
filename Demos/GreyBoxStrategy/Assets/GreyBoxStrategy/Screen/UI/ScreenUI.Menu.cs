@@ -51,6 +51,10 @@ namespace GreyBoxStrategy.Realm
         public bool UnlimitedWrits;
         /// <summary>Whether this choice gives you unlimited writs: only when you rule, on the writs turn.</summary>
         public bool YourWritsUnlimited => Rule && Writs && UnlimitedWrits;
+        /// <summary>The new turn in testing (<see cref="GameRules.FreeOrders"/>): no writs, as many court orders as gold allows. Off by default.</summary>
+        public bool FreeOrders;
+        /// <summary>Whether this choice plays free orders: only when you rule, on the writs turn.</summary>
+        public bool YourFreeOrders => Rule && Writs && FreeOrders;
         /// <summary>The writs game's victory preset: <see cref="GameSetup.ConquestPreset"/> or <see cref="GameSetup.DominationPreset"/>.</summary>
         public string Victory = GameSetup.ConquestPreset;
 
@@ -401,6 +405,20 @@ namespace GreyBoxStrategy.Realm
             rulesG.Add(victoryNote);
             rulesG.Add(writsRow);
             rulesG.Add(writsNote);
+            // The lead's new turn, in testing: on, it replaces the writs for every ruler, so "Your writs" has nothing to set.
+            var freeNote = new Label(); freeNote.AddToClassList("src"); freeNote.style.whiteSpace = WhiteSpace.Normal;
+            void Free(int i)
+            {
+                choice.FreeOrders = i == 1;
+                writsRow.SetEnabled(choice.Writs && !choice.FreeOrders);
+                freeNote.text = i == 1
+                    ? "Free orders, the new turn in testing: no writs for anyone. Your court gives as many orders as your gold allows and you may order every army; the rivals decide while you plan. Rule mode only."
+                    : "Off: the writs turn as it has been.";
+            }
+            var freeRow = Steps("Free orders (new turn, in testing)", new[] { "Off", "On" }, choice.FreeOrders ? 1 : 0, Free);
+            Free(choice.FreeOrders ? 1 : 0);
+            rulesG.Add(freeRow);
+            rulesG.Add(freeNote);
             rulesG.Add(Section2("ARMIES", "the writs turn's four army rules, each on or off"));
             rulesG.Add(unitsRow);
             rulesG.Add(generalsRow);

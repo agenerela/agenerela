@@ -100,6 +100,43 @@ namespace GreyBoxStrategy
             }
         }
 
+        /// <summary>
+        /// Free orders (<see cref="GameRules.FreeOrders"/>): the gold a court order holds back when it is given, paid when
+        /// it lands. A levy at its type's price, a fort at its cost, every other order nothing.
+        /// </summary>
+        public static int CourtOrderCost(World world, string countryId, Move order)
+        {
+            var me = world.Country(countryId);
+            if (me == null || order == null) return 0;
+            if (Actions.RecruitsType(order.Action) is UnitType type) return world.Levy(me, type) * world.Rules.GoldPerSoldier * Units.CostFactor(world.Rules, type);
+            if (order.Action == Actions.Recruit) return world.Levy(me) * world.Rules.GoldPerSoldier;
+            if (order.Action == Actions.Fortify) return world.Rules.FortCost;
+            return 0;
+        }
+
+        /// <summary>
+        /// Free orders: the court orders still offered once <paramref name="given"/> are given this turn: legal with their
+        /// gold held back, and none already given offered again (a levy may repeat). What the court's next request would
+        /// be offered; <paramref name="world"/> is left as it was.
+        /// </summary>
+        public static List<Move> CourtMovesAfter(World world, string countryId, IReadOnlyList<Move> given)
+        {
+            var me = world.Country(countryId);
+            if (me == null) return new List<Move> { Move.Hold };
+            int held = (given ?? Array.Empty<Move>()).Sum(m => CourtOrderCost(world, countryId, m));
+            me.Reserved += held;
+            try { return NotGivenAgain(CourtMoves(world, countryId), given); }
+            finally { me.Reserved -= held; }
+        }
+
+        /// <summary>Free orders: court moves less those already given this turn; levies and none may repeat.</summary>
+        public static List<Move> NotGivenAgain(List<Move> moves, IReadOnlyList<Move> given)
+        {
+            if (given == null || given.Count == 0) return moves;
+            return moves.Where(m => m.Action == Actions.None || m.Action == Actions.Recruit || Actions.RecruitsType(m.Action) != null
+                                    || !given.Any(g => g.Action == m.Action && (m.Action == Actions.RaiseTaxes || g.Target == m.Target))).ToList();
+        }
+
         /// <summary>Every legal court order, the actions in <see cref="Actions.Court"/>'s order, targets in id order, none last.</summary>
         public static List<Move> CourtMoves(World world, string countryId)
         {
