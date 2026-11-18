@@ -1,6 +1,6 @@
 # 002: economy smoke, the first request from the laptop
 
-Status: open
+Status: done (results.md)
 
 **Why.** The run queue on the RTX 5080 machine (#376, #377) has played its own check (901). This is
 the first request sent from another machine: it tests the queue end to end, and it is the smallest

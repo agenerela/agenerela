@@ -4691,3 +4691,26 @@ The runner (`tools/live-runs/runner/`, step 2 of its `DESIGN.md`), played by han
 - **The network hop from the laptop costs little here.** Model seconds a turn, summed over the five courts' `model_s` in `writs-turns.csv`, are within a few tenths of the laptop-driven arms' means. This is one seed against a twelve-seed mean, and the 16 November figure came from that run's own `report.py`, which may sum differently; seed 1's laptop rows are in its kit on the laptop (`.scratch/realm-build-map/landbonus-live/`) and were not compared turn by turn. So it says the runner is not slower, not by how much it is faster.
 - **Answers were not compared with the laptop's game** for the same reason, so whether the runner's seed-1 games are the laptop's turn for turn (as two arms of one rule were on 15 November) is open.
 - **What would change it:** the same seed-1 pair driven from the laptop on the same day, as `DESIGN.md` step 2 asks, which this machine cannot do alone. Until then, times from the runner are recorded as their own kind (its `manifest.json` says which runner played), as the design says.
+
+### The run queue's first request from the laptop, and the economy's first game: taxes toggled, almost nothing built (18 November 2026)
+
+**What.** Request 002, the first sent to the RTX 5080 run queue (#376, #377) from the laptop:
+Painted Realm's writs turn with free orders, five `qwen3.5:4b` rulers with personas, Classic, seed 1,
+40 turns, without the economy (`x1`) and with it (`e1`, #372 and #374). Played on the 5080 machine
+itself through its gateway, Ollama 0.40.14, `size_vram` 3.14 GB. n = one game an arm.
+Details: [`docs/run-requests/002-economy-smoke/results.md`](../run-requests/002-economy-smoke/results.md).
+
+**Seen.**
+- The queue played both blocks at the first try, 10.4 and 10.9 minutes, with nobody at either machine.
+- No illegal answer, no answer that was not offered and no error in either arm.
+- With the economy, 79 of 448 council answers changed the tax level, toggling between high and
+  normal every turn or two, and 2 built anything (a barracks, a farm; no market).
+- It cost 20% more calls a turn (25.2 to 30.2) and 109 more prompt tokens a council request
+  (1,371 to 1,480), with a largest request of 1,934 tokens.
+
+**What it means.** Not an accuracy result (one seed, hard rule 2). It is a rules result: a free,
+always-offered tax change gets toggled, and buildings at these prices and words are ignored. The
+economy's live check (E3) should wait for a change to both, and compare against this game.
+
+**Would change it.** The same toggling and neglect on more seeds after a tax change costs
+something or locks for some turns would point at the prompt rather than the rules.
