@@ -1,0 +1,18 @@
+{
+  "id": "002-economy-smoke",
+  "question": "Does the run queue play a request sent from the laptop, and do model courts play the economy (manpower, tax levels, market, barracks, farm) legally on one seed, against free orders without it?",
+  "commit": "e56f97325f14c9867106a76571d7078ec26a9334",
+  "project": "Demos/GreyBoxStrategy",
+  "method": "GreyBoxStrategy.Editor.StrategyTableMenu.RunInterleavedFromCommandLine",
+  "model": "qwen3.5:4b",
+  "common_args": "-strategyTable personas -strategyTurn writs -strategyCap 40",
+  "blocks": [
+    { "name": "x1", "arm": "default", "seed": 1, "index": 0, "games": 1, "extra": "-strategyRules FreeOrders=true", "minutes": 16 },
+    { "name": "e1", "arm": "default", "seed": 1, "index": 0, "games": 1, "extra": "-strategyRules FreeOrders=true;Economy=true", "minutes": 12 }
+  ],
+  "done_when": "{block}/summary.md",
+  "smallest_slice": ["x1", "e1"],
+  "report": [],
+  "keep": ["**/summary.md", "**/scorecard.md", "**/games.csv", "**/writs-turns.csv", "**/model.csv", "**/decisions.jsonl"],
+  "notes": "The first request sent from the laptop: a test of the queue end to end, and E3's smallest slice. x1 has five extra minutes for the first Unity import in a new worktree. No report script yet; the tech lead reads the raw files."
+}
