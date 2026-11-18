@@ -426,6 +426,11 @@ words, the ruler's line, **Why?** for the inspector, and the guard's line in pla
 to every court, but an order to an army beyond your sight is only counted, with an eye. While the strip shows, the
 left panels end above it. `TurnSummary` reads only the turn's recorded events and decisions; `TurnSummaryTests`
 checks it without a scene. A click also calls `TurnRowPressed(country, turn)`, for replaying the turn on the map.
+Each icon names itself in its tooltip ("recruited, 2 orders"), the shield gives the guard's line, opening a card plays
+the panel cue, and the header folds the strip to one line (kept in the settings, `TurnStripFolded`). The chronicle no
+longer prints a rival's army order the fog hides, nor shows that marshal's words on the map: `ScreenUI.SeesArmyOrder`
+is the one test the strip and the chronicle share. The watch mode's top bar takes measured steps too: the countries'
+lesser stats go, then their names (the crest and the tooltip name each).
 
 The numbers, the outliner's rows and the feed's filters come from `ScreenModels`, which `ScreenModelsTests` checks
 without a scene.

@@ -145,19 +145,30 @@ namespace GreyBoxStrategy.Realm
         public void SetCompact(bool compact) => Root.EnableInClassList("compact", compact);
 
         private VisualElement topBar;
-        private float tightAt = -1;
+        private float tightAt = -1, lastNationsNeed = -1;
 
-        // Tight while the countries do not fit; loosened again only when the bar's width changes, so it never flickers.
+        /// <summary>
+        /// The watch bar's steps, taken in turn while the countries do not fit: "tight" drops each country's gold, pips and
+        /// delta; "tight-names" its name too (the crest and the tooltip name it). Measured, as <see cref="StatsStep"/> is.
+        /// </summary>
+        private static readonly string[] NationSteps = { "tight", "tight-names" };
+
+        // One step a tick once the measure has held for a tick; all undone only when the bar's width changes, so it never flickers.
         private void FitTopBar()
         {
-            if (topBar == null || nations == null || float.IsNaN(topBar.layout.width)) return;
-            float w = topBar.layout.width;
-            bool tight = Root.ClassListContains("tight");
-            if (tight && Math.Abs(w - tightAt) > 1) { Root.RemoveFromClassList("tight"); return; }
-            float need = 0;
-            foreach (var c in nations.Children()) need += c.layout.width;
-            if (!tight && need > nations.layout.width + 1) { Root.AddToClassList("tight"); tightAt = w; }
             FitStats();
+            if (topBar == null || nations == null || float.IsNaN(topBar.layout.width) || nations.resolvedStyle.display == DisplayStyle.None) return;
+            float w = topBar.layout.width;
+            int step = 0;
+            while (step < NationSteps.Length && Root.ClassListContains(NationSteps[step])) step++;
+            if (step > 0 && Math.Abs(w - tightAt) > 1) { foreach (string c in NationSteps) Root.RemoveFromClassList(c); lastNationsNeed = -1; return; }
+            float need = 0;
+            foreach (var c in nations.Children()) need += c.layout.width + c.resolvedStyle.marginLeft + c.resolvedStyle.marginRight;
+            if (Math.Abs(need - lastNationsNeed) > 0.5f) { lastNationsNeed = need; return; }
+            int next = need > nations.layout.width + 1 ? Math.Min(NationSteps.Length, step + 1) : step;
+            if (next == step) return;
+            lastNationsNeed = -1; tightAt = w;
+            for (int i = 0; i < NationSteps.Length; i++) Root.EnableInClassList(NationSteps[i], next > i);
         }
 
         /// <summary>
