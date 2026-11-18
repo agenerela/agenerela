@@ -30,6 +30,11 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: the economy, part 2** (#20). Under `GameRules.Economy`: a market (+5 gold, +8 on a coast), a
+  barracks (+3 manpower a turn, +10 to the cap) and a farm (+3 gold, +5 on plains; three farms steady the realm),
+  each bought at once with gold by a court order on one of our held provinces, one of each a province and one building
+  order a province a turn. The fort stays the fortify order. A court reads its provinces' land, gold and buildings.
+
 - **Painted Realm: the economy, part 1** (#20, the turn rework's second slice). `GameRules.Economy` (off; with free
   orders only): manpower limits recruiting (2 a turn a province, starting full), provinces yield by terrain (plains,
   hills and mountains, coast), and taxes are a standing level (low, normal, high) set by a court order in place of

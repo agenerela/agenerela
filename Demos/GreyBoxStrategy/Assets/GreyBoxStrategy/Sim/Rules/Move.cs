@@ -44,6 +44,16 @@ namespace GreyBoxStrategy
         public const string TaxesHigh = "taxes_high";
         public static readonly string[] TaxLevels = { TaxesLow, TaxesNormal, TaxesHigh };
 
+        /// <summary>Economy, E2: the court builds in one of our provinces, at once, for gold.</summary>
+        public const string BuildMarket = "build_market";
+        public const string BuildBarracks = "build_barracks";
+        public const string BuildFarm = "build_farm";
+        public static readonly string[] Builds = { BuildMarket, BuildBarracks, BuildFarm };
+
+        /// <summary>The building an action builds, or null.</summary>
+        public static Building? BuildsWhat(string action) =>
+            action == BuildMarket ? Building.Market : action == BuildBarracks ? Building.Barracks : action == BuildFarm ? Building.Farm : (Building?)null;
+
         /// <summary>The tax level an action sets, or null.</summary>
         public static TaxLevel? SetsTaxes(string action) =>
             action == TaxesLow ? TaxLevel.Low : action == TaxesNormal ? TaxLevel.Normal : action == TaxesHigh ? TaxLevel.High : (TaxLevel?)null;
@@ -51,7 +61,7 @@ namespace GreyBoxStrategy
         /// <summary>The court's actions under these rules: with the economy, the tax levels in place of raise_taxes.</summary>
         public static IEnumerable<string> CourtFor(GameRules r)
         {
-            var list = r.EconomyOn ? Court.Where(a => a != RaiseTaxes).Concat(TaxLevels) : Court;
+            var list = r.EconomyOn ? Court.Where(a => a != RaiseTaxes).Concat(TaxLevels).Concat(Builds) : Court;
             return r.UnitTypes ? list.Concat(RecruitTypes) : list;
         }
         public static readonly string[] ArmyOrders = { March, None };
@@ -71,7 +81,7 @@ namespace GreyBoxStrategy
         public static readonly string[] Envoy = { AcceptPeace, RefusePeace };
 
         /// <summary>Whether the action names a province (fortify, attack) rather than a country.</summary>
-        public static bool TargetsProvince(string action) => action == Fortify || action == Attack || action == March;
+        public static bool TargetsProvince(string action) => action == Fortify || action == Attack || action == March || BuildsWhat(action) != null;
 
         /// <summary>Whether the action names a country (declare_war, offer_peace).</summary>
         public static bool TargetsCountry(string action) => action == DeclareWar || action == OfferPeace || IsTerm(action);

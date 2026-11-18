@@ -864,6 +864,35 @@ Variant B's empty picture frames are filled, from an art pack made ahead of time
   has its picture, at the right shape; a missing picture is null; and a realm's panel hangs the portrait the
   catalogue chose. The three that read the pack were seen failing before the pack existed.
 
+### The economy, part 2: market, barracks, farm (18 November)
+
+Under the same switch (`GameRules.Economy`, with free orders). A court buys a building at once with gold, by an order on
+one of our provinces that we hold; it stands from the turn the order lands and stays with the province when it changes
+hands. Every number is a starting sketch.
+
+| Order | Gold | What it does |
+|---|---|---|
+| `build_market` | 40 | +5 gold a turn in that province, +8 on a coast |
+| `build_barracks` | 40 | +3 manpower a turn, and +10 to the realm's manpower cap |
+| `build_farm` | 30 | +3 gold a turn in that province, +5 on plains; with three farms the realm's stability recovers 1 more a turn |
+| `fortify` (as before) | 30 | the fort: unchanged, one thing, not a building |
+
+- One of each a province, and one building order a province a turn, a fort among them.
+- Each order lists at most `MaxBuildTargets` (6) provinces, those it would add most to first, as fortify lists six.
+- Their gold is held back from the court's later orders in the council, as a levy's is.
+- A court reads each of its own provinces as "ours, 0 forts, plains, 12 gold a turn, farm": its land, its gold a turn
+  and its buildings. Without the economy the line is as before.
+
+For the screen: the orders come through `WritLegality.CourtMovesAfter` and `CourtOrderCost` (a building's cost),
+nothing to compute. A province's buildings are `Province.Buildings` (`Province.Has(Building)`), its gold `World.Yield`;
+`World.Held(country, Building)` counts a realm's; `WritLegality.BuildingCost` and `BuildingGain` say what one costs and
+adds. The replay's `ReplayState.Buildings` has each province's, "market,farm" (null without the economy).
+
+**Tests**, each seen failing once against a deliberate break: `EconomyBuildingTests` (a market in our province, its
+yield and not twice, one order a province a turn with a fort among them, the gold held back, a barracks' manpower and
+cap, farms' yield and stability, a building staying with its province, what a court reads, a model court building).
+The six-target cap is not tested on Classic, where a realm starts with three provinces.
+
 ### The economy, part 1: manpower, tax levels, terrain (18 November; the turn rework, slice 2)
 
 The lead's direction: "Light: gold, a few buildings, upkeep." This first part is behind `GameRules.Economy` (off), and

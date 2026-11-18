@@ -46,6 +46,22 @@ namespace GreyBoxStrategy
                         : $"recruiting {Units.Name(type)} needs {rules.MinLevy * rules.GoldPerSoldier * Units.CostFactor(rules, type)} gold";
                 }
 
+                case Actions.BuildMarket:
+                case Actions.BuildBarracks:
+                case Actions.BuildFarm:
+                {
+                    if (!rules.EconomyOn) return "buildings are the economy's";
+                    var p = world.Province(move.Target);
+                    var what = Actions.BuildsWhat(move.Action).Value;
+                    string name = what.ToString().ToLowerInvariant();
+                    if (p == null) return $"{move.Action} needs one of our provinces";
+                    if (p.Owner != countryId) return $"{p.Id} is not ours";
+                    if (p.Occupier != null) return $"{p.Id} is occupied by {p.Occupier}";
+                    if (p.Has(what)) return $"{p.Id} already has a {name}";
+                    int cost = BuildingCost(rules, what);
+                    return me.Spendable >= cost ? null : $"a {name} needs {cost} gold";
+                }
+
                 case Actions.TaxesLow:
                 case Actions.TaxesNormal:
                 case Actions.TaxesHigh:
@@ -122,6 +138,7 @@ namespace GreyBoxStrategy
             if (Actions.RecruitsType(order.Action) is UnitType type) return world.Levy(me, type) * world.Rules.GoldPerSoldier * Units.CostFactor(world.Rules, type);
             if (order.Action == Actions.Recruit) return world.Levy(me) * world.Rules.GoldPerSoldier;
             if (order.Action == Actions.Fortify) return world.Rules.FortCost;
+            if (Actions.BuildsWhat(order.Action) is Building b) return BuildingCost(world.Rules, b);
             return 0;
         }
 
@@ -142,6 +159,18 @@ namespace GreyBoxStrategy
             finally { me.Reserved -= held; me.ReservedManpower -= men; }
         }
 
+        /// <summary>Economy, E2: what a building would add in this province: gold for a market or a farm, men for a barracks.</summary>
+        public static int BuildingGain(World world, Province p, Building b)
+        {
+            var r = world.Rules;
+            if (b == Building.Market) return p.Info.IsCoastal ? r.MarketCoastYield : r.MarketYield;
+            if (b == Building.Farm) return p.Info.Terrain == Terrain.Plains ? r.FarmPlainsYield : r.FarmYield;
+            return r.BarracksManpower;
+        }
+
+        /// <summary>Economy, E2: what a building costs.</summary>
+        public static int BuildingCost(GameRules r, Building b) => b == Building.Market ? r.MarketCost : b == Building.Barracks ? r.BarracksCost : r.FarmCost;
+
         /// <summary>Economy: the manpower a court order holds back when it is given: a levy's soldiers, nothing else.</summary>
         public static int CourtOrderManpower(World world, string countryId, Move order)
         {
@@ -158,8 +187,13 @@ namespace GreyBoxStrategy
             if (given == null || given.Count == 0) return moves;
             return moves.Where(m => m.Action == Actions.None || m.Action == Actions.Recruit || Actions.RecruitsType(m.Action) != null
                                     || !given.Any(g => g.Action == m.Action && (m.Action == Actions.RaiseTaxes || g.Target == m.Target)))
-                .Where(m => Actions.SetsTaxes(m.Action) == null || !given.Any(g => Actions.SetsTaxes(g.Action) != null)).ToList();
+                .Where(m => Actions.SetsTaxes(m.Action) == null || !given.Any(g => Actions.SetsTaxes(g.Action) != null))
+                // Economy, E2: one building order a province a turn, a fort among them.
+                .Where(m => !IsBuildOrder(m.Action) || !given.Any(g => IsBuildOrder(g.Action) && g.Target == m.Target && (Actions.BuildsWhat(g.Action) != null || Actions.BuildsWhat(m.Action) != null)))
+                .ToList();
         }
+
+        private static bool IsBuildOrder(string action) => action == Actions.Fortify || Actions.BuildsWhat(action) != null;
 
         /// <summary>Every legal court order, the actions in <see cref="Actions.Court"/>'s order, targets in id order, none last.</summary>
         public static List<Move> CourtMoves(World world, string countryId)
@@ -176,6 +210,11 @@ namespace GreyBoxStrategy
                 var open = candidates.Where(m => WhyNotCourt(world, countryId, m) == null).ToList();
                 // At most six forts offered (a large realm borders many provinces): those facing an
                 // enemy first, then capitals, then by id, so the list stays the dozen targets a model reads well.
+                // Economy, E2: at most MaxBuildTargets provinces a building, those that would yield the most first.
+                if (Actions.BuildsWhat(action) is Building building)
+                    open = open.Select(m => world.Province(m.Target))
+                        .OrderByDescending(p => BuildingGain(world, p, building)).ThenBy(p => p.Id, StringComparer.Ordinal)
+                        .Take(world.Rules.MaxBuildTargets).OrderBy(p => p.Id, StringComparer.Ordinal).Select(p => new Move(action, p.Id)).ToList();
                 if (action == Actions.Fortify)
                     open = open.Select(m => world.Province(m.Target))
                         .OrderByDescending(p => world.Neighbours(p).Any(n => n.Controller != null && n.Controller != countryId && world.AtWar(countryId, n.Controller)))

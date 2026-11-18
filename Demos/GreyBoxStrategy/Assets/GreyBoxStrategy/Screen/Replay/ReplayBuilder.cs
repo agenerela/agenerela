@@ -588,6 +588,9 @@ namespace GreyBoxStrategy.Replay
             {
                 Owners = provinceIds.Select(id => w.Province(id).Owner).ToArray(),
                 Forts = provinceIds.Select(id => w.Province(id).Forts).ToArray(),
+                Buildings = w.Rules.EconomyOn
+                    ? provinceIds.Select(id => string.Join(",", w.Province(id).Buildings.OrderBy(b => b).Select(b => b.ToString().ToLowerInvariant()))).ToArray()
+                    : null,
                 Garrisons = provinceIds.Select(id => w.Province(id).Garrison).ToArray(),
                 Occupiers = provinceIds.Select(id => w.Province(id).Occupier).ToArray(),
                 Armies = w.Armies.Select(a => new ArmyState

@@ -192,6 +192,23 @@ namespace GreyBoxStrategy
         /// <summary>Economy: the income factor of low and high taxes (normal is 1).</summary>
         public double LowTaxIncome = 0.8;
         public double HighTaxIncome = 1.3;
+        /// <summary>Economy, E2: what a market, a barracks and a farm cost, bought at once with gold by a court order.</summary>
+        public int MarketCost = 40;
+        public int BarracksCost = 40;
+        public int FarmCost = 30;
+        /// <summary>Economy: a market's gold a turn in its province, more on a coast.</summary>
+        public int MarketYield = 5;
+        public int MarketCoastYield = 8;
+        /// <summary>Economy: a farm's gold a turn in its province, more on plains.</summary>
+        public int FarmYield = 3;
+        public int FarmPlainsYield = 5;
+        /// <summary>Economy: a barracks' manpower a turn, and what it adds to the realm's manpower cap.</summary>
+        public int BarracksManpower = 3;
+        public int BarracksCap = 10;
+        /// <summary>Economy: with this many farms a realm's stability recovers 1 more a turn (to its maximum).</summary>
+        public int FarmsForStability = 3;
+        /// <summary>Economy: at most this many provinces listed for each building order, best yield first.</summary>
+        public int MaxBuildTargets = 6;
         /// <summary>With <see cref="FreeOrders"/>: a realm's court orders a turn in place of <see cref="MaxCourtOrders"/> (the person's, no limit).</summary>
         public Dictionary<string, int> CourtOrdersOverride = new Dictionary<string, int>();
         /// <summary>With <see cref="FreeOrders"/>: the court orders this country may give a turn.</summary>
