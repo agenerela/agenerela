@@ -127,6 +127,10 @@ namespace GreyBoxStrategy
                 CourtOrder(Actions.TaxesLow, $"Set taxes low from now on: income x{world.Rules.LowTaxIncome:0.0#}, stability recovers faster.", null);
                 CourtOrder(Actions.TaxesNormal, "Set taxes normal from now on: full income, stability recovers 1 a turn.", null);
                 CourtOrder(Actions.TaxesHigh, $"Set taxes high from now on: income x{world.Rules.HighTaxIncome:0.0#}, stability falls 1 a turn.", null);
+                var r = world.Rules;
+                CourtOrder(Actions.BuildMarket, $"Build a market in one of our provinces, {r.MarketCost} gold: +{r.MarketYield} gold a turn there (+{r.MarketCoastYield} on a coast).", new[] { CountryAgent.Ours });
+                CourtOrder(Actions.BuildBarracks, $"Build a barracks in one of our provinces, {r.BarracksCost} gold: +{r.BarracksManpower} manpower a turn and +{r.BarracksCap} to its cap.", new[] { CountryAgent.Ours });
+                CourtOrder(Actions.BuildFarm, $"Build a farm in one of our provinces, {r.FarmCost} gold: +{r.FarmYield} gold a turn there (+{r.FarmPlainsYield} on plains); {r.FarmsForStability} farms steady the realm.", new[] { CountryAgent.Ours });
             }
             else CourtOrder(Actions.RaiseTaxes, "Take gold from our people, at a cost in stability.", null);
             CourtOrder(Actions.DeclareWar, "Go to war with a country our land borders.", new[] { CountryAgent.AtPeace });

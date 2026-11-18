@@ -163,6 +163,8 @@ namespace GreyBoxStrategy.Replay
         /// <summary>Owner per province index (row × columns + column); null for neutral.</summary>
         public string[] Owners;
         public int[] Forts;
+        /// <summary>Economy, E2: each province's buildings, "market,farm" (empty for none); null without the economy.</summary>
+        public string[] Buildings;
         public int[] Garrisons;
         /// <summary>The writs turn: who occupies each province, by index; null where nobody does. Never null itself.</summary>
         public string[] Occupiers;
@@ -181,6 +183,7 @@ namespace GreyBoxStrategy.Replay
         {
             Owners = (string[])Owners.Clone(),
             Forts = (int[])Forts.Clone(),
+            Buildings = (string[])Buildings?.Clone(),
             Garrisons = (int[])Garrisons.Clone(),
             Occupiers = Occupiers == null ? new string[Owners.Length] : (string[])Occupiers.Clone(),
             Armies = Armies.Select(a => a.Clone()).ToList(),

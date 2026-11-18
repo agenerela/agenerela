@@ -459,7 +459,8 @@ namespace GreyBoxStrategy
 
             // b. Home: recruits appear, taxes, forts.
             foreach (string action in new[] { Actions.Recruit, Actions.RecruitPikes, Actions.RecruitRiders, Actions.RecruitBows, Actions.RaiseTaxes,
-                         Actions.TaxesLow, Actions.TaxesNormal, Actions.TaxesHigh, Actions.Fortify })
+                         Actions.TaxesLow, Actions.TaxesNormal, Actions.TaxesHigh, Actions.Fortify,
+                         Actions.BuildMarket, Actions.BuildBarracks, Actions.BuildFarm })
                 foreach (var a in all.Where(a => !landed.Contains(a) && a.Choice.Action == action && a.Request.Moment == Moment.Council))
                 {
                     landed.Add(a);
@@ -643,6 +644,17 @@ namespace GreyBoxStrategy
                     var site = WritLegality.RecruitSite(World, me.Id);
                     var joined = Reinforce(me.Id, site.Id, levy, type);
                     Done(a, $"raised {levy} {Units.Name(type)} at {site.Id} ({joined})");
+                    break;
+                }
+                case Actions.BuildMarket:
+                case Actions.BuildBarracks:
+                case Actions.BuildFarm:
+                {
+                    var p = World.Province(a.Choice.Target);
+                    var what = Actions.BuildsWhat(a.Choice.Action).Value;
+                    me.Gold -= WritLegality.BuildingCost(r, what);
+                    p.Buildings.Add(what);
+                    Done(a, $"built a {what.ToString().ToLowerInvariant()} at {p.Id}");
                     break;
                 }
                 case Actions.TaxesLow:

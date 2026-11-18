@@ -13,6 +13,9 @@ namespace GreyBoxStrategy
         Truce,
     }
 
+    /// <summary>Economy, E2: a building a province can have, one of each; the fort stays the fortify order.</summary>
+    public enum Building { Market, Barracks, Farm }
+
     /// <summary>Economy (<see cref="GameRules.EconomyOn"/>): the standing tax level.</summary>
     public enum TaxLevel { Low, Normal, High }
 
@@ -67,6 +70,9 @@ namespace GreyBoxStrategy
         public string Owner { get; set; }
         public bool IsNeutral => Owner == null;
         public int Forts { get; set; }
+        /// <summary>Economy, E2: its market, barracks and farm, each at most once. They stay with it when it changes hands.</summary>
+        public HashSet<Building> Buildings { get; } = new HashSet<Building>();
+        public bool Has(Building b) => Buildings.Contains(b);
         /// <summary>The defenders of a neutral province. Zero once a country holds it.</summary>
         public int Garrison { get; set; }
         /// <summary>A capital is the start province marked * on the map, whoever holds it now.</summary>
@@ -228,6 +234,8 @@ namespace GreyBoxStrategy
             if (t == Terrain.Plains) y += r.PlainsYield;
             else if (t == Terrain.Hills || t == Terrain.Mountains) y += r.MineYield;
             if (p.Info.IsCoastal) y += r.CoastYield;
+            if (p.Has(Building.Market)) y += p.Info.IsCoastal ? r.MarketCoastYield : r.MarketYield;
+            if (p.Has(Building.Farm)) y += t == Terrain.Plains ? r.FarmPlainsYield : r.FarmYield;
             return y;
         }
 
@@ -238,10 +246,13 @@ namespace GreyBoxStrategy
         public int HeldProvinces(string countryId) => ProvinceList.Count(p => p.Owner == countryId && p.Occupier == null);
 
         /// <summary>Economy: the most manpower a realm can have.</summary>
-        public int ManpowerCap(Country c) => HeldProvinces(c.Id) * Rules.ManpowerCapPerProvince;
+        public int ManpowerCap(Country c) => HeldProvinces(c.Id) * Rules.ManpowerCapPerProvince + Held(c.Id, Building.Barracks) * Rules.BarracksCap;
 
         /// <summary>Economy: the manpower a realm gains at each upkeep, up to its cap.</summary>
-        public int ManpowerGrowth(Country c) => HeldProvinces(c.Id) * Rules.ManpowerPerProvince;
+        public int ManpowerGrowth(Country c) => HeldProvinces(c.Id) * Rules.ManpowerPerProvince + Held(c.Id, Building.Barracks) * Rules.BarracksManpower;
+
+        /// <summary>Economy, E2: how many held provinces of a realm have this building.</summary>
+        public int Held(string countryId, Building b) => ProvinceList.Count(p => p.Owner == countryId && p.Occupier == null && p.Has(b));
 
         public int Upkeep(Country c) =>
             (c.Army + (Rules.UnitTypes ? Armies.Where(a => a.Owner == c.Id).Sum(a => a.Riders) * (Rules.RiderCostFactor - 1) : 0))
