@@ -46,7 +46,18 @@ namespace GreyBoxStrategy
                         : $"recruiting {Units.Name(type)} needs {rules.MinLevy * rules.GoldPerSoldier * Units.CostFactor(rules, type)} gold";
                 }
 
+                case Actions.TaxesLow:
+                case Actions.TaxesNormal:
+                case Actions.TaxesHigh:
+                {
+                    if (!rules.EconomyOn) return "tax levels are the economy's";
+                    if (move.Target != null) return $"{move.Action} takes no target";
+                    var level = Actions.SetsTaxes(move.Action).Value;
+                    return me.Taxes == level ? $"taxes are already {level.ToString().ToLowerInvariant()}" : null;
+                }
+
                 case Actions.RaiseTaxes:
+                    if (rules.EconomyOn) return "with the economy, taxes are a standing level";
                     if (move.Target != null) return "raise_taxes takes no target";
                     return me.Stability >= rules.MinStabilityToTax ? null : $"taxes need stability {rules.MinStabilityToTax}";
 
@@ -124,9 +135,21 @@ namespace GreyBoxStrategy
             var me = world.Country(countryId);
             if (me == null) return new List<Move> { Move.Hold };
             int held = (given ?? Array.Empty<Move>()).Sum(m => CourtOrderCost(world, countryId, m));
+            int men = (given ?? Array.Empty<Move>()).Sum(m => CourtOrderManpower(world, countryId, m));
             me.Reserved += held;
+            me.ReservedManpower += men;
             try { return NotGivenAgain(CourtMoves(world, countryId), given); }
-            finally { me.Reserved -= held; }
+            finally { me.Reserved -= held; me.ReservedManpower -= men; }
+        }
+
+        /// <summary>Economy: the manpower a court order holds back when it is given: a levy's soldiers, nothing else.</summary>
+        public static int CourtOrderManpower(World world, string countryId, Move order)
+        {
+            var me = world.Country(countryId);
+            if (!world.Rules.EconomyOn || me == null || order == null) return 0;
+            if (Actions.RecruitsType(order.Action) is UnitType type) return world.Levy(me, type);
+            if (order.Action == Actions.Recruit) return world.Levy(me);
+            return 0;
         }
 
         /// <summary>Free orders: court moves less those already given this turn; levies and none may repeat.</summary>
@@ -134,14 +157,15 @@ namespace GreyBoxStrategy
         {
             if (given == null || given.Count == 0) return moves;
             return moves.Where(m => m.Action == Actions.None || m.Action == Actions.Recruit || Actions.RecruitsType(m.Action) != null
-                                    || !given.Any(g => g.Action == m.Action && (m.Action == Actions.RaiseTaxes || g.Target == m.Target))).ToList();
+                                    || !given.Any(g => g.Action == m.Action && (m.Action == Actions.RaiseTaxes || g.Target == m.Target)))
+                .Where(m => Actions.SetsTaxes(m.Action) == null || !given.Any(g => Actions.SetsTaxes(g.Action) != null)).ToList();
         }
 
         /// <summary>Every legal court order, the actions in <see cref="Actions.Court"/>'s order, targets in id order, none last.</summary>
         public static List<Move> CourtMoves(World world, string countryId)
         {
             var legal = new List<Move>();
-            foreach (string action in world.Rules.UnitTypes ? Actions.Court.Concat(Actions.RecruitTypes) : Actions.Court)
+            foreach (string action in Actions.CourtFor(world.Rules))
             {
                 if (action == Actions.None) continue;
                 IEnumerable<Move> candidates = Actions.TargetsProvince(action)

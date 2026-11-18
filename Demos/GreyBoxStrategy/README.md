@@ -863,6 +863,36 @@ Variant B's empty picture frames are filled, from an art pack made ahead of time
   has its picture, at the right shape; a missing picture is null; and a realm's panel hangs the portrait the
   catalogue chose. The three that read the pack were seen failing before the pack existed.
 
+### The economy, part 1: manpower, tax levels, terrain (18 November; the turn rework, slice 2)
+
+The lead's direction: "Light: gold, a few buildings, upkeep." This first part is behind `GameRules.Economy` (off), and
+applies only with free orders on the writs turn (`GameRules.EconomyOn`). Off, nothing changes, and what every model
+reads is the same byte for byte. Every number is a starting sketch, to be tuned by play.
+
+- **Manpower** limits recruiting. A realm gains `ManpowerPerProvince` (2) a turn for each province it holds, up to
+  `ManpowerCapPerProvince` (10) each, and starts at its full cap, so the opening is no slower than before. A recruit
+  costs 1 manpower a soldier, riders too, and its levy is cut to what both gold and manpower allow. A second recruit in
+  one council sees the men the first will take.
+- **Terrain.** A held province yields its owner `IncomePerProvince` (10), plus 2 on plains (farmland), 3 on hills and
+  mountains (mines) and 3 on a coast (trade). An occupied one still gives its occupier half the base.
+- **Taxes are a standing level**, set by a court order (`taxes_low`, `taxes_normal`, `taxes_high`) in place of the
+  one-off `raise_taxes`. Each is offered only when it differs from the level now, and one a turn.
+  - Low: income x0.8, stability +1 a turn and +1 more below 3.
+  - Normal: income x1, stability +1 a turn, as before.
+  - High: income x1.3, stability -1 a turn while above 1.
+- **A court reads** "Manpower: 25 of 30, +6 a turn. Taxes: normal (income x1; stability recovers 1 a turn)." A model
+  court is offered the three levels with one line each on what they do. No extra calls: the cap of court orders
+  is unchanged.
+
+For the screen, nothing to compute: orders come through `WritLegality.CourtMovesAfter` and `CourtOrderCost` as before
+(a tax level costs nothing), with `WritLegality.CourtOrderManpower` for what a levy takes. A realm's numbers are
+`Country.Manpower`, `Country.Taxes`, `World.ManpowerCap`, `World.ManpowerGrowth`, `World.TaxFactor`; a province's
+gold is `World.Yield`. The replay's `CountryState` carries `Manpower`, `ManpowerCap`, `ManpowerGrowth` and `Taxes`.
+
+**Tests**, each seen failing once against a deliberate break: `EconomyTests` (the switch and the full start, the levy
+cut by manpower and the men held back, the growth to the cap, the yields and the tax factor, the three levels and their
+stability, one tax order a turn, no `raise_taxes`, a whole game, and a model court offered the levels).
+
 ### Free orders, the rules (17 November; the turn rework, slice 1)
 
 The lead's direction ([`painted-realm-direction.md`](../../docs/demos/painted-realm-direction.md)): no writs, the same

@@ -13,6 +13,9 @@ namespace GreyBoxStrategy
         Truce,
     }
 
+    /// <summary>Economy (<see cref="GameRules.EconomyOn"/>): the standing tax level.</summary>
+    public enum TaxLevel { Low, Normal, High }
+
     /// <summary>A country's numbers. Only <see cref="Game"/> changes them during play.</summary>
     public sealed class Country
     {
@@ -37,6 +40,12 @@ namespace GreyBoxStrategy
         /// back so a later order is offered only what is left. 0 outside a council, and always without free orders.
         /// </summary>
         public int Reserved { get; set; }
+        /// <summary>Economy (<see cref="GameRules.EconomyOn"/>): men who can still be raised; a recruit costs 1 a soldier.</summary>
+        public int Manpower { get; set; }
+        /// <summary>Economy: manpower the court's orders this council will spend when they land, held back as gold is.</summary>
+        public int ReservedManpower { get; set; }
+        /// <summary>Economy: the standing tax level, set by a court order; normal at the start.</summary>
+        public TaxLevel Taxes { get; set; } = TaxLevel.Normal;
         /// <summary>The gold an order may still spend: <see cref="Gold"/> less <see cref="Reserved"/>.</summary>
         public int Spendable => Gold - Reserved;
 
@@ -122,6 +131,9 @@ namespace GreyBoxStrategy
                     : 0,
             }).ToList();
             provinces = ProvinceList.ToDictionary(p => p.Id, StringComparer.Ordinal);
+            // Economy: every realm starts at its full manpower, so the opening is no slower than without it.
+            if (rules.EconomyOn)
+                foreach (var c in CountryList) c.Manpower = ManpowerCap(c);
         }
 
         public MapDefinition Map { get; }
@@ -159,6 +171,13 @@ namespace GreyBoxStrategy
         public int Income(Country c)
         {
             if (Rules.Turn != TurnStyle.Writs) return ProvinceCount(c.Id) * Rules.IncomePerProvince;
+            if (Rules.EconomyOn)
+            {
+                // Each held province its yield, each occupied one half the base to its occupier, then the tax level.
+                int gold = ProvinceList.Where(p => p.Owner == c.Id && p.Occupier == null && !(Rules.SiegeStopsIncome && p.SiegedBy != null)).Sum(Yield)
+                           + ProvinceList.Count(p => p.Occupier == c.Id) * Rules.IncomePerProvince / 2;
+                return (int)Math.Round(gold * TaxFactor(c.Taxes), MidpointRounding.AwayFromZero);
+            }
             int own = ProvinceList.Count(p => p.Owner == c.Id && p.Occupier == null && !(Rules.SiegeStopsIncome && p.SiegedBy != null));
             int occupied = ProvinceList.Count(p => p.Occupier == c.Id);
             return own * Rules.IncomePerProvince + occupied * Rules.IncomePerProvince / 2;
@@ -196,6 +215,34 @@ namespace GreyBoxStrategy
 
         public static string PairKey(string a, string b) => Key(a, b);
         /// <summary>Gold a turn to keep the army; with unit types a rider counts <see cref="GameRules.RiderCostFactor"/> times.</summary>
+        /// <summary>
+        /// Economy: the gold a held province yields its owner a turn before taxes: the base, plus plains (farmland), hills
+        /// and mountains (mines), and a coast (trade).
+        /// </summary>
+        public int Yield(Province p)
+        {
+            var r = Rules;
+            int y = r.IncomePerProvince;
+            if (!r.EconomyOn) return y;
+            var t = p.Info.Terrain;
+            if (t == Terrain.Plains) y += r.PlainsYield;
+            else if (t == Terrain.Hills || t == Terrain.Mountains) y += r.MineYield;
+            if (p.Info.IsCoastal) y += r.CoastYield;
+            return y;
+        }
+
+        /// <summary>Economy: the income factor of a tax level.</summary>
+        public double TaxFactor(TaxLevel level) => level == TaxLevel.Low ? Rules.LowTaxIncome : level == TaxLevel.High ? Rules.HighTaxIncome : 1.0;
+
+        /// <summary>Economy: the provinces a realm holds (owned, not occupied), which raise its manpower.</summary>
+        public int HeldProvinces(string countryId) => ProvinceList.Count(p => p.Owner == countryId && p.Occupier == null);
+
+        /// <summary>Economy: the most manpower a realm can have.</summary>
+        public int ManpowerCap(Country c) => HeldProvinces(c.Id) * Rules.ManpowerCapPerProvince;
+
+        /// <summary>Economy: the manpower a realm gains at each upkeep, up to its cap.</summary>
+        public int ManpowerGrowth(Country c) => HeldProvinces(c.Id) * Rules.ManpowerPerProvince;
+
         public int Upkeep(Country c) =>
             (c.Army + (Rules.UnitTypes ? Armies.Where(a => a.Owner == c.Id).Sum(a => a.Riders) * (Rules.RiderCostFactor - 1) : 0))
             / Rules.SoldiersPerUpkeepGold;
@@ -205,10 +252,14 @@ namespace GreyBoxStrategy
         public int Levy(Country c) => Levy(c, UnitType.Pikes);
 
         /// <summary>A recruit of one type: the same levy, cut to what the treasury pays at that type's cost.</summary>
-        public int Levy(Country c, UnitType type) =>
-            System.Math.Min(Rules.LevyBase + Rules.LevyPerProvince * (Rules.Turn == TurnStyle.Writs
+        public int Levy(Country c, UnitType type)
+        {
+            int levy = System.Math.Min(Rules.LevyBase + Rules.LevyPerProvince * (Rules.Turn == TurnStyle.Writs
                     ? ProvinceList.Count(p => p.Owner == c.Id && p.Occupier == null) : ProvinceCount(c.Id)),
                 c.Spendable / (Rules.GoldPerSoldier * Units.CostFactor(Rules, type)));
+            // Economy: a levy is cut to the manpower left too.
+            return Rules.EconomyOn ? System.Math.Min(levy, System.Math.Max(0, c.Manpower - c.ReservedManpower)) : levy;
+        }
 
         public IEnumerable<Province> Neighbours(Province p) => Map.Neighbours(p.Id).Select(Province);
 
