@@ -30,6 +30,12 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: the economy, part 1** (#20, the turn rework's second slice). `GameRules.Economy` (off; with free
+  orders only): manpower limits recruiting (2 a turn a province, starting full), provinces yield by terrain (plains,
+  hills and mountains, coast), and taxes are a standing level (low, normal, high) set by a court order in place of
+  `raise_taxes`. A model court is offered the same. Off, nothing a model reads changes.
+
+
 - **Painted Realm: the turn strip** (#20). After each turn, one row a realm above the chronicle: what it did as icons with
   counts, its persona, and a shield where a guard of the framework stopped one of its decisions; a click opens a card
   of its decisions with Why? for the inspector and the guard's line in plain words. Fog counts a rival's army orders out

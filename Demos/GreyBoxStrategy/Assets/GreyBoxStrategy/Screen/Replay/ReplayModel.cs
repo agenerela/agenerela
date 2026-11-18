@@ -139,6 +139,9 @@ namespace GreyBoxStrategy.Replay
         public int Provinces;
         public int Income;
         public int Upkeep;
+        /// <summary>Economy (<c>GameRules.EconomyOn</c>): manpower, its cap and gain a turn, and the tax level; 0, 0, 0 and normal without it.</summary>
+        public int Manpower, ManpowerCap, ManpowerGrowth;
+        public TaxLevel Taxes = TaxLevel.Normal;
         public CountryState Clone() => (CountryState)MemberwiseClone();
     }
 
