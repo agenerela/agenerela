@@ -107,6 +107,36 @@ namespace GreyBoxStrategy.Screen.Tests
             Assert.That(c.Orders.Select(m => m.Action), Is.EqualTo(new[] { Actions.Recruit }));
         }
 
+        [Test]
+        public void Taking_the_advice_adds_its_court_orders_once_and_says_which_no_longer_stand()
+        {
+            var c = List();
+            var advised = new List<Move> { new Move(Actions.RaiseTaxes), new Move(Actions.Recruit), new Move(Actions.Recruit), Move.Hold };
+            Assert.That(c.Take(advised), Is.Empty);
+            Assert.That(c.Orders.Select(m => m.Action), Is.EqualTo(new[] { Actions.RaiseTaxes, Actions.Recruit, Actions.Recruit }), "none is skipped; a levy advised twice is added twice");
+            Assert.That(c.Take(advised), Is.Empty, "taking it again adds nothing");
+            Assert.That(c.Orders.Count, Is.EqualTo(3));
+            Assert.That(advised.All(m => c.Holds(advised, m)), Is.True, "every advised order is held: the advice is the plan");
+            c.RemoveAt(2);
+            Assert.That(c.Holds(advised, new Move(Actions.Recruit)), Is.False, "one levy short");
+            var refused = c.Take(new List<Move> { new Move(Actions.Recruit), new Move(Actions.Recruit), new Move(Actions.Recruit), new Move(Actions.Recruit) });
+            Assert.That(refused.Count, Is.EqualTo(1), "100 gold: three levies of 30 fit, the fourth is refused and said");
+        }
+
+        [Test]
+        public void A_first_turn_hint_is_dismissed_once_and_for_good()
+        {
+            var s = new GameSettings();
+            Assert.That(s.HintSeen(ScreenUI.FreeOrdersHint), Is.False);
+            s.SeeHint(ScreenUI.FreeOrdersHint); s.SeeHint(ScreenUI.FreeOrdersHint); s.SeeHint("another");
+            Assert.That(s.HintsSeen, Is.EqualTo(ScreenUI.FreeOrdersHint + ",another"));
+            Assert.That(s.HintSeen("another") && s.HintSeen(ScreenUI.FreeOrdersHint), Is.True);
+            Assert.That(s.HintSeen("free"), Is.False, "a hint's id is matched whole");
+            var back = Newtonsoft.Json.JsonConvert.DeserializeObject<GameSettings>(Newtonsoft.Json.JsonConvert.SerializeObject(s)).Normalised();
+            Assert.That(back.HintSeen(ScreenUI.FreeOrdersHint), Is.True, "kept in settings.json");
+            Assert.That(new GameSettings { HintsSeen = null }.Normalised().HintSeen("x"), Is.False);
+        }
+
         // ---- the rules' two queries behind the list, on a real world ----
 
         private static World FreeWorld()
@@ -154,6 +184,51 @@ namespace GreyBoxStrategy.Screen.Tests
             Assert.That(list.Add(new Move(Actions.RaiseTaxes)), Is.False);
             Assert.That(plan.Courts.Count, Is.EqualTo(3));
             Assert.That(list.Committed, Is.EqualTo(2 * WritLegality.CourtOrderCost(w, me, levy)));
+        }
+
+        // ---- the council itself, built from a real free-orders request ----
+
+        private static void Click(UnityEngine.UIElements.Button b) =>
+            typeof(UnityEngine.UIElements.Clickable).GetMethod("Invoke", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance, null,
+                new[] { typeof(UnityEngine.UIElements.EventBase) }, null).Invoke(b.clickable, new object[] { null });
+
+        [Test]
+        public void In_the_free_council_the_advice_goes_into_the_court_list_and_the_hint_closes_for_good()
+        {
+            var setup = GameSetup.Writs(3);
+            var map = setup.BuildMap();
+            var rules = setup.BuildRules(map); rules.FreeOrders = true;
+            var game = new Game(3, map, rules);
+            var w = game.World;
+            string me = w.CountryList.First().Id;
+            w.Country(me).Gold = 1000;
+            var req = new CountryRequest(Moment.Council, 1, me, w, new List<string>(), new List<string>(), WritLegality.CourtMoves(w, me));
+            var ui = new ScreenUI(new UnityEngine.UIElements.VisualElement(), UnityEngine.ScriptableObject.CreateInstance<UnityEngine.UIElements.StyleSheet>(), null,
+                w.CountryList.Select(c => c.Id).ToList(), w.ProvinceList.Select(p => p.Id).ToList(), new Dictionary<string, RecordedPlayer>(), "test");
+            ui.BuildPanels();
+            ui.Fog = new Fog(me, null);
+            ui.Writs = true;
+            var seen = new HashSet<string>();
+            ui.HintSeen = seen.Contains; ui.DismissHint = id => seen.Add(id);
+            var offered = WritLegality.CourtMoves(w, me);
+            var advice = new Advice { Turn = 1 };
+            foreach (var m in new[] { offered.First(x => x.Action == Actions.RaiseTaxes), offered.First(x => x.Action == Actions.Fortify) })
+                advice.Items.Add(new AdviceItem { Request = req, Move = m, AsAsked = true });
+            ui.AdvisorShown = true; ui.Advice = advice;
+            ui.OrdersRequest = req;
+            ui.ShowOrders(null);
+            UnityEngine.UIElements.Button Find(string cls) { UnityEngine.UIElements.Button b = null; UnityEngine.UIElements.UQueryExtensions.Query<UnityEngine.UIElements.Button>(ui.Root, null, cls).ForEach(x => b = x); return b; }
+            Assert.That(UnityEngine.UIElements.UQueryExtensions.Query(ui.Root, null, "hint-line").ToList().Count, Is.EqualTo(1), "the hint shows on a fresh screen");
+            Click(Find("advice-all"));
+            Assert.That(ui.Plan.Courts.Select(m => m.Action), Is.EqualTo(new[] { Actions.RaiseTaxes, Actions.Fortify }), "the advice's court orders, in the court list");
+            Assert.That(ui.Plan.Court, Is.EqualTo(Move.Hold).Or.Null, "the single court order of the writs turn is not used");
+            Assert.That(Find("advice-all").text, Is.EqualTo("The advice is your plan"));
+            Click(Find("advice-all"));
+            Assert.That(ui.Plan.Courts.Count, Is.EqualTo(2), "taking it again adds nothing");
+            Click(Find("hint-x"));
+            ui.ShowOrders(null);
+            Assert.That(seen, Does.Contain(ScreenUI.FreeOrdersHint));
+            Assert.That(UnityEngine.UIElements.UQueryExtensions.Query(ui.Root, null, "hint-line").ToList().Count, Is.EqualTo(0), "closed once, gone");
         }
     }
 }
