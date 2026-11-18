@@ -7,3 +7,9 @@ Python is standard library only, like `tools/benchmarks/`; the shell scripts run
 | Kit | What it runs | First used |
 |---|---|---|
 | [`model-sweep/`](model-sweep/README.md) | Each model in a list through `EvalRunner`, with the idle example on and off, plus a probe of field order, thinking and VRAM | 9 November 2026, on the lead's laptop (findings, "Thirteen models on the evaluation set") |
+
+## Planned: a run queue on the RTX 5080 machine
+
+[`runner/DESIGN.md`](runner/DESIGN.md) is the design, not yet built, for playing live runs on the
+RTX 5080 machine itself, with runs that can stop and continue and a queue that can be paused and
+reordered. Read it before writing another `run_blocks.sh`.

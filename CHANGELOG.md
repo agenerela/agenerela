@@ -20,6 +20,10 @@ phase table and the open issues, not here.
 
 ## [Unreleased]
 
+### Tools
+
+- **A run queue on the RTX 5080 machine, designed** (`tools/live-runs/runner/DESIGN.md`): live runs played on that machine beside Ollama, resumable block by block, with a queue on `test` that can be paused, reordered and switched. Not built; written for the agent on that machine to build.
+
 ### Framework
 
 - **DR-024, accepted 17 November:** speech and images as two more provider kinds beside the language model (`ISpeechProvider`, `IImageProvider`), reached only through an agent's statement and through actions. Nothing is built; GreyBoxStrategy builds both in its own code first. Issues #358 and #359.
