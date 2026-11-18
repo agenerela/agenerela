@@ -34,6 +34,11 @@ phase table and the open issues, not here.
   orders, Take and Take the advice add the advisor's court orders to the court list (each once; one no longer offered
   is named). The council opens with a one-line hint on what free orders change, closed once for good (`HintsSeen` in
   the settings). `CourtListTests`.
+- **Painted Realm: Merge and Split on the screen** (#20). With two or more of your armies chosen, the group view
+  offers Merge (and M); with one, Split… (and S) opens a slider at half its soldiers. Each is disabled with the rules'
+  reason when they say no, and the merged or new army is chosen after. A ruler's words no longer fall under the map's
+  mode row and legend.
+
 - **Painted Realm: the council for free orders** (#20), behind `GameRules.FreeOrders`, off by default, with a New game
   switch (Rules, "Free orders (new turn, in testing)") so the lead can play it. No writs: the court is a list you build,
   as many orders as gold allows, with each order's cost, gold committed and left, and the reason a button is shut;
@@ -81,6 +86,11 @@ phase table and the open issues, not here.
   in code: a generated emblem did not read at the top bar's 14 px.
 
 ### Changed
+
+- **Painted Realm: the advisor advises a free turn as a model court plays one** (#20). With free orders, the advisor
+  gives court orders one at a time on the moves left after the earlier ones, until none or the model seats' pacing
+  cap (`MaxCourtOrders`), then an order for every army a model realm would be asked about. `Advice.Courts` lists them
+  all, and "Take the advice" takes every one. On the writs turn the advisor is unchanged.
 
 - **Painted Realm: the top bar never overlaps, and an opened feed entry shows whole** (#20). At 1707 × 1067 the
   stats' sub-labels ran into the next stat's icon. Stats no longer shrink into each other; between the full and the

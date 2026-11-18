@@ -327,6 +327,12 @@ namespace GreyBoxStrategy.Screen.Tests
             Assert.That(nextTo.Overlaps(Inspector1920), Is.False, "under the inspector");
             Assert.That(nextTo.xMax, Is.LessThanOrEqualTo(Inspector1920.xMin), "the nearer side is the left");
 
+            // A capital in the north at 1366, under the map's mode row and legend (a watch-mode frame, 17 November): below them.
+            var modes1366 = new ScreenModels.Box(196, 84, 331, 30); var legend1366 = new ScreenModels.Box(196, 120, 490, 36);
+            var north = Words(ScreenModels.PlaceWords(450, 140, Half, Height, 1366, 768, null, new[] { Chronicle1366 }, null, new[] { modes1366, legend1366 }));
+            Assert.That(north.Overlaps(modes1366) || north.Overlaps(legend1366), Is.False, "under the mode row or the legend");
+            Assert.That(north.Overlaps(Chronicle1366), Is.False, "pushed onto the chronicle");
+
             // At 1366 neither side has room: below it, and still on the screen.
             var under = Words(ScreenModels.PlaceWords(683, 300, Half, Height, 1366, 768, null, new[] { Chronicle1366 }, Inspector1366));
             Assert.That(under.Overlaps(Inspector1366), Is.False, "under the inspector at 1366");
