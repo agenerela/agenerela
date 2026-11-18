@@ -30,6 +30,11 @@ phase table and the open issues, not here.
   orders, Take and Take the advice add the advisor's court orders to the court list (each once; one no longer offered
   is named). The council opens with a one-line hint on what free orders change, closed once for good (`HintsSeen` in
   the settings). `CourtListTests`.
+- **Painted Realm: Merge and Split on the screen** (#20). With two or more of your armies chosen, the group view
+  offers Merge (and M); with one, Split… (and S) opens a slider at half its soldiers. Each is disabled with the rules'
+  reason when they say no, and the merged or new army is chosen after. A ruler's words no longer fall under the map's
+  mode row and legend.
+
 - **Painted Realm: the council for free orders** (#20), behind `GameRules.FreeOrders`, off by default, with a New game
   switch (Rules, "Free orders (new turn, in testing)") so the lead can play it. No writs: the court is a list you build,
   as many orders as gold allows, with each order's cost, gold committed and left, and the reason a button is shut;

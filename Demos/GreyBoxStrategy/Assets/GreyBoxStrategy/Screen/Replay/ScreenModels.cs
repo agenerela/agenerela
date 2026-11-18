@@ -331,12 +331,15 @@ namespace GreyBoxStrategy.Replay
         /// chronicle, still kept clear.
         /// </summary>
         public static (float x, float bottom) PlaceWords(float px, float py, float half, float height, float screenW, float screenH,
-            Box? side, IEnumerable<Box> below, Box? inspector)
+            Box? side, IEnumerable<Box> below, Box? inspector, IEnumerable<Box> above = null)
         {
             float minX = 248 + half, maxX = screenW - 356 - half;
             float x = maxX > minX ? Math.Min(Math.Max(px, minX), maxX) : px;
             float bottom = Math.Max(50 + height, py - 26);
             bool Covers(Box r, float pad) => x + half > r.xMin - pad && x - half < r.xMax + pad && bottom > r.yMin - pad && bottom - height < r.yMax;
+            // The map's mode row and its legend, top left: words for a capital in the north drop below them.
+            foreach (var r in above ?? Enumerable.Empty<Box>())
+                if (Covers(r, 8)) bottom = r.yMax + 8 + height;
             if (side is Box s && Covers(s, 8)) x = s.xMax + 8 + half;
             foreach (var r in below)
                 if (Covers(r, 8)) bottom = r.yMin - 8;

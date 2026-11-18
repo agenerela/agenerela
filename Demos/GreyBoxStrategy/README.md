@@ -1022,6 +1022,12 @@ The lead chose variant B of the UI rework (`docs/demos/painted-realm-ui-variant-
   window's edges (a setting, on by default; off without focus and over a panel other than the top bar). I opens the
   decisions. The logic is `ScreenModels.OnMapClick`, `OnRightClick`, `BoxSelect`, `ClickArmy` and `EdgeScroll`,
   tested; `ReplayDirector.ClickAt`, `RightClickAt` and `BoxAt` apply it, for the mouse and the CLI alike.
+- **Merge and split.** With two or more of your armies chosen, the group view offers **Merge** (and M); with one,
+  **Split…** under its panel (and S) opens a slider, half its soldiers by default, and a button that says what it
+  does. Each is disabled with the rules' reason in its tooltip when they say no (`RuleSession.CanMerge`, `CanSplit`,
+  the build session's). Both happen at once in your council and cost no order; the merged army, or the new one, is
+  then chosen, so a right click sends it off. The screen side is `ArmyControlsTests`.
+- **Words over the north.** A ruler's words keep clear of the map's mode row and legend too, as of every panel.
 - **Smaller windows.** At 1366 × 768 the bar drops the words beside its numbers and shrinks its icons; the feed and
   the outliner narrow.
 

@@ -663,7 +663,8 @@ namespace GreyBoxStrategy.Realm
             foreach (var panel in new[] { chronicleBox, orders })
                 if (panel != null && panel.resolvedStyle.display != DisplayStyle.None) below.Add(BoxOf(panel));
             var (x, bottom) = ScreenModels.PlaceWords(p.x, p.y, half, height, Root.layout.width, Root.layout.height,
-                SideOpen ? BoxOf(side) : (ScreenModels.Box?)null, below, InspectorOpen ? BoxOf(inspector) : (ScreenModels.Box?)null);
+                SideOpen ? BoxOf(side) : (ScreenModels.Box?)null, below, InspectorOpen ? BoxOf(inspector) : (ScreenModels.Box?)null,
+                new[] { modes, legend }.Where(e => e != null && e.resolvedStyle.display != DisplayStyle.None && e.worldBound.width > 0).Select(BoxOf).ToList());
             b.Element.style.left = x;
             b.Element.style.top = bottom;
         }
