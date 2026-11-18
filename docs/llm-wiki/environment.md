@@ -265,6 +265,9 @@ deleted models, and the app's updater could change the version under a run.
 - **The serving machine's GPU is the one measured.** Record its card, driver and Ollama version,
   and that it was the Docker server, not the asking machine's.
 - **Latency includes the network hop.** About a millisecond at home, more over the VPN. Say which.
+- **Check the run queue first** (`python tools/live-runs/runner/runq.py status`). While it runs,
+  the card is the runner's on that machine: pause it before using the card, resume it after
+  ([`tools/live-runs/runner/AGENT_USAGE.md`](../../tools/live-runs/runner/AGENT_USAGE.md)).
 - **Take the 5080's lock, `.scratch/ollama-5080-lock/` on the lead's laptop**, not the laptop's
   `.scratch/ollama-lock/`, which covers the laptop's own Ollama only. It covers sessions on the
   laptop; one on the 5080 machine or elsewhere can't see it, so still check nothing else uses the

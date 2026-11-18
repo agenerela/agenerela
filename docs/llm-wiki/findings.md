@@ -4675,3 +4675,19 @@ A medium world has five realms, each starting on its own land, so the starting t
 - **Nothing else moved beyond noise.** 0 illegal answers in either arm; battles, land, treaties and time a turn within their intervals; the line costs about 35 prompt tokens (19 on Classic).
 - **What 12 worlds cannot show:** the games are capped at 40 turns and none finished, so nothing about who wins or whether the lean helps a realm. One map size, one generator setting, one model. The match counts a seat's land at the start; land taken during the game changes the line and is not followed. Whether the lost counters cost battles was not measured: battles fell 4.5 a game, within noise, and the counter's side won about as often in both arms (72% and 70%).
 - **No default changes.** `LandTraditions` stays off; the tech lead decides.
+
+### The run queue's first blocks on the RTX 5080 machine: a game played beside Ollama takes the same model time a turn as one driven from the laptop (18 November 2026)
+
+The runner (`tools/live-runs/runner/`, step 2 of its `DESIGN.md`), played by hand with `runq.py run --on-server`: Unity 6000.3.23f1 in batch mode on the RTX 5080 machine itself, calling the Docker Ollama 0.40.14 gateway on `127.0.0.1:11436`, no other model resident, no Unity test or asset job beside it. Two requests:
+
+- **One scripted block** (`-strategyTable scripted`, seed 1, cap 40, at b616caf): done in 1.4 minutes, the first in a new worktree, import included.
+- **One model pair**, the first slice of the 16 November land-traditions run replayed: `personas` table, five `qwen3.5:4b` seats, `-strategyTurn writs -strategyCap 40`, Classic, seed 1, at 42e0ec8, `n1` (defaults) then `l1` (`-strategyRules LandTraditions=true`). `size_vram` 3.14 GB, all on the GPU. Both done on the first try, 6.4 and 5.5 minutes. Results on branch `runs/901-runner-model-pair-check`.
+
+| | n1, runner | l1, runner | 16 November, laptop-driven, mean of seeds 1 to 12 (n, l) |
+|---|---|---|---|
+| Model seconds a turn | 7.38 | 7.76 | 7.45, 7.61 |
+| Battles, provinces changing hands, treaties | 95, 10, 3 | 100, 18, 7 | 96.4, 13.3, 3.8 (n) |
+
+- **The network hop from the laptop costs little here.** Model seconds a turn, summed over the five courts' `model_s` in `writs-turns.csv`, are within a few tenths of the laptop-driven arms' means. This is one seed against a twelve-seed mean, and the 16 November figure came from that run's own `report.py`, which may sum differently; seed 1's laptop rows are in its kit on the laptop (`.scratch/realm-build-map/landbonus-live/`) and were not compared turn by turn. So it says the runner is not slower, not by how much it is faster.
+- **Answers were not compared with the laptop's game** for the same reason, so whether the runner's seed-1 games are the laptop's turn for turn (as two arms of one rule were on 15 November) is open.
+- **What would change it:** the same seed-1 pair driven from the laptop on the same day, as `DESIGN.md` step 2 asks, which this machine cannot do alone. Until then, times from the runner are recorded as their own kind (its `manifest.json` says which runner played), as the design says.

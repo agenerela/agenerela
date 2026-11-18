@@ -39,7 +39,11 @@ never need to.
    runs the asset server and the lead's own ComfyUI, which nothing from here may touch.
 3. **Ask before pulling.** A model is gigabytes on the server's disk. Pull one only when the user
    asked for it or the run they asked for needs it, and say which.
-4. **One session at a time, on a quiet GPU** (hard rule 3). On the lead's laptop, take the lock in
+4. **One session at a time, on a quiet GPU** (hard rule 3). First check the run queue on the RTX
+   5080 machine: `python tools/live-runs/runner/runq.py status`. While it is running, the card is
+   the runner's: pause it (`runq.py pause "<why>"`, after the user's yes) and resume it when you are
+   done ([`tools/live-runs/runner/AGENT_USAGE.md`](../live-runs/runner/AGENT_USAGE.md)). Then, on
+   the lead's laptop, take the lock in
    `.scratch/ollama-5080-lock/` before any request, even `check`, and release it when done; its
    README has the commands. It covers sessions on the laptop only, so also run `ps`: if a model you
    did not load is resident, someone else is using the card: ask the user. Unload what you loaded

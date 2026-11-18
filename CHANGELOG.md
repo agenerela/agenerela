@@ -22,7 +22,7 @@ phase table and the open issues, not here.
 
 ### Tools
 
-- **A run queue on the RTX 5080 machine, designed** (`tools/live-runs/runner/DESIGN.md`): live runs played on that machine beside Ollama, resumable block by block, with a queue on `test` that can be paused, reordered and switched. Not built; written for the agent on that machine to build.
+- **A run queue on the RTX 5080 machine** (`tools/live-runs/runner/`, designed in its `DESIGN.md`): live runs played on that machine beside Ollama, resumable block by block, with a queue on `test` (`docs/run-requests/QUEUE.json`) that can be paused, reordered and switched. `runq.py` serves the queue, plays one request anywhere, checks a request's `run.json`, and reports status; results come back on branches `runs/<request id>`, the only branches it pushes. A block still running at twice its estimate is killed, the model unloaded, and tried once more. `check` refuses a flag given twice, since the game reads only its first copy. Standard-library tests prove resume after a hard kill, the timeout, pause and switch.
 
 ### Framework
 
