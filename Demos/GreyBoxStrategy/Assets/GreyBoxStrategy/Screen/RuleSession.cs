@@ -51,6 +51,8 @@ namespace GreyBoxStrategy.Realm
             {
                 var plan = new WritsPlan { Court = advice?.Court ?? Move.Hold };
                 if (advice != null) foreach (var kv in advice.Armies) plan.Armies[kv.Key] = kv.Value;
+                // Free orders: every court order the advisor proposed, in order (empty on the writs turn).
+                if (advice != null) plan.Courts.AddRange(advice.Courts);
                 return plan;
             }
 

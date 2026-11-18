@@ -83,6 +83,11 @@ phase table and the open issues, not here.
 
 ### Changed
 
+- **Painted Realm: the advisor advises a free turn as a model court plays one** (#20). With free orders, the advisor
+  gives court orders one at a time on the moves left after the earlier ones, until none or the model seats' pacing
+  cap (`MaxCourtOrders`), then an order for every army a model realm would be asked about. `Advice.Courts` lists them
+  all, and "Take the advice" takes every one. On the writs turn the advisor is unchanged.
+
 - **Painted Realm: the top bar never overlaps, and an opened feed entry shows whole** (#20). At 1707 × 1067 the
   stats' sub-labels ran into the next stat's icon. Stats no longer shrink into each other; between the full and the
   compact form the bar takes measured steps (sub-labels go, then smaller numbers and icons, then the icons), decided by
