@@ -3,6 +3,7 @@
 Five countries on a map of 25 provinces, one move each a turn, until one holds 15. The design,
 the rules and why they are what they are: [`docs/demos/grey-box-strategy.md`](../../docs/demos/grey-box-strategy.md).
 Issue #20, a sub-issue of #47.
+Which file owns what: [`CODE_MAP.md`](CODE_MAP.md). This README is long; read its headings and jump to the section you need.
 A deeper version of the rules, [`docs/demos/painted-realm-rules-v2.md`](../../docs/demos/painted-realm-rules-v2.md), is being built slice by slice. Its first turn, the writs turn with armies as pieces, exists headless as a setting beside the one-move game, which stays the default ([R1a](#rules-v2-being-built)).
 
 **Stages 1 and 2 of 3 are built.** Stage 1 is the game as a headless simulation, a scripted AI
