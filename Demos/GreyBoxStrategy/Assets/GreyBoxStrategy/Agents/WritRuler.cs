@@ -122,7 +122,13 @@ namespace GreyBoxStrategy
             }
             else CourtOrder(Actions.Recruit, "Raise soldiers with gold, at our capital.", null);
             CourtOrder(Actions.Fortify, "Build a fort in one of our border provinces.", new[] { CountryAgent.Ours });
-            CourtOrder(Actions.RaiseTaxes, "Take gold from our people, at a cost in stability.", null);
+            if (world.Rules.EconomyOn)
+            {
+                CourtOrder(Actions.TaxesLow, $"Set taxes low from now on: income x{world.Rules.LowTaxIncome:0.0#}, stability recovers faster.", null);
+                CourtOrder(Actions.TaxesNormal, "Set taxes normal from now on: full income, stability recovers 1 a turn.", null);
+                CourtOrder(Actions.TaxesHigh, $"Set taxes high from now on: income x{world.Rules.HighTaxIncome:0.0#}, stability falls 1 a turn.", null);
+            }
+            else CourtOrder(Actions.RaiseTaxes, "Take gold from our people, at a cost in stability.", null);
             CourtOrder(Actions.DeclareWar, "Go to war with a country our land borders.", new[] { CountryAgent.AtPeace });
             CourtOrder(Actions.OfferWhitePeace, "Offer an enemy peace: all occupied land returns.", new[] { CountryAgent.AtWar });
             CourtOrder(Actions.DemandOccupied, "Demand from an enemy the provinces of theirs we occupy, for peace.", new[] { CountryAgent.AtWar });

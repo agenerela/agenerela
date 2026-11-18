@@ -33,6 +33,11 @@ namespace GreyBoxStrategy
                 $"Soldiers: {me.Army} in {Plural(armies.Count, "army", "armies")}. Stability: {me.Stability} of {rules.MaxStability}."
                     + (me.Stability <= 1 ? " A province may revolt." : ""),
             };
+            // Economy: what limits recruiting, and what the tax level does.
+            if (rules.EconomyOn)
+                lines.Add($"Manpower: {me.Manpower} of {world.ManpowerCap(me)}, +{world.ManpowerGrowth(me)} a turn. "
+                          + $"Taxes: {me.Taxes.ToString().ToLowerInvariant()} (income x{world.TaxFactor(me.Taxes):0.0#}; "
+                          + (me.Taxes == TaxLevel.High ? "stability falls 1 a turn)." : me.Taxes == TaxLevel.Low ? "stability recovers faster)." : "stability recovers 1 a turn).") );
             if (armies.Count > 0)
             {
                 // With unit types (R3), each army's mix: "maren_host 50 (25 pikes, 15 riders, 10 bows) at stonereach".

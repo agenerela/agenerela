@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace GreyBoxStrategy
 {
@@ -35,6 +37,23 @@ namespace GreyBoxStrategy
         public static readonly string[] Council = { Recruit, Fortify, RaiseTaxes, DeclareWar, Attack, OfferPeace, None };
         /// <summary>The court's orders in the writs turn: no attack (armies do that) and treaty terms for peace.</summary>
         public static readonly string[] Court = { Recruit, Fortify, RaiseTaxes, DeclareWar, OfferWhitePeace, DemandOccupied, CedeOccupied, None };
+
+        /// <summary>Economy (<see cref="GameRules.EconomyOn"/>): the court sets the standing tax level, in place of raise_taxes.</summary>
+        public const string TaxesLow = "taxes_low";
+        public const string TaxesNormal = "taxes_normal";
+        public const string TaxesHigh = "taxes_high";
+        public static readonly string[] TaxLevels = { TaxesLow, TaxesNormal, TaxesHigh };
+
+        /// <summary>The tax level an action sets, or null.</summary>
+        public static TaxLevel? SetsTaxes(string action) =>
+            action == TaxesLow ? TaxLevel.Low : action == TaxesNormal ? TaxLevel.Normal : action == TaxesHigh ? TaxLevel.High : (TaxLevel?)null;
+
+        /// <summary>The court's actions under these rules: with the economy, the tax levels in place of raise_taxes.</summary>
+        public static IEnumerable<string> CourtFor(GameRules r)
+        {
+            var list = r.EconomyOn ? Court.Where(a => a != RaiseTaxes).Concat(TaxLevels) : Court;
+            return r.UnitTypes ? list.Concat(RecruitTypes) : list;
+        }
         public static readonly string[] ArmyOrders = { March, None };
 
         // R3: recruiting one unit type, in place of recruit while GameRules.UnitTypes is on (rules v2 3.1).

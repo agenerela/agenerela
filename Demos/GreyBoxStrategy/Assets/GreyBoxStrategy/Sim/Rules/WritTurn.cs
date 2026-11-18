@@ -285,7 +285,9 @@ namespace GreyBoxStrategy
             if (order.Action != Actions.None)
             {
                 d.CourtGiven.Add(order);
+                int men = WritLegality.CourtOrderManpower(World, d.Country, order);
                 me.Reserved += WritLegality.CourtOrderCost(World, d.Country, order);
+                me.ReservedManpower += men;
             }
             if (order.Action == Actions.None || d.CourtGiven.Count >= Rules.CourtOrdersFor(d.Country)) d.CourtDone = true;
         }
@@ -426,7 +428,7 @@ namespace GreyBoxStrategy
             Expect(Phase.AwaitingEnvoys);
             if (treatyAnswers != null) Submit(treatyAnswers);
             // Free orders: the gold held back for the council's orders is spent for real as they land.
-            foreach (var c in World.CountryList) c.Reserved = 0;
+            foreach (var c in World.CountryList) { c.Reserved = 0; c.ReservedManpower = 0; }
             foreach (var c in World.CountryList) pending[c.Id].Clear();
             var order = RotatedOrder();
             var all = order.Where(dockets.ContainsKey).SelectMany(id => dockets[id].Answers).ToList();
@@ -456,7 +458,8 @@ namespace GreyBoxStrategy
             SendHomeArmiesInPeacefulLand();
 
             // b. Home: recruits appear, taxes, forts.
-            foreach (string action in new[] { Actions.Recruit, Actions.RecruitPikes, Actions.RecruitRiders, Actions.RecruitBows, Actions.RaiseTaxes, Actions.Fortify })
+            foreach (string action in new[] { Actions.Recruit, Actions.RecruitPikes, Actions.RecruitRiders, Actions.RecruitBows, Actions.RaiseTaxes,
+                         Actions.TaxesLow, Actions.TaxesNormal, Actions.TaxesHigh, Actions.Fortify })
                 foreach (var a in all.Where(a => !landed.Contains(a) && a.Choice.Action == action && a.Request.Moment == Moment.Council))
                 {
                     landed.Add(a);
@@ -621,6 +624,7 @@ namespace GreyBoxStrategy
                 {
                     int levy = World.Levy(me);
                     me.Gold -= levy * r.GoldPerSoldier;
+                    if (r.EconomyOn) me.Manpower -= levy;
                     me.Army += levy;
                     var site = WritLegality.RecruitSite(World, me.Id);
                     var joined = Reinforce(me.Id, site.Id, levy);
@@ -634,12 +638,19 @@ namespace GreyBoxStrategy
                     var type = Actions.RecruitsType(a.Choice.Action).Value;
                     int levy = World.Levy(me, type);
                     me.Gold -= levy * r.GoldPerSoldier * Units.CostFactor(r, type);
+                    if (r.EconomyOn) me.Manpower -= levy;
                     me.Army += levy;
                     var site = WritLegality.RecruitSite(World, me.Id);
                     var joined = Reinforce(me.Id, site.Id, levy, type);
                     Done(a, $"raised {levy} {Units.Name(type)} at {site.Id} ({joined})");
                     break;
                 }
+                case Actions.TaxesLow:
+                case Actions.TaxesNormal:
+                case Actions.TaxesHigh:
+                    me.Taxes = Actions.SetsTaxes(a.Choice.Action).Value;
+                    Done(a, $"set taxes to {me.Taxes.ToString().ToLowerInvariant()}");
+                    break;
                 case Actions.RaiseTaxes:
                     me.Gold += r.TaxGold;
                     me.Stability--;

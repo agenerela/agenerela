@@ -615,6 +615,8 @@ namespace GreyBoxStrategy.Replay
                 {
                     Id = c.Id, Gold = c.Gold, Army = c.Army, Stability = c.Stability, Alive = c.Alive,
                     Provinces = w.ProvinceCount(c.Id), Income = w.Income(c), Upkeep = w.Upkeep(c),
+                    Manpower = w.Rules.EconomyOn ? c.Manpower : 0, ManpowerCap = w.Rules.EconomyOn ? w.ManpowerCap(c) : 0,
+                    ManpowerGrowth = w.Rules.EconomyOn ? w.ManpowerGrowth(c) : 0, Taxes = c.Taxes,
                 };
             var ids = w.CountryList.Select(c => c.Id).ToList();
             for (int i = 0; i < ids.Count; i++)

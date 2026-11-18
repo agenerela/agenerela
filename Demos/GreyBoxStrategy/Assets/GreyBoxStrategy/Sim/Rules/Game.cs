@@ -401,7 +401,14 @@ namespace GreyBoxStrategy
                 report.Upkeep.Add($"{c.Id}: bankrupt, {deserted} soldiers deserted.");
             }
 
-            if (!c.RaisedTaxes && c.Stability < r.MaxStability) c.Stability++;
+            if (r.EconomyOn)
+            {
+                // Low taxes: +1, and +1 more below 3. Normal: +1, as without the economy. High: no recovery, and -1 while above 1.
+                if (c.Taxes == TaxLevel.High) { if (c.Stability > 1) c.Stability--; }
+                else c.Stability = Math.Min(r.MaxStability, c.Stability + 1 + (c.Taxes == TaxLevel.Low && c.Stability < 3 ? 1 : 0));
+                c.Manpower = Math.Min(World.ManpowerCap(c), c.Manpower + World.ManpowerGrowth(c));
+            }
+            else if (!c.RaisedTaxes && c.Stability < r.MaxStability) c.Stability++;
             c.RaisedTaxes = false;
 
             if (c.Stability <= 1 && Dice.Unit(Seed, World.Turn, c.Id, "revolt") < r.RevoltChance)
