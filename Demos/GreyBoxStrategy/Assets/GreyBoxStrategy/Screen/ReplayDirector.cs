@@ -747,6 +747,8 @@ namespace GreyBoxStrategy.Realm
                     yield return Land(e);
                     Current = "";
                 }
+                // The turn strip: what each realm did, once the turn has landed (ScreenUI.TurnStrip.cs).
+                ui.ShowTurnStrip(turn.Turn, turn.Events, turn.End);
             }
             ui.GameOver = true;
             if (rule != null) RuleOver();
