@@ -152,7 +152,8 @@ namespace GreyBoxStrategy.Realm
                 case ReplayEventKind.ArmyOrder:
                 {
                     // Many a turn: quick, and spoken only when the marshal said something.
-                    var banner = string.IsNullOrWhiteSpace(e.Statement) ? null : ui.Say(e.Country, e.Statement, Index(shown.Army(e.Army)?.Location), Why(e));
+                    // A rival's marshal beyond your sight says nothing on the map: its words would show where the army is.
+                    var banner = string.IsNullOrWhiteSpace(e.Statement) || !ui.SeesArmyOrder(e, e.After) ? null : ui.Say(e.Country, e.Statement, Index(shown.Army(e.Army)?.Location), Why(e));
                     Show(e.After, null);
                     AddLine(e, line);
                     yield return Wait(banner == null ? 0.12f : Mathf.Max(0.6f, Reading(e.Statement) * 0.6f));

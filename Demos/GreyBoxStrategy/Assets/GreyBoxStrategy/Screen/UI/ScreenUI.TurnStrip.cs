@@ -20,22 +20,34 @@ namespace GreyBoxStrategy.Realm
         public Action<string, int> TurnRowPressed;
 
         private VisualElement turnStrip, turnStripBody, turnCard;
+
+        /// <summary>The strip folded to its header, and folding it: saved with the settings. Null: always open.</summary>
+        public Func<bool> StripFolded;
+        public Action<bool> FoldStrip;
         private List<TurnRow> turnRows = new List<TurnRow>();
         private string openRow;
 
         /// <summary>For tests and the CLI: the strip's rows as they stand.</summary>
         public IReadOnlyList<TurnRow> TurnRows => turnRows;
 
+        /// <summary>
+        /// Whether your court sees an army order: yours always; a rival's when the army stands, or marches to, a province in
+        /// your sight in <paramref name="state"/>; every one while you watch. The strip and the chronicle both ask it, so
+        /// neither tells what the map's fog hides.
+        /// </summary>
+        public bool SeesArmyOrder(ReplayEvent e, ReplayState state)
+        {
+            if (e == null || e.Kind != ReplayEventKind.ArmyOrder || !Fog.On || e.Country == Fog.Viewer || state == null) return true;
+            var sight = Sight(state);
+            if (sight == null) return true;
+            string at = state.Army(e.Army)?.Location;
+            return (at != null && sight.Contains(at)) || (e.Province != null && sight.Contains(e.Province));
+        }
+
         /// <summary>The strip for a turn just resolved: <paramref name="state"/> is the turn's end, for what your court sees.</summary>
         public void ShowTurnStrip(int turn, IEnumerable<ReplayEvent> events, ReplayState state)
         {
-            var sight = state != null ? Sight(state) : null;
-            bool Seen(ReplayEvent e)
-            {
-                if (sight == null) return true;
-                string at = state.Army(e.Army)?.Location;
-                return (at != null && sight.Contains(at)) || (e.Province != null && sight.Contains(e.Province));
-            }
+            bool Seen(ReplayEvent e) => SeesArmyOrder(e, state);
             turnRows = TurnSummary.For(turn, events, CountryIds.Where(c => state == null || !state.Countries.TryGetValue(c, out var cs) || cs.Alive), Fog.Viewer,
                 c => Players != null && Players.TryGetValue(c, out var p) ? p.Persona : null, CountryLook.NameOf, Seen);
             if (turnStrip == null)
@@ -48,9 +60,17 @@ namespace GreyBoxStrategy.Realm
             Root.AddToClassList("strip-on");
             if (openRow != null && turnCard != null) { var keep = openRow; CloseTurnCard(); openRow = keep; }
             turnStripBody.Clear();
-            var head = new Label($"TURN {turn} · WHAT EACH REALM DID") { tooltip = "Each realm's orders this turn. Click a row: its decisions, and why." }; head.AddToClassList("turn-strip-head");
+            bool folded = StripFolded?.Invoke() == true;
+            Root.EnableInClassList("strip-folded", folded);
+            // The header folds the strip to one line, as the outliner's sections fold; the choice is kept in settings.
+            var head = new VisualElement { tooltip = folded ? "Click: show what each realm did" : "Click: fold. Each realm's orders this turn; click a row for its decisions, and why." };
+            head.AddToClassList("turn-strip-head");
+            head.Add(new Label(folded ? "▸" : "▾") { style = { width = 12 } });
+            head.Add(new Label($"TURN {turn} · WHAT EACH REALM DID"));
+            int st = turn; var ev = events; var sstate = state;
+            head.RegisterCallback<ClickEvent>(_ => { FoldStrip?.Invoke(!folded); if (!folded) CloseTurnCard(); ShowTurnStrip(st, ev, sstate); });
             turnStripBody.Add(head);
-            foreach (var r in turnRows) turnStripBody.Add(TurnRowElement(r));
+            if (!folded) foreach (var r in turnRows) turnStripBody.Add(TurnRowElement(r));
             KeepLayout();
             if (openRow != null) { var row = turnRows.FirstOrDefault(x => x.Country == openRow); if (row != null) ShowTurnCard(row); else openRow = null; }
         }
@@ -68,21 +88,21 @@ namespace GreyBoxStrategy.Realm
             foreach (var (kind, count) in r.Kinds)
             {
                 var k = new VisualElement { tooltip = KindWords(kind, count) }; k.AddToClassList("turn-row-kind");
-                k.Add(new Icon(KindIcon(kind), 13) { Tint = KindTint(kind) });
+                k.Add(new Icon(KindIcon(kind), 16) { Tint = KindTint(kind) });
                 if (count > 1) { var n = new Label(count.ToString()); n.AddToClassList("turn-row-count"); k.Add(n); }
                 icons.Add(k);
             }
             row.Add(icons);
             if (r.Guarded)
             {
-                var shield = new Icon(IconKind.Shield, 14) { Tint = new Color32(226, 194, 122, 255), tooltip = "A guard of the framework stopped one of its decisions. Click: which, and why." };
+                var shield = new Icon(IconKind.Shield, 16) { Tint = new Color32(226, 194, 122, 255), tooltip = string.Join(" ", r.Deeds.Where(d => d.Guarded).Select(d => d.GuardLine)) };
                 shield.AddToClassList("turn-row-shield"); row.Add(shield);
             }
             row.tooltip = "Click: its decisions this turn";
             string c = r.Country; int turn = r.Turn;
             row.RegisterCallback<ClickEvent>(_ =>
             {
-                if (openRow == c) CloseTurnCard(); else { openRow = c; ShowTurnCard(turnRows.First(x => x.Country == c)); }
+                if (openRow == c) CloseTurnCard(); else { openRow = c; ShowTurnCard(turnRows.First(x => x.Country == c)); SoundManager.Play(SoundCues.PanelOpen); }
                 foreach (var el in turnStripBody.Query(className: "turn-row").ToList()) el.EnableInClassList("open", el == row && openRow == c);
                 TurnRowPressed?.Invoke(c, turn);
             });
@@ -94,7 +114,7 @@ namespace GreyBoxStrategy.Realm
         {
             var r = turnRows.FirstOrDefault(x => x.Country == country);
             if (r == null) return false;
-            openRow = country; ShowTurnCard(r);
+            openRow = country; ShowTurnCard(r); SoundManager.Play(SoundCues.PanelOpen);
             turnStripBody?.Query(className: "turn-row").ForEach(el => el.EnableInClassList("open", el.Q<Label>(className: "turn-row-name")?.text.StartsWith(CountryLook.NameOf(country)) == true));
             TurnRowPressed?.Invoke(country, r.Turn);
             return true;
@@ -162,7 +182,7 @@ namespace GreyBoxStrategy.Realm
             _ => new Color32(214, 196, 158, 255),
         };
 
-        private static string KindWords(string kind, int n)
+        public static string KindWords(string kind, int n)
         {
             string w = kind switch
             {
@@ -172,7 +192,7 @@ namespace GreyBoxStrategy.Realm
                 "refused" => "an order refused when it landed", "hidden" => n == 1 ? "an army out of your sight was ordered" : "armies out of your sight were ordered",
                 _ => kind,
             };
-            return n > 1 ? $"{w}: {n}" : w;
+            return n > 1 ? $"{w}, {n} orders" : w;
         }
     }
 }

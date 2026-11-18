@@ -114,6 +114,8 @@ namespace GreyBoxStrategy.Realm
                 // The first-turn hints: dismissed once, gone for good (saved with the settings).
                 HintSeen = id => settings != null && settings.HintSeen(id),
                 DismissHint = id => { if (settings == null) return; settings.SeeHint(id); settingsStore?.Save(settings); },
+                StripFolded = () => settings != null && settings.TurnStripFolded,
+                FoldStrip = f => { if (settings == null) return; settings.TurnStripFolded = f; settingsStore?.Save(settings); },
                 PlayPressed = () => { playing = !playing; ui.SetPlaying(playing, speed); },
                 StepPressed = () => { playing = false; stepOnce = true; ui.SetPlaying(false, speed); },
                 SpeedPressed = () => { speed = speed >= 4 ? 1 : speed * 2; ui.SetPlaying(playing, speed); },
@@ -897,6 +899,8 @@ namespace GreyBoxStrategy.Realm
         private bool AddLine(ReplayEvent e, ChronicleLine line)
         {
             if (!ui.Fog.KnowsUpkeep(e)) return false;
+            // A rival's army order beyond your sight: the map hides the army, so the chronicle does not tell it either.
+            if (!ui.SeesArmyOrder(e, e.After)) return false;
             ui.AddLine(line);
             return true;
         }

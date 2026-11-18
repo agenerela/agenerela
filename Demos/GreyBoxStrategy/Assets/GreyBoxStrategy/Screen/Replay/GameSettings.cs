@@ -39,6 +39,8 @@ namespace GreyBoxStrategy.Replay
         public EventWindows EventWindows = EventWindows.All;
         /// <summary>The first-turn hints you have dismissed, by id, comma-separated: each shows until you close it once.</summary>
         public string HintsSeen = "";
+        /// <summary>The turn strip folded to its header.</summary>
+        public bool TurnStripFolded;
 
         public bool HintSeen(string id) => !string.IsNullOrEmpty(id) && ("," + (HintsSeen ?? "") + ",").Contains("," + id + ",");
         public void SeeHint(string id) { if (!string.IsNullOrEmpty(id) && !HintSeen(id)) HintsSeen = string.IsNullOrEmpty(HintsSeen) ? id : HintsSeen + "," + id; }

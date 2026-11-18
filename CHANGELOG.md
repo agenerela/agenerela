@@ -91,6 +91,11 @@ phase table and the open issues, not here.
 
 ### Changed
 
+- **Painted Realm: the chronicle keeps the fog, and the strip and the watch bar read** (#20). A rival's army order beyond
+  your sight is no longer printed in the chronicle or spoken on the map (it was a leak); the strip counts it. The watch
+  mode's top bar no longer overlaps: its chips keep their width and measured steps drop the lesser stats, then the
+  names. The turn strip's icons are larger and name themselves, the shield gives the guard's reason, the header folds
+  (kept in settings), and opening a card plays the panel cue. `TurnSummaryTests`.
 - **Painted Realm: the advisor advises a free turn as a model court plays one** (#20). With free orders, the advisor
   gives court orders one at a time on the moves left after the earlier ones, until none or the model seats' pacing
   cap (`MaxCourtOrders`), then an order for every army a model realm would be asked about. `Advice.Courts` lists them

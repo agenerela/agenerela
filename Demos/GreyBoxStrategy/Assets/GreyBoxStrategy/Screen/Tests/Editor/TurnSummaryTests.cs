@@ -126,5 +126,63 @@ namespace GreyBoxStrategy.Screen.Tests
             ui.CloseTurnCard();
             Assert.That(UnityEngine.UIElements.UQueryExtensions.Query(ui.Root, null, "turn-card").ToList().Count, Is.EqualTo(0));
         }
+
+        private static ReplayGame Scripted()
+        {
+            var setup = GameSetup.Writs(3);
+            var map = setup.BuildMap();
+            var rules = ReplayDirector.WithArmySettings(setup.BuildRules(map), true, true, true, true);
+            return ReplayBuilder.Build(Recording.Parse(ScriptedWorldGame.Play(setup, map, rules).ToJson()), map, rules);
+        }
+
+        private static ScreenUI Ui(ReplayGame g)
+        {
+            var ui = new ScreenUI(new UnityEngine.UIElements.VisualElement(), UnityEngine.ScriptableObject.CreateInstance<UnityEngine.UIElements.StyleSheet>(), null,
+                g.CountryIds, g.ProvinceIds, g.Players, "test");
+            ui.BuildPanels();
+            return ui;
+        }
+
+        [Test]
+        public void The_chronicle_and_the_strip_hide_the_same_army_orders_the_fog_hides()
+        {
+            var g = Scripted(); var q = new RealmQueries(g);
+            var ui = Ui(g);
+            ui.Writs = true;
+            ui.NeighboursOf = id => q.Neighbours(g.IndexOf(id)).Select(i => g.ProvinceIds[i]).ToList();
+            var orders = g.AllEvents.Where(e => e.Kind == ReplayEventKind.ArmyOrder).ToList();
+            Assert.That(orders.All(e => ui.SeesArmyOrder(e, e.After)), Is.True, "watching, every army order is seen");
+            ui.Fog = new Fog("kesh", q);
+            var rivals = orders.Where(e => e.Country != "kesh").ToList();
+            var unseen = rivals.Where(e => !ui.SeesArmyOrder(e, e.After)).ToList();
+            Assert.That(unseen, Is.Not.Empty, "some rival marches beyond Kesh's sight in a whole game");
+            Assert.That(rivals.Count(e => ui.SeesArmyOrder(e, e.After)), Is.GreaterThan(0), "and some within it");
+            Assert.That(orders.Where(e => e.Country == "kesh").All(e => ui.SeesArmyOrder(e, e.After)), Is.True, "your own, always");
+            Assert.That(ui.SeesArmyOrder(g.AllEvents.First(e => e.Kind == ReplayEventKind.Recruit && e.Country != "kesh"), g.Initial), Is.True, "a court's order is news, not an army's");
+            var t = unseen[0].Turn;
+            ui.ShowTurnStrip(t, g.AllEvents, g.Turns.First(x => x.Turn == t).End);
+            var row = ui.TurnRows.Single(r => r.Country == unseen[0].Country);
+            Assert.That(row.Deeds.Any(d => d.Kind == "hidden"), Is.True, "the strip counts it, as the chronicle leaves it out");
+        }
+
+        [Test]
+        public void The_strip_folds_to_its_header_and_its_icons_say_what_they_are()
+        {
+            var g = Scripted(); var ui = Ui(g); var t = g.Turns[2];
+            bool folded = true; bool? set = null;
+            ui.StripFolded = () => folded; ui.FoldStrip = f => set = f;
+            ui.ShowTurnStrip(t.Turn, t.Events, t.End);
+            Assert.That(UnityEngine.UIElements.UQueryExtensions.Query(ui.Root, null, "turn-row").ToList(), Is.Empty, "folded: the header alone");
+            Assert.That(ui.Root.ClassListContains("strip-folded"), Is.True, "the left panels give back the room");
+            folded = false;
+            ui.ShowTurnStrip(t.Turn, t.Events, t.End);
+            Assert.That(UnityEngine.UIElements.UQueryExtensions.Query(ui.Root, null, "turn-row").ToList().Count, Is.EqualTo(ui.TurnRows.Count));
+            Assert.That(ui.Root.ClassListContains("strip-folded"), Is.False);
+            Assert.That(ScreenUI.KindWords("recruit", 2), Is.EqualTo("recruited, 2 orders"));
+            Assert.That(ScreenUI.KindWords("fortify", 1), Is.EqualTo("fortified"));
+            var kinds = UnityEngine.UIElements.UQueryExtensions.Query(ui.Root, null, "turn-row-kind").ToList();
+            Assert.That(kinds, Is.Not.Empty);
+            Assert.That(kinds.All(k => !string.IsNullOrEmpty(k.tooltip)), Is.True, "every icon names itself");
+        }
     }
 }

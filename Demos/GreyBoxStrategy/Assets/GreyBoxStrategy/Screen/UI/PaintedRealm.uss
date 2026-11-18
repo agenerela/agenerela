@@ -820,3 +820,20 @@
 .tc-why { width: auto; padding-left: 7px; padding-right: 7px; margin-left: 6px; flex-shrink: 0; }
 .tc-guard { flex-direction: row; align-items: flex-start; margin-top: 3px; padding: 4px 6px; background-color: rgba(226, 194, 122, 0.12); border-left-width: 2px; border-left-color: rgb(226, 194, 122); }
 .tc-guard-text { margin-left: 5px; flex-shrink: 1; font-size: 12px; color: rgb(240, 224, 186); }
+
+/* The watch bar never overlaps either (#20): a country's chip and what is in it never shrink into the next; the
+   measured steps (ScreenUI.FitTopBar) drop the lesser stats, then the names. */
+.nation, .nation > *, .stat > * { flex-shrink: 0; }
+.tight-names .nation-name { display: none; }
+.tight-names .nation { padding-left: 5px; padding-right: 5px; }
+/* the turn strip, 18 November: icons that read, a header that folds */
+.turn-row { height: 26px; }
+.turn-row-kind { margin-left: 7px; }
+.turn-row-count { font-size: 11px; margin-left: 2px; }
+.turn-strip-head { flex-direction: row; align-items: center; }
+.turn-strip-head:hover { color: rgb(236, 224, 196); background-color: rgba(226, 194, 122, 0.08); }
+.turn-strip { max-height: 170px; }
+.strip-on .realm, .strip-on .side { bottom: 468px; }
+.compact.strip-on .realm, .compact.strip-on .side { bottom: 414px; }
+.strip-on.strip-folded .realm, .strip-on.strip-folded .side { bottom: 316px; }
+.compact.strip-on.strip-folded .realm, .compact.strip-on.strip-folded .side { bottom: 264px; }
