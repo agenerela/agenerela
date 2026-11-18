@@ -164,6 +164,14 @@ phase table and the open issues, not here.
   the rulers' facts (`ArmySight.About`) always have. The map piece still uses its own rounding until the screen
   calls it.
 
+### Fixed
+
+- **Painted Realm: a court is never offered an order it already gave this turn** (#20). With free orders, a court's
+  later request still listed `raise_taxes` among its actions after taxes were raised, though the rules no longer
+  offered it, and `qwen3.5:4b` took it: 72 of 1,190 answers in the first live check were held as not offered. A court
+  action is now offered only when the request offers it. On the writs turn the two lists always agree, so nothing a
+  model reads there changes (the request hash test holds).
+
 ## [0.4.0-preview.2] - 2026-11-16
 
 ### Framework
