@@ -76,7 +76,13 @@ namespace Agenerela
 
         private static void AppendFieldSequenceRules(StringBuilder grammar, IReadOnlyList<SchemaField> fields)
         {
-            
+            var hasRequiredFieldAtOrAfter = new bool[fields.Count];
+            var requriedSeen = false;
+
+            for (var i = fields.Count - 1; i >= 0; i--)
+            {
+                
+            }
         }
         
         private static void Validate(IReadOnlyList<SchemaField> fields)
