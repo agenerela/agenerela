@@ -115,7 +115,66 @@ namespace Agenerela
         
         private static void Validate(IReadOnlyList<SchemaField> fields)
         {
-            
+            if (fields == null)
+            {
+                throw new ArgumentException("The schema has no field list.", "schema");
+            }
+
+            var names = new HashSet<string>(StringComparer.Ordinal);
+
+            for (var i = 0; i < fields.Count; i++)
+            {
+                var field = fields[i];
+
+                if (field == null)
+                {
+                    throw new ArgumentException($"Schema field {i} is null.", "schema");
+                }
+
+                if (string.IsNullOrEmpty(field.Name))
+                {
+                    throw new ArgumentException($"Schema field {i} has no name.", "schema");
+                }
+
+                if (!names.Add(field.Name))
+                {
+                    throw new ArgumentException(
+                        $"The schema has two fields named '{field.Name}'. A JSON object cannot hold both.",
+                        "schema");
+                }
+
+                if (field.AllowedValues == null)
+                {
+                    continue;
+                }
+
+                if (field.AllowedValues.Count == 0)
+                {
+                    throw new ArgumentException(
+                        $"Field '{field.Name}' has an empty list of allowed values, which no answer can satisfy. " +
+                        "Use null for a free-form field, or leave the field out.",
+                        "schema");
+                }
+
+                var values = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var value in field.AllowedValues)
+                {
+                    if (string.IsNullOrEmpty(value))
+                    {
+                        throw new ArgumentException(
+                            $"Field '{field.Name}' allows a null or empty value. " +
+                            $"A target field uses '{TargetRegistry.NoTarget}' instead.",
+                            "schema");
+                    }
+
+                    if (!values.Add(value))
+                    {
+                        throw new ArgumentException(
+                            $"Field '{field.Name}' allows '{value}' twice.",
+                            "schema");
+                    }
+                }
+            }
         }
 
         private static void AppendRule(StringBuilder grammar, string name, string expression)
