@@ -103,6 +103,13 @@ namespace Agenerela
                         alternatives.Add("nonempty-" + (i + 1));
                     }
                 }
+                AppendRule(grammar, "nonempty-" + i, string.Join(" | ", alternatives));
+
+                var fieldsExpression = hasRequiredFieldAtOrAfter[i]
+                    ? "nonempty-" + i
+                    : "| nonempty-" + i;
+
+                AppendRule(grammar, "fields-" + i, fieldsExpression);
             }
         }
         
