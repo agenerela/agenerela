@@ -81,7 +81,28 @@ namespace Agenerela
 
             for (var i = fields.Count - 1; i >= 0; i--)
             {
-                
+                requriedSeen |= fields[i].Required;
+                hasRequiredFieldAtOrAfter[i] = requiredSeen;
+            }
+
+            // "nonempty-i" means at leat one field form i onward is present.
+            // "fields-i" also permits nothing when every remaining field is optional.
+            for (var i = 0; i < fields.Count; i++)
+            {
+                var alternatives = new List<string>();
+
+                if (i == fields.Count - 1)
+                {
+                    alternatives.Add("field-" + i);
+                }
+                else
+                {
+                    alternatives.Add("field-" + i +" (" + GbnfTerminal(",") + " ws nonempty-" + (i + 1) + ")?");
+                    if (!fields[i].Required)
+                    {
+                        alternatives.Add("nonempty-" + (i + 1));
+                    }
+                }
             }
         }
         
