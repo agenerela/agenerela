@@ -128,7 +128,7 @@ As of #147, 23 November 2026: 209 prompts. Counted by script, not by hand:
 | **All** | **209** | **133** | **22** | **0** |
 
 - **Game-triggered** (`situation`, `event`, `turn`): 118 of 209, 56%.
-- **Expected actions:** `move_to` 93, `none` 50, `follow_player` 24, `stop_following` 24, `attack_target` 18. A model that never acts would score 24%.
+- **Expected actions:** `move_to` 92, `none` 51, `follow_player` 24, `stop_following` 24, `attack_target` 18. A model that never acts would score 24%.
 - **Targets found only in the observations:** 35, by word match.
 - **Open choices:** 8. **`checkTarget: false`:** 6.
 - **Multi-turn** (with a `history`): 22.
@@ -138,7 +138,7 @@ As of #147, 23 November 2026: 209 prompts. Counted by script, not by hand:
   second agent definition.
 
 What #147's 133 add, from the October runs (findings, 5 to 27 October): game-triggered cases
-(80 of them), far fewer `none` (20 of 133, so a model that never acts falls from 39% to 24%),
+(80 of them), far fewer `none` (21 of 133, so a model that never acts falls from 39% to 24%),
 targets named only in the observations, look-alike names (a south tower, another village's
 bell, a bridge downstream, the sheep pen's gate), registered targets the guard cannot use as
 asked (`none`), negations and cancellations, two commands in one line, polite and indirect

@@ -1030,8 +1030,8 @@
       "observations": [
         "The riders are flying no banner"
       ],
-      "expectedAction": "move_to",
-      "expectedTarget": "eastern_road",
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
       "preconditionState": {
         "isFollowing": false
       },
@@ -1043,7 +1043,7 @@
           "statement": "I'll stay at the gate."
         }
       ],
-      "note": "Multi-turn with an earlier order not to leave the gate: the guard is at the gate and the riders are elsewhere. Labelled move_to eastern_road as the event alone asks; a second annotator may well say none, which is the point of the case.",
+      "note": "Multi-turn: the player's standing order was not to leave the village gate whatever happens, and the riders are on the road, not at the gate. The history is what makes none right; without it, move_to eastern_road would be.",
       "labelledBy": [
         "claude (tech lead session)"
       ]
