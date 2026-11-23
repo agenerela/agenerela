@@ -204,6 +204,10 @@ namespace GreyBoxStrategy
 
         private Agent AgentFor(CountryRequest r) => r.Moment == Moment.Army ? Marshal : Court;
 
+        // CourtNoneWording: a later court request's stimulus asks for the next order, so the headline stays among its facts.
+        private bool AsksForNextOrder(CountryRequest r) =>
+            r.Moment == Moment.Council && world.Rules.FreeOrders && world.Rules.CourtNoneWording && r.Ordered.Count > 0;
+
         public string StimulusFor(CountryRequest r)
         {
             switch (r.Moment)
@@ -212,6 +216,9 @@ namespace GreyBoxStrategy
                 case Moment.Envoy: return $"{r.OfferedBy} proposes a treaty.";
                 case Moment.Choice: return "An event asks for our decision.";
                 default:
+                    // CourtNoneWording (an A/B arm): a later court order is asked for as one more, or none.
+                    if (AsksForNextOrder(r))
+                        return $"Turn {r.Turn}. The court's next order: give another, or none when the court is done.";
                     string head = r.TurnFacts.Count > 0 ? r.TurnFacts[0] : "Nothing has changed.";
                     return $"Turn {r.Turn}. {head}";
             }
@@ -220,7 +227,7 @@ namespace GreyBoxStrategy
         public DecideOptions OptionsFor(CountryRequest r)
         {
             // The court's headline already says its first fact; an army's first fact is its own line.
-            var facts = r.Moment == Moment.Council ? r.TurnFacts.Skip(1).ToList() : r.TurnFacts.ToList();
+            var facts = r.Moment == Moment.Council && !AsksForNextOrder(r) ? r.TurnFacts.Skip(1).ToList() : r.TurnFacts.ToList();
             bool speaks = Speaks(r);
             bool asked = AsksForStatement(r);
             if (!speaks && asked) facts.Add(SayNothingLine);

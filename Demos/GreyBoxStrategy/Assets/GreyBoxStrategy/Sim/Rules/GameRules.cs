@@ -172,6 +172,16 @@ namespace GreyBoxStrategy
         /// again when a wake rule fires or after standing this many turns unasked. A pacing setting: each ask is a call.
         /// </summary>
         public int AskHoldingArmyEvery = 3;
+        /// <summary>
+        /// With <see cref="FreeOrders"/>, an A/B arm (17 November, off): a court's later request in a turn is told what its
+        /// earlier orders settled: "Taxes are raised this turn" once they are, and the gold held back for its orders.
+        /// </summary>
+        public bool CourtTurnFacts;
+        /// <summary>
+        /// With <see cref="FreeOrders"/>, an A/B arm (17 November, off): a court's later request in a turn asks for "the
+        /// court's next order, or none when the court is done" in place of repeating the turn's headline.
+        /// </summary>
+        public bool CourtNoneWording;
 
         // --- Economy (the turn rework, slice 2, E1; every number a starting sketch) ------------------------------
         /// <summary>
