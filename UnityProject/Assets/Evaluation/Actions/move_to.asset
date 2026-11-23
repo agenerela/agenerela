@@ -20,3 +20,6 @@ MonoBehaviour:
     PreferredExampleTargets:
     - well
     - bridge
+    ExampleStatement: Heading over there now.
+    TargetCategories:
+    - place

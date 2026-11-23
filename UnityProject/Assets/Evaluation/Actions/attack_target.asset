@@ -19,3 +19,6 @@ MonoBehaviour:
     ExampleStimulus: Strike the {0}.
     PreferredExampleTargets:
     - wolf
+    ExampleStatement: 'Stand back, I''ll deal with it.'
+    TargetCategories:
+    - creature

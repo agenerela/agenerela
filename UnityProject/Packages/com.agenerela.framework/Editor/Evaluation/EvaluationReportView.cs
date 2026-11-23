@@ -214,6 +214,12 @@ namespace Agenerela.Editor.Evaluation
 
             string placement = PlacementWords(arm.ObservationPlacement, arm.StandingLinesAsCallObservations);
             if (placement != null) yield return placement;
+
+            // Only when on (§2.8, #151), so a report from before it reads as it always did.
+            if (arm.SummariseTargets)
+            {
+                yield return "targets summarised, one line per category";
+            }
         }
 
         // Where the arm put each prompt's own observations (#151), or null for the default, which

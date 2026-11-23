@@ -18,3 +18,4 @@ MonoBehaviour:
     RequiresTarget: 0
     ExampleStimulus: Tag along behind me.
     PreferredExampleTargets: []
+    ExampleStatement: 'Lead the way, I''m right behind you.'

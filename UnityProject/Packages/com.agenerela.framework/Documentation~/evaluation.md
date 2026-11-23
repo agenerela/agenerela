@@ -65,7 +65,7 @@ file, and a merge never has to choose between their answers.
     { "id": "none", "needsTarget": false }
   ],
   "targets": [
-    { "id": "bridge", "description": "The wooden bridge over the stream" }
+    { "id": "bridge", "description": "The wooden bridge over the stream", "category": "place" }
   ],
   "categories": [
     { "id": "command_with_target", "file": "prompts/commands_with_target.json", "idPrefix": "target" },
@@ -80,6 +80,7 @@ file, and a merge never has to choose between their answers.
 | `actions[].needsTarget` | `true` if the action takes a registered target, `false` if it always takes `no_target` |
 | `actions[].onlyWhen` | Optional. The state in which the action is available, in the shape of a prompt's `preconditionState` |
 | `targets` | Every target the agent has registered, the only values besides `no_target` an expected target may hold |
+| `targets[].category` | Optional. The category the target is registered in, matched against each profile action's `TargetCategories` (DR-020). With both written, the paired schema (`PairTargetsWithActions`) gives each action only its own targets and `TargetCategoryGuard` refuses another pair, in every arm. The window refuses a label they make illegal (#151) |
 | `categories[].id` | Lower-case letters, digits and `_`, starting with a letter or digit. It names each annotator's label file, so it can never hold a path |
 | `categories[].file` | The category's prompts: a `.json` path relative to the set file, inside its folder, and neither the set file, under `labels/`, nor another category's file. Created on the first prompt you add |
 | `categories[].idPrefix` | Optional. What its prompt ids start with; the category id when left out |
@@ -363,9 +364,14 @@ ran one after the other; repeat a close result.
   state is also told to it, by `DescribeState`: one `isFollowing: true.` line per value by
   default (`PlainStateLines`). Give it your game's own wording, such as "You are following the
   player.", or null to tell the model nothing.
-- The set's targets are offered through an `ExplicitTargetSource`, and each is told to the model
-  as a line, `bridge: The wooden bridge over the stream.`, because the prompt lists no targets
-  and Ollama never shows the model the schema.
+- The set's targets are offered through an `ExplicitTargetSource`, each in its `category` when it
+  has one, and each is told to the model as a line, `bridge: The wooden bridge over the stream.`,
+  because the prompt lists no targets and Ollama never shows the model the schema. An arm with
+  `SummariseTargets` tells them as `TargetSummarySource` summarises them instead, one line per
+  category, ids verbatim: `place: bridge (the wooden bridge over the stream), well (the stone well
+  in the village square) and docks (the docks where supply boats unload).` (build plan §2.8,
+  #151). It calls no model, so it is the same on every prompt and costs no latency; the report's
+  conditions record it (`summariseTargets`).
 - The observations are, in order: the arm's own `DecideOptions.Observations`, the state's
   lines, the targets', then the prompt's own. Only the prompt's own are the call's
   `DecideOptions.Observations`; the rest reach the agent through an observation source, so the
@@ -382,8 +388,8 @@ ran one after the other; repeat a close result.
   they are introduced (`DecideOptions.StatementRulesWording`, #244). The report's conditions name
   each arm's rules and wording.
 - An arm's `Legality` (`EvalLegality`) gives its own copies of the profile's actions categories
-  or **parameters** (`ActionParameters`, DR-023), and its targets categories, without changing the
-  set, its labels or the profile. An arm that gives an action a parameter sends the paired schema
+  or **parameters** (`ActionParameters`, DR-023), and its targets categories, in place of the
+  set's own, without changing the set, its labels or the profile. An arm that gives an action a parameter sends the paired schema
   and the action list, as any agent with a parameter does ([parameters.md](parameters.md)). The
   labels are scored on action and target alone, so the parameter's value is never judged. The
   report's conditions carry the arm's legality.
@@ -443,6 +449,13 @@ mechanical rules that need no judgement (`ReplyChecks`, `ReplyFlag`):
 | `Empty` | The schema asked for a statement, as a decision's always does, and it is empty or only whitespace |
 | `TooLong` | Longer, once trimmed, than the arm's `MaxStatementLength`: 200 characters unless set (`EvalArm.DefaultMaxStatementLength`) |
 | `Leak` | The statement shows the machinery: an action or target id as written (`move_to`, `no_target`, `north_tower`), a schema field used as a label (`action:`, `"target":`), a `{` or `}`, or one of `ReplyChecks.AssistantPhrases` |
+
+An `Echo` also says which kind of line it repeats (`ReplyFinding.EchoesStimulus`,
+`EchoesStatement`), and each arm counts them apart (`ReplyCounts.EchoStimulus`, `EchoStatement`;
+the report's rows **of a stimulus** and **of a statement**): an echo of the request's kind of line,
+or a parrot of what an example says. One line can be both. So a run that writes example
+statements can see whether stimulus echoes fall without statement parrots taking their place
+(#190 G14, #218).
 
 They apply to every prompt of a set; nothing in the set's format turns one on or off. What is
 checked is the model's own statement, before any guard, so a guard that stopped a decision does

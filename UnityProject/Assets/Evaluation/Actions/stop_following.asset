@@ -18,3 +18,4 @@ MonoBehaviour:
     RequiresTarget: 0
     ExampleStimulus: You can stay put now.
     PreferredExampleTargets: []
+    ExampleStatement: 'Understood, I''ll hold here.'

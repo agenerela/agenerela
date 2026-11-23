@@ -26,6 +26,17 @@ namespace Agenerela.Evaluation
         [JsonProperty("tooLong")] public int TooLong;
         [JsonProperty("leak")] public int Leak;
 
+        /// <summary>
+        /// Of <see cref="Echo"/>, the answers whose statement repeats an example's stimulus
+        /// (<see cref="ReplyFinding.EchoesStimulus"/>), and those that repeat an example's written
+        /// statement (<see cref="ReplyFinding.EchoesStatement"/>), so a run can tell an echo of the
+        /// request from a parrot of the example (#151, #218). One answer can be in both.
+        /// </summary>
+        [JsonProperty("echoStimulus")] public int EchoStimulus;
+
+        /// <inheritdoc cref="EchoStimulus"/>
+        [JsonProperty("echoStatement")] public int EchoStatement;
+
         /// <summary>The answers with at least one flag. Less than the flags' sum when one answer has several.</summary>
         [JsonProperty("flagged")] public int Flagged;
 
@@ -59,6 +70,9 @@ namespace Agenerela.Evaluation
                     default: throw new ArgumentOutOfRangeException(nameof(flag), flag, null);
                 }
             }
+
+            if (findings.Any(f => f.Flag == ReplyFlag.Echo && f.EchoesStimulus)) EchoStimulus++;
+            if (findings.Any(f => f.Flag == ReplyFlag.Echo && f.EchoesStatement)) EchoStatement++;
 
             if (findings.Count > 0)
             {

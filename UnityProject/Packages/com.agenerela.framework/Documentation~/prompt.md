@@ -65,7 +65,12 @@ Targets:
 
   Any other target is listed by its id. A scene target is registered as its `Transform`, so it is
   listed by id, and its `Targetable.Description` reaches the model as an observation through
-  `ProximityObservationSource` instead (build plan §2.8).
+  `ProximityObservationSource` instead (build plan §2.8). To tell the model the targets as
+  observations without the list, add a `TargetSummarySource` to `Agent.ObservationSources`: one
+  line per target category, each target by its id, its `IDescribedTarget` description in
+  brackets, as in `place: bridge (the wooden bridge) and well (the stone well).` It calls no model
+  and gives the same lines for the same targets; `Headings` words a category's line. Whether a
+  small model reads it better than a line per target is #151's A/B (`EvalArm.SummariseTargets`).
 - **The budget.** `MaxListedTargets`, 12 by default, caps the target lines. The first targets in
   schema order are kept, so a source that offers the nearest first, as `ProximityTargetSource`
   does, loses the far ones. **The cut is silent**: the prompt says nothing about targets left out,

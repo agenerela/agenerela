@@ -291,6 +291,12 @@ namespace Agenerela.Evaluation
                 }
 
                 line($"| {name} | " + string.Join(" | ", Arms.Select(a => a.Replies[flag].ToString(CultureInfo.InvariantCulture))) + " |");
+                if (flag == ReplyFlag.Echo)
+                {
+                    // Told apart (#151, #218): the request's kind of line echoed, or a written statement parroted.
+                    line("| of a stimulus | " + string.Join(" | ", Arms.Select(a => a.Replies.EchoStimulus.ToString(CultureInfo.InvariantCulture))) + " |");
+                    line("| of a statement | " + string.Join(" | ", Arms.Select(a => a.Replies.EchoStatement.ToString(CultureInfo.InvariantCulture))) + " |");
+                }
             }
 
             line("| **Any flag** | " + string.Join(" | ", Arms.Select(a => $"**{a.Replies.Flagged}**")) + " |");

@@ -78,6 +78,12 @@ namespace Agenerela.Evaluation
         /// before it existed.
         /// </summary>
         [JsonProperty("standingLinesAsCallObservations")] public bool StandingLinesAsCallObservations;
+        /// <summary>
+        /// Whether the arm told the targets as <see cref="TargetSummarySource"/>'s summary, one line
+        /// per category, instead of a line per target (<see cref="EvalArm.SummariseTargets"/>, §2.8,
+        /// #151); false in a report written before it existed.
+        /// </summary>
+        [JsonProperty("summariseTargets")] public bool SummariseTargets;
         [JsonProperty("priority")] public string Priority;
         [JsonProperty("observations")] public List<string> Observations = new List<string>();
         /// <summary>The arm's <see cref="EvalArm.Knowledge"/>, added to the profile's; empty in a report written before it existed.</summary>

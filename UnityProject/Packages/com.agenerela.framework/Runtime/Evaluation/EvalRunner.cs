@@ -447,7 +447,7 @@ namespace Agenerela.Evaluation
                         yield return $"{prompt.Id}: arm '{arm.Name}' registers its expected target '{id}' as an extra target.";
                     }
                     else if (categories != null && id != TargetRegistry.NoTarget &&
-                             !rule.AcceptsCategory(legality.TargetCategories.TryGetValue(id, out var category) ? category : null))
+                             !rule.AcceptsCategory(CategoryOf(arm, Set.Targets.FirstOrDefault(t => t.Id == id) ?? new DeclaredTarget { Id = id })))
                     {
                         yield return $"{prompt.Id}: arm '{arm.Name}' makes its expected answer {prompt.ExpectedAction}/{id} illegal.";
                     }
@@ -874,8 +874,19 @@ namespace Agenerela.Evaluation
         {
             var observations = new List<string>(run.Arm.Options.Observations ?? new List<string>());
             observations.AddRange(stateLines);
+            var extras = run.Arm.Legality?.ExtraTargets ?? new List<EvalExtraTarget>();
+            if (run.Arm.SummariseTargets)
+            {
+                // One line per category in place of one per target (§2.8, #151), in the order the
+                // agent registers them.
+                observations.AddRange(new TargetSummarySource().Summarise(
+                    Set.Targets.Select(t => (t.Id, t.Description, CategoryOf(run.Arm, t)))
+                        .Concat(extras.Select(e => (e.Id, e.Description, e.Category)))));
+                return observations;
+            }
+
             observations.AddRange(Set.Targets.Select(TargetLine));
-            foreach (var extra in run.Arm.Legality?.ExtraTargets ?? new List<EvalExtraTarget>())
+            foreach (var extra in extras)
             {
                 observations.Add(TargetLine(new DeclaredTarget { Id = extra.Id, Description = extra.Description }));
             }
@@ -937,12 +948,9 @@ namespace Agenerela.Evaluation
             }
 
             var targets = new ExplicitTargetSource();
-            var targetCategories = run.Arm.Legality?.TargetCategories;
             foreach (var target in Set.Targets)
             {
-                string category = null;
-                targetCategories?.TryGetValue(target.Id, out category);
-                targets.Add(target.Id, target, category);
+                targets.Add(target.Id, target, CategoryOf(run.Arm, target));
             }
 
             foreach (var extra in run.Arm.Legality?.ExtraTargets ?? new List<EvalExtraTarget>())
@@ -957,6 +965,14 @@ namespace Agenerela.Evaluation
             }
 
             return agent;
+        }
+
+        // A set target's category in an arm: the arm's own legality's, where it names the target, or
+        // else the set's (#151).
+        private static string CategoryOf(EvalArm arm, DeclaredTarget target)
+        {
+            var own = arm.Legality?.TargetCategories;
+            return own != null && own.TryGetValue(target.Id, out string category) ? category : target.Category;
         }
 
         // The profile's definition with an arm's own target categories (#151): every field copied, so
@@ -1155,6 +1171,7 @@ namespace Agenerela.Evaluation
                     Legality = arm.Legality?.Copy(),
                     ObservationPlacement = arm.Options.ObservationPlacement.ToString(),
                     StandingLinesAsCallObservations = arm.StandingLinesAsCallObservations,
+                    SummariseTargets = arm.SummariseTargets,
                     Priority = arm.Options.Priority.ToString(),
                     Observations = new List<string>(arm.Options.Observations ?? new List<string>()),
                     Knowledge = new List<string>(arm.Knowledge),

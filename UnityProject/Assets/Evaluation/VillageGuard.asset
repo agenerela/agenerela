@@ -24,3 +24,4 @@ MonoBehaviour:
   - {fileID: 11400000, guid: ba076ce4e0948c54a82a2805bc4ff770, type: 2}
   - {fileID: 11400000, guid: b68e8581d60f1154a8baedf8a6edb7ce, type: 2}
   IdleExampleStimulus: Fine day for it.
+  IdleExampleStatement: Aye, quiet enough for now.

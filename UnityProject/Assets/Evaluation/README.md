@@ -47,6 +47,7 @@ with the targets the prompts name.
 | `actions[].onlyWhen` | Optional. The state in which the action is available, in the same shape as a prompt's `preconditionState`. `stop_following` needs `{ "isFollowing": true }` |
 | `targets[].id` | A registered target id, the only values `expectedTarget` may hold besides `no_target` |
 | `targets[].description` | One line saying what the target is. It may reach the prompt, so it describes the world, not the test |
+| `targets[].category` | `place` or `creature` here, matched against `VillageGuard.asset`'s `move_to` (places) and `attack_target` (creatures), so the paired schema gives each action its own targets (#151, #210). The same in `Interim/agent.json` |
 | `categories[]` | Each category's `id`, its `file`, and `idPrefix`, what its prompt ids start with when that is not the id: `command_with_target`'s are `target_001` |
 | `targetRules` | Checks a harness should run on the set before scoring it: every expected target registered, and `none` always paired with `no_target`. No code reads this field: `PromptSetChecks` runs the same checks on every set, and the window shows them |
 
@@ -91,10 +92,15 @@ written. A test checks that our set breaks none of them.
   #297) is flagged only when a prompt matches its stimulus and its observations both; an arm that shows
   the examples without their situations is judged on the bare stimulus, as before.
   `VillageGuard.asset`'s examples are GreyBoxVillage's guard's, the four actions' and its idle
-  line, so the set is measured with the examples the demo plays with; `PromptSetStartTests`
+  line, so the set is measured with the examples the demo plays with. Their statements
+  (`ExampleStatement` on each action and `IdleExampleStatement`, #151) were written here first,
+  since the demo's guard has none: "Lead the way, I'm right behind you.", "Understood, I'll hold
+  here.", "Heading over there now.", "Stand back, I'll deal with it." and "Aye, quiet enough for
+  now.". An arm with `ExampleStatements = false` sends the prompt from before them; `PromptSetStartTests`
   checks that none matches a prompt.
 - **Targets are registered ids, not descriptions.** Name a concrete `wolf`, not
-  `nearby_enemy`. A new target goes into `agent.json` first.
+  `nearby_enemy`. A new target goes into `agent.json` first, with its category: a label
+  `move_to` / `wolf` is refused, because `move_to` takes places.
 - **Observations describe the world, not the framework or the test.** "A wolf is at the
   bridge", not "The bridge is registered" or "No alternate command was given".
 - **`none` always takes `no_target`.** A request that names a registered target the agent
