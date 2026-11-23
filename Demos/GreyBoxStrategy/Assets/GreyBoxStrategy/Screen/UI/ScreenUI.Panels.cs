@@ -331,12 +331,13 @@ namespace GreyBoxStrategy.Realm
         {
             ["gold"] = (IconKind.Gold, "st-gold", "gold"), ["army"] = (IconKind.Army, "st-army", "soldiers"), ["land"] = (IconKind.Province, "st-land", "provinces"),
             ["writ"] = (IconKind.Seal, "st-writ", "writs left"), ["stab"] = (IconKind.Scales, "st-stab", "stability"), ["war"] = (IconKind.Swords, "st-war", "wars"), ["truce"] = (IconKind.Truce, "st-truce", "truces"),
+            ["men"] = (IconKind.Men, "st-men", "manpower"), ["tax"] = (IconKind.Taxes, "st-tax", "taxes"),
         };
 
         private void StatBar(ReplayState s, string me, CountryState c, CountryLook look, int n, int net)
         {
             (int, int)? writs = OrdersRequest != null && OrdersRequest.CountryId == me && !OrdersRequest.World.Rules.FreeOrders && OrdersRequest.Writs != GameRules.UnlimitedWrits ? (OrdersRequest.Writs, WritsUsed(OrdersRequest)) : ((int, int)?)null;
-            foreach (var st in ScreenModels.TopBar(s, me, Queries?.Rules?.IncomePerProvince ?? 10, Conquest, WinAt, writs, CountryLook.NameOf, Cap))
+            foreach (var st in ScreenModels.TopBar(s, me, Queries?.Rules?.IncomePerProvince ?? 10, Conquest, WinAt, writs, CountryLook.NameOf, Cap, Queries?.Rules))
             {
                 var (icon, cls, caption) = StatLook[st.Key];
                 var e = new VisualElement { tooltip = st.Tip }; e.AddToClassList("bstat"); e.AddToClassList(cls); if (st.Key == "gold") e.AddToClassList("first");
@@ -485,12 +486,18 @@ namespace GreyBoxStrategy.Realm
             {
                 ["owner"] = (IconKind.Province, Good), ["occupier"] = (IconKind.War, Bad), ["garrison"] = (IconKind.Army, RowInk), ["defence"] = (IconKind.Shield, RowInk),
                 ["forts"] = (IconKind.Fort, RowInk), ["capital"] = (IconKind.Fort, new Color32(226, 194, 122, 255)), ["income"] = (IconKind.Gold, new Color32(232, 196, 92, 255)), ["siege"] = (IconKind.Fort, Bad),
+                ["buildings"] = (IconKind.Hammer, RowInk),
             };
             var tabs = new List<(IconKind, string, Action<VisualElement>)>
             {
                 (IconKind.Province, "Holding", page =>
                 {
-                    foreach (var r in rows) { var (ic, tint) = icons[r.Key]; page.Add(KitRow(r, ic, tint, IconKind.Fort)); }
+                    foreach (var r in rows)
+                    {
+                        var (ic, tint) = icons[r.Key];
+                        // The economy: a building row shows the three, each lit where it stands.
+                        page.Add(r.Key == "buildings" ? BuildingsRow(r, ScreenModels.BuildingsAt(s, p)) : KitRow(r, ic, tint, IconKind.Fort));
+                    }
                     var armies = s.Armies.Where(a => a.Location == id && (Sight(s) == null || a.Owner == You || Sight(s).Contains(a.Location))).ToList();
                     foreach (var a in armies)
                     {
@@ -532,6 +539,20 @@ namespace GreyBoxStrategy.Realm
                 }
             }));
             KitTabs(body, "province", tabs.ToArray());
+        }
+
+        /// <summary>The province panel's buildings: the three icons, each lit where it stands, and the names built.</summary>
+        private static VisualElement BuildingsRow(ScreenModels.Row r, IReadOnlyCollection<Building> here)
+        {
+            var row = new VisualElement { tooltip = r.Tip }; row.AddToClassList("krow");
+            row.Add(new Icon(IconKind.Hammer, 15) { Tint = RowInk });
+            var label = new Label(r.Label); label.AddToClassList("krow-label"); row.Add(label);
+            var marks = new VisualElement(); marks.AddToClassList("krow-pips"); marks.AddToClassList("building-marks");
+            foreach (var b in ScreenModels.AllBuildings)
+                marks.Add(new Icon(BuildingIcon(b), 15) { Tint = here.Contains(b) ? BuildingTint(b) : new Color32(70, 58, 40, 255), tooltip = Cap(ScreenModels.BuildingName(b)) + (here.Contains(b) ? ": built" : ": not built") });
+            row.Add(marks);
+            var v = new Label(r.Value); v.AddToClassList("krow-value"); row.Add(v);
+            return row;
         }
 
         private static string Lowered(string t) => string.IsNullOrEmpty(t) ? t : char.ToLowerInvariant(t[0]) + t.Substring(1);
@@ -588,11 +609,12 @@ namespace GreyBoxStrategy.Realm
                 head.Add(follow);
             }
             body.Add(head);
-            var rows = ScreenModels.RealmRows(s, id, Fog.On ? You : null, Fog.KnowsTreasury(id), CountryLook.NameOf);
+            var rows = ScreenModels.RealmRows(s, id, Fog.On ? You : null, Fog.KnowsTreasury(id), CountryLook.NameOf, Queries?.Rules);
             var icons = new Dictionary<string, (IconKind, Color)>
             {
                 ["land"] = (IconKind.Province, Good), ["army"] = (IconKind.Army, new Color32(196, 204, 214, 255)), ["gold"] = (IconKind.Gold, new Color32(232, 196, 92, 255)),
                 ["stab"] = (IconKind.Scales, new Color32(170, 190, 220, 255)), ["relation"] = (IconKind.Seal, new Color32(150, 190, 225, 255)), ["score"] = (IconKind.Swords, Bad),
+                ["men"] = (IconKind.Men, new Color32(200, 170, 150, 255)), ["tax"] = (IconKind.Taxes, new Color32(232, 196, 92, 255)),
             };
             KitTabs(body, "realm",
                 (IconKind.Eye, id == You || !Fog.On ? "Overview" : "What you know", page =>

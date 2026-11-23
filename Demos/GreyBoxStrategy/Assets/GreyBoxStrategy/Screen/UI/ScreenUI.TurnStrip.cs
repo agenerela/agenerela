@@ -167,7 +167,8 @@ namespace GreyBoxStrategy.Realm
 
         public static IconKind KindIcon(string kind) => kind switch
         {
-            "recruit" => IconKind.Army, "fortify" => IconKind.Fort, "tax" => IconKind.Gold, "war" => IconKind.Swords,
+            "recruit" => IconKind.Army, "fortify" => IconKind.Fort, "tax" => IconKind.Gold, "taxes" => IconKind.Taxes, "war" => IconKind.Swords,
+            "market" => IconKind.Market, "barracks" => IconKind.Barracks, "farm" => IconKind.Farm,
             "peace" => IconKind.Peace, "cede" => IconKind.Province, "demand" => IconKind.Province, "march" => IconKind.Province,
             "siege" => IconKind.Fort, "hold" => IconKind.Hourglass, "attack" => IconKind.Swords, "army" => IconKind.Army,
             "refused" => IconKind.Refused, "hidden" => IconKind.Eye, _ => IconKind.Quill,
@@ -176,7 +177,8 @@ namespace GreyBoxStrategy.Realm
         private static Color KindTint(string kind) => kind switch
         {
             "war" => new Color32(226, 110, 90, 255), "attack" => new Color32(226, 110, 90, 255), "refused" => new Color32(200, 120, 110, 255),
-            "peace" => new Color32(150, 190, 225, 255), "tax" => new Color32(232, 196, 92, 255), "march" => new Color32(150, 200, 120, 255),
+            "peace" => new Color32(150, 190, 225, 255), "tax" => new Color32(232, 196, 92, 255), "taxes" => new Color32(232, 196, 92, 255),
+            "market" => BuildingTint(Building.Market), "barracks" => BuildingTint(Building.Barracks), "farm" => BuildingTint(Building.Farm), "march" => new Color32(150, 200, 120, 255),
             "cede" => new Color32(214, 160, 120, 255), "demand" => new Color32(214, 160, 120, 255), "siege" => new Color32(214, 180, 120, 255),
             "hidden" => new Color32(140, 128, 104, 255), "hold" => new Color32(170, 160, 140, 255),
             _ => new Color32(214, 196, 158, 255),
@@ -186,13 +188,25 @@ namespace GreyBoxStrategy.Realm
         {
             string w = kind switch
             {
-                "recruit" => "recruited", "fortify" => "fortified", "tax" => "raised taxes", "war" => "declared war", "peace" => "sought peace",
+                "recruit" => "recruited", "fortify" => "fortified", "tax" => "raised taxes", "taxes" => "set taxes",
+                "market" => n == 1 ? "built a market" : "built markets", "barracks" => "built barracks", "farm" => n == 1 ? "built a farm" : "built farms", "war" => "declared war", "peace" => "sought peace",
                 "cede" => "offered land", "demand" => "demanded land", "march" => n == 1 ? "an army marched" : "armies marched", "siege" => "a siege",
                 "hold" => n == 1 ? "an order to hold" : "orders to hold", "attack" => "attacked", "army" => "merged or split armies",
                 "refused" => "an order refused when it landed", "hidden" => n == 1 ? "an army out of your sight was ordered" : "armies out of your sight were ordered",
                 _ => kind,
             };
             return n > 1 ? $"{w}, {n} orders" : w;
+        }
+
+        /// <summary>A building's colour, the same on the strip, in the province panel and in the council.</summary>
+        public static Color BuildingTint(Building b) => b switch
+        {
+            Building.Market => new Color32(232, 196, 92, 255), Building.Barracks => new Color32(200, 140, 120, 255), _ => new Color32(160, 200, 110, 255),
+        };
+
+        public static IconKind BuildingIcon(Building b) => b switch
+        {
+            Building.Market => IconKind.Market, Building.Barracks => IconKind.Barracks, _ => IconKind.Farm,
         }
     }
 }
