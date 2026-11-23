@@ -695,6 +695,7 @@ namespace Agenerela.Evaluation
             options.StimulusLabel = prompt.Label;
             options.CheckTarget = run.Arm.Options.CheckTarget && prompt.ChecksTarget;
             var agent = Build(run, state, Standing(run, stateLines), prompt.Observations ?? new List<string>(), options);
+            StageHistory(agent, prompt, options);
 
             var result = await agent.DecideAsync(prompt.Stimulus, options, ct);
             var outcome = Classify(prompt, result);
@@ -743,6 +744,52 @@ namespace Agenerela.Evaluation
                 ReplyFlags = replyFlags,
                 Result = result,
             };
+        }
+
+        // A multi-turn prompt's history (#147), put in the agent's memory before the stimulus is
+        // asked: each turn as RollingHistory remembers a real one, the stimulus as the request
+        // sent it ("Player: \"Follow me.\"") and the answer as the JSON object the model gives,
+        // in DR-004's order, with the statement only when the arm asks for one. The memory holds
+        // every turn and sends them all, so a long history is never cut. A prompt with none keeps
+        // the agent Build made, with no memory, exactly as before.
+        private static void StageHistory(Agent agent, EvalPrompt prompt, DecideOptions options)
+        {
+            if (!prompt.HasHistory)
+            {
+                return;
+            }
+
+            var snapshot = new MemorySnapshot { Format = RollingHistory.SnapshotFormat, Version = RollingHistory.SnapshotVersion };
+            int characters = 0;
+            foreach (var turn in prompt.History)
+            {
+                string statement = options.AskForStatement && !string.IsNullOrWhiteSpace(turn.Statement) ? turn.Statement : null;
+                string stimulus = $"{turn.LabelOrDefault}: \"{turn.Stimulus}\"";
+                string decision = HistoryDecision(turn.Action, turn.Target, statement);
+                snapshot.Exchanges.Add(new MemoryExchange(stimulus, decision));
+                characters += stimulus.Length + decision.Length;
+            }
+
+            int tokens = Math.Max(RollingHistory.DefaultMaxTokens, RollingHistory.EstimateTokens(characters) + prompt.History.Count);
+            var memory = new RollingHistory(Math.Max(RollingHistory.DefaultTurns, prompt.History.Count), tokens);
+            memory.Import(snapshot);
+            agent.Memory = memory;
+        }
+
+        // One remembered answer on one line: action, target, then the statement when there is one.
+        internal static string HistoryDecision(string action, string target, string statement)
+        {
+            var json = new JObject
+            {
+                [DecisionSchema.ActionFieldName] = action,
+                [DecisionSchema.TargetFieldName] = target,
+            };
+            if (statement != null)
+            {
+                json[DecisionSchema.StatementFieldName] = statement;
+            }
+
+            return json.ToString(Formatting.None);
         }
 
         // Whether the request's schema had a statement field; a decision's always has, so a result

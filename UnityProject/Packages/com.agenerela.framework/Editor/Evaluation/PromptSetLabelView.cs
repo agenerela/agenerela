@@ -64,6 +64,21 @@ namespace Agenerela.Editor.Evaluation
             scroll = EditorGUILayout.BeginScrollView(scroll);
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
+                if (prompt.History.Count > 0)
+                {
+                    // Earlier turns, which the agent has already answered: context, not the question.
+                    EditorGUILayout.LabelField("Earlier turns", EditorStyles.miniBoldLabel);
+                    foreach (var turn in prompt.History)
+                    {
+                        EditorGUILayout.LabelField($"{turn.LabelOrDefault}: {turn.Stimulus}", Wrapped(EditorStyles.label, 0));
+                        string said = string.IsNullOrWhiteSpace(turn.Statement) ? "" : $" — \"{turn.Statement}\"";
+                        EditorGUILayout.LabelField($"    → {turn.Action}/{turn.Target}{said}", Wrapped(EditorStyles.miniLabel, 0));
+                    }
+
+                    EditorGUILayout.Space();
+                    EditorGUILayout.LabelField("Now", EditorStyles.miniBoldLabel);
+                }
+
                 EditorGUILayout.LabelField(prompt.Label ?? "", EditorStyles.miniBoldLabel);
                 EditorGUILayout.LabelField(prompt.Stimulus ?? "", Wrapped(EditorStyles.label, 14));
                 EditorGUILayout.Space();

@@ -24,6 +24,14 @@ namespace Agenerela.Evaluation
             Stimulus = prompt.Stimulus;
             Observations = (prompt.Observations ?? new List<string>()).ToList();
             PreconditionState = (JObject)(prompt.PreconditionState ?? new JObject()).DeepClone();
+            History = (prompt.History ?? new List<HistoryTurn>()).Where(t => t != null).Select(t => new HistoryTurn
+            {
+                Label = t.Label,
+                Stimulus = t.Stimulus,
+                Action = t.Action,
+                Target = t.Target,
+                Statement = t.Statement,
+            }).ToList();
         }
 
         public string Id { get; }
@@ -38,6 +46,13 @@ namespace Agenerela.Evaluation
 
         /// <summary>A copy: changing it changes nothing in the set.</summary>
         public JObject PreconditionState { get; }
+
+        /// <summary>
+        /// The earlier exchanges the prompt is asked after, oldest first, copied (#147). Shown to the
+        /// annotator as context: they are what the agent did, not the answer being labelled. Empty
+        /// for a prompt with none.
+        /// </summary>
+        public IReadOnlyList<HistoryTurn> History { get; }
 
         /// <summary>
         /// The prompts <paramref name="annotator"/> still has to label, in the set's order: every

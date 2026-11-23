@@ -307,6 +307,58 @@ namespace Agenerela.Tests.Evaluation
             Assert.That(provider.Requests.Select(r => r.History.Count), Is.All.EqualTo(0));
         }
 
+        // A multi-turn prompt (#147): asked to follow, then told something else, then the stimulus.
+        private static readonly string Released = Prompt("target_003", "You can go now.", "stop_following", "no_target", true,
+            extra: ", \"history\": ["
+                 + "{ \"stimulus\": \"Walk with me a while.\", \"action\": \"follow_player\", \"target\": \"no_target\", \"statement\": \"Lead on.\" },"
+                 + "{ \"label\": \"Event\", \"stimulus\": \"A bell rings in the square.\", \"action\": \"none\", \"target\": \"no_target\" }"
+                 + "]");
+
+        [Test]
+        public async Task AMultiTurnPromptIsAskedAfterItsHistoryOldestFirst()
+        {
+            var provider = new FakeProvider(Reply("stop_following", "no_target"));
+
+            await Run(new[] { Bridge, Released }, null, provider);
+
+            Assert.That(Request(provider, "You can go now.").History, Is.EqualTo(new[]
+            {
+                "Player: \"Walk with me a while.\"",
+                "{\"action\":\"follow_player\",\"target\":\"no_target\",\"statement\":\"Lead on.\"}",
+                "Event: \"A bell rings in the square.\"",
+                "{\"action\":\"none\",\"target\":\"no_target\"}",
+            }));
+            Assert.That(Request(provider, "Meet me over at the bridge.").History, Is.Empty, "A prompt's history reached another prompt.");
+        }
+
+        [Test]
+        public async Task AnArmThatAsksForNoStatementStagesNone()
+        {
+            var provider = new FakeProvider(Reply("stop_following", "no_target"));
+
+            await Run(new[] { Released }, null, provider, provider, new DecideOptions { AskForStatement = false });
+
+            var histories = provider.Requests.Where(r => r.Stimulus.Contains("\"You can go now.\"")).Select(r => r.History).ToList();
+            Assert.That(histories, Has.Count.EqualTo(2));
+            Assert.That(histories[0][1], Is.EqualTo("{\"action\":\"follow_player\",\"target\":\"no_target\"}"),
+                "An arm with no statement field still read one in its history.");
+            Assert.That(histories[1][1], Does.Contain("\"statement\":\"Lead on.\""), "The other arm, which asks for one, lost it.");
+        }
+
+        [Test]
+        public async Task AHistoryLongerThanTheMemorysDefaultsIsSentWhole()
+        {
+            string turns = string.Join(",", Enumerable.Range(1, 9).Select(i =>
+                $"{{ \"stimulus\": \"Turn {i} of a long and rambling conversation about the weather and the harvest.\", \"action\": \"none\", \"target\": \"no_target\", \"statement\": \"I hear you, and I have nothing to add to that.\" }}"));
+            var longOne = Prompt("target_004", "Stand guard by the bridge.", "move_to", "bridge", false, extra: ", \"history\": [" + turns + "]");
+            var provider = new FakeProvider(Reply("move_to", "bridge"));
+
+            var report = await Run(new[] { longOne }, null, provider);
+
+            Assert.That(Request(provider, "Stand guard by the bridge.").History, Has.Count.EqualTo(18));
+            Assert.That(report.Answers[0].Result.Telemetry.HistoryTurnsDropped, Is.EqualTo(0));
+        }
+
         // ---- Order and warm-up -------------------------------------------------------------------
 
         [Test]

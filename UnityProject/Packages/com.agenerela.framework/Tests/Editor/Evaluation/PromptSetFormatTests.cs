@@ -239,6 +239,39 @@ namespace Agenerela.Tests.Evaluation
         }
 
         [Test]
+        public void AHistoryRoundTripsWithNoChangeToItsContent()
+        {
+            using (var fixture = new EvalFixtures())
+            {
+                string path = Path.Combine(fixture.Folder, "prompts", "situations.json");
+                // One turn with every field, one with only those it needs, and a field a later
+                // format might add (DR-017): each must come back as it was.
+                string history = "\"history\": ["
+                    + "{ \"label\": \"Event\", \"stimulus\": \"A wolf howls.\", \"action\": \"move_to\", \"target\": \"bridge\", \"statement\": \"On my way.\" },"
+                    + "{ \"stimulus\": \"Never mind.\", \"action\": \"none\", \"target\": \"no_target\", \"outcome\": \"stood still\" }"
+                    + "], ";
+                File.WriteAllText(path, EvalFixtures.SituationsJson.Replace(
+                    "\"preconditionState\": { \"isFollowing\": false }, \"labelledBy\"",
+                    "\"preconditionState\": { \"isFollowing\": false }, " + history + "\"labelledBy\""));
+                var before = Parse(File.ReadAllText(path));
+                Assert.That(before["prompts"][0]["history"], Is.Not.Null, "The fixture did not take the history.");
+
+                var set = fixture.Load();
+                var prompt = set.FindCategory("situation").Prompts[0];
+                Assert.That(prompt.HasHistory, Is.True);
+                Assert.That(prompt.History[1].LabelOrDefault, Is.EqualTo("Player"));
+                Assert.That(prompt.History[0].Statement, Is.EqualTo("On my way."));
+
+                set.SaveCategory(set.FindCategory("situation"));
+
+                var after = Parse(File.ReadAllText(path));
+                Assert.That(JToken.DeepEquals(before, after), Is.True, $"The history changed on a round trip:
+{after}");
+                Assert.That(after["prompts"][1]["history"], Is.Null, "A prompt with no history gained one on saving.");
+            }
+        }
+
+        [Test]
         public void AnExpectedTargetKeepsTheShapeItWasWrittenIn()
         {
             Assert.That(JsonConvert.SerializeObject(new ExpectedTarget("bridge")), Is.EqualTo("\"bridge\""));

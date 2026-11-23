@@ -54,6 +54,8 @@ namespace Agenerela.Evaluation
                 CheckAnswer(set, prompt, Add);
             }
 
+            CheckHistory(set, prompt, Add);
+
             if (profile != null)
             {
                 CheckExamples(prompt, profile, Add);
@@ -140,8 +142,52 @@ namespace Agenerela.Evaluation
 
         private static void CheckAnswer(PromptSet set, EvalPrompt prompt, System.Action<PromptRule, string> add)
         {
-            string action = prompt.ExpectedAction;
-            var targets = prompt.ExpectedTarget.Ids;
+            CheckAnswer(set, prompt.ExpectedAction, prompt.ExpectedTarget.Ids, prompt.PreconditionState, add);
+        }
+
+        // Each history turn (#147) is checked as an answer is, but for the state, which a turn does
+        // not declare: the prompt's is the state after the last turn, and an earlier one may differ.
+        // Its messages say which turn, counted from 1, oldest first.
+        private static void CheckHistory(PromptSet set, EvalPrompt prompt, System.Action<PromptRule, string> add)
+        {
+            if (prompt.History == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < prompt.History.Count; i++)
+            {
+                string turn = $"History turn {i + 1}: ";
+                void Add(PromptRule rule, string message) => add(rule, turn + message);
+
+                var t = prompt.History[i];
+                if (t == null)
+                {
+                    Add(PromptRule.Incomplete, "the turn is empty");
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(t.Stimulus)) Add(PromptRule.Incomplete, "the stimulus is empty");
+
+                if (string.IsNullOrWhiteSpace(t.Action))
+                {
+                    Add(PromptRule.Incomplete, "no action");
+                }
+                else if (string.IsNullOrWhiteSpace(t.Target))
+                {
+                    Add(PromptRule.Incomplete, "no target: use no_target for none");
+                }
+                else
+                {
+                    CheckAnswer(set, t.Action, new[] { t.Target }, null, Add);
+                }
+            }
+        }
+
+        // state null: the answer is not checked against a state.
+        private static void CheckAnswer(PromptSet set, string action, IReadOnlyList<string> targets, Newtonsoft.Json.Linq.JObject state,
+            System.Action<PromptRule, string> add)
+        {
             bool noTarget = targets.Contains(TargetRegistry.NoTarget);
 
             foreach (string target in targets)
@@ -180,7 +226,7 @@ namespace Agenerela.Evaluation
                 add(PromptRule.ActionTakesNoTarget, $"{action} takes no target: use no_target");
             }
 
-            if (!declared.IsAvailableIn(prompt.PreconditionState))
+            if (state != null && !declared.IsAvailableIn(state))
             {
                 add(PromptRule.PreconditionMismatch,
                     $"{action} is only available when {declared.OnlyWhen.ToString(Newtonsoft.Json.Formatting.None)}; set the state to match");
