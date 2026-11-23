@@ -326,6 +326,82 @@ namespace Agenerela.Tests.Evaluation
             Assert.That(PromptSetChecks.MatchesSituation(null, null), Is.True, "No situation: the stimulus alone decides.");
         }
 
+        // ---- History turns (#147) -----------------------------------------------------------------
+
+        private static HistoryTurn Turn(string action = "follow_player", string target = "no_target", string stimulus = "Walk with me a while.")
+            => new HistoryTurn { Stimulus = stimulus, Action = action, Target = target };
+
+        [Test]
+        public void AValidHistoryBreaksNoRule()
+        {
+            var prompt = Valid();
+            prompt.History = new List<HistoryTurn> { Turn(), Turn(ActionRegistry.None, "no_target", "Nice weather.") };
+
+            Assert.That(Rules(prompt), Is.Empty);
+        }
+
+        [Test]
+        public void AHistoryTurnIsJudgedOnNoState()
+        {
+            // stop_following needs isFollowing, which the prompt's state (after the turns) need not have.
+            var prompt = Valid();
+            prompt.History = new List<HistoryTurn> { Turn(), Turn("stop_following") };
+
+            Assert.That(Rules(prompt), Is.Empty);
+        }
+
+        [Test]
+        public void AHistoryTurnsTargetMustBeRegistered()
+        {
+            var prompt = Valid();
+            prompt.History = new List<HistoryTurn> { Turn("move_to", "north_tower") };
+
+            AssertBreaks(prompt, PromptRule.TargetNotRegistered);
+            Assert.That(PromptSetChecks.CheckPrompt(set, commands, prompt, profile)[0].Message, Does.Contain("History turn 1"));
+        }
+
+        [Test]
+        public void AHistoryTurnsNoneTakesNoTarget()
+        {
+            var prompt = Valid();
+            prompt.History = new List<HistoryTurn> { Turn(), Turn(ActionRegistry.None, "bridge") };
+
+            AssertBreaks(prompt, PromptRule.NoneTakesNoTarget);
+            Assert.That(PromptSetChecks.CheckPrompt(set, commands, prompt, profile)[0].Message, Does.Contain("History turn 2"));
+        }
+
+        [Test]
+        public void AHistoryTurnsActionMustBeDeclared()
+        {
+            var prompt = Valid();
+            prompt.History = new List<HistoryTurn> { Turn("dance") };
+
+            AssertBreaks(prompt, PromptRule.ActionNotDeclared);
+        }
+
+        [Test]
+        public void AHistoryTurnNeedsAStimulusAnActionAndATarget()
+        {
+            var prompt = Valid();
+            prompt.History = new List<HistoryTurn> { Turn(stimulus: " ") };
+            AssertBreaks(prompt, PromptRule.Incomplete);
+
+            prompt.History = new List<HistoryTurn> { Turn(target: null) };
+            AssertBreaks(prompt, PromptRule.Incomplete);
+
+            prompt.History = new List<HistoryTurn> { null };
+            AssertBreaks(prompt, PromptRule.Incomplete);
+        }
+
+        [Test]
+        public void AHistoryTurnsMoveNeedsATarget()
+        {
+            var prompt = Valid();
+            prompt.History = new List<HistoryTurn> { Turn("move_to", "no_target") };
+
+            AssertBreaks(prompt, PromptRule.ActionNeedsTarget);
+        }
+
         // A new prompt in the commands category that breaks no rule, so each test breaks exactly one.
         private EvalPrompt Valid()
         {

@@ -340,6 +340,731 @@
       "labelledBy": [
         "Yevhen"
       ]
+    },
+    {
+      "id": "situation_020",
+      "label": "Situation",
+      "stimulus": "A child has wandered toward the stream.",
+      "observations": [
+        "A small child is playing at the edge of the bridge",
+        "The stream is running high after the rain"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "bridge",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The target is named only in the observations.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_021",
+      "label": "Situation",
+      "stimulus": "Something is moving among the sheep.",
+      "observations": [
+        "A wolf is creeping toward the sheep pens",
+        "The shepherd is asleep"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The target is named only in the observations.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_022",
+      "label": "Situation",
+      "stimulus": "The player is setting off alone at dusk.",
+      "observations": [
+        "The player is heading for the eastern road",
+        "Bandits were seen on that road yesterday"
+      ],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The eastern road is named, but the player is the one in danger: following them is the answer, not going to the road.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_023",
+      "label": "Situation",
+      "stimulus": "The player has sat down by the fire for the night.",
+      "observations": [
+        "The player is warming their hands at the campfire",
+        "They look settled"
+      ],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_024",
+      "label": "Situation",
+      "stimulus": "A boat is coming in.",
+      "observations": [
+        "A supply boat is drawing up to the docks",
+        "Nobody is there to catch its rope"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "docks",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The target is named only in the observations.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_025",
+      "label": "Situation",
+      "stimulus": "The wind is picking up fast.",
+      "observations": [
+        "Villagers are hurrying to the shelter",
+        "An old man is struggling to reach the shelter on his own"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "shelter",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_026",
+      "label": "Situation",
+      "stimulus": "The tower lantern is dark.",
+      "observations": [
+        "The north tower's lantern should be lit at night",
+        "The watchman did not come back from supper"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "north_tower",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_027",
+      "label": "Situation",
+      "stimulus": "Two places need a guard at once.",
+      "observations": [
+        "A fight has started at the market",
+        "A cart is stuck across the bridge"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": [
+        "market",
+        "bridge"
+      ],
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "An open choice: either is a right place to go first.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_028",
+      "label": "Situation",
+      "stimulus": "The gate has been left open.",
+      "observations": [
+        "The village gate is wide open",
+        "Wolves were heard close to the wall"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "village_gate",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_029",
+      "label": "Situation",
+      "stimulus": "Smoke is drifting across the square.",
+      "observations": [
+        "The baker is firing his oven",
+        "The campfire went out hours ago",
+        "Nobody seems worried"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Distractors: smoke and the campfire are mentioned, but the smoke is the baker's and nothing needs doing.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_030",
+      "label": "Situation",
+      "stimulus": "Your patrol takes you past the stream.",
+      "observations": [
+        "A traveller is lying on the bridge, holding their ankle"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "bridge",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_031",
+      "label": "Situation",
+      "stimulus": "It is your turn on watch.",
+      "observations": [
+        "The guard on the north tower is waiting to be relieved"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "north_tower",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_032",
+      "label": "Situation",
+      "stimulus": "The player is standing at the gate, waving you over.",
+      "observations": [
+        "The player is at the village gate",
+        "You are by the well"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "village_gate",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Waved over to a place: go to it. The player is not leaving, so following is not asked for.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_033",
+      "label": "Situation",
+      "stimulus": "The road east is quiet, but the tower is unmanned.",
+      "observations": [
+        "Nobody is on the north tower",
+        "The eastern road is empty"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "north_tower",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The eastern road is a distractor: it is named first, and needs nothing.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_034",
+      "label": "Situation",
+      "stimulus": "Villagers are crowding around the well.",
+      "observations": [
+        "The well's rope has snapped",
+        "Someone is shouting for a guard"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "well",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_035",
+      "label": "Situation",
+      "stimulus": "The player is being stalked.",
+      "observations": [
+        "A wolf is trailing the player at a distance",
+        "The player has not noticed"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The target is named only in the observations. Following the player is defensible, but the threat is the wolf.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_036",
+      "label": "Situation",
+      "stimulus": "Children are playing on the docks again.",
+      "observations": [
+        "The docks are slippery",
+        "Boats are unloading heavy crates"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "docks",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_037",
+      "label": "Situation",
+      "stimulus": "The player is safe inside the shelter.",
+      "observations": [
+        "The player went into the shelter",
+        "The storm has started"
+      ],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_038",
+      "label": "Situation",
+      "stimulus": "A merchant is blocking the crossing.",
+      "observations": [
+        "The merchant's cart has lost a wheel on the bridge",
+        "People are waiting to cross"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "bridge",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_039",
+      "label": "Situation",
+      "stimulus": "Sheep are loose.",
+      "observations": [
+        "The sheep pen fence is broken",
+        "Sheep are wandering out onto the eastern road"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "eastern_road",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The target is named only in the observations.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_040",
+      "label": "Situation",
+      "stimulus": "The player is heading for the cliffs.",
+      "observations": [
+        "The player is walking along the cliff path toward the locked cave",
+        "Rockfalls are common there"
+      ],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The locked cave is named, but the player is the one to look after.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_041",
+      "label": "Situation",
+      "stimulus": "A wolf and a stray dog are near the market.",
+      "observations": [
+        "The dog is wagging its tail at a trader",
+        "The wolf is stalking a child between the stalls"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_042",
+      "label": "Situation",
+      "stimulus": "The fire in the camp is spreading.",
+      "observations": [
+        "Flames from the campfire are reaching the tents"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "campfire",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_043",
+      "label": "Situation",
+      "stimulus": "It has been quiet at the gate all day.",
+      "observations": [
+        "Two guards are already at the village gate",
+        "The north tower is manned"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Every post named is already covered, so there is nothing to do.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_044",
+      "label": "Situation",
+      "stimulus": "A storm is coming in from the sea.",
+      "observations": [
+        "Villagers working on the docks have not noticed",
+        "The shelter is open"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": [
+        "docks",
+        "shelter"
+      ],
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "An open choice: warning the villagers at the docks and holding the shelter are both right.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_045",
+      "label": "Situation",
+      "stimulus": "Something is wrong at the edge of the village.",
+      "observations": [
+        "Fresh tracks of a large animal lead onto the eastern road"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "eastern_road",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "checkTarget": false,
+      "note": "The target is named only in the observations. Run with the grounding guard off (DR-016).",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_046",
+      "label": "Situation",
+      "stimulus": "Night has fallen and the player has not come back.",
+      "observations": [
+        "You are at the village gate",
+        "The road beyond is empty"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "history": [
+        {
+          "stimulus": "Keep watch at the village gate until I come back.",
+          "action": "move_to",
+          "target": "village_gate",
+          "statement": "I'll hold the gate."
+        }
+      ],
+      "note": "Multi-turn: told to wait at the gate until the player returns. The guard is there already, so staying is the answer.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_047",
+      "label": "Situation",
+      "stimulus": "The player has stepped aboard a boat.",
+      "observations": [
+        "The player is on a boat at the docks",
+        "The boat is casting off"
+      ],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "history": [
+        {
+          "stimulus": "Walk with me to the docks.",
+          "action": "follow_player",
+          "target": "no_target",
+          "statement": "Lead on."
+        }
+      ],
+      "note": "Multi-turn: the escort asked for earlier has ended at the water.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_048",
+      "label": "Situation",
+      "stimulus": "A wolf is on the bridge with you.",
+      "observations": [
+        "A wolf is snarling at you from the middle of the bridge"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "history": [
+        {
+          "stimulus": "Guard the bridge.",
+          "action": "move_to",
+          "target": "bridge",
+          "statement": "I'll keep it safe."
+        }
+      ],
+      "note": "Multi-turn: guarding the bridge means dealing with the wolf on it, not moving to the bridge again.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_049",
+      "label": "Situation",
+      "stimulus": "The player is back and walking off again.",
+      "observations": [
+        "The player is heading toward the market",
+        "They waved for you to come"
+      ],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "history": [
+        {
+          "stimulus": "Stay with me.",
+          "action": "follow_player",
+          "target": "no_target",
+          "statement": "Right here."
+        },
+        {
+          "stimulus": "Wait here, I'll be back.",
+          "action": "stop_following",
+          "target": "no_target",
+          "statement": "I'll wait."
+        }
+      ],
+      "note": "Multi-turn: the guard waited as asked, and the player has come back for them.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_050",
+      "label": "Situation",
+      "stimulus": "The market lanterns have gone out.",
+      "observations": [
+        "The market is dark",
+        "Thieves were reported there last week"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "market",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_051",
+      "label": "Situation",
+      "stimulus": "Shouting from the guards' camp.",
+      "observations": [
+        "A tent near the campfire has caught fire",
+        "Two guards are throwing water on it"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "campfire",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_052",
+      "label": "Situation",
+      "stimulus": "The player is crossing the stream alone at night.",
+      "observations": [
+        "The player is on the bridge heading out",
+        "Wolves hunt on the far side at night"
+      ],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_053",
+      "label": "Situation",
+      "stimulus": "The square is full of smoke.",
+      "observations": [
+        "A stall in the market is on fire",
+        "The well is the nearest water"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "market",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "checkTarget": false,
+      "note": "The well is a distractor, a place to fetch water from; the fire is in the market. Run with the grounding guard off (DR-016).",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_054",
+      "label": "Situation",
+      "stimulus": "A villager is running toward you.",
+      "observations": [
+        "The villager says a child is trapped in the shelter",
+        "The shelter roof has partly fallen in"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "shelter",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The target is named only in the observations, by someone else.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_055",
+      "label": "Situation",
+      "stimulus": "The player has stopped to chat at the well.",
+      "observations": [
+        "The player is talking with a friend",
+        "They have not said anything to you"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "note": "Following and the player pauses: there is nothing new to do. stop_following is not asked for.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_056",
+      "label": "Situation",
+      "stimulus": "The docks are unwatched tonight.",
+      "observations": [
+        "The night watchman at the docks has gone home sick"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "docks",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_057",
+      "label": "Situation",
+      "stimulus": "The player is leaving through the gate.",
+      "observations": [
+        "The player is walking out of the village gate",
+        "It is getting dark"
+      ],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The gate is named, but the player is the one leaving: follow, not move_to village_gate.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "situation_058",
+      "label": "Situation",
+      "stimulus": "A wolf is drinking from the well's trough.",
+      "observations": [
+        "Villagers have frozen where they stand around the square"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
     }
   ]
 }

@@ -210,6 +210,7 @@ namespace Agenerela.Editor.Evaluation
             }
 
             DrawState(prompt);
+            DrawHistory(prompt);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Expected answer", EditorStyles.miniBoldLabel);
@@ -315,6 +316,75 @@ namespace Agenerela.Editor.Evaluation
                         prompt.PreconditionState[newStateKey.Trim()] = false;
                         newStateKey = "";
                     }
+                }
+            }
+        }
+
+        // The earlier turns a multi-turn prompt is asked after (#147), oldest first. The list is
+        // null, and left out of the file, until a turn is added, and again once the last is removed,
+        // so a prompt without history saves exactly as it was read.
+        private void DrawHistory(EvalPrompt prompt)
+        {
+            EditorGUILayout.LabelField("History", "Earlier turns, oldest first. The state above is the one after them.", EditorStyles.miniLabel);
+            var turns = prompt.History ?? new List<HistoryTurn>();
+            var targets = new List<string> { TargetRegistry.NoTarget };
+            targets.AddRange(set.Targets.Select(t => t.Id));
+
+            int remove = -1;
+            for (int i = 0; i < turns.Count; i++)
+            {
+                var turn = turns[i] ?? (turns[i] = new HistoryTurn());
+                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+                {
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        EditorGUILayout.LabelField($"Turn {i + 1}", EditorStyles.miniBoldLabel);
+                        if (GUILayout.Button("−", GUILayout.Width(22)))
+                        {
+                            remove = i;
+                        }
+                    }
+
+                    EditorGUI.BeginChangeCheck();
+                    string label = TextWithChoices("Label", turn.LabelOrDefault, KnownLabels());
+                    if (EditorGUI.EndChangeCheck()) turn.Label = label;
+
+                    turn.Stimulus = EditorGUILayout.TextField("Stimulus", turn.Stimulus);
+
+                    var actions = ActionChoices(turn.Action);
+                    EditorGUI.BeginChangeCheck();
+                    int action = EditorGUILayout.Popup("Answered", Math.Max(0, actions.IndexOf(turn.Action)), actions.ToArray());
+                    if (EditorGUI.EndChangeCheck() || string.IsNullOrEmpty(turn.Action)) turn.Action = actions[action];
+
+                    var choices = new List<string>(targets);
+                    if (!string.IsNullOrEmpty(turn.Target) && !choices.Contains(turn.Target)) choices.Add(turn.Target);
+                    EditorGUI.BeginChangeCheck();
+                    int target = EditorGUILayout.Popup("Target", Math.Max(0, choices.IndexOf(turn.Target)), choices.ToArray());
+                    if (EditorGUI.EndChangeCheck() || string.IsNullOrEmpty(turn.Target)) turn.Target = choices[target];
+
+                    EditorGUI.BeginChangeCheck();
+                    string statement = EditorGUILayout.TextField("Said", turn.Statement ?? "");
+                    if (EditorGUI.EndChangeCheck()) turn.Statement = string.IsNullOrWhiteSpace(statement) ? null : statement;
+                }
+            }
+
+            if (remove >= 0)
+            {
+                // After the loop, so the layout of this frame stays whole; GUI.changed is set by the
+                // button, so the prompt's file is marked changed.
+                turns.RemoveAt(remove);
+                prompt.History = turns.Count == 0 ? null : turns;
+                GUI.changed = true;
+            }
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button(new GUIContent("+ Turn", "An earlier exchange, staged in the agent's memory before the stimulus."), GUILayout.Width(70)))
+                {
+                    turns.Add(new HistoryTurn { Action = ActionRegistry.None, Target = TargetRegistry.NoTarget });
+                    prompt.History = turns;
+                    GUI.changed = true;
                 }
             }
         }

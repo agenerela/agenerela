@@ -10,6 +10,18 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **Label mode asks only the agreement cohort** (#148, with #147). With an `agreement-subset.json`
+  beside the set, `BlindPrompt.Queue` (its new `cohort` argument) and the progress count hold only
+  the cohort's prompts, a line says so, and a **Whole set** toggle asks every prompt instead.
+  `AgreementCohort` reads the file's prompt ids, and nothing else.
+- **Multi-turn prompts** (#147). A prompt's optional `history` (`EvalPrompt.History`, a list of
+  `HistoryTurn`: `label`, `stimulus`, `action`, `target`, optional `statement`) holds the turns it
+  is asked after, oldest first. `EvalRunner` stages them in a `RollingHistory` of the prompt's own
+  before the stimulus, written as a real turn is remembered, the statement only for an arm that
+  asks for one; a prompt without one is asked with no memory, as before. `PromptSetChecks` holds
+  each turn to the rules for an answer, the Prompt Set window edits the turns in Write and shows
+  them in Label (`BlindPrompt.History`), and a file without `history` round-trips unchanged (DR-017).
+
 - **A reply out of the schema's field order is flagged** (#266 item 2, DR-023).
   `DecisionTelemetry.OrderLost`, and `orderLost` in the decision log, are true when the reply's
   fields came in another order than the schema's: `statement` before `target`, or a parameter

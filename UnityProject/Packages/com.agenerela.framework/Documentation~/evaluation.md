@@ -121,7 +121,8 @@ when its `category` is not the id `agent.json` gives that file. Each prompt in i
 | `stimulus` | What the agent is told or shown |
 | `observations` | Short facts about the world given alongside it |
 | `expectedAction`, `expectedTarget` | The right answer. `expectedTarget` can be a list where either target is right: `["bridge", "docks"]` |
-| `preconditionState` | The agent's state the prompt assumes, set as `Agent.State` before it is asked |
+| `preconditionState` | The agent's state the prompt assumes, set as `Agent.State` before it is asked. With a `history`, the state after its last turn |
+| `history` | Optional. Earlier turns the prompt is asked after, oldest first; see below |
 | `checkTarget` | Optional, `true` when left out. `false` tests a decision with the grounding guard off |
 | `note` | Optional. Why the answer is what it is |
 | `labelledBy` | Who wrote the prompt; everyone who answered it, once it has been settled |
@@ -129,6 +130,31 @@ when its `category` is not the id `agent.json` gives that file. Each prompt in i
 
 A field the format does not know is kept and written back, so nothing is lost when an older
 version of the window saves a newer file.
+
+**A multi-turn prompt** carries a `history`: the exchanges the agent has already had, each what it
+was told and what it answered. The runner puts them in the agent's memory before it asks the
+stimulus, so "You can go." can be scored on an agent that was asked to follow two turns ago:
+
+```json
+"preconditionState": { "isFollowing": true },
+"history": [
+  { "stimulus": "Walk with me to the market.", "action": "follow_player", "target": "no_target", "statement": "Lead the way." },
+  { "label": "Event", "stimulus": "Church bells ring.", "action": "none", "target": "no_target" }
+]
+```
+
+| Turn field | Meaning |
+|---|---|
+| `label` | Optional, `Player` when left out. The label the turn's stimulus arrived with |
+| `stimulus` | What the agent was told then |
+| `action`, `target` | What it answered: an action the set declares, and a registered target or `no_target` |
+| `statement` | Optional. What it said, staged only for an arm that asks for a statement |
+
+A turn is history, not a question: it is never scored, and its answer is what the agent did, right
+or not, so a set can stage a mistake and ask what comes after. The checks hold each turn to the
+rules for an answer (registered targets, `none` with `no_target`, a target where the action needs
+one), but not to a state, since the prompt's `preconditionState` is the state after the turns. A
+turn's fields the format does not know are kept, as a prompt's are.
 
 ## Writing prompts
 
@@ -169,13 +195,22 @@ applied over it: the window offers to keep it or discard it. Each category you c
 
 A label from someone who has seen the expected answer is not a second opinion. Switch to
 **Label** with your own name in the toolbar. The window asks you every prompt you neither wrote
-nor answered, one at a time, and shows only its label, stimulus, observations and state. The
+nor answered, one at a time, and shows only its label, stimulus, observations and state, after
+the earlier turns of a multi-turn prompt, which are what the agent did, not the answer asked for. The
 actions offered are the ones the state allows, as the agent would be offered them. No expected
 answer, note or other person's label is shown, and the view is given none of them
 (`BlindPrompt`, `LabelChoices`). Nor does it show the prompt's category, which `BlindPrompt`
 carries only so the answer can be filed: a prompt among the impossible requests is half
 answered by that. The prompts come in an order of your own
 rather than the set's, which groups them by category.
+
+**An agreement cohort.** When an `agreement-subset.json` sits beside the set file, Label mode
+asks only the prompts it names, and says so above the prompt ("Labelling the 76 prompts of the
+agreement cohort"); the progress count is the cohort's. The **Whole set** toggle beside that line
+asks every prompt instead. The file is a fixed subset frozen for a second annotator before the set
+grows (`AgreementCohort`; only its `categories[].promptIds` are read, and it holds no answers), so
+the person checking agreement is not asked prompts added later. A file that cannot be read is
+shown as a warning, and the whole set is asked.
 
 **Save answer** writes your answer to your own file under `labels/<you>/` and moves on. An answer once
 saved is never replaced, even if you change your mind: agreement is measured on first answers.
@@ -313,6 +348,12 @@ arms on two models, a 2B against a 4B. Drift is then not shared, and the report 
 ran one after the other; repeat a close result.
 
 **Each prompt** gets a fresh agent per arm, with no memory, so no prompt sees another:
+
+- A prompt with a `history` gets a `RollingHistory` holding its turns and nothing else, oldest
+  first, each as the agent would have remembered a real one: the stimulus as it was sent,
+  `Player: "Walk with me to the market."`, and the answer as the one-line JSON object a model
+  gives, `action`, `target`, then `statement` when the arm asks for one. The memory is sized to
+  send every turn, so a long history is never cut. A prompt without one is asked with no memory.
 
 - Every action of the profile is bound to a handler that does nothing and is available exactly
   when the prompt's `preconditionState` holds the action's `onlyWhen`. An action with no

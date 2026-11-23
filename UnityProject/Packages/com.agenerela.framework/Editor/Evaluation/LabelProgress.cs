@@ -29,9 +29,10 @@ namespace Agenerela.Editor.Evaluation
         /// How many prompts <paramref name="annotator"/> is asked to label in <paramref name="set"/>:
         /// those they did not write. The ones still to answer are <see cref="BlindPrompt.Queue"/>.
         /// </summary>
-        internal static int TotalFor(PromptSet set, string annotator)
+        internal static int TotalFor(PromptSet set, string annotator, AgreementCohort cohort = null)
         {
-            return set.Prompts.Count(p => p.LabelledBy == null || !p.LabelledBy.Contains(annotator));
+            return set.Prompts.Count(p => (cohort == null || cohort.Contains(p.Id))
+                                          && (p.LabelledBy == null || !p.LabelledBy.Contains(annotator)));
         }
 
         /// <summary>The line above each prompt.</summary>
