@@ -164,6 +164,16 @@ namespace Agenerela.Evaluation
                    + $"| {Guard(arm)} | {arm.WarmUpRequests} | {Cell(resident)} |");
             }
 
+            // Only when an arm renamed the free-text field (DR-008), so a default report reads as before.
+            foreach (var arm in c.Arms)
+            {
+                if (arm.StatementFieldName != null && arm.StatementFieldName != DecisionSchema.StatementFieldName)
+                {
+                    Line();
+                    Line($"Arm {Cell(arm.Name)} named the free-text field `{arm.StatementFieldName}`.");
+                }
+            }
+
             Line();
             Line("## Outcomes");
             Line();
@@ -336,6 +346,12 @@ namespace Agenerela.Evaluation
             if (arm.TargetGroundingThreshold.HasValue && arm.TargetGroundingThreshold.Value != TargetGroundingGuard.DefaultThreshold)
             {
                 changed.Add("threshold " + arm.TargetGroundingThreshold.Value.ToString("0.###", CultureInfo.InvariantCulture));
+            }
+
+            if (arm.TokenProbabilities == false)
+            {
+                // The guard has nothing to read; the target rule was sent instead (#107).
+                changed.Add("no probabilities");
             }
 
             if (arm.TokenAlternatives.HasValue && arm.TokenAlternatives.Value != Providers.OllamaSettings.DefaultTokenAlternatives)

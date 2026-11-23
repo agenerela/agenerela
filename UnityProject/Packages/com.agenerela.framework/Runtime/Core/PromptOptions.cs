@@ -165,6 +165,14 @@ namespace Agenerela
         public bool ExampleStatements = true;
 
         /// <summary>
+        /// The name the examples give the statement, <c>statement</c> unless set, as the schema names
+        /// the field (DR-008). <c>Agent</c> copies it from <see cref="DecideOptions.StatementFieldName"/>.
+        /// Read by <c>FewShotBuilder.Build</c>; <see cref="PromptBuilder"/> reads the schema's own
+        /// (<see cref="DecisionSchema.StatementName"/>). Null or blank is the default.
+        /// </summary>
+        public string StatementFieldName = DecisionSchema.StatementFieldName;
+
+        /// <summary>
         /// Whether the examples show their <see cref="ActionDefinition.ExampleObservations"/> (#216
         /// item 1). Off by default. <c>Agent</c> copies it from <see cref="DecideOptions.ExampleObservations"/>.
         /// Read by <see cref="FewShotBuilder.Build"/>.

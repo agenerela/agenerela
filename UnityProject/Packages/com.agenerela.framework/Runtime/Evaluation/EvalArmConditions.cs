@@ -37,6 +37,13 @@ namespace Agenerela.Evaluation
         /// provider, and in a report written before it existed, which asked for 5.
         /// </summary>
         [JsonProperty("tokenAlternatives", NullValueHandling = NullValueHandling.Ignore)] public int? TokenAlternatives;
+        /// <summary>
+        /// Whether an Ollama arm asked for token probabilities
+        /// (<see cref="Agenerela.Providers.OllamaSettings.TokenProbabilities"/>, #107); null for another
+        /// provider, and in a report written before it existed, which always asked. False, the arm sent
+        /// the target rule and the grounding guard read nothing.
+        /// </summary>
+        [JsonProperty("tokenProbabilities", NullValueHandling = NullValueHandling.Ignore)] public bool? TokenProbabilities;
         [JsonProperty("askForRefusalLine")] public bool AskForRefusalLine;
         [JsonProperty("idleExampleStimulus")] public string IdleExampleStimulus;
         [JsonProperty("listActionsAndTargets")] public bool ListActionsAndTargets;
@@ -61,6 +68,11 @@ namespace Agenerela.Evaluation
         /// before it existed, which used <c>YourStatement</c>.
         /// </summary>
         [JsonProperty("statementRulesWording")] public string StatementRulesWording;
+        /// <summary>
+        /// What the arm named the free-text field (<see cref="DecideOptions.StatementFieldName"/>,
+        /// DR-008); null in a report written before it existed, which named it <c>statement</c>.
+        /// </summary>
+        [JsonProperty("statementFieldName", NullValueHandling = NullValueHandling.Ignore)] public string StatementFieldName;
         /// <summary>The arm's own <see cref="EvalArm.StatementRules"/>, in place of the profile's; null when it kept the profile's.</summary>
         [JsonProperty("statementRules", NullValueHandling = NullValueHandling.Ignore)] public string StatementRules;
         /// <summary>The arm's own target legality (<see cref="EvalArm.Legality"/>, #151); null when it ran the set as it is.</summary>

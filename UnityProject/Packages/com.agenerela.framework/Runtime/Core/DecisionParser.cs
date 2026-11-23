@@ -97,12 +97,13 @@ namespace Agenerela
             }
 
             string statement = "";
-            var statementToken = schema.AsksForStatement ? answer[DecisionSchema.StatementFieldName] : null;
+            // Under the name the schema gave it (DR-008), so a reply in another's is not read as one.
+            var statementToken = schema.AsksForStatement ? answer[schema.StatementName] : null;
             if (statementToken != null && statementToken.Type != JTokenType.Null)
             {
                 if (statementToken.Type != JTokenType.String)
                 {
-                    problem = $"'{DecisionSchema.StatementFieldName}' is not a string.";
+                    problem = $"'{schema.StatementName}' is not a string.";
                     return false;
                 }
 
@@ -156,7 +157,7 @@ namespace Agenerela
             bool placed = false;
             foreach (var field in schema.Fields)
             {
-                if (field.Name == DecisionSchema.StatementFieldName && !placed)
+                if (field.Name == schema.StatementName && !placed)
                 {
                     foreach (var parameter in parameters) expected.Add(parameter.Name);
                     placed = true;
@@ -190,23 +191,35 @@ namespace Agenerela
         /// <param name="problem">Why the reply was rejected, or null.</param>
         public static bool TryParseStatement(string reply, out string statement, out string problem)
         {
+            return TryParseStatement(reply, DecisionSchema.StatementFieldName, out statement, out problem);
+        }
+
+        /// <summary>
+        /// Reads the reply to a refusal line's request as the other overload does, with the free-text
+        /// field named <paramref name="statementName"/>, as the decision's schema named it
+        /// (<see cref="DecisionSchema.StatementName"/>, DR-008). Null or blank is
+        /// <see cref="DecisionSchema.StatementFieldName"/>.
+        /// </summary>
+        public static bool TryParseStatement(string reply, string statementName, out string statement, out string problem)
+        {
             statement = null;
+            string name = string.IsNullOrWhiteSpace(statementName) ? DecisionSchema.StatementFieldName : statementName;
 
             if (!TryReadObject(reply, out var answer, out problem))
             {
                 return false;
             }
 
-            var token = answer[DecisionSchema.StatementFieldName];
+            var token = answer[name];
             if (token == null || token.Type == JTokenType.Null)
             {
-                problem = $"The reply has no '{DecisionSchema.StatementFieldName}'.";
+                problem = $"The reply has no '{name}'.";
                 return false;
             }
 
             if (token.Type != JTokenType.String)
             {
-                problem = $"'{DecisionSchema.StatementFieldName}' is not a string.";
+                problem = $"'{name}' is not a string.";
                 return false;
             }
 

@@ -332,6 +332,29 @@ namespace Agenerela.Tests.Evaluation
         }
 
         [Test]
+        public async Task AnArmThatNamesTheFieldDialogueAsksStagesAndRecordsIt()
+        {
+            // The DR-008 rename's two arms (#151): A as it is, B with the prototype's name.
+            var statement = new FakeProvider(Reply("stop_following", "no_target", "Very well."));
+            var dialogue = new FakeProvider("{\"action\":\"stop_following\",\"target\":\"no_target\",\"dialogue\":\"Very well.\"}");
+
+            var report = await Fixtures.NotCancelled(
+                Runner(new[] { Released }, null, statement, dialogue, null, new DecideOptions { StatementFieldName = DecisionSchema.DialogueFieldName }).RunAsync());
+
+            var asked = Request(dialogue, "You can go now.");
+            Assert.That(asked.Schema.Fields.Select(f => f.Name), Is.EqualTo(new[] { "action", "target", "dialogue" }));
+            Assert.That(asked.History[1], Is.EqualTo("{\"action\":\"follow_player\",\"target\":\"no_target\",\"dialogue\":\"Lead on.\"}"),
+                "The staged history keeps the name the arm asks under.");
+            Assert.That(Request(statement, "You can go now.").History[1], Does.Contain("\"statement\":\"Lead on.\""));
+
+            Assert.That(report.Conditions.Arms.Select(a => a.StatementFieldName), Is.EqualTo(new[] { "statement", "dialogue" }));
+            Assert.That(report.Answers.Select(a => a.ModelStatement), Is.All.EqualTo("Very well."), "Both arms read their own field.");
+            Assert.That(report.Arms.Select(a => a.OrderLost), Is.All.EqualTo(0));
+            Assert.That(report.ToMarkdown(), Does.Contain("Arm B named the free-text field `dialogue`.").And.Not.Contain("Arm A named"));
+            Assert.That(EvalReport.FromJson(report.ToJson()).Conditions.Arms[1].StatementFieldName, Is.EqualTo("dialogue"));
+        }
+
+        [Test]
         public async Task AnArmThatAsksForNoStatementStagesNone()
         {
             var provider = new FakeProvider(Reply("stop_following", "no_target"));

@@ -834,7 +834,7 @@ namespace Agenerela.Evaluation
             {
                 string statement = options.AskForStatement && !string.IsNullOrWhiteSpace(turn.Statement) ? turn.Statement : null;
                 string stimulus = $"{turn.LabelOrDefault}: \"{turn.Stimulus}\"";
-                string decision = HistoryDecision(turn.Action, turn.Target, statement);
+                string decision = HistoryDecision(turn.Action, turn.Target, statement, options.StatementFieldName);
                 snapshot.Exchanges.Add(new MemoryExchange(stimulus, decision));
                 characters += stimulus.Length + decision.Length;
             }
@@ -845,8 +845,11 @@ namespace Agenerela.Evaluation
             agent.Memory = memory;
         }
 
-        // One remembered answer on one line: action, target, then the statement when there is one.
-        internal static string HistoryDecision(string action, string target, string statement)
+        // One remembered answer on one line: action, target, then the statement when there is one,
+        // under the name the arm's schema gives it (DR-008), so a remembered answer has the shape the
+        // model must give now.
+        internal static string HistoryDecision(string action, string target, string statement,
+                                               string statementName = DecisionSchema.StatementFieldName)
         {
             var json = new JObject
             {
@@ -855,7 +858,7 @@ namespace Agenerela.Evaluation
             };
             if (statement != null)
             {
-                json[DecisionSchema.StatementFieldName] = statement;
+                json[string.IsNullOrWhiteSpace(statementName) ? DecisionSchema.StatementFieldName : statementName] = statement;
             }
 
             return json.ToString(Formatting.None);
@@ -1138,7 +1141,9 @@ namespace Agenerela.Evaluation
                     Model = Ollama?.Model,
                     CheckTarget = arm.Options.CheckTarget,
                     TargetGroundingThreshold = arm.Options.TargetGroundingThreshold,
-                    TokenAlternatives = Ollama?.TokenAlternatives,
+                    // None asked for when the arm's Ollama asks without probabilities (#107).
+                    TokenAlternatives = Ollama != null && Ollama.TokenProbabilities ? Ollama.TokenAlternatives : (int?)null,
+                    TokenProbabilities = Ollama?.TokenProbabilities,
                     AskForRefusalLine = arm.Options.AskForRefusalLine,
                     IdleExampleStimulus = arm.Options.IdleExampleStimulus,
                     ListActionsAndTargets = arm.Options.ListActionsAndTargets,
@@ -1151,6 +1156,7 @@ namespace Agenerela.Evaluation
                     PairTargetsWithActions = arm.Options.PairTargetsWithActions,
                     LegalTargets = arm.Options.LegalTargets.ToString(),
                     StatementRulesWording = arm.Options.StatementRulesWording.ToString(),
+                    StatementFieldName = arm.Options.StatementFieldName ?? DecisionSchema.StatementFieldName,
                     StatementRules = arm.StatementRules,
                     Legality = arm.Legality?.Copy(),
                     ObservationPlacement = arm.Options.ObservationPlacement.ToString(),

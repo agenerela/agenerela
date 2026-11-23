@@ -166,6 +166,34 @@ namespace Agenerela
         public bool AskForStatement = true;
 
         /// <summary>
+        /// What this call's free-text field is named: <see cref="DecisionSchema.StatementFieldName"/>,
+        /// <c>statement</c>, by default, and null means the same. Set
+        /// <see cref="DecisionSchema.DialogueFieldName"/> to ask under the prototype's name (DR-008),
+        /// for the A/B run of the rename (#151). Only the name changes: the field still comes after
+        /// <c>action</c>, <c>target</c> and any parameters, and the decision's
+        /// <see cref="AgentDecision.Statement"/> holds what the model wrote in it.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The schema carries the name (<see cref="DecisionSchema.StatementName"/>), so everything
+        /// that reads the field reads it under the name that was sent: the parser, the order check
+        /// (<see cref="DecisionTelemetry.OrderLost"/>), the serializer, the examples
+        /// (<c>dialogue: "…"</c>), the identity's statement rules line ("Your dialogue: "), memory,
+        /// and a refusal line's request (#109). Telemetry, the Decision Log and the evaluation report
+        /// keep their own key, <c>statement</c>, whatever the call named the field.
+        /// </para>
+        /// <para>
+        /// Any lowercase snake_case name other than <c>action</c>, <c>target</c>, <c>also_targets</c>
+        /// and <c>outcome</c>, and none of the offered actions' parameter names; another fails the call
+        /// before anything is sent. The rename is unmeasured (DR-008), so this is a choice per call,
+        /// never a default, until the run says otherwise. A memory snapshot does not record the name:
+        /// a remembered decision imported from one is read as if its statement were
+        /// <c>statement</c>.
+        /// </para>
+        /// </remarks>
+        public string StatementFieldName = DecisionSchema.StatementFieldName;
+
+        /// <summary>
         /// Whether this call's examples show each action's
         /// <see cref="ActionDefinition.CounterExampleStimulus"/>, answered with <c>none</c> (#190). On
         /// by default, which shows only what a developer wrote. False leaves them out of this call, as

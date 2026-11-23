@@ -381,6 +381,15 @@ ran one after the other; repeat a close result.
   changed. So two arms can give a set whose profile has no rules the same rules, and compare how
   they are introduced (`DecideOptions.StatementRulesWording`, #244). The report's conditions name
   each arm's rules and wording.
+- Two of #151's runs change what an arm asks under rather than what it says. The free-text
+  field's name (DR-008): an arm with `DecideOptions.StatementFieldName = "dialogue"` asks, reads,
+  orders and stages its multi-turn history under `dialogue`, and the report's conditions carry it
+  (`statementFieldName`), with a line under the arms table naming any arm that renamed it. The
+  target rule against the grounding guard (#107): an arm whose `OllamaProviderConfig` has
+  **Token Probabilities** off asks Ollama without `logprobs`, so its calls send the target rule
+  and its guard reads nothing; the conditions record `tokenProbabilities: false`, no
+  `tokenAlternatives`, and the arms table's checkTarget cell reads "on, no probabilities"
+  ([providers.md](providers.md)).
 - An arm's `Legality` (`EvalLegality`) gives its own copies of the profile's actions categories
   or **parameters** (`ActionParameters`, DR-023), and its targets categories, without changing the
   set, its labels or the profile. An arm that gives an action a parameter sends the paired schema

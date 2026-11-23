@@ -98,6 +98,8 @@ namespace Agenerela
             options = options ?? new PromptOptions();
             string label = options.StimulusLabel;
             bool statements = options.ExampleStatements;
+            // The statement under the name the schema gives it (DR-008).
+            string field = string.IsNullOrWhiteSpace(options.StatementFieldName) ? DecisionSchema.StatementFieldName : options.StatementFieldName;
             bool situations = options.ExampleObservations;
             HashSet<string> mentioned = options.ExampleTargetFallback ? Words(options.Stimulus) : null;
 
@@ -109,13 +111,13 @@ namespace Agenerela
                                 ?? (mentioned != null ? FallbackTarget(action, targets, mentioned, availability) : null);
                 string name = target == null ? null : NameOf(target, targets);
 
-                string example = ActionExample(action, target, name, label, statements, situations, ExampleArguments(action, availability));
+                string example = ActionExample(action, target, name, label, statements, situations, ExampleArguments(action, availability), field);
                 if (example != null)
                 {
                     lines.Add(example);
                 }
 
-                string counter = options.CounterExamples ? CounterExample(action, name, label, statements) : null;
+                string counter = options.CounterExamples ? CounterExample(action, name, label, statements, field) : null;
                 if (counter != null)
                 {
                     lines.Add(counter);
@@ -125,7 +127,7 @@ namespace Agenerela
             if (!string.IsNullOrWhiteSpace(options.IdleExampleStimulus))
             {
                 lines.Add(Example(label, options.IdleExampleStimulus, "none", TargetRegistry.NoTarget,
-                                  statements ? options.IdleExampleStatement : null));
+                                  statements ? options.IdleExampleStatement : null, field: field));
             }
 
             string refusal = RefusalExample(available, targets, label);
@@ -168,7 +170,8 @@ namespace Agenerela
         }
 
         private static string ActionExample(ActionDefinition action, string target, string name,
-                                            string label, bool statements, bool situations, string arguments = "")
+                                            string label, bool statements, bool situations, string arguments = "",
+                                            string field = DecisionSchema.StatementFieldName)
         {
             if (string.IsNullOrWhiteSpace(action.ExampleStimulus)) return null;
 
@@ -177,13 +180,13 @@ namespace Agenerela
             if (!action.RequiresTarget)
             {
                 return Situation(action, null, situations) +
-                       Example(label, action.ExampleStimulus, action.Id, TargetRegistry.NoTarget, statement, arguments);
+                       Example(label, action.ExampleStimulus, action.Id, TargetRegistry.NoTarget, statement, arguments, field);
             }
 
             if (target == null) return null;
 
             return Situation(action, name, situations) +
-                   Example(label, Fill(action.ExampleStimulus, name), action.Id, target, Fill(statement, name), arguments);
+                   Example(label, Fill(action.ExampleStimulus, name), action.Id, target, Fill(statement, name), arguments, field);
         }
 
         // The example's observations, under the heading a real call's observations have, each "- "
@@ -210,7 +213,8 @@ namespace Agenerela
         // Living Vale #9). Its {0}s, in the stimulus and the statement, name the example's target;
         // with no target to name, the line is left out rather than sent with a placeholder in it.
         // Without {0} it is sent as written.
-        private static string CounterExample(ActionDefinition action, string name, string label, bool statements)
+        private static string CounterExample(ActionDefinition action, string name, string label, bool statements,
+                                             string field = DecisionSchema.StatementFieldName)
         {
             string stimulus = action.CounterExampleStimulus;
             if (string.IsNullOrWhiteSpace(stimulus)) return null;
@@ -225,7 +229,7 @@ namespace Agenerela
                 statement = Fill(statement, name);
             }
 
-            return Example(label, stimulus, ActionRegistry.None, TargetRegistry.NoTarget, statement);
+            return Example(label, stimulus, ActionRegistry.None, TargetRegistry.NoTarget, statement, field: field);
         }
 
         // One refusal of a target that is not here, worded from the first targeted action's own
@@ -432,10 +436,11 @@ namespace Agenerela
 
         // "Label: "stimulus" -> action: id, target: id", then ", statement: "..."" when there is one,
         // in the order the reply's fields come: action, target, statement.
-        private static string Example(string label, string stimulus, string actionId, string targetId, string statement, string arguments = "")
+        private static string Example(string label, string stimulus, string actionId, string targetId, string statement, string arguments = "",
+                                      string field = DecisionSchema.StatementFieldName)
         {
             string line = $"{label}: {Quoted(stimulus)} -> action: {actionId}, target: {targetId}{arguments}";
-            return string.IsNullOrWhiteSpace(statement) ? line : line + $", statement: {Quoted(statement)}";
+            return string.IsNullOrWhiteSpace(statement) ? line : line + $", {field}: {Quoted(statement)}";
         }
 
         // Text inside an example's quotes, escaped as JSON escapes it, so a quote the developer wrote

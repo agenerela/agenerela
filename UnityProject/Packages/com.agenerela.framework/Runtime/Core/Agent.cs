@@ -764,6 +764,14 @@ namespace Agenerela
                     "DecideOptions.StatementRulesWording is not one of YourStatement, HowItShouldRead or InYourOwnWords.");
             }
 
+            // Null is the default name (DR-008); any other must be a field the reply can hold.
+            options.StatementFieldName = options.StatementFieldName ?? DecisionSchema.StatementFieldName;
+            string nameProblem = DecisionSchema.StatementNameProblem(options.StatementFieldName);
+            if (nameProblem != null)
+            {
+                throw new ArgumentException($"DecideOptions.StatementFieldName: {nameProblem}", nameof(options));
+            }
+
             // A list of the context's own, apart from the options' copy a guard may read. Blank
             // lines are not something the agent knows, so they take no place under the cap.
             observations = new ReadOnlyCollection<string>(NotBlank(options.Observations));
@@ -1503,6 +1511,7 @@ namespace Agenerela
                 IdleExampleStatement = call.IdleExampleStatement,
                 // A call that asks for no statement shows none in its examples either (#266).
                 ExampleStatements = call.ExampleStatements && call.AskForStatement,
+                StatementFieldName = call.StatementFieldName,
                 ExampleTargetFallback = call.ExampleTargetFallback,
                 ExampleObservations = call.ExampleObservations,
                 Stimulus = stimulus,
@@ -1552,7 +1561,25 @@ namespace Agenerela
                     "and this call needs one: it asked for PairTargetsWithActions, or offers an action that declares a parameter.");
             }
 
-            var schema = DecisionSchema.Build(ctx, available, paired, availability, call.AskForStatement);
+            // A parameter named like the statement would be two fields of one name in the reply.
+            if (call.StatementFieldName != DecisionSchema.StatementFieldName)
+            {
+                foreach (var definition in available)
+                {
+                    if (!definition.DeclaresParameters) continue;
+                    foreach (var parameter in definition.Parameters)
+                    {
+                        if (parameter.Name == call.StatementFieldName)
+                        {
+                            throw new InvalidOperationException(
+                                $"DecideOptions.StatementFieldName is '{call.StatementFieldName}', which action '{definition.Id}' " +
+                                "declares as a parameter. Name the statement otherwise for this call.");
+                        }
+                    }
+                }
+            }
+
+            var schema = DecisionSchema.Build(ctx, available, paired, availability, call.AskForStatement, call.StatementFieldName);
             string fewShot = FewShotBuilder.Build(available, ctx.Targets, options, availability);
 
             var history = Recall(memory, ctx, telemetry);
@@ -1763,7 +1790,7 @@ namespace Agenerela
             telemetry.RefusalLinePromptTokens = reply.PromptTokens;
             telemetry.RefusalLineCompletionTokens = reply.CompletionTokens;
 
-            if (!DecisionParser.TryParseStatement(reply.Text, out string line, out string problem))
+            if (!DecisionParser.TryParseStatement(reply.Text, decided.Schema?.StatementName, out string line, out string problem))
             {
                 return NoLine(telemetry, PipelineErrorKind.UnreadableReply, $"{problem} The reply was: {Excerpt(reply.Text)}");
             }

@@ -445,6 +445,32 @@ a turn, where each army asked to speak made the rulers repeat themselves (35 to 
 word, findings, 13 November). It changes what the model reads, so it is unmeasured as a default
 and owed an A/B run (#151); on by default, every request is byte-identical to one sent before.
 
+## The free-text field's name
+
+`DecideOptions.StatementFieldName` names the free-text field for one call: `statement`
+(`DecisionSchema.StatementFieldName`) unless set, and null means the same. Set
+`DecisionSchema.DialogueFieldName`, `dialogue`, to ask under the prototype's name, for the A/B
+run of the rename (DR-008, #151). Only the name changes. The field still comes last, after
+`action`, `target` and any parameters, so the reply is `{"action": ..., "target": ...,
+"dialogue": ...}`, and the decision's `Statement` holds what the model wrote there.
+
+The schema carries the name (`DecisionSchema.StatementName`), so everything that reads the field
+reads it under the name that was sent: the parser, the field-order check
+(`DecisionTelemetry.OrderLost`, #180), the JSON schema, the examples (`..., dialogue: "On my
+way."`), the identity's statement rules line ("Your dialogue: "), memory, a multi-turn prompt's
+staged history in the evaluation runner, and a refusal line's request (#109). A reply that writes
+the other name has no statement: under `dialogue`, a `statement` key is ignored, as any key the
+schema did not ask for is. Telemetry, the decision log and the evaluation report keep their own
+key, `statement`, whatever the call named the field.
+
+The name must be lowercase snake_case and none of `action`, `target`, `also_targets` and `outcome`
+(the key a remembered outcome takes), or the call throws `ArgumentException`; an offered action
+with a parameter of the same name fails the call as a `RequestPreparation` error before anything
+is sent. A memory snapshot does not record the name, so a decision imported from one is read as if
+its statement were `statement`. With the default name every request is byte-identical to one sent
+before the option. The rename is unmeasured, so it is a choice per call, never a default, until the
+run says otherwise.
+
 ## A choice among options given with the call
 
 `DecideOptions.Choices` asks the agent to pick one of a list the call passes, instead of its
