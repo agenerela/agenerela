@@ -202,6 +202,11 @@ namespace GreyBoxStrategy
         /// <summary>Economy: the income factor of low and high taxes (normal is 1).</summary>
         public double LowTaxIncome = 0.8;
         public double HighTaxIncome = 1.3;
+        /// <summary>
+        /// Economy: once a court sets the tax level, the tax orders are not offered for this many turns (0: offered every turn).
+        /// A free change offered every turn was toggled high and normal 79 times in 448 council answers (run request 002).
+        /// </summary>
+        public int TaxLockTurns = 5;
         /// <summary>Economy, E2: what a market, a barracks and a farm cost, bought at once with gold by a court order.</summary>
         public int MarketCost = 40;
         public int BarracksCost = 40;

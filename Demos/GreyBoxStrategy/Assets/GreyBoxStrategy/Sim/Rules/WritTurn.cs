@@ -676,6 +676,7 @@ namespace GreyBoxStrategy
                 case Actions.TaxesNormal:
                 case Actions.TaxesHigh:
                     me.Taxes = Actions.SetsTaxes(a.Choice.Action).Value;
+                    me.TaxesSetTurn = World.Turn;
                     Done(a, $"set taxes to {me.Taxes.ToString().ToLowerInvariant()}");
                     break;
                 case Actions.RaiseTaxes:
