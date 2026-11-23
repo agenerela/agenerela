@@ -135,6 +135,114 @@
       "labelledBy": [
         "Maxim"
       ]
+    },
+    {
+      "id": "impossible_010",
+      "label": "Player",
+      "stimulus": "Swim across the sea to the next kingdom.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "No registered target is across the sea.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "impossible_011",
+      "label": "Player",
+      "stimulus": "Go to the lighthouse.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "There is no lighthouse. The docks are near the water, but they are not what was asked for.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "impossible_012",
+      "label": "Player",
+      "stimulus": "Open the locked cave for me.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The cave is registered, but no action opens it. move_to locked_cave goes to it without doing what was asked.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "impossible_013",
+      "label": "Player",
+      "stimulus": "Fight the dragon on the north tower.",
+      "observations": [
+        "The north tower is empty"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The tower is registered, but the dragon is not, and attacking it is what was asked.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "impossible_014",
+      "label": "Player",
+      "stimulus": "I said open the cave!",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "history": [
+        {
+          "stimulus": "Open up the locked cave.",
+          "action": "none",
+          "target": "no_target",
+          "statement": "I can't open that, it's locked tight."
+        }
+      ],
+      "note": "Multi-turn: a request refused last turn and repeated more forcefully. Repeating it does not make it possible.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "impossible_015",
+      "label": "Player",
+      "stimulus": "It's right behind you, attack the dragon!",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "history": [
+        {
+          "stimulus": "Attack the dragon over there.",
+          "action": "none",
+          "target": "no_target",
+          "statement": "I don't see any dragon."
+        }
+      ],
+      "note": "Multi-turn: the player insists on a target that is not there.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
     }
   ]
 }

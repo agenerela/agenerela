@@ -126,6 +126,277 @@
       "labelledBy": [
         "Maxim"
       ]
+    },
+    {
+      "id": "simple_010",
+      "label": "Player",
+      "stimulus": "Could you walk with me for a bit?",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "A polite question that is a request: the guard should come along.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "simple_011",
+      "label": "Player",
+      "stimulus": "I'd feel safer if you came along.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Indirect: no verb aimed at the guard, but the only sensible reading is a request to follow.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "simple_012",
+      "label": "Player",
+      "stimulus": "Stick by my side until we get home.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "simple_013",
+      "label": "Player",
+      "stimulus": "You don't need to follow me anymore.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "note": "A release that contains the words \"follow me\": choosing follow_player would be reading the words, not the meaning.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "simple_014",
+      "label": "Player",
+      "stimulus": "That's far enough, I can manage from here.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "note": "A release without the word stop or follow.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "simple_015",
+      "label": "Player",
+      "stimulus": "Don't stop following me.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "note": "A double negation: the guard is already following and is told to carry on, so there is nothing new to do. stop_following is the trap.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "simple_016",
+      "label": "Player",
+      "stimulus": "Okay, stop here and keep watch.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "simple_017",
+      "label": "Player",
+      "stimulus": "Keep following - actually no, stay here.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "note": "Two commands in one line where the second corrects the first: the correction is the answer.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "simple_018",
+      "label": "Player",
+      "stimulus": "Please follow.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "simple_019",
+      "label": "Player",
+      "stimulus": "You can go.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "history": [
+        {
+          "stimulus": "Walk with me to the market.",
+          "action": "follow_player",
+          "target": "no_target",
+          "statement": "Lead the way."
+        },
+        {
+          "stimulus": "Lovely stalls today, aren't they?",
+          "action": "none",
+          "target": "no_target",
+          "statement": "They are. Plenty of people about."
+        }
+      ],
+      "note": "Multi-turn: asked to follow two turns ago, and now released. Without the history \"You can go\" could read as a move with no destination.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "simple_020",
+      "label": "Player",
+      "stimulus": "Thanks, that's all for now.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "history": [
+        {
+          "stimulus": "Come along, I need an escort to the docks.",
+          "action": "follow_player",
+          "target": "no_target",
+          "statement": "Right behind you."
+        }
+      ],
+      "note": "Multi-turn: a thank-you that ends the escort the player asked for one turn ago.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "simple_021",
+      "label": "Player",
+      "stimulus": "Never mind, I'll go in alone.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "history": [
+        {
+          "stimulus": "Keep me company on the walk home.",
+          "action": "follow_player",
+          "target": "no_target",
+          "statement": "Happy to."
+        },
+        {
+          "label": "Situation",
+          "stimulus": "The player has stopped at their front door.",
+          "action": "none",
+          "target": "no_target"
+        }
+      ],
+      "note": "Multi-turn: \"never mind\" cancels the escort from two turns ago, so the guard stops following.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "simple_022",
+      "label": "Player",
+      "stimulus": "Alright, let's keep moving.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "history": [
+        {
+          "stimulus": "Walk with me.",
+          "action": "follow_player",
+          "target": "no_target",
+          "statement": "Of course."
+        },
+        {
+          "stimulus": "Hold on, wait here a moment.",
+          "action": "stop_following",
+          "target": "no_target",
+          "statement": "I'll wait."
+        }
+      ],
+      "note": "Multi-turn: the guard stopped to wait last turn, so resuming is follow_player again, from a state that is not following.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "simple_023",
+      "label": "Player",
+      "stimulus": "Hang back, I want to talk to the trader alone.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "note": "A polite release: hang back means stop following, not go somewhere.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "simple_024",
+      "label": "Player",
+      "stimulus": "Follow along, would you?",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
     }
   ]
 }
