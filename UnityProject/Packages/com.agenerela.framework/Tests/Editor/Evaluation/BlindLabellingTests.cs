@@ -26,14 +26,41 @@ namespace Agenerela.Tests.Evaluation
         public void DeleteTheFixture() => fixture.Dispose();
 
         [Test]
-        public void ABlindPromptHoldsOnlyTheLabelStimulusObservationsAndState()
+        public void ABlindPromptHoldsOnlyTheLabelStimulusObservationsStateAndHistory()
         {
             var properties = typeof(BlindPrompt).GetProperties(BindingFlags.Public | BindingFlags.Instance).Select(p => p.Name);
 
-            Assert.That(properties, Is.EquivalentTo(new[] { "Id", "CategoryId", "Label", "Stimulus", "Observations", "PreconditionState" }));
+            // History (#147) is the earlier turns, which the agent has already answered: context,
+            // not the answer asked for. The next test checks it carries nothing else of the prompt.
+            Assert.That(properties, Is.EquivalentTo(new[] { "Id", "CategoryId", "Label", "Stimulus", "Observations", "PreconditionState", "History" }));
 
             var fieldTypes = typeof(BlindPrompt).GetFields(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance).Select(f => f.FieldType);
-            Assert.That(fieldTypes, Is.All.Matches<Type>(t => t == typeof(string) || t == typeof(IReadOnlyList<string>) || t == typeof(JObject)));
+            Assert.That(fieldTypes, Is.All.Matches<Type>(t => t == typeof(string) || t == typeof(IReadOnlyList<string>) || t == typeof(JObject)
+                                                             || t == typeof(IReadOnlyList<HistoryTurn>)));
+        }
+
+        [Test]
+        public void ABlindPromptsHistoryHoldsTheTurnsAndNothingOfThePromptsAnswer()
+        {
+            var set = fixture.Load();
+            var prompt = set.FindCategory("command_with_target").Prompts.First(p => p.Id == "target_002");
+            prompt.History = new List<HistoryTurn>
+            {
+                new HistoryTurn { Stimulus = "Walk with me a while.", Action = "follow_player", Target = "no_target", Statement = "Lead on." },
+            };
+            prompt.History[0].Extra["secret"] = JToken.FromObject("SECRET_TURN_FIELD");
+
+            var blind = BlindPrompt.Queue(set, set.LoadLabels(), "Bo").First(p => p.Id == "target_002");
+            string seen = JsonConvert.SerializeObject(blind);
+
+            Assert.That(blind.History, Has.Count.EqualTo(1));
+            Assert.That(blind.History[0].Stimulus, Is.EqualTo("Walk with me a while."));
+            Assert.That(blind.History[0].Action, Is.EqualTo("follow_player"));
+            Assert.That(blind.History[0], Is.Not.SameAs(prompt.History[0]), "The view holds the set's own turn, which it could change.");
+            foreach (string secret in new[] { "attack_target", "wolf\"", "SECRET_NOTE", "SECRET_TURN_FIELD", "Maxim", "expected" })
+            {
+                Assert.That(seen, Does.Not.Contain(secret), $"The blind prompt holds '{secret}':\n{seen}");
+            }
         }
 
         [Test]
