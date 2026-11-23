@@ -140,6 +140,14 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **Pairwise Cohen's kappa for prompt labels** (#148). `AgreementReport.Pairwise` gives each
+  named pair's overlap, raw agreement, chance agreement and `CohensKappa`, using original
+  complete `action/target` answers. Missing answers are excluded; constant identical answers
+  leave kappa undefined. The Prompt Set and Evaluation Report windows show the same per-pair
+  numbers, and the findings summary includes them with the current-label-files caveat.
+  **Record agreed answers** preserves both original answers on unanimous prompts too,
+  without changing the expected answer. Human blind labels and discussion of disagreements
+  are still required for #148.
 - **Examples that carry their situation** (#216 item 1). `ActionDefinition.ExampleObservations`
   (the asset front door) and `[Example(..., Observations = ...)]` (the code front door) hold one or
   two observation lines, rendered by `FewShotBuilder` above the example under the observations'

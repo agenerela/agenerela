@@ -104,12 +104,13 @@
                         <ui:VisualElement class="er-grow">
                             <ui:Label name="agreement-headline" class="er-wrap er-bold" />
                             <ui:Label name="agreement-detail" class="er-wrap" />
+                            <ui:Label name="agreement-pairs" class="er-wrap" />
                             <ui:Label name="agreement-note" class="ag-muted er-wrap er-small" />
                         </ui:VisualElement>
                     </ui:VisualElement>
                     <ui:VisualElement class="er-row er-buttons">
                         <ui:Button name="review-disagreements" text="Review disagreements" tooltip="Opens the Prompt Set window: its Agreement tab lists and settles the splits." />
-                        <ui:Button name="copy-summary" text="Copy summary for findings.md" tooltip="Copies a short Markdown summary: what ran, its conditions, the five outcomes and the noise check." />
+                        <ui:Button name="copy-summary" text="Copy summary for findings.md" tooltip="Copies what ran, its conditions, the five outcomes, the noise check, and current raw agreement and Cohen's kappa per annotator pair." />
                         <ui:Button name="show-files" text="Show files" tooltip="Shows report.json and report.md in the file browser." />
                         <ui:Button name="save-copy" text="Save a copy…" tooltip="Writes report.json and report.md into a folder of your choice." />
                     </ui:VisualElement>

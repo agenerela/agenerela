@@ -2,7 +2,11 @@
     "name": "GreyBoxStrategy.Screen.Editor",
     "rootNamespace": "GreyBoxStrategy.Realm.Editor",
     "references": [
-        "GreyBoxStrategy.Screen"
+        "GreyBoxStrategy.Screen",
+        "GreyBoxStrategy.Sim",
+        "GreyBoxStrategy.Replay",
+        "GreyBoxStrategy",
+        "Agenerela"
     ],
     "includePlatforms": [
         "Editor"

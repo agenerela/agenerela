@@ -31,6 +31,11 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: free orders' prompt arms and the live-run reports** (#20, #380). Two A/B arms, both off:
+  `CourtTurnFacts` (a court's later request reads what its earlier orders settled) and `CourtNoneWording` (it is asked for
+  "the next order, or none"); a live-check harness; and `tools/live-runs/free-orders/report.py` and
+  `tools/live-runs/economy/report.py`.
+
 - **Painted Realm: the economy on screen** (#20, #379). When `GameRules.Economy` is on: manpower and the tax level on the
   top bar, a province's yield and buildings, tax levels and buildings as council orders with their cost, gain and the
   rules' reason when shut (a building picks its province from a list), and buildings and tax changes in the turn strip

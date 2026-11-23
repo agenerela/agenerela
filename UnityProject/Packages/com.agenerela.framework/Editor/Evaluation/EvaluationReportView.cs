@@ -477,14 +477,31 @@ namespace Agenerela.Editor.Evaluation
                 : $"{splits} prompt{(splits == 1 ? "" : "s")} split {(splits == 1 ? "its" : "their")} labellers: the Prompt Set window's Agreement tab lists and settles them.";
         }
 
+        /// <summary>One line per named pair; never pools different annotators into one kappa.</summary>
+        internal static string PairwiseAgreement(AgreementReport agreement)
+        {
+            if (agreement.Pairwise.Count == 0)
+            {
+                return "Cohen's kappa: unavailable until two people answer the same prompts.";
+            }
+
+            return string.Join("\n", agreement.Pairwise.Select(pair =>
+            {
+                string percent = pair.PercentAgreement.Value.ToString("0.0", CultureInfo.InvariantCulture);
+                string kappa = pair.CohensKappa?.ToString("0.000", CultureInfo.InvariantCulture)
+                    ?? "undefined (both always gave the same answer)";
+                return $"{pair.First} / {pair.Second}: {pair.Agreed}/{pair.AnsweredByBoth} agree ({percent}%); Cohen's kappa: {kappa}.";
+            }));
+        }
+
         // ---- ⑥ Export ---------------------------------------------------------------------------
 
         /// <summary>
         /// A short Markdown summary to paste into findings.md: what ran, under what conditions, the
-        /// five outcomes per arm, the noise check and any warning. <paramref name="reportPath"/> is
-        /// where the full report is, or null.
+        /// five outcomes per arm, the noise check, any warning, and current labelling agreement
+        /// when available. <paramref name="reportPath"/> is where the full report is, or null.
         /// </summary>
-        internal string FindingsSummary(string reportPath)
+        internal string FindingsSummary(string reportPath, AgreementReport agreement = null, string agreementNote = null)
         {
             var c = Report.Conditions;
             var md = new StringBuilder();
@@ -519,6 +536,18 @@ namespace Agenerela.Editor.Evaluation
 
             Line();
             Line(NoiseLine + $" Floor: {NoiseCheck.Formula}.");
+            if (agreement != null)
+            {
+                Line();
+                Line("Labelling: " + AgreementHeadline(agreement));
+                Line(AgreementDetail(agreement));
+                Line(PairwiseAgreement(agreement));
+                if (!string.IsNullOrEmpty(agreementNote))
+                {
+                    Line(agreementNote);
+                }
+            }
+
             if (c.Warnings.Count > 0)
             {
                 Line();

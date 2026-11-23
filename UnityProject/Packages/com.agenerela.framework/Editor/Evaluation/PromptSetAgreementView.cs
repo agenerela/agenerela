@@ -33,17 +33,16 @@ namespace Agenerela.Editor.Evaluation
             scroll = EditorGUILayout.BeginScrollView(scroll);
             EditorGUILayout.Space();
 
-            int twice = report.AnsweredByTwoOrMore;
-            string headline = twice == 0
-                ? "No prompt has two answers yet."
-                : $"{report.Unanimous} of {twice} prompts answered by two or more people got the same answer from all ({report.PercentAgreement:0}%).";
+            string headline = EvaluationReportView.AgreementHeadline(report);
             EditorGUILayout.LabelField(headline, new GUIStyle(EditorStyles.boldLabel) { wordWrap = true, fontSize = 14 });
+            EditorGUILayout.LabelField(EvaluationReportView.PairwiseAgreement(report), EditorStyles.wordWrappedLabel);
             EditorGUILayout.LabelField(
                 "An unsettled prompt counts its expected answer as its one writer's. Settling a split writes everyone's answer into the prompt's labels.",
                 EditorStyles.wordWrappedMiniLabel);
 
             EditorGUILayout.Space();
             DrawCategories();
+            DrawAgreedAnswers();
             EditorGUILayout.Space();
             DrawSplits();
             EditorGUILayout.Space();
@@ -139,6 +138,47 @@ namespace Agenerela.Editor.Evaluation
             EditorGUILayout.LabelField(
                 "If neither side convinces the other, the prompt is ambiguous: rewrite it as a new prompt in Write mode, as findings.md describes.",
                 EditorStyles.wordWrappedMiniLabel);
+        }
+
+        private void DrawAgreedAnswers()
+        {
+            int count = UnrecordedAgreements(set, report).Count();
+            if (count == 0)
+            {
+                return;
+            }
+
+            EditorGUILayout.Space();
+            if (GUILayout.Button($"Record agreed answers ({count})") && EditorUtility.DisplayDialog(
+                    "Record agreed answers?",
+                    $"Keep each person's own answer in labels for these {count} unanimous prompts. Expected answers stay as they are; splits still need discussion.",
+                    "Record", "Cancel"))
+            {
+                RecordAgreedAnswers(set, report);
+                afterSettle();
+                GUIUtility.ExitGUI();
+            }
+        }
+
+        // Unanimous prompts need both original answers in labels too (#148), without making a
+        // person settle a disagreement that never existed or replacing the expected answer.
+        internal static int RecordAgreedAnswers(PromptSet set, AgreementReport report)
+        {
+            var agreed = UnrecordedAgreements(set, report).ToList();
+            foreach (var agreement in agreed)
+            {
+                set.TryFind(agreement.PromptId, out var prompt, out _);
+                set.Settle(agreement, prompt.ExpectedAction, prompt.ExpectedTarget);
+            }
+
+            return agreed.Count;
+        }
+
+        private static IEnumerable<PromptAgreement> UnrecordedAgreements(PromptSet set, AgreementReport report)
+        {
+            return report.Prompts.Where(p => p.Answered >= 2 && !p.IsSplit
+                && set.TryFind(p.PromptId, out var prompt, out _)
+                && p.Answers.Keys.Any(name => prompt.Labels == null || !prompt.Labels.ContainsKey(name)));
         }
 
         private void Settle(PromptAgreement split, string action, ExpectedTarget target)
