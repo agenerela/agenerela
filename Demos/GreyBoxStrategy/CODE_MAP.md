@@ -98,7 +98,7 @@ kit), `.Inspector`, `.Rule` and `.WritsRule` (orders panels), `.FreeCouncil`, `.
 ## Tests
 
 `Tests/Editor/` tests the rules and agents, one file a slice (`WritTests` R1a, `FreeOrderTests`,
-`EconomyTests`, `StorytellerTests`, ...); `TestGames.cs` sets up a game in a known state.
+`EconomyTests`, `EconomyTaxLockTests`, `StorytellerTests`, ...); `TestGames.cs` sets up a game in a known state.
 `Screen/Tests/Editor/` tests the screen's data and sessions, mostly one file per `Screen/Replay`
 model. Run one class with `-testFilter "GreyBoxStrategy.Tests.EconomyTests"` (the README's
 "Run it" has the full command).

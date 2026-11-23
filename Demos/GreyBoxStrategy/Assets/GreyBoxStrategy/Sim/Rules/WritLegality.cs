@@ -69,6 +69,13 @@ namespace GreyBoxStrategy
                     if (!rules.EconomyOn) return "tax levels are the economy's";
                     if (move.Target != null) return $"{move.Action} takes no target";
                     var level = Actions.SetsTaxes(move.Action).Value;
+                    // A change sticks for TaxLockTurns: offered every turn, the courts toggled it (run request 002).
+                    int wait = world.TaxTurnsLeft(me);
+                    if (wait > 0)
+                    {
+                        int ago = world.Turn - me.TaxesSetTurn;
+                        return $"taxes were set {(ago <= 0 ? "this turn" : ago == 1 ? "1 turn ago" : $"{ago} turns ago")}; they can change in {wait}";
+                    }
                     return me.Taxes == level ? $"taxes are already {level.ToString().ToLowerInvariant()}" : null;
                 }
 

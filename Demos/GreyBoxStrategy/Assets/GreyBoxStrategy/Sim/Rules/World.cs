@@ -49,6 +49,8 @@ namespace GreyBoxStrategy
         public int ReservedManpower { get; set; }
         /// <summary>Economy: the standing tax level, set by a court order; normal at the start.</summary>
         public TaxLevel Taxes { get; set; } = TaxLevel.Normal;
+        /// <summary>Economy: the turn the court last set <see cref="Taxes"/>, 0 if never; see <see cref="GameRules.TaxLockTurns"/>.</summary>
+        public int TaxesSetTurn { get; set; }
         /// <summary>The gold an order may still spend: <see cref="Gold"/> less <see cref="Reserved"/>.</summary>
         public int Spendable => Gold - Reserved;
 
@@ -240,6 +242,10 @@ namespace GreyBoxStrategy
 
         /// <summary>Economy: the income factor of a tax level.</summary>
         public double TaxFactor(TaxLevel level) => level == TaxLevel.Low ? Rules.LowTaxIncome : level == TaxLevel.High ? Rules.HighTaxIncome : 1.0;
+
+        /// <summary>Economy: turns until this realm's court may set taxes again (<see cref="GameRules.TaxLockTurns"/>), 0 when it may now.</summary>
+        public int TaxTurnsLeft(Country c) =>
+            !Rules.EconomyOn || c.TaxesSetTurn == 0 || Rules.TaxLockTurns <= 0 ? 0 : Math.Max(0, c.TaxesSetTurn + Rules.TaxLockTurns - Turn);
 
         /// <summary>Economy: the provinces a realm holds (owned, not occupied), which raise its manpower.</summary>
         public int HeldProvinces(string countryId) => ProvinceList.Count(p => p.Owner == countryId && p.Occupier == null);
