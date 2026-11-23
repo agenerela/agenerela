@@ -189,6 +189,8 @@ namespace Agenerela.Evaluation
                    + $"| {Points(check.NoiseFloorPoints)} | {(check.WithinNoise ? "within noise" : "**beyond noise**")} |");
             }
 
+            FieldOrder(Line);
+
             Line();
             Line("## Per category");
             Line();
@@ -233,6 +235,32 @@ namespace Agenerela.Evaluation
 
             Replies(Line);
             return md.ToString();
+        }
+
+        // Beside the noise check (#180): whether each arm's replies kept the schema's field order, so a
+        // comparison under another order is not read as a model result.
+        private void FieldOrder(Action<string> line)
+        {
+            line("");
+            line("## Field order");
+            line("");
+            line("Whether each reply's fields came in the schema's order, action, then target, then statement. An arm with any out of "
+               + "order measures the order as well as the model.");
+            if (Conditions.AllowOrderLost)
+            {
+                line("");
+                line("**AllowOrderLost was on**: the run started whatever order its warm-ups came in.");
+            }
+
+            line("");
+            line("| | " + string.Join(" | ", Arms.Select(a => Cell(a.Name))) + " |");
+            line("|---|" + string.Concat(Arms.Select(_ => "---:|")));
+            line("| In order | " + string.Join(" | ", Arms.Select(a => a.OrderKept.ToString(CultureInfo.InvariantCulture))) + " |");
+            line("| Out of order | " + string.Join(" | ", Arms.Select(a => a.OrderFlagged ? $"**{a.OrderLost}**" : "0")) + " |");
+            line("| Not checked | " + string.Join(" | ", Arms.Select(a => a.OrderNotChecked.ToString(CultureInfo.InvariantCulture))) + " |");
+            line("| Warm-ups out of order | " + string.Join(" | ", Arms.Select(a =>
+                (Conditions.Arms.FirstOrDefault(c => c.Name == a.Name)?.WarmUpOrderLost ?? 0).ToString(CultureInfo.InvariantCulture))) + " |");
+            line("| | " + string.Join(" | ", Arms.Select(a => a.OrderFlagged ? "**order lost**" : a.OrderKept > 0 ? "order kept" : "not checked")) + " |");
         }
 
         // The second score: what the reply checks found in the statements, apart from the outcomes.

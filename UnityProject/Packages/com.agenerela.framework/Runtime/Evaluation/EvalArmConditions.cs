@@ -92,6 +92,13 @@ namespace Agenerela.Evaluation
         /// <summary>The throwaway decisions sent before the arm's first prompt, which no count includes.</summary>
         [JsonProperty("warmUpRequests")] public int WarmUpRequests;
 
+        /// <summary>
+        /// How many warm-up replies came with their fields out of the schema's order (#180). Above 0
+        /// only in a run with <see cref="EvalRunner.AllowOrderLost"/> on: otherwise the run refused
+        /// to start.
+        /// </summary>
+        [JsonProperty("warmUpOrderLost")] public int WarmUpOrderLost;
+
         /// <summary>What was resident before the warm-up, after it, and when the arm's last prompt was answered.</summary>
         [JsonProperty("residency")] public List<ResidencyReading> Residency = new List<ResidencyReading>();
 

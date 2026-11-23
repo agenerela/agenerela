@@ -50,6 +50,14 @@ namespace Agenerela.Evaluation
     /// what the agent chose, not what it said.
     /// </para>
     /// <para>
+    /// <b>The field order</b> of each reply is counted per arm, from
+    /// <see cref="DecisionTelemetry.OrderLost"/>: in the schema's order, out of it, or not checked
+    /// when no reply was read (<see cref="EvalArmResult.OrderKept"/> and the two beside it). An arm
+    /// with any reply out of order is warned about, since its accuracy then measures the order as
+    /// well as the model. A warm-up reply out of order refuses the run before its first prompt,
+    /// unless <see cref="AllowOrderLost"/> is on (#180).
+    /// </para>
+    /// <para>
     /// <b>What it said</b> is a second score: <see cref="ReplyChecks"/> flags each answer's statement
     /// that repeats a few-shot line, is empty, is longer than the arm's
     /// <see cref="EvalArm.MaxStatementLength"/>, or leaks the machinery, into
@@ -108,6 +116,20 @@ namespace Agenerela.Evaluation
         /// §4, item 6: two or three). They are never counted or reported, only how many there were.
         /// </summary>
         public int WarmUpRequests = 3;
+
+        /// <summary>
+        /// Lets the run start when a warm-up reply's fields came out of the schema's order; false by
+        /// default, which refuses it, naming the arm and the model (#180). On for a run that
+        /// measures the order on purpose. The report records it
+        /// (<see cref="EvalConditions.AllowOrderLost"/>), and still counts and warns about every
+        /// answer out of order.
+        /// </summary>
+        /// <remarks>
+        /// The settled field-order rule (action, then target, then statement) is the measured one:
+        /// a model whose replies come in another order, as Ollama's native template path writes
+        /// them, is compared under two changes at once (findings, 5 November 2026).
+        /// </remarks>
+        public bool AllowOrderLost;
 
         /// <summary>
         /// How a prompt's <c>preconditionState</c> is told to the model, one observation per line:
@@ -188,7 +210,8 @@ namespace Agenerela.Evaluation
         /// <exception cref="InvalidOperationException">
         /// The run cannot start or go on: the set breaks a rule or disagrees with the profile, has no
         /// prompts, another model is resident, interleaved arms are on two models, no warm-up decision
-        /// was a decision, or the model could not be unloaded between sequential arms. The message
+        /// was a decision, a warm-up reply's fields came out of the schema's order (unless
+        /// <see cref="AllowOrderLost"/>), or the model could not be unloaded between sequential arms. The message
         /// says which.
         /// </exception>
         /// <exception cref="ProviderException">An Ollama server could not be read.</exception>
@@ -296,6 +319,7 @@ namespace Agenerela.Evaluation
             foreach (var run in new[] { a, b })
             {
                 Warn(report.Conditions, run);
+                WarnOrder(report.Conditions, run);
             }
 
             // A cancelled run compares only where both arms were asked the same prompts: in an
@@ -512,6 +536,7 @@ namespace Agenerela.Evaluation
                 SetAgent = Set.Agent,
                 Prompts = prompts,
                 SetCommit = commit,
+                AllowOrderLost = AllowOrderLost,
                 SetUncommitted = uncommitted,
                 Profile = Profile.name,
                 GraphicsDevice = SystemInfo.graphicsDeviceName,
@@ -604,6 +629,19 @@ namespace Agenerela.Evaluation
                 var agent = Build(run, new JObject(), Standing(run, new List<string>()), new List<string>(), options);
                 last = await agent.DecideAsync(stimuli[i % stimuli.Count], options, ct);
                 decided |= last.Decision != null;
+                if (OrderOf(last) == true)
+                {
+                    run.Conditions.WarmUpOrderLost++;
+                }
+            }
+
+            if (run.Conditions.WarmUpOrderLost > 0 && !AllowOrderLost)
+            {
+                throw new InvalidOperationException(
+                    $"Arm '{run.Arm.Name}': {run.Conditions.WarmUpOrderLost} of {WarmUpRequests} warm-up replies from {ModelOf(run, last)} came with "
+                  + "their fields out of the schema's order (action, target, statement), so every answer would measure the order as well as "
+                  + "the model. Ollama's native template path sorts the schema's keys (findings, 5 November 2026). Set AllowOrderLost to "
+                  + "run it anyway, for a run that measures the order on purpose.");
             }
 
             if (WarmUpRequests > 0 && !decided)
@@ -611,6 +649,34 @@ namespace Agenerela.Evaluation
                 throw new InvalidOperationException(
                     $"Arm '{run.Arm.Name}': no warm-up request produced a decision, so every prompt would fail the same way. "
                   + $"{last.Telemetry.ErrorKind}: {last.Telemetry.ErrorMessage}");
+            }
+        }
+
+        // Whether the reply's fields came out of the schema's order; null when no reply was read,
+        // so the order was not checked. OrderLost is false then, which is not "kept".
+        private static bool? OrderOf(DecisionResult result)
+        {
+            return result?.ModelDecision == null ? (bool?)null : result.Telemetry.OrderLost;
+        }
+
+        // The model as the arm asks for it, otherwise as the provider reported it, otherwise the provider.
+        private static string ModelOf(ArmRun run, DecisionResult last)
+        {
+            if (!string.IsNullOrEmpty(run.Ollama?.Model)) return run.Ollama.Model;
+            if (!string.IsNullOrEmpty(last?.Telemetry.Model)) return last.Telemetry.Model;
+            return $"the {run.Provider.Name} provider's model";
+        }
+
+        // An arm with any answer out of order, for the report's warnings (#180).
+        private static void WarnOrder(EvalConditions conditions, ArmRun run)
+        {
+            var result = run.Result;
+            if (result.OrderFlagged)
+            {
+                int read = result.OrderKept + result.OrderLost;
+                conditions.Warnings.Add(
+                    $"Arm '{run.Arm.Name}': {result.OrderLost} of {read} replies from {ModelOf(run, null)} came with their fields out of the "
+                  + "schema's order, so its accuracy measures the order as well as the model.");
             }
         }
 
@@ -701,6 +767,8 @@ namespace Agenerela.Evaluation
             result.Telemetry.Outcome = outcome;
             run.Result.Add(category, outcome);
             run.Answered(result.Telemetry.Model);
+            bool? orderLost = OrderOf(result);
+            run.Result.AddOrder(orderLost);
 
             // The reply checks, a second score: they read the statement and change nothing above.
             var replyFlags = new List<ReplyFinding>();
@@ -739,6 +807,7 @@ namespace Agenerela.Evaluation
                 ErrorMessage = t.ErrorMessage,
                 Model = t.Model,
                 LatencySeconds = t.LatencySeconds,
+                OrderLost = orderLost,
                 ReplyChecked = replyChecked,
                 ReplyFlags = replyFlags,
                 Result = result,

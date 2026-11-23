@@ -43,6 +43,13 @@ namespace Agenerela.Evaluation
         /// <summary>How each prompt's state was told to the model.</summary>
         [JsonProperty("state")] public string State;
 
+        /// <summary>
+        /// <see cref="EvalRunner.AllowOrderLost"/>: true when the run was let start although its
+        /// warm-ups' fields came out of the schema's order, as a run measuring the order on purpose
+        /// is (#180).
+        /// </summary>
+        [JsonProperty("allowOrderLost")] public bool AllowOrderLost;
+
         [JsonProperty("arms")] public List<EvalArmConditions> Arms = new List<EvalArmConditions>();
 
         /// <summary>

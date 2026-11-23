@@ -63,6 +63,13 @@ namespace Agenerela.Evaluation
         [JsonProperty("latencySeconds")] public float LatencySeconds;
 
         /// <summary>
+        /// Whether the reply's fields came in an order other than the schema's
+        /// (<see cref="DecisionTelemetry.OrderLost"/>, #180); null when no reply was read, so its
+        /// order was not checked, and in a report written before the check existed.
+        /// </summary>
+        [JsonProperty("orderLost")] public bool? OrderLost;
+
+        /// <summary>
         /// Whether the reply checks looked at <see cref="ModelStatement"/>: true for every answer
         /// with a decision, false for a pipeline error and in a report written before they existed.
         /// </summary>
