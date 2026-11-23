@@ -268,6 +268,21 @@ namespace GreyBoxStrategy
             foreach (var d in dockets.Values) d.Recalled.RemoveAll(id => World.FindArmy(id) == null);
         }
 
+        // The court's turn facts; with CourtTurnFacts, a later request also reads what its earlier orders settled.
+        private List<string> CourtTurnFacts(Docket d)
+        {
+            var facts = Facts.Select(pending[d.Country]);
+            if (!Rules.FreeOrders || !Rules.CourtTurnFacts || d.CourtGiven.Count == 0) return facts;
+            var me = World.Country(d.Country);
+            var more = new List<string>();
+            if (d.CourtGiven.Any(m => m.Action == Actions.RaiseTaxes)) more.Add("Taxes are raised this turn; they cannot be raised again until next turn.");
+            if (me.Reserved > 0) more.Add($"Gold held for this turn's orders: {me.Reserved} of our {me.Gold}; {Math.Max(0, me.Spendable)} left to spend.");
+            // After the headline, which the court reads as its stimulus.
+            var list = facts.ToList();
+            list.InsertRange(Math.Min(1, list.Count), more);
+            return list;
+        }
+
         // The court's moves; with free orders, an order already given this turn is not offered again (recruits may repeat).
         private List<Move> CourtMovesFor(Docket d)
         {
@@ -340,7 +355,7 @@ namespace GreyBoxStrategy
 
         private CountryRequest CourtRequest(Docket d) =>
             new CountryRequest(Moment.Council, World.Turn, d.Country, World,
-                WritFacts.Standing(World, d.Country), Facts.Select(pending[d.Country]), CourtMovesFor(d))
+                WritFacts.Standing(World, d.Country), CourtTurnFacts(d), CourtMovesFor(d))
             {
                 Ordered = d.Ordered.ToList(),
                 Writ = d.Used + 1,
