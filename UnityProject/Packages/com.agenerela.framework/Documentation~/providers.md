@@ -60,12 +60,19 @@ Two rules sit above every implementation:
 | Rate limit | none | **~15/min, 1000/day** | none |
 | Rejects empty enum values | no | **yes** | no |
 | Reports token probabilities | yes | by model | not yet known |
+| Takes a paired schema | yes | `anyOf` yes (OpenAI strict: no) | not yet known |
 
 Bold marks where one backend differs from the other two, and most of it falls in the middle
 column — which is the point. Gemini is the vendor whose quirks the prototype actually hit, so
 it is the worked example and doubles as the conformance reference for the next vendor.
 
-The last row is `ReportsTokenProbabilities`, which the grounding guard depends on (build plan
+`SupportsPairedSchema` says whether the provider can be sent a root `anyOf` of complete objects,
+the paired schema of DR-020. It is true unless a provider sets it false. An action that declares a
+parameter is sent only in that shape, so an agent refuses one on a provider that says false when
+the agent is set up, and a call that asks for `PairTargetsWithActions` there ends as a
+`RequestPreparation` error with nothing sent ([parameters.md](parameters.md)).
+
+The row above it is `ReportsTokenProbabilities`, which the grounding guard depends on (build plan
 §2.5, DR-016). A provider sets it only if every reply carries the probabilities taken
 **before** the schema's mask. After the mask they always sit on the target list, so the guard
 would pass everything.
@@ -89,7 +96,11 @@ Schema and Ollama compiles it to a sampling grammar internally, so property orde
 inferred from the schema and needs no separate statement. No quota, no key, no budget.
 
 `Capabilities`: constrained decoding yes, explicit ordering no, dialect `JsonSchema`,
-`RateLimit` null, rejects empty enum values no, reports token probabilities yes.
+`RateLimit` null, rejects empty enum values no, reports token probabilities yes, takes a paired
+schema yes.
+
+On Ollama's native chat path a schema's keys come back sorted (findings, 5 November 2026). The
+framework detects that from the reply, whatever the provider: `DecisionTelemetry.OrderLost`.
 
 **What was built (#88).** `new Agent(profile, new OllamaProvider(new OllamaSettings()))`
 decides against `qwen3.5:4b` at `http://127.0.0.1:11434`. `OllamaSettings` is a plain class
@@ -118,8 +129,18 @@ measurement in Appendix A depends on it:
 | `messages` | One `system` message, the non-empty system-side blocks joined by a blank line (left out if there are none); then `History`; then `Stimulus` as the last `user` message |
 | `format` | `JsonSchemaSerializer`'s output (#9), embedded as a JSON object exactly as written |
 | `stream`, `think` | `false`, `false` |
-| `options` | `temperature` from the settings, `num_ctx` from the settings |
+| `options` | `temperature` from the call's `DecideOptions.Temperature` when set, else from the settings; `num_ctx` from the settings; then `seed` and `num_predict`, each only when the call set `DecideOptions.Seed` or `DecideOptions.MaxReplyTokens` |
 | `logprobs`, `top_logprobs` | `true`, `OllamaSettings.TokenAlternatives` (20 unless set) |
+
+**Sampling and a cap per call** (#266 item 7, #244 item 11). `DecideOptions.Temperature`, `Seed` and
+`MaxReplyTokens` are null by default, and a call that sets none sends exactly the request sent
+before they existed. They travel on `DecisionRequest`, so a storyteller at 0.8 and rulers at 0 share
+one provider and one queue, rather than needing a second provider (and a second queue against the
+same server). A refusal line is sampled as its decision was. `MaxReplyTokens` changes nothing the
+model reads; a reply cut at the cap is not one JSON object, so it ends as an `UnreadableReply`, as a
+runaway does, only sooner. Set it generously: a decision is a few dozen tokens, a story a hundred
+or two, so 400 binds only a runaway. A temperature above 0 changes the replies, and every number in
+the build plan's Appendix A was measured at 0. The scripted provider ignores all three.
 
 `History` is sent in the encoding `DecisionRequest.History` documents (#90): entries alternate
 `user` and `assistant`, starting with `user`, each exchange being the stimulus as it was sent

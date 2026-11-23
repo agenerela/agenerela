@@ -116,8 +116,9 @@ start.
 - **Ollama has no login.** Its own port is published nowhere: only the gateway can reach it.
 - **The gateway is the only door.** It answers 401 without the key, and passes only the routes the
   framework, the kits and `ollama_remote.py` use: `/api/version`, `tags`, `ps`, `show`, `chat`,
-  `generate`, `embed` and `pull`. Deleting, creating, copying or pushing a model, blob uploads and
-  the OpenAI-style `/v1` routes answer 403; do those on the server with `docker exec`. Caddy's log
+  `generate`, `embed` and `pull`, and `/v1/systemone`, the route decision models answer on.
+  Deleting, creating, copying or pushing a model, blob uploads and every other `/v1` route answer
+  403; do those on the server with `docker exec`. Caddy's log
   shows the key as `REDACTED`.
 - **Traffic is plain HTTP.** Fine at home and over the VPN, which encrypts it. On a network you
   do not trust, use the VPN or Tailscale, never the open port.
@@ -170,6 +171,7 @@ From any machine with the `.env`:
 | What is in memory, how much on the GPU | `python tools/ollama-server/ollama_remote.py ps` |
 | Load a model before timing it | `python tools/ollama-server/ollama_remote.py warm <model>` |
 | Free the GPU | `python tools/ollama-server/ollama_remote.py unload --all` |
+| Check a decision model answers on `/v1/systemone` | `python tools/ollama-server/ollama_remote.py systemone <model>` |
 
 ## Logs
 

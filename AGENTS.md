@@ -85,7 +85,7 @@ Neither changelog nor the wiki is loaded into every session; read the one you ne
 | `docs/` | Build plan, llm-wiki, screen designs and course materials — [`docs/README.md`](docs/README.md) maps them |
 | `tools/benchmarks/` | Standalone Python probes, no Unity required |
 | `tools/branding/` | The logo as 3D-printable pins and signs, 4K stills and a 4K animation with sound, all built in Blender from the logo's traced geometry |
-| `tools/live-runs/` | Kits that `docs/run-requests/` points to, so any machine repeats a live run exactly: `model-sweep/` runs a list of models through `EvalRunner` |
+| `tools/live-runs/` | Kits that `docs/run-requests/` points to, so any machine repeats a live run exactly: `model-sweep/` runs a list of models through `EvalRunner`, and `runner/` plays requests on the RTX 5080 machine from a queue on `test`, resumably |
 | `tools/ci/` | `hygiene.py`, every check CI runs, runnable on your machine and as a pre-commit hook; `release.py`, the mechanical steps of a release |
 | `tools/comfyui/` | The asset server: ComfyUI in Docker on the lead's RTX 5080 machine, making 3D models, sounds and images for the demo games, and `comfy.py`, which agents call it with |
 | `tools/ollama-server/` | Ollama in Docker on the same RTX 5080 machine, behind a gateway that wants a key, so the laptop runs Unity, the live tests and `tools/live-runs/` on that card; `ollama_remote.py` checks it |
@@ -217,6 +217,10 @@ CI check or a test starts enforcing a lesson, delete it from this list.
   test whose `Task` ends cancelled as passed, so a cancelled decision hides a failure.
 - **After merging `test` into a branch, diff it against the branch's head before the merge.**
   A merge with `test` silently dropped #90's memory tests and docs; c9d6160 restored them.
+- **Before every push, read `git diff --stat origin/test...HEAD` and `git diff --diff-filter=D --name-only origin/test...HEAD`.**
+  The first must list only your files and the second is usually empty. A `git reset --soft origin/test` after
+  `test` has moved commits your old tree on top of the new head and silently reverts everything merged since:
+  #343 would have deleted typed parameters (#342) and #344 a UI slice, both on 16 November, both green in CI.
 - **Check a pull request is still open before pushing to it** (`gh pr view <n> --json state`).
   Green pull requests merge fast: a commit pushed to #37 after its merge never reached `test`
   and had to become #38.

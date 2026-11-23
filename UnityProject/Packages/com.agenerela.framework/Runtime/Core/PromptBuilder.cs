@@ -61,7 +61,15 @@ namespace Agenerela
             " and target " + TargetRegistry.NoTarget +
             ", and say it is not here. Never act on a different thing instead.";
 
-        private const string ObservationsHeader = "What you know right now:";
+        // The same rule for a schema with no statement (#266, DecideOptions.AskForStatement): it
+        // cannot ask the agent to say anything. New and unmeasured.
+        private const string TargetRuleEndSilent =
+            ". If you are asked to act on anything else, choose action " + ActionRegistry.None +
+            " and target " + TargetRegistry.NoTarget +
+            ". Never act on a different thing instead.";
+
+        // Internal so an example's situation is rendered under the same heading (#216 item 1).
+        internal const string ObservationsHeader = "What you know right now:";
 
         // The identity's standing knowledge and statement rules (#190, Living Vale #14), after the
         // goals. "What you know:" sets the knowledge against the observations' "What you know right
@@ -219,8 +227,9 @@ namespace Agenerela
 
             return new DecisionRequest
             {
-                SystemPrompt = SystemPrompt(ctx.Identity, options.StatementRulesWording, choices,
-                    options.TargetRule ? TargetRuleLine(schema) : null),
+                // With no statement field, the rules for one are not sent either (#266).
+                SystemPrompt = SystemPrompt(ctx.Identity, schema.AsksForStatement ? options.StatementRulesWording : (StatementRulesWording?)null,
+                    choices, options.TargetRule ? TargetRuleLine(schema) : null),
                 FewShotBlock = fewShotBlock,
                 Observations = ObservationsBlock(block),
                 // Copied, so a memory strategy changing its list afterwards does not change a
@@ -249,6 +258,10 @@ namespace Agenerela
                 StimulusText = decided.StimulusText,
                 StimulusLabel = decided.StimulusLabel,
                 AgentId = decided.AgentId,
+                // Sampled as the decision was (#266 item 7, #244 item 11).
+                Temperature = decided.Temperature,
+                Seed = decided.Seed,
+                MaxReplyTokens = decided.MaxReplyTokens,
             };
         }
 
@@ -278,7 +291,9 @@ namespace Agenerela
                     }
                 }
 
-                return ids.Count > 0 ? TargetRuleStart + string.Join(", ", ids) + TargetRuleEnd : null;
+                return ids.Count > 0
+                    ? TargetRuleStart + string.Join(", ", ids) + (schema.AsksForStatement ? TargetRuleEnd : TargetRuleEndSilent)
+                    : null;
             }
 
             return null;
@@ -301,7 +316,8 @@ namespace Agenerela
                     lines.Add(ActionsHeader);
                     foreach (string id in field.AllowedValues)
                     {
-                        lines.Add(Entry(id, id == ActionRegistry.None ? DecisionSchema.NoneDescription : DescriptionOf(ctx.Actions, id)));
+                        lines.Add(WithParameters(
+                            Entry(id, id == ActionRegistry.None ? DecisionSchema.NoneDescription : DescriptionOf(ctx.Actions, id)), schema, id));
                     }
                 }
                 else if (field.Name == DecisionSchema.TargetFieldName)
@@ -359,7 +375,8 @@ namespace Agenerela
             var lines = new List<string> { ActionsHeader };
             foreach (string id in actionField.AllowedValues)
             {
-                string line = Entry(id, id == ActionRegistry.None ? DecisionSchema.NoneDescription : DescriptionOf(ctx.Actions, id));
+                string line = WithParameters(
+                    Entry(id, id == ActionRegistry.None ? DecisionSchema.NoneDescription : DescriptionOf(ctx.Actions, id)), schema, id);
                 var set = TakenBy(id);
                 var real = listed.FindAll(set.Contains);
                 bool noTarget = set.Contains(TargetRegistry.NoTarget);
@@ -476,6 +493,37 @@ namespace Agenerela
             return parts.Count == 0 ? null : MovesLinePrefix + string.Join("; ", parts) + ".";
         }
 
+        // The entry with the parameters the schema asks of this action, each as
+        // "strength (how hard it strikes): minor or major." (DR-023): the values offered for this
+        // decision, since a local model never reads the schema's enum. Unchanged for an action that
+        // declares none. New and unmeasured as wording, and here alone so an A/B can change it.
+        private static string WithParameters(string entry, DecisionSchema schema, string actionId)
+        {
+            foreach (var parameter in DecisionSchema.ParametersOf(schema, actionId))
+            {
+                string name = string.IsNullOrWhiteSpace(parameter.Description)
+                    ? parameter.Name
+                    : parameter.Name + " (" + OneLine(parameter.Description) + ")";
+                entry = WithNote(entry, name + ": " + OneOf(parameter.AllowedValues) + ".");
+            }
+
+            return entry;
+        }
+
+        // "a", "a or b", "a, b or c".
+        private static string OneOf(IReadOnlyList<string> values)
+        {
+            if (values.Count == 1)
+            {
+                return values[0];
+            }
+
+            var head = new List<string>(values);
+            string last = head[head.Count - 1];
+            head.RemoveAt(head.Count - 1);
+            return string.Join(", ", head) + " or " + last;
+        }
+
         // An action's line with its pairs note: "- id: Its description. Target: no_target.", or with
         // no description "- id: Target: no_target.".
         private static string WithNote(string entry, string note)
@@ -510,8 +558,9 @@ namespace Agenerela
         // Who the agent is, its goals, its knowledge and its statement rules, each when it has
         // them, then the fixed instruction line, then the action and target list and the target
         // rule, each when there is one. With no knowledge and no rules the prompt is exactly what
-        // it was before them (#190, Living Vale #14).
-        private static string SystemPrompt(AgentIdentity identity, StatementRulesWording wording, string choices, string targetRule)
+        // it was before them (#190, Living Vale #14). A null wording sends no rules line: the
+        // schema asks for no statement (#266).
+        private static string SystemPrompt(AgentIdentity identity, StatementRulesWording? wording, string choices, string targetRule)
         {
             var lines = new List<string>(7);
 
@@ -534,9 +583,9 @@ namespace Agenerela
             }
 
             string rules = OneLine(identity.StatementRules);
-            if (rules.Length > 0)
+            if (rules.Length > 0 && wording.HasValue)
             {
-                lines.Add(RulesPrefix(wording) + EndSentence(rules));
+                lines.Add(RulesPrefix(wording.Value) + EndSentence(rules));
             }
 
             lines.Add(InstructionLine);

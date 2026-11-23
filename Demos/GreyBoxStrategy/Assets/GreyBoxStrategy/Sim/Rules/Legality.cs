@@ -134,7 +134,14 @@ namespace GreyBoxStrategy
                 string forts = p.Forts == 1 ? "1 fort" : $"{p.Forts} forts";
                 string capital = p.IsCapital ? ", a capital" : "";
                 if (p.Owner == null) return $"neutral, garrison {p.Garrison}" + (p.Forts > 0 ? ", " + forts : "");
-                if (p.Owner == countryId) return $"ours, {forts}{capital}";
+                if (p.Owner == countryId)
+                {
+                    // Economy, E2: our province's land, its gold a turn and its buildings, to choose where to build.
+                    if (world.Rules.EconomyOn)
+                        return $"ours, {forts}{capital}, {p.Info.Terrain.ToString().ToLowerInvariant()}{(p.Info.IsCoastal ? " coast" : "")}, {world.Yield(p)} gold a turn"
+                               + string.Concat(p.Buildings.OrderBy(b => b).Select(b => ", " + b.ToString().ToLowerInvariant()));
+                    return $"ours, {forts}{capital}";
+                }
                 return $"{p.Owner}'s, {forts}{capital}";
             }
             var c = world.Country(targetId);

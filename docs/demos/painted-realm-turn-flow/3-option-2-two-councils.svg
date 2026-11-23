@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 404" width="1280" height="404" role="img" aria-labelledby="t d">
+  <title id="t">Option 2 (a sketch): two councils a turn, court then field</title>
+  <desc id="d">Option 2, a sketch. The turn has two halves. In the court council every ruler gives its court order; these resolve and are shown. In the field council every ruler orders its armies on the new snapshot, so marshals and you see the wars just declared; then the march and the battles resolve.</desc>
+  <style>text{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif}</style>
+  <rect width="1280" height="404" rx="10" fill="#0d1117"/>
+  <text x="20" y="34" font-size="18" font-weight="600" fill="#e6edf3">Option 2 (a sketch): two councils a turn, court then field</text>
+  <rect x="12" y="56" width="1256" height="52" rx="6" fill="#161b22"/>
+  <text x="20" y="82" font-size="13" font-weight="600" fill="#e6edf3" dominant-baseline="middle">You</text>
+  <rect x="12" y="118" width="1256" height="52" rx="6" fill="#161b22"/>
+  <text x="20" y="137" font-size="13" font-weight="600" fill="#e6edf3" dominant-baseline="middle">Rival rulers</text>
+  <text x="20" y="154" font-size="11" fill="#8b949e" dominant-baseline="middle">the model, one call at a time</text>
+  <rect x="12" y="180" width="1256" height="36" rx="6" fill="#161b22"/>
+  <text x="20" y="198" font-size="13" font-weight="600" fill="#e6edf3" dominant-baseline="middle">The rules</text>
+  <rect x="12" y="226" width="1256" height="84" rx="6" fill="#161b22"/>
+  <text x="20" y="268" font-size="13" font-weight="600" fill="#e6edf3" dominant-baseline="middle">The screen</text>
+  <line x1="170.0" y1="52" x2="170.0" y2="318" stroke="#f0f6fc" stroke-width="1.5" stroke-dasharray="4 4" opacity=".6"/>
+  <line x1="452.4" y1="52" x2="452.4" y2="318" stroke="#f0f6fc" stroke-width="1.5" stroke-dasharray="4 4" opacity=".6"/>
+  <line x1="626.1" y1="52" x2="626.1" y2="318" stroke="#f0f6fc" stroke-width="1.5" stroke-dasharray="4 4" opacity=".6"/>
+  <line x1="930.2" y1="52" x2="930.2" y2="318" stroke="#f0f6fc" stroke-width="1.5" stroke-dasharray="4 4" opacity=".6"/>
+  <line x1="1256.0" y1="52" x2="1256.0" y2="318" stroke="#f0f6fc" stroke-width="1.5" stroke-dasharray="4 4" opacity=".6"/>
+  <rect x="172.0" y="61" width="278.4" height="42" rx="5" fill="#12351f" stroke="#2ea043"/>
+  <text x="311.2" y="74.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Court council: wars, treaties, recruits,</text>
+  <text x="311.2" y="90.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">forts, taxes</text>
+  <rect x="519.5" y="61" width="104.6" height="42" rx="5" fill="#12351f" stroke="#2ea043"/>
+  <text x="571.8" y="74.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Read the</text>
+  <text x="571.8" y="90.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">proclamations</text>
+  <rect x="628.1" y="61" width="300.1" height="42" rx="5" fill="#12351f" stroke="#2ea043"/>
+  <text x="778.2" y="74.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Field council: order your armies, knowing</text>
+  <text x="778.2" y="90.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">the wars just declared</text>
+  <rect x="953.9" y="61" width="300.1" height="42" rx="5" fill="#12351f" stroke="#2ea043"/>
+  <text x="1104.0" y="82.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Watch the march and the battles</text>
+  <rect x="172.0" y="123" width="126.3" height="42" rx="5" fill="#11264f" stroke="#4d8eff"/>
+  <text x="235.2" y="136.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Courts decide: 5</text>
+  <text x="235.2" y="152.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">to 10 calls</text>
+  <rect x="454.4" y="123" width="61.2" height="42" rx="5" fill="#11264f" stroke="#4d8eff"/>
+  <text x="484.9" y="144.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Envoys</text>
+  <rect x="519.5" y="123" width="256.6" height="42" rx="5" fill="#11264f" stroke="#4d8eff"/>
+  <text x="647.8" y="136.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Marshals decide on the new snapshot:</text>
+  <text x="647.8" y="152.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">5 to 12 calls, 2.5 to 6 s</text>
+  <rect x="1029.9" y="123" width="126.3" height="42" rx="5" fill="#11264f" stroke="#4d8eff"/>
+  <text x="1093.1" y="136.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Next turn&#x27;s</text>
+  <text x="1093.1" y="152.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">courts</text>
+  <rect x="172.0" y="185" width="278.4" height="26" rx="5" fill="#21262d" stroke="#6e7681"/>
+  <text x="311.2" y="198.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Snapshot 1, after upkeep</text>
+  <rect x="519.5" y="185" width="408.7" height="26" rx="5" fill="#21262d" stroke="#6e7681"/>
+  <text x="723.9" y="198.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Snapshot 2: treaties, wars and recruits have landed</text>
+  <rect x="953.9" y="185" width="72.0" height="26" rx="5" fill="#21262d" stroke="#6e7681"/>
+  <text x="989.9" y="198.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Resolve</text>
+  <rect x="1029.9" y="185" width="126.3" height="26" rx="5" fill="#21262d" stroke="#6e7681"/>
+  <text x="1093.1" y="198.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Next upkeep</text>
+  <rect x="172.0" y="231" width="278.4" height="74" rx="5" fill="#2a1d47" stroke="#a371f7"/>
+  <text x="311.2" y="268.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Court panel</text>
+  <rect x="519.5" y="231" width="104.6" height="74" rx="5" fill="#2a1d47" stroke="#a371f7"/>
+  <text x="571.8" y="244.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Proclamations:</text>
+  <text x="571.8" y="260.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">who declared,</text>
+  <text x="571.8" y="276.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">offered,</text>
+  <text x="571.8" y="292.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">raised</text>
+  <rect x="628.1" y="231" width="300.1" height="74" rx="5" fill="#2a1d47" stroke="#a371f7"/>
+  <text x="778.2" y="260.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Army panel and the map. Rivals&#x27; new wars and</text>
+  <text x="778.2" y="276.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">levies are on it</text>
+  <rect x="953.9" y="231" width="300.1" height="74" rx="5" fill="#2a1d47" stroke="#a371f7"/>
+  <text x="1104.0" y="268.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">The march, battles, sieges, land</text>
+  <text x="170.0" y="334" font-size="12" font-weight="600" fill="#f0f6fc" text-anchor="start">Court council</text>
+  <text x="452.4" y="334" font-size="12" font-weight="600" fill="#f0f6fc" text-anchor="middle">Seal</text>
+  <text x="626.1" y="334" font-size="12" font-weight="600" fill="#f0f6fc" text-anchor="middle">Field council</text>
+  <text x="930.2" y="334" font-size="12" font-weight="600" fill="#f0f6fc" text-anchor="middle">End turn</text>
+  <text x="1256.0" y="334" font-size="12" font-weight="600" fill="#f0f6fc" text-anchor="end">Next turn</text>
+  <text x="20" y="358" font-size="13" fill="#c9d1d9">Not to scale. Both model rounds overlap something you are doing, so neither is a wait. The marshals read a different snapshot than today: a new turn style, to be measured against the writs turn.</text>
+  <rect x="20" y="376" width="16" height="12" rx="3" fill="#12351f" stroke="#2ea043"/>
+  <text x="42" y="386" font-size="12" fill="#8b949e">you</text>
+  <rect x="85.2" y="376" width="16" height="12" rx="3" fill="#11264f" stroke="#4d8eff"/>
+  <text x="107.2" y="386" font-size="12" fill="#8b949e">model rulers (qwen3.5:4b)</text>
+  <rect x="291.2" y="376" width="16" height="12" rx="3" fill="#21262d" stroke="#6e7681"/>
+  <text x="313.2" y="386" font-size="12" fill="#8b949e">the rules</text>
+  <rect x="394.79999999999995" y="376" width="16" height="12" rx="3" fill="#2a1d47" stroke="#a371f7"/>
+  <text x="416.79999999999995" y="386" font-size="12" fill="#8b949e">what the screen shows</text>
+</svg>

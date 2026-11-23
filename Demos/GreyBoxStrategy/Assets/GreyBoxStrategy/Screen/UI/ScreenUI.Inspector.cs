@@ -87,7 +87,7 @@ namespace GreyBoxStrategy.Realm
             return inspector;
         }
 
-        public void CloseInspector() => inspector.RemoveFromClassList("on");
+        public void CloseInspector() { inspector.RemoveFromClassList("on"); Root.RemoveFromClassList("insp-open"); }
 
         public void ShowCard(DecisionCard c)
         {
@@ -98,10 +98,15 @@ namespace GreyBoxStrategy.Realm
 
             // header: face, crest, outcome
             var head = new VisualElement(); head.AddToClassList("insp-head");
-            var face = new Image { image = portraits, uv = Faces.Uv(player?.Persona, look.Slot % 2), scaleMode = ScaleMode.ScaleAndCrop };
-            face.AddToClassList("insp-face");
-            face.style.borderTopColor = face.style.borderBottomColor = face.style.borderLeftColor = face.style.borderRightColor = (Color)look.Colour;
-            head.Add(face);
+            bool teller = CountryLook.IsStoryteller(c.Country);
+            if (teller) head.Add(new Crest(look, 44)); // the chronicler has no face
+            else
+            {
+                var face = RulerFace(c.Country);
+                face.AddToClassList("insp-face");
+                face.style.borderTopColor = face.style.borderBottomColor = face.style.borderLeftColor = face.style.borderRightColor = (Color)look.Colour;
+                head.Add(face);
+            }
             var hb = new VisualElement { style = { marginLeft = 10, flexShrink = 1 } };
             var row = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = Align.Center } };
             row.Add(new Crest(look, 18));
@@ -109,11 +114,37 @@ namespace GreyBoxStrategy.Realm
             string cls = c.Outcome == CardOutcome.Done || c.Outcome == CardOutcome.Held ? "ok" : c.Outcome == CardOutcome.Contained ? "guard" : "ref";
             var badge = new Label(c.OutcomeText.ToUpperInvariant()); badge.AddToClassList("badge-outcome"); badge.AddToClassList(cls); row.Add(badge);
             hb.Add(row);
-            var sub = new Label($"The {player?.Persona ?? "ruler"} · the {c.Moment} · {c.ChainId}{(c.ChainHop > 0 ? " · hop " + c.ChainHop : "")}");
+            var sub = new Label(teller ? $"The game's storyteller · {c.Moment} · before turn {c.Turn}'s upkeep"
+                : $"The {player?.Persona ?? "ruler"} · the {c.Moment} · {c.ChainId}{(c.ChainHop > 0 ? " · hop " + c.ChainHop : "")}");
             sub.AddToClassList("insp-sub"); hb.Add(sub);
             head.Add(hb);
             inspectorBody.Add(head);
+            bool report = Fog.KnowsReport(c.Country, GameOver);
+            sectionTarget = null;
+            KitTabs(inspectorBody, "inspector",
+                (IconKind.Seal, "Answer", page => { sectionTarget = page; CardAnswer(c); }),
+                (IconKind.Eye, "Offered", page => { sectionTarget = page; CardOffered(c, report); }),
+                (IconKind.Quill, "Told", page => { sectionTarget = page; CardTold(c, report, look); }),
+                (IconKind.Shield, "Guards", page => { sectionTarget = page; CardGuards(c); }),
+                (IconKind.Hourglass, "Model", page => { sectionTarget = page; CardModel(c, teller, player, look); }));
+            sectionTarget = null;
 
+            var foot = new Label("Everything on this card comes from DecisionFeed.Recorded: the DecisionResult and its DecisionTelemetry, recorded when the table played. The game adds only the layout.");
+            foot.AddToClassList("src"); foot.style.paddingLeft = 10; foot.style.paddingRight = 10; foot.style.paddingBottom = 10;
+            inspectorBody.Add(foot);
+
+            inspector.AddToClassList("on");
+            inspector.BringToFront(); // a window over the map: above the legend and the map's modes
+            Root.AddToClassList("insp-open");
+            KeepLayout();
+            inspectorBody.scrollOffset = Vector2.zero;
+        }
+
+        // The section a card's tab is building into; null: the inspector's body.
+        private VisualElement sectionTarget;
+
+        private void CardAnswer(DecisionCard c)
+        {
             // 1 the answer
             var s1 = Section("1 · WHAT THE MODEL ANSWERED", "action, then target, then statement");
             var box = new VisualElement(); box.AddToClassList("code-box");
@@ -121,7 +152,10 @@ namespace GreyBoxStrategy.Realm
             s1.Add(box);
             if (c.ModelWrote != null) s1.Add(Note($"Before the guard, the model wrote {c.ModelWrote}."));
             if (c.Outcome == CardOutcome.Contained) s1.Add(Note("A guard contained it: the agent ran none instead, and no statement was shown."));
+        }
 
+        private void CardOffered(DecisionCard c, bool report)
+        {
             // 2 the menu
             var s2 = Section("2 · THE MOVES IT WAS OFFERED", $"{c.Offered.Count}, from its state");
             var chips = new VisualElement(); chips.AddToClassList("chips");
@@ -132,22 +166,36 @@ namespace GreyBoxStrategy.Realm
                 chips.Add(chip);
             }
             s2.Add(chips);
-            if (c.NotOffered.Count > 0)
+            if (c.NotOffered.Count > 0 && report)
             {
                 s2.Add(Note("Not offered, so absent from its schema:"));
                 foreach (var n in c.NotOffered.Take(14)) { var l = new Label($"{n.move}  —  {n.why}"); l.AddToClassList("why-no"); s2.Add(l); }
                 if (c.NotOffered.Count > 14) s2.Add(Note($"and {c.NotOffered.Count - 14} more"));
             }
             s2.Add(Src("TargetsUnavailable · ITargetAvailability, each with its reason"));
+            if (!report) s2.Add(Note("Why other moves were not offered is its court's business: it shows the treasury."));
+        }
 
+        private void CardTold(DecisionCard c, bool report, CountryLook look)
+        {
             // 3 what it was told
-            var s3 = Section("3 · WHAT IT WAS TOLD", $"{c.Standing.Count} standing + {c.ThisTurn.Count} this turn");
+            var s3 = Section("3 · WHAT IT WAS TOLD", report ? $"{c.Standing.Count} standing + {c.ThisTurn.Count} this turn" : "private");
+            if (!report)
+            {
+                s3.Add(Note($"What {look.Name}'s court told it holds its treasury, stability and plans, so it stays private while the game runs. It opens when the game is over. What it did and said is on the Answer tab."));
+            }
+            else
+            {
             s3.Add(Note("Standing facts (IObservationSource)"));
             var f1 = new VisualElement(); f1.AddToClassList("facts-box"); f1.Add(Mono(string.Join("\n", c.Standing))); s3.Add(f1);
             s3.Add(Note("The stimulus, then this turn's facts (ObservationPlacement.WithStimulus)"));
             var f2 = new VisualElement(); f2.AddToClassList("facts-box"); f2.Add(Mono(string.Join("\n", c.ThisTurn))); s3.Add(f2);
             s3.Add(Src($"ObservationsDropped: {c.ObservationsDropped}"));
+            }
+        }
 
+        private void CardGuards(DecisionCard c)
+        {
             // 4 guards
             var s4 = Section("4 · GUARDS, AND THE RE-CHECK WHEN IT LANDED", "");
             foreach (var g in c.Guards)
@@ -176,11 +224,14 @@ namespace GreyBoxStrategy.Realm
             s5.Add(KeyValue("Exchanges sent with this call", c.MemorySent.ToString()));
             s5.Add(KeyValue("Held but left out", c.MemoryDropped.ToString()));
             s5.Add(Src("HistoryTurnsSent · HistoryTurnsDropped. Only moves that landed are remembered."));
+        }
 
+        private void CardModel(DecisionCard c, bool teller, RecordedPlayer player, CountryLook look)
+        {
             // 6 model and time
             var s6 = Section("6 · MODEL AND TIME", "");
             s6.Add(KeyValue("Model", c.Model ?? "?"));
-            s6.Add(KeyValue("Persona", (player?.Persona ?? "?") + $" · face {look.Slot % 2 + 1} of 2"));
+            if (!teller) s6.Add(KeyValue("Persona", (player?.Persona ?? "?") + $" · face {look.Slot % 2 + 1} of 2"));
             s6.Add(KeyValue("Tokens", $"{c.PromptTokens:N0} in · {c.CompletionTokens} out"));
             float total = Mathf.Max(0.01f, c.QueueWaitSeconds + c.LatencySeconds);
             var tb = new VisualElement(); tb.AddToClassList("timebar");
@@ -195,13 +246,32 @@ namespace GreyBoxStrategy.Realm
             tb.Add(m);
             s6.Add(tb);
             s6.Add(Src("QueueWaitSeconds · LatencySeconds · PromptTokens · CompletionTokens · Model"));
+        }
 
-            var foot = new Label("Everything on this card comes from DecisionFeed.Recorded: the DecisionResult and its DecisionTelemetry, recorded when the table played. The game adds only the layout.");
-            foot.AddToClassList("src"); foot.style.paddingLeft = 10; foot.style.paddingRight = 10; foot.style.paddingBottom = 10;
-            inspectorBody.Add(foot);
+        /// <summary>For tests and the CLI: the inspector's tabs and the one shown.</summary>
+        public (List<string> tabs, string on) InspectorTabs()
+        {
+            var names = new List<string>(); string on = null;
+            inspector.Query(className: "ktab").ForEach(t => { var l = t.Q<Label>(); names.Add(l?.text); if (t.ClassListContains("on")) on = l?.text; });
+            return (names, on);
+        }
 
-            inspector.AddToClassList("on");
-            inspectorBody.scrollOffset = Vector2.zero;
+        /// <summary>For tests and the CLI: shows an inspector tab by name, as a click on it does.</summary>
+        public bool ShowInspectorTab(string name)
+        {
+            VisualElement hit = null;
+            inspector.Query(className: "ktab").ForEach(t => { if (t.Q<Label>()?.text == name) hit = t; });
+            if (!(hit?.userData is Action show)) return false;
+            show();
+            return true;
+        }
+
+        /// <summary>For tests: every label's text on the inspector, in order.</summary>
+        public List<string> InspectorText()
+        {
+            var t = new List<string>();
+            inspector.Query<Label>().ForEach(l => t.Add(l.text));
+            return t;
         }
 
         private VisualElement Section(string title, string note)
@@ -211,7 +281,7 @@ namespace GreyBoxStrategy.Realm
             h.Add(new Label(title));
             if (!string.IsNullOrEmpty(note)) { var n = new Label(note); n.AddToClassList("sec-note"); h.Add(n); }
             s.Add(h);
-            inspectorBody.Add(s);
+            (sectionTarget ?? inspectorBody).Add(s);
             return s;
         }
 

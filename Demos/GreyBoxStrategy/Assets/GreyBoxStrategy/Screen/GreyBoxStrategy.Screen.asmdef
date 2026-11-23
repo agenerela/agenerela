@@ -4,6 +4,7 @@
     "references": [
         "GreyBoxStrategy.Sim",
         "GreyBoxStrategy.Replay",
+        "GreyBoxStrategy.Chart",
         "GreyBoxStrategy",
         "Agenerela",
         "Unity.InputSystem"

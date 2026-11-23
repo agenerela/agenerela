@@ -127,11 +127,16 @@ namespace Agenerela.Evaluation
             {
                 if (asset != null && asset.Action != null && asset.Action.Id != ActionRegistry.None)
                 {
-                    set.Actions.Add(new DeclaredAction { Id = asset.Action.Id, NeedsTarget = asset.Action.RequiresTarget });
+                    set.Actions.Add(new DeclaredAction
+                    {
+                        Id = asset.Action.Id,
+                        NeedsTarget = asset.Action.RequiresTarget,
+                        TakesNoTarget = asset.Action.TakesNoTarget,
+                    });
                 }
             }
 
-            set.Actions.Add(new DeclaredAction { Id = ActionRegistry.None, NeedsTarget = false });
+            set.Actions.Add(new DeclaredAction { Id = ActionRegistry.None, TakesNoTarget = true });
             return set;
         }
 

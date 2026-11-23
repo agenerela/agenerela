@@ -10,6 +10,11 @@ demo's `README.md` has the numbers and why. There is no screen yet. The project 
 framework still lacks for this game. This page is the design: the rules, why they are what they
 are, and what changed from the first draft of 9 November.
 
+> **The next version of these rules** (several armies on the map, a turn of several orders, a
+> generated map of any size, an economy and diplomacy) is designed in
+> [`painted-realm-rules-v2.md`](painted-realm-rules-v2.md), 12 November 2026. This page stays the
+> record of the rules as built.
+
 > **Why this demo.** GreyBoxVillage and Living Vale are 3D, and most of their cost went into
 > things the framework never touches: terrain, cameras, animation, navigation, art. A country
 > here is a handful of numbers, so nearly all the work is the part that shows off the framework.

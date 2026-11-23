@@ -9,6 +9,10 @@ namespace GreyBoxStrategy
         Council,
         /// <summary>When another country offers it peace: accept or refuse.</summary>
         Envoy,
+        /// <summary>When an event asks its ruler to choose (the storyteller's dilemmas, S2): one of the event's options.</summary>
+        Choice,
+        /// <summary>The writs turn (rules v2, R1): orders for one army awaiting them, named by <see cref="CountryRequest.ArmyId"/>.</summary>
+        Army,
     }
 
     /// <summary>
@@ -20,8 +24,9 @@ namespace GreyBoxStrategy
     {
         public CountryRequest(Moment moment, int turn, string countryId, World world,
             IReadOnlyList<string> standingFacts, IReadOnlyList<string> turnFacts, IReadOnlyList<Move> legal,
-            string offerId = null, string offeredBy = null)
+            string offerId = null, string offeredBy = null, Move defaultMove = null)
         {
+            DefaultMove = defaultMove;
             Moment = moment;
             Turn = turn;
             CountryId = countryId;
@@ -47,6 +52,19 @@ namespace GreyBoxStrategy
         public string OfferId { get; }
         /// <summary>For an envoy call: the country offering peace.</summary>
         public string OfferedBy { get; }
+        /// <summary>For a choice: the option taken when nobody answers, which a scripted seat takes too.</summary>
+        public Move DefaultMove { get; }
+
+        /// <summary>For an army order (<see cref="Moment.Army"/>): the army being ordered. A model seat sends it as the correlation.</summary>
+        public string ArmyId { get; set; }
+        /// <summary>
+        /// In the writs turn: this ruler's earlier orders this turn, in order ("recruit", "maren_host
+        /// to march to corwick"), so a later decision does not repeat one. Empty for the first.
+        /// </summary>
+        public IReadOnlyList<string> Ordered { get; set; } = new string[0];
+        /// <summary>In the writs turn: the writ this decision spends, 1-based, and the writs this ruler has this turn.</summary>
+        public int Writ { get; set; }
+        public int Writs { get; set; }
     }
 
     /// <summary>A player's answer, paired with the request it answers.</summary>
@@ -119,6 +137,16 @@ namespace GreyBoxStrategy
         LastStanding,
         /// <summary>The last turn ended: most provinces won, then the larger army, then more gold.</summary>
         TurnLimit,
+        /// <summary>
+        /// A conquest game reached its headless cap with more than one country left. The leader is
+        /// named as by the turn limit, but nobody won (rules v2, section 6.1).
+        /// </summary>
+        Unfinished,
+        /// <summary>
+        /// No province changed owner or controller for <see cref="GameRules.StalemateTurns"/> turns.
+        /// The leader is named as by the turn limit, but nobody won.
+        /// </summary>
+        Stalemate,
     }
 
     /// <summary>A finished game's result.</summary>
@@ -152,6 +180,10 @@ namespace GreyBoxStrategy
         /// <summary>Provinces whose owner changed this turn, revolts included.</summary>
         public int TerritoryChanges;
         public int Battles;
+        /// <summary>The writs turn: every battle this turn, with its terms and why it went as it did, for the battle report.</summary>
+        public List<BattleRecord> BattleRecords = new List<BattleRecord>();
+        /// <summary>The writs turn: the human player's merges and splits, given in the council before anything resolved (#20).</summary>
+        public List<ArmyOrderRecord> ArmyOrders = new List<ArmyOrderRecord>();
         /// <summary>Moves the re-check refused because an earlier move this turn made them stale.</summary>
         public int StaleRefusals;
         /// <summary>The events that happened at this turn's upkeep: the random table's, or the storyteller's one.</summary>

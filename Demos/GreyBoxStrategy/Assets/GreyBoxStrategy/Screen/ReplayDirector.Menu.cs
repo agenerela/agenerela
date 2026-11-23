@@ -1,0 +1,265 @@
+using System.IO;
+using System.Linq;
+using GreyBoxStrategy.Replay;
+using UnityEngine;
+
+namespace GreyBoxStrategy.Realm
+{
+    /// <summary>
+    /// The menus and the settings: the main menu is the Watch scene's first state, so the painted
+    /// map stays behind it and "back to the main menu" is a reload of the one scene. Settings are a
+    /// small JSON file, <c>settings.json</c> in <c>Application.persistentDataPath</c>.
+    /// </summary>
+    public sealed partial class ReplayDirector
+    {
+        private SettingsStore settingsStore;
+        private GameSettings settings;
+        private bool pausedByMenu;
+
+        public GameSettings Settings => settings;
+        public string SettingsPath => settingsStore?.Path;
+
+        private void LoadSettings()
+        {
+            settingsStore = new SettingsStore(Path.Combine(Application.persistentDataPath, "settings.json"));
+            settings = settingsStore.Load();
+            speed = settings.PlaybackSpeed;
+            ApplySettings(settings, null);
+            SoundManager.Apply(settings); // the sound's volumes
+        }
+
+        /// <summary>The UI scale now: the settings' fixed step, or automatic from the screen's size.</summary>
+        private float CurrentUiScale() => settings != null && settings.UiScale > 0 ? settings.UiScale : UiScale.For(Screen.width, Screen.height);
+
+        private void ApplyScale()
+        {
+            if (panelSettings == null) return;
+            float scale = CurrentUiScale();
+            panelSettings.scale = scale;
+            ui?.SetCompact(Screen.width / scale < 1600);
+            if (cam != null) { if (framedRealm != null) FrameRealm(framedRealm); else FitCamera(); }
+        }
+
+        /// <summary>Applies settings at once. The display (a built game only) changes only when it differs from <paramref name="before"/>.</summary>
+        private void ApplySettings(GameSettings s, GameSettings before)
+        {
+            QualitySettings.vSyncCount = s.VSync ? 1 : 0;
+            Application.targetFrameRate = s.FrameCap > 0 ? s.FrameCap : -1;
+            ApplyScale();
+            if (!Application.isEditor && s.DisplayDiffers(before))
+            {
+                var mode = s.Display == DisplayMode.Windowed ? FullScreenMode.Windowed
+                    : s.Display == DisplayMode.Borderless ? FullScreenMode.FullScreenWindow : FullScreenMode.ExclusiveFullScreen;
+                int w = s.Width > 0 ? s.Width : Screen.currentResolution.width, h = s.Height > 0 ? s.Height : Screen.currentResolution.height;
+                Screen.SetResolution(w, h, mode);
+            }
+        }
+
+        /// <summary>A change from the settings page: applied and saved at once; a display change waits for Keep, or reverts.</summary>
+        private void SettingsChanged(GameSettings next)
+        {
+            var before = settings;
+            settings = next.Normalised();
+            SoundManager.Apply(settings); // the sound's volumes, at once
+            ApplySettings(settings, before);
+            if (!settings.DisplayDiffers(before) || Application.isEditor)
+            {
+                settingsStore.Save(settings);
+                if (settings.PlaybackSpeed != before.PlaybackSpeed) SetSpeed(settings.PlaybackSpeed);
+                return;
+            }
+            ui.ShowDisplayConfirm(12,
+                keep: () => settingsStore.Save(settings),
+                revert: () =>
+                {
+                    var bad = settings;
+                    settings = before;
+                    ApplySettings(settings, bad);
+                    ui.ShowNotice("The display went back to how it was.");
+                    OpenSettings(lastSettingsBack);
+                });
+        }
+
+        private System.Action lastSettingsBack;
+
+        private DisplayInfo Display()
+        {
+            var info = new DisplayInfo
+            {
+                InEditor = Application.isEditor,
+                Native = new Vector2Int(Screen.currentResolution.width, Screen.currentResolution.height),
+                AutoScale = UiScale.For(Screen.width, Screen.height),
+            };
+            info.Resolutions = Screen.resolutions.Select(r => new Vector2Int(r.width, r.height)).Distinct()
+                .Where(r => r.x >= 1280 && r.y >= 720).OrderBy(r => r.x).ThenBy(r => r.y).ToList();
+            return info;
+        }
+
+        /// <summary>For the Unity CLI and the menus: the settings page, returning to <paramref name="back"/>.</summary>
+        public void OpenSettings(System.Action back)
+        {
+            lastSettingsBack = back;
+            ui.ShowSettings(settings, Display(), SettingsChanged, back);
+        }
+
+        // ---- the pages ----
+
+        private readonly NewGameChoice newGame = new NewGameChoice();
+
+        /// <summary>The replay's line on the main menu, in a player's words: who won and how, never ids or model names.</summary>
+        private string MenuTitle()
+        {
+            if (game?.Result == null) return game?.Title;
+            var s = EndSummary.From(game, CountryLook.NameOf);
+            return s.Winner == null ? $"A game of {s.Turns} turns" : $"{CountryLook.NameOf(s.Winner)} wins {s.How}, after {s.Turns} turns";
+        }
+
+        /// <summary>The game's first screen.</summary>
+        public void ShowMainMenu()
+        {
+            OpenTitle(); // the start menu: ReplayDirector.StartMenu.cs
+        }
+
+        /// <summary>Set by the end screen's "New game": the next start opens New game, not the main menu.</summary>
+        private static bool newGameNext;
+
+        // A replay watched from the end screen does not end on it again.
+        private bool replayingEnd;
+
+        /// <summary>The end of the game: who won and how, the land over the turns, the wars and treaties, the rulers.</summary>
+        public void ShowEnd()
+        {
+            if (game == null) return;
+            var summary = EndSummary.From(game, CountryLook.NameOf);
+            SaveFinished(summary); // kept for Load a replay
+            ui.ShowEnd(summary, rule?.You, WatchReplay, () => { newGameNext = true; LeaveToMenu(); });
+        }
+
+        /// <summary>
+        /// The end screen's "Watch the replay": the same game again from turn 1, every council open, as the replay of a
+        /// recording plays. A rule game's council and fog step aside; the game stays as it was.
+        /// </summary>
+        public void WatchReplay()
+        {
+            ui.HideMenu();
+            if (rule != null)
+            {
+                rule.Stop();
+                ruleLock?.ReleaseNow();
+                rule = null;
+                ui.OrdersRequest = null;
+                ui.HideOrders();
+                ui.AdvisorShown = false;
+                ui.ShowAwaiting = false;
+                ui.Fog = new Fog(null, queries);
+                ui.Root.RemoveFromClassList("rule");
+            }
+            played.Clear();
+            ui.ClearChronicle();
+            ui.CloseInspector();
+            ui.CloseSide();
+            skipUntilTurn = 0;
+            replayingEnd = false;
+            if (game.Turns.Count > 0) Show(game.Turns[0].Start, null);
+            playing = true;
+            ui.SetPlaying(true, speed);
+            StartCoroutine(Play());
+        }
+
+        /// <summary>The first-turn help, now: the notes for this game, each beside what it explains.</summary>
+        public void ShowHelp()
+        {
+            if (ui == null || rule == null || !rule.Writs) return;
+            ui.ShowHelp(HelpCallouts.ForRule(rule.AdvisorOn, world != null && world.Provinces.Count > 40), () => PlayerPrefs.SetInt(HelpSeenKey, 1));
+        }
+
+        /// <summary>Remembered once the first-turn help has been closed: it opens by itself only once.</summary>
+        public const string HelpSeenKey = "painted-realm.help-seen";
+
+        public void ShowNewGame()
+        {
+            OpenNewGame(null); // the start menu's window: ReplayDirector.StartMenu.cs
+        }
+
+        private void StartNewGame(NewGameChoice c)
+        {
+            string arm = StoryArms.For(c.Storyteller);
+            yourWritsUnlimited = c.YourWritsUnlimited;
+            advisorNext = c.AdvisorFor;
+            nextUnitTypes = c.UnitTypes;
+            nextGenerals = c.Generals;
+            nextSieges = c.Sieges;
+            nextSupply = c.Supply;
+            nextFreeOrders = c.YourFreeOrders;
+            switch (c.Route(out string why))
+            {
+                case NewGameRoute.None: ui.ShowMenuStatus(why); return;
+                case NewGameRoute.WorldRule: StartGeneratedRule(c.Size, c.Shape, c.Seed, c.CountriesFor(), c.Slot, c.Model, c.Scripted, c.Victory, arm); return;
+                case NewGameRoute.WorldReplay: StartGeneratedWatch(c.Size, c.Shape, c.Seed, c.CountriesFor(), c.Writs, c.Victory); return;
+                // Model rulers on the RTX 5080: a court and a marshal for every country.
+                case NewGameRoute.WorldLive: StartGeneratedLive(c.Size, c.Seed, c.Model, c.Victory, 0, arm, c.Shape, c.CountriesFor()); return;
+                case NewGameRoute.ClassicWritsRule: TryRuleWrits(c.Country, c.Model, c.Seed, c.Victory, arm); return;
+                case NewGameRoute.ClassicWritsRuleScripted: ui.HideMenu(); StartRuleScriptedWrits(c.Country, c.Seed, c.Victory, arm); return;
+                case NewGameRoute.ClassicWritsReplay: StartWritsWatch(c.Seed, c.Victory); return;
+                case NewGameRoute.ClassicWritsLive: TryLiveWrits(c.Model, c.Seed, c.Victory, false, 0, arm); return;
+                case NewGameRoute.ClassicRule: TryRule(c.Country, c.Model, c.Seed, arm); return;
+                case NewGameRoute.ClassicRuleScripted: ui.HideMenu(); StartRuleScripted(c.Country, c.Seed, 0, arm); return;
+                case NewGameRoute.ClassicReplay: StartReplay(); return;
+                case NewGameRoute.ClassicLive: TryLive(c.Model, c.Seed, arm); return;
+            }
+        }
+
+        private static void Quit()
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
+        }
+
+        // ---- the pause menu: Esc, or Menu in the top bar ----
+
+        /// <summary>Opens the pause menu over a game in progress.</summary>
+        public void OpenPause()
+        {
+            if (!started) return;
+            if (!ui.MenuOpen) { pausedByMenu = playing; playing = false; ui.SetPlaying(false, speed); }
+            bool advisable = rule != null && rule.Writs && rule.Model != "scripted";
+            if (rule != null && rule.Writs) ui.ShowPauseHelp(() => { ResumeFromPause(); ShowHelp(); });
+            EnsureMenuKeys();
+            ui.ShowPause(ResumeFromPause, () => OpenSettings(OpenPause), LeaveToMenu, DevTools.Available ? "F1 opens the dev menu (editor and development builds)" : null,
+                advisable ? () => rule.AdvisorOn : (System.Func<bool>)null, advisable ? SetAdvisor : (System.Action<bool>)null, Quit, LostByLeaving());
+        }
+
+        private void ResumeFromPause()
+        {
+            SoundManager.Play(SoundCues.PanelClose);
+            ui.HideMenu();
+            if (pausedByMenu) { playing = true; ui.SetPlaying(true, speed); }
+            pausedByMenu = false;
+        }
+
+        /// <summary>
+        /// Esc, the same everywhere: it closes what is on top (the display countdown is left alone,
+        /// it reverts by itself), then goes back one page, then opens the pause menu in a game.
+        /// </summary>
+        private void Escape()
+        {
+            if (ui.DisplayConfirmOpen) return;
+            if (ui.HelpOpen) { ui.CloseHelp(); return; }
+            if (ui.MenuOpen) { ui.MenuBack?.Invoke(); return; }
+            // The choice card closes only by choosing: Esc opens the pause menu over it.
+            if (ui.EventOpen) { ui.DismissEvent(); return; }
+            if (ui.BattleOpen) { ui.CloseBattle(); return; }
+            if (ui.TalesOpen) { ui.CloseTales(); return; }
+            if (ui.ChosenArmies.Count > 0 && !ui.InspectorOpen) { Choose(null, open: false); ui.CloseSide(); return; } // the chosen armies first
+            if (ui.InspectorOpen || ui.SideOpen || ui.DiplomacyOpen)
+            {
+                ui.CloseInspector(); ui.CloseSide(); ui.CloseDiplomacy(); map.SetSelected(-1);
+                return;
+            }
+            OpenPause();
+        }
+    }
+}

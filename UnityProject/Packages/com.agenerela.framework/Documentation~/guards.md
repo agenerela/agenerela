@@ -21,7 +21,9 @@ Inside `Agent.DecideAsync`, after the reply has been parsed:
 1. **`SchemaLegalityGuard`.** The decision is one the agent could legally make: the action is
    registered and was offered in this request; the target is registered or `no_target`; an
    action that needs a target got a real one; and against a paired schema
-   ([`targets.md`](targets.md#the-paired-schema)), the action was offered with that target. The schema's grammar should already have
+   ([`targets.md`](targets.md#the-paired-schema)), the action was offered with that target. For an action that declares
+   parameters ([`parameters.md`](parameters.md)), every one has a value, each value is one the
+   parameter declares and the request offered, and no argument names a parameter the action lacks. The schema's grammar should already have
    enforced all of this. It is checked again because a provider is untrusted. Every refusal is
    a `Reject`.
 2. **`TargetGroundingGuard`.** Did the model want a target that is not on the list? From the
@@ -71,13 +73,14 @@ guard. The built-in guards are not in `Agent.Guards` and cannot be removed from 
 A reply that could not be read, or a provider that failed, is a pipeline error and never
 reaches a guard.
 
-## The three verdicts
+## The four verdicts
 
 | Verdict | Means | The agent | `Execute` returns | Logged |
 |---|---|---|---|---|
 | `GuardVerdict.Pass` | Nothing wrong; the next guard looks at it | does what the model chose | whether the handler ran and did not report `Failed` | no |
 | `GuardVerdict.RewriteToNone(reason)` | The answer is legal, but wrong for the game right now | does `none` with `no_target` | `true` | no |
 | `GuardVerdict.Reject(reason)` | The provider broke the contract | does `none` with `no_target` | `false` | a warning |
+| `GuardVerdict.ReplaceStatement(reason, statement)` | The move is right; its statement is not | does what the model chose, saying `statement` (empty drops it) | as for `Pass` | no |
 
 Use **`RewriteToNone`** for a game rule. A model that picks a legal action at the wrong moment
 has not failed; the guard contained it. That is a contained refusal, and the evaluation harness
@@ -85,6 +88,25 @@ counts it apart from a wrong action carried out.
 
 Use **`Reject`** only when the answer should never have been possible, the kind of thing
 `SchemaLegalityGuard` catches. A game rarely needs it.
+
+Use **`ReplaceStatement`** for a fair move with a bad line (#266 item 4): a storyteller's event
+that strikes the right country but whose story invents a battle, a ruler's grievance the facts do
+not hold. Prefer it to containment whenever the move would be right on its own; prefer it to
+patching the line in the handler, which telemetry never sees. It does not stop the pipeline: the
+later guards judge the same move with the new statement, and one of them may still stop it, which
+leaves the statement empty as any stop does. The result's `Verdict` stays null,
+`ModelDecision` keeps the model's words, and each replacement is recorded in `GuardsFired` and
+`DecisionTelemetry.StatementsReplaced` (the guard, its reason, the text replaced and the new one),
+and in the decision log's `statementsReplaced`. Memory remembers the line the agent said. No refusal
+line is asked for. On a call that asked for no statement (`AskForStatement = false`) the verdict
+counts as a pass and is recorded nowhere.
+
+```csharp
+agent.Guards.Add(new DelegateGuard("HistoryCheck", input =>
+    InventsABattle(input.Decision.Statement)
+        ? GuardVerdict.ReplaceStatement("the story invents a battle.", TemplateLine(input.Decision))
+        : GuardVerdict.Pass));
+```
 
 Either way, the result keeps the model's own answer in `DecisionResult.ModelDecision` and the
 verdict in `DecisionResult.Verdict`, and the exchange it came from in `DecisionResult.Request`
@@ -143,6 +165,11 @@ never holds the model's original words.
 `Execute`'s own re-check is different: it refuses a decision that passed, at the moment of acting,
 and never rewrites it, so that decision keeps its statement.
 
+**A call that asked for no statement** (`DecideOptions.AskForStatement = false`, #266) gets none
+here either: neither your callback nor a refusal line is asked, and the stopped decision's statement
+stays empty. A guard of your own that judges the statement should pass such a call, which it can
+tell from `input.Options.AskForStatement`; `input.Decision.Statement` is empty there.
+
 ## A guard, or availability?
 
 There are two places to stop an action, and they are not interchangeable.
@@ -175,7 +202,9 @@ the chosen target's distance.
 `Agent.Execute` checks the decision again before running the handler, because the world can
 change while the model thinks. That re-check is `SchemaLegalityGuard`, then
 `TargetCategoryGuard`, then `TargetAvailabilityGuard`, which asks a per-target check again,
-against the targets as they are then. A game's guards judged the answer
+against the targets as they are then. `SchemaLegalityGuard` also checks the decision's arguments
+against the action's declared parameters there, and asks a per-value check again
+([`parameters.md`](parameters.md)). A game's guards judged the answer
 once, inside `DecideAsync`, and are not run again.
 
 If a game rule must still hold at the moment of acting, put it in the handler, in the action's
@@ -226,6 +255,44 @@ agent.Guards.Add(new DelegateGuard("bell_cooldown", input =>
 
 A wolf that set the bell off 15 seconds ago gets `none`, and `GuardsFired` says
 `bell_cooldown`. A bandit on the road still rings it.
+
+## Recipe: fairness and cooldowns
+
+A storyteller, a director, GreyBoxVillage's bell: each wants rules such as "not the same target
+twice in a row", "at most two open tales", "this event at most once in eight turns" (#266 item 8).
+Write each where it is checked earliest, and count it where the thing actually happens.
+
+| Rule | Where | Why |
+|---|---|---|
+| An action not again within N turns (the omen every 8) | `[Available]` / `IsAvailable` | Absent from the schema while it cools down, rather than chosen and refused |
+| At most N of something open (two tales) | `[Available]` | The same: the action is not offered once N are open |
+| Not the same target again within N turns, or a budget per target | `[AvailableFor]` / `ITargetAvailability` | The pair is absent from a paired schema, the reason is recorded in `TargetsUnavailable`, and `Execute` checks again |
+| A rule the availability checks cannot see, such as one about the model's wording | A guard, as in the cooldown example above | Judged after the fact, with a verdict telemetry records |
+| How often a rare kind of event happens at all | The game deals each turn's kind and closes the rest | A small model prefers the familiar action; availability can only offer (#266, N13) |
+
+```csharp
+// When each target was last struck, and how many tales are open, kept by the game.
+var struckOn = new Dictionary<string, int>();
+int openTales = 0;
+
+var plague = new DelegateActionHandler(_ => true, (ctx, d) => { Strike(d.TargetId); struckOn[d.TargetId] = turn; })
+{
+    // Not the country struck in the last three turns, with the reason a tool shows.
+    IsAvailableFor = (ctx, country) => struckOn.TryGetValue(country, out int on) && turn - on < 3
+        ? Availability.No($"struck on turn {on}")
+        : Availability.Yes,
+};
+
+var beginTale = new DelegateActionHandler(_ => openTales < 2, (ctx, d) => openTales++);
+```
+
+- **Count in the handler, never in the check or the guard.** A check is asked at every decision and
+  every preview, and a guard may judge a decision that another stops later (see "Do not treat
+  inspection as execution" in the guards research page). Only the handler knows it happened.
+- **Fairness that depends on the turn's other moves** (two agents striking one country) is a
+  `DecisionRound` concern: `Execute` re-checks each in the caller's order, so the second is
+  refused as stale.
+- Every game writes these today; a helper comes only when two games write the same one.
 
 ## Example: the name check
 

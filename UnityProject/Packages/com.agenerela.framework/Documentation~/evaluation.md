@@ -332,6 +332,12 @@ ran one after the other; repeat a close result.
   changed. So two arms can give a set whose profile has no rules the same rules, and compare how
   they are introduced (`DecideOptions.StatementRulesWording`, #244). The report's conditions name
   each arm's rules and wording.
+- An arm's `Legality` (`EvalLegality`) gives its own copies of the profile's actions categories
+  or **parameters** (`ActionParameters`, DR-023), and its targets categories, without changing the
+  set, its labels or the profile. An arm that gives an action a parameter sends the paired schema
+  and the action list, as any agent with a parameter does ([parameters.md](parameters.md)). The
+  labels are scored on action and target alone, so the parameter's value is never judged. The
+  report's conditions carry the arm's legality.
 
 The warm-up's requests are shaped like a prompt's, with the arm's and the targets' lines, but no
 state. Nothing is executed: the runner scores what the agent chose, and checks what it said apart

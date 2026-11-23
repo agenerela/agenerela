@@ -32,6 +32,20 @@ namespace GreyBoxStrategy.Screen.Tests
         }
 
         [Test]
+        public void A_saved_recording_replays_with_the_army_rules_off_as_it_was_played_not_under_the_new_defaults()
+        {
+            var g = Build();
+            var r = g.Rules;
+            Assert.That(r.UnitTypes || r.Generals || r.Sieges || r.Supply || r.Fog || r.HungerFirst, Is.False,
+                "a recording that names no rules plays R3's army rules off");
+            Assert.That(GameRules.Standard.Supply, Is.True, "while the defaults are on");
+            // The one-move game reads none of the six, so even under the new defaults it would replay the same.
+            var underDefaults = ReplayBuilder.Build(Recording.Parse(Json), null, GameRules.Standard);
+            Assert.That(underDefaults.Turns.Select(t => t.Events.Select(e => e.Text).ToList()), Is.EqualTo(g.Turns.Select(t => t.Events.Select(e => e.Text).ToList())));
+            Assert.That((underDefaults.Result.Winner, underDefaults.Result.Turns), Is.EqualTo((g.Result.Winner, g.Result.Turns)));
+        }
+
+        [Test]
         public void Every_turn_changes_as_many_provinces_as_the_game_counted()
         {
             foreach (var t in Build().Turns)

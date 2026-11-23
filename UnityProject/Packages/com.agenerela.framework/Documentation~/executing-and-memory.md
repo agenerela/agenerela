@@ -268,6 +268,43 @@ foreach (var saved in save.npcMemories)
 A decision still waiting under `MemoryCommit.OnExecute` is not in the memory yet, so it is not in
 the snapshot either.
 
+## Facts the game keeps: `FactLedger`
+
+Memory holds exchanges: what an agent was asked and what it answered. A game's most useful
+knowledge is often facts instead, "orsk broke a truce with us on turn 6", "the well is dry", "a
+plague spreads in kesh", and those are the game's to keep, not the agent's to remember. A
+`FactLedger` holds them as an observation source (#216 item 4), so nothing new reaches the model:
+its lines go where every source's go.
+
+```csharp
+var news = new FactLedger { MaxLines = 8 };
+foreach (var ruler in rulers) ruler.Court.ObservationSources.Add(news.For(ruler.Id));
+
+news.Set("plague_kesh", "A plague spreads in kesh.", expiresAfter: 3);   // news for everyone
+news.Word("plague_kesh", "kesh", "Plague is killing our people.");        // ours, for kesh
+news.Tick();                                                             // once a turn, in the game's units
+```
+
+- **Keys.** `Set` again replaces a fact, its wordings and its expiry, and makes it the newest;
+  `Remove` forgets it.
+- **One fact, each reader's words.** `For(reader)` is one agent's view. A reader reads its own
+  wording when the fact has one, the shared line otherwise; a blank wording hides the fact from it,
+  and a fact with no shared line is only its readers'. One ledger may sit in any number of agents'
+  `ObservationSources`; memory's rule that an agent's memory is never shared is about exchanges,
+  and a ledger holds none.
+- **Order.** Lines come in the order facts were last set, oldest first, the same on every call.
+- **Expiry** counts `Tick()`s, in whatever the game's units are; the framework assumes no clock. A
+  fact set to expire after 3 is read until the third tick, then removed; `Tick` returns the keys it
+  removed. `FactLedger.Forever`, the default, never expires.
+- **The budget.** `MaxLines` above 0 keeps the newest lines and reports the oldest it cut through
+  `IReportsDroppedObservations`, so `DecisionTelemetry.ObservationsDropped` records them. The
+  agent's `MaxObservations` still applies after it.
+- **Saving.** `Export` and `Import` (`IExportsMemory`) carry every fact, wording and expiry, as a
+  memory's are carried; `CanImport` checks first. Another strategy's snapshot, or a version the
+  ledger does not know, throws and changes nothing.
+
+Use memory for what the agent did, and the ledger for what the game knows and wants told.
+
 ## Starting an agent afresh: `Reset`
 
 After a scene event, a new stage or a debug key, a game may want an agent to start over: forget

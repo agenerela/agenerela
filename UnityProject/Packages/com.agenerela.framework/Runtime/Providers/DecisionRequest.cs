@@ -138,6 +138,24 @@ namespace Agenerela.Providers
         /// </remarks>
         public DecisionSchema Schema;
 
+        /// <summary>
+        /// The call's <see cref="DecideOptions.Temperature"/>: null for the provider's own. A provider
+        /// that can set one sends it; Ollama as <c>options.temperature</c> (#266 item 7).
+        /// </summary>
+        public float? Temperature;
+
+        /// <summary>
+        /// The call's <see cref="DecideOptions.Seed"/>: null for none. Ollama sends it as
+        /// <c>options.seed</c>, and only when set (#266 item 7).
+        /// </summary>
+        public int? Seed;
+
+        /// <summary>
+        /// The call's <see cref="DecideOptions.MaxReplyTokens"/>: null for no cap. Ollama sends it as
+        /// <c>options.num_predict</c>, and only when set (#244 item 11).
+        /// </summary>
+        public int? MaxReplyTokens;
+
         // Who asked and what, as the developer passed them, set by PromptBuilder; null on a request
         // built any other way. Internal on purpose: they are never sent, and a provider must not
         // branch on who is asking or how the stimulus is labelled (DR-008). Only ScriptedProvider

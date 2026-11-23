@@ -165,6 +165,13 @@ namespace Agenerela
         public bool ExampleStatements = true;
 
         /// <summary>
+        /// Whether the examples show their <see cref="ActionDefinition.ExampleObservations"/> (#216
+        /// item 1). Off by default. <c>Agent</c> copies it from <see cref="DecideOptions.ExampleObservations"/>.
+        /// Read by <see cref="FewShotBuilder.Build"/>.
+        /// </summary>
+        public bool ExampleObservations;
+
+        /// <summary>
         /// Whether an example with no registered preferred target names the first offered target its
         /// action takes, skipping any target <see cref="Stimulus"/> mentions (#190, Living Vale #20).
         /// Off by default. <c>Agent</c> copies it from <see cref="DecideOptions.ExampleTargetFallback"/>.

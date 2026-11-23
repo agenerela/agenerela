@@ -13,14 +13,21 @@ namespace Agenerela{
         public string Model = string.Empty; // The model that answered, as the provider reported it, such as qwen3.5:2b; empty when it did not say (#88)
         public string ProviderConfig = string.Empty; // The name of the provider config asset whose provider answered, such as OllamaLocal; empty when the provider was built in code (#92, DR-013)
         public string FrameworkVersion = string.Empty; // AgenerelaInfo.version
-        public List<string> GuardsFired = new List<string>(); // Each guard that did not pass the decision, in order: at most one from DecideAsync, then "SchemaLegalityGuard@Execute" for each refusal by Execute's re-check (#106)
+        public List<string> GuardsFired = new List<string>(); // Each guard that did not pass the decision, in order: from DecideAsync, each that replaced the statement (StatementsReplaced) and at most one that stopped it, then "SchemaLegalityGuard@Execute" for each refusal by Execute's re-check (#106)
+        public List<ReplacedStatement> StatementsReplaced = new List<ReplacedStatement>(); // Each statement a guard replaced while keeping the move (GuardVerdict.ReplaceStatement), in order, with the guard, its reason and both texts; empty when none did. Never a stop: Verdict stays null unless a later guard stopped the move (#266 item 4)
         public GuardVerdictKind? Verdict; // The verdict of the guard that stopped the decision, or of Execute's re-check when it refused; null when every guard passed (#106)
         public string GuardReason; // That guard's reason, word for word; null when every guard passed (#106)
         public List<string> TargetsDropped = new List<string>(); // Target ids a source found but left out because of its cap (#32)
         public List<string> TargetsUnlisted = new List<string>(); // Target ids the schema offered but the prompt's action and target list left out for DecideOptions.MaxListedTargets, in schema order; empty when nothing is listed or nothing was cut. The request is the same with or without this record (#151)
         public List<string> ObservationsDropped = new List<string>(); // Observation lines a source had but the request does not carry, in source order: for each source, its lines Agent.MaxObservations cut, then those its own cap left out, from IReportsDroppedObservations (#91)
+        public List<string> ChoicesOffered = new List<string>(); // The ids of DecideOptions.Choices this call offered, in the order given, none left out; empty for a call that gave no choices (DR-022)
+        public List<UnavailableChoice> ChoicesUnavailable = new List<UnavailableChoice>(); // Each choice the call gave as unavailable, with its reason, in the order given; empty when none was (DR-022)
+        public bool OrderLost; // Whether the reply's fields came in an order other than the schema's, such as statement before target or a parameter after the statement, as a provider that sorts the schema's keys produces (Ollama's native chat path). The decision is still read and judged as any other; false when the order held or the reply could not be read (DR-023)
         public string TargetIgnored; // The target the model named for an action that takes none (ActionDefinition.TakesNoTarget), dropped before the guards so the decision's target is no_target; null when nothing was dropped (#244 item 2)
         public List<UnavailableTarget> TargetsUnavailable = new List<UnavailableTarget>(); // Each action and target pair a per-target check (ITargetAvailability) rejected when the request was prepared, with its reason, in registry then target order; empty for an agent with no such check (#190 LV #19)
+        public Dictionary<string, string> Arguments = new Dictionary<string, string>(); // The value the decision holds for each parameter of its action, by name (AgentDecision.Arguments), after any default was applied and the guards ran, in no promised order (AgentDecision.Arguments keeps the declared one); empty for an action that declares none, and for a decision a guard stopped (DR-023)
+        public List<string> ArgumentsDefaulted = new List<string>(); // The parameters whose value the model left out or gave as one not offered, and that took ActionParameter.Default instead, in declared order; DecisionResult.ModelDecision keeps what the model wrote. Empty when none did (DR-023)
+        public List<UnavailableValue> ValuesUnavailable = new List<UnavailableValue>(); // Each value of an action's parameter a per-value check (IValueAvailability) rejected when the request was prepared, with its reason, in registry, parameter then value order; empty for an agent with no such check (DR-023)
         public int HistoryTurnsSent; // Exchanges of memory sent in DecisionRequest.History, two entries each (#90)
         public int HistoryTurnsDropped; // Exchanges the memory still held but left out of this request, from IReportsDroppedTurns; 0 when it cannot say (#90)
         public int HistoryTurnsForgotten; // Exchanges the memory has let go of since it was made, a rising total, from IReportsDroppedTurns; 0 when it cannot say (#90)
@@ -42,6 +49,7 @@ namespace Agenerela{
         public float BacklogWaitSeconds; // From the call to its turn in the agent's own Agent.Backlog, before it was prepared; 0 with no backlog, and never part of QueueWaitSeconds (#190, G5)
         public string ChainId; // DecideOptions.Chain's id: the chain of relayed decisions this one is in; null for none (#190, G4)
         public int ChainHop; // That chain's hop: relays from its start, 0 for its first decision; 0 with no chain (#190, G4)
+        public bool StatementAsked = true; // DecideOptions.AskForStatement: whether the request's schema had a statement field; false for a call that asked for the move alone, whose decision's statement is empty (#266)
         public string ChainSource; // The Agent.Id of the agent whose decision was relayed to this one; null at a chain's start, with no chain, or when that agent has no id (#190, G4)
 
         public DecisionTelemetry()
@@ -54,13 +62,20 @@ namespace Agenerela{
             ProviderConfig = string.Empty;
             FrameworkVersion = string.Empty;
             GuardsFired = new List<string>();
+            StatementsReplaced = new List<ReplacedStatement>();
             Verdict = null;
             GuardReason = null;
             TargetsDropped = new List<string>();
             TargetsUnlisted = new List<string>();
             ObservationsDropped = new List<string>();
+            ChoicesOffered = new List<string>();
+            ChoicesUnavailable = new List<UnavailableChoice>();
+            OrderLost = false;
             TargetIgnored = null;
             TargetsUnavailable = new List<UnavailableTarget>();
+            Arguments = new Dictionary<string, string>();
+            ArgumentsDefaulted = new List<string>();
+            ValuesUnavailable = new List<UnavailableValue>();
             HistoryTurnsSent = 0;
             HistoryTurnsDropped = 0;
             HistoryTurnsForgotten = 0;
@@ -83,6 +98,7 @@ namespace Agenerela{
             ChainId = null;
             ChainHop = 0;
             ChainSource = null;
+            StatementAsked = true;
         }
     }
 

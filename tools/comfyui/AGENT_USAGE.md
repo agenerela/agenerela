@@ -14,6 +14,25 @@ pointer in `.claude/skills/` for Claude Code.
 Setting the server up is a different job, on the RTX 5080 machine only:
 [AGENT_SETUP.md](AGENT_SETUP.md). Never follow it from a client machine.
 
+## Two servers
+
+`comfy.py` reaches either of two servers. `COMFY_URL` in `tools/comfyui/.env` decides which, and
+`check` names the card it found, so run `check` before anything else and read that line.
+
+| | The RTX 5080 machine | The home server |
+|---|---|---|
+| `check` names | `NVIDIA GeForce RTX 5080` | `NVIDIA GeForce RTX 4070 SUPER` |
+| Address | its LAN address on port 8289 | `http://192.168.1.4:8289` |
+| VRAM | 16 GB | 12 GB |
+| ComfyUI | v0.39.1 in Docker | v0.39.1 in Docker |
+| In front of it | the gateway in this folder | a gate that queues every job, and gives the card to ComfyUI or to Ollama, one at a time |
+| Set up from | [AGENT_SETUP.md](AGENT_SETUP.md) | its own repository, not this one |
+
+**Since 21 November 2026 the lead's laptop points at the home server.** Everything below was
+written for the RTX 5080 machine and holds for the home server too, except where
+[On the home server](#on-the-home-server) says otherwise. Read that section whenever `check` names
+the RTX 4070 SUPER.
+
 ## What is on the other end
 
 The RTX 5080 machine runs ComfyUI v0.39.1 in Docker, behind a gateway that wants a token.
@@ -217,6 +236,62 @@ The server unloads its models after every job, so the lead's own ComfyUI gets th
 For a batch of the same workflow, add `--keep-loaded` to every run except the last, or run
 `python tools/comfyui/comfy.py free` at the end.
 
+## On the home server
+
+What differs when `check` names the RTX 4070 SUPER. Checked on 21 November 2026, from the lead's
+laptop at home, with one job of each kind.
+
+**`validate` reports one problem, and that is expected:**
+
+```
+image: 1 problem(s)
+  node 28 (UNETLoader): unet_name='z_image_turbo_nvfp4.safetensors' not on the server; is the model downloaded?
+mesh: ok
+sfx: ok
+```
+
+The image workflow names the NVFP4 file, which this card cannot use. The home server has the int8
+file instead, so **every image run names it**:
+
+```bash
+python tools/comfyui/comfy.py run image --set 28.unet_name=z_image_turbo_int8_convrot.safetensors --set "prompt=..."
+```
+
+That is a parameter on the command line, not a change to `workflows/`, so rule 5 stands. `mesh` and
+`sfx` run as written above. `validate` also says the experimental `mesh_multiview` model is not
+downloaded: don't run that workflow here.
+
+**Times, one job each:**
+
+| Workflow | Here | Notes |
+|---|---|---|
+| `image` | 26 s with the model not loaded | |
+| `sfx` | 6 s for a 2-second clip | |
+| `mesh` | 3 min 48 s at the defaults | 49,917 triangles, 2048 px textures, an intact model; uses nearly all 12 GB of VRAM |
+
+**Ollama and ComfyUI take turns on the one card.** The gate unloads Ollama's models by itself when
+a job arrives, and a model request then waits for the job to end. So never start a job while a
+live test, a game or a run is using a model on this server: the framework gives up on a decision
+after 30 s, long before a mesh is done. After a job, `warm` the model again before a run
+([the Ollama guide](../ollama-server/AGENT_USAGE.md#on-the-home-server)).
+
+**Look without a token.** The gate's status page at `http://192.168.1.4:8291/`, and `/status.json`
+beside it, say who holds the card, what is running and who is waiting. Read it before a mesh run
+and when a run fails. Other people at home use this card too, each with their own key.
+
+**Failures read differently**, because `comfy.py` words them for the RTX 5080's gateway:
+
+| `comfy.py` says | Means here | What to do |
+|---|---|---|
+| `HTTP 503 from /prompt: ...` | The card is busy and your turn did not come within 120 s; the text names who holds it | Wait for them, then run once more; never retry in a loop |
+| `cannot reach ... (timed out)` on a run, when `check` works | The same: the job waited at the gate for longer than `comfy.py` waits, 60 s | Read the status page, then as above |
+| `cannot reach ...` on `check` too | The home server is off, or this machine is not on the home network or the VPN | Ask the user |
+| `the gateway rejected the token` | The token here is not the `agenerela` client's key on the gate, or was replaced there | Ask the user to set it again themselves in `tools/comfyui/.env`. Never ask for the token |
+| `the gateway is up but ComfyUI is not answering` | ComfyUI is restarting; the status page says when it is up | Wait, then `check` again |
+| a node failed with `out of memory`, or a job ended as `oom` | The job needed more memory than this server has | Tell the user, with the time; don't run the same job again |
+
+The server's logs are read by the user, on the server.
+
 ## Into a game
 
 - Copy only the files a game will use, into that game's own Unity project under `Demos/`, never
@@ -230,6 +305,9 @@ For a batch of the same workflow, add `--keep-loaded` to every run except the la
   repository. Prefer `faces=20000 decimation=qem` and `texture_size=1024` for props.
 
 ## When something goes wrong
+
+On the RTX 5080 machine. The home server's table is in
+[On the home server](#on-the-home-server).
 
 | `comfy.py` says | Meaning | What to do |
 |---|---|---|

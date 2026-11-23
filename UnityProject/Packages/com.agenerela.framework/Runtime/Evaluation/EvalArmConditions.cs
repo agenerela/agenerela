@@ -44,6 +44,9 @@ namespace Agenerela.Evaluation
         [JsonProperty("counterExamples")] public bool CounterExamples;
         [JsonProperty("idleExampleStatement")] public string IdleExampleStatement;
         [JsonProperty("exampleStatements")] public bool ExampleStatements;
+
+        /// <summary>The arm's <see cref="DecideOptions.ExampleObservations"/> (#216 item 1).</summary>
+        [JsonProperty("exampleObservations")] public bool ExampleObservations;
         [JsonProperty("exampleTargetFallback")] public bool ExampleTargetFallback;
         [JsonProperty("pairTargetsWithActions")] public bool PairTargetsWithActions;
         /// <summary>

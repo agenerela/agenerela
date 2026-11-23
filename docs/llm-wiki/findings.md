@@ -2926,6 +2926,8 @@ The runner refuses a legality that would make any label's expected pair illegal,
 389 prompts have restricted pairs. **This legality arm is the only evidence for restricted pairs.**
 A number from a real game is still owed: GreyBoxStrategy with `PerTarget` in place of its game-side
 moves line.
+*Since then:* it was run on 10 November, in "GreyBoxStrategy: the framework's legal-target listing does
+not replace the game's moves line" below.
 
 **Setup.**
 
@@ -3302,6 +3304,7 @@ statements read like people is the three game accounts in the demo README, one r
 the human player's default opponents should be 4B seats with personas. The 2B is not fit for a
 persona seat until gap N9 is fixed; that fix is a prompt change, owed an A/B run. Gaps N9 and N10
 are in the demo README.
+*Since then:* the A/B run was made the same day, in "How a statement rule is introduced" below.
 
 **What would change this.** A second game; personas written by someone else; and gap N9's A/B run,
 which may change the 2B's voice numbers entirely.
@@ -3880,3 +3883,867 @@ with reasons, and commit the label files and prompts with both original answers 
 for each named pair, every relabelled id with its old and settled answer and discussion
 reason (or an explicit none), and any rewritten/retired ids. Until those records exist,
 #148 and the second-annotator part of the Phase 4 gate remain open.
+### Non-generative deciders against `qwen3.5:4b`: the best embedding engine scores 15 and 9 points lower, a cascade to the 4B keeps its score while answering 28% itself, and no reranker runs on Ollama (12 November 2026)
+
+**The question.** Can a model built for choosing, or a game engine with no model, pick the action
+and the target instead of a generative model? The lead asked for "the decision making
+models/engines rather than LLMs"; the reading, the survey and the design notes are in
+[`non-llm-deciders.md`](non-llm-deciders.md), which this entry summarises.
+
+**What was run.** One session on the RTX 5080 (Docker Ollama 0.40.14, over the network), one model
+resident at a time, under the 5080 lock. The run reported here is the second, 10:29 to 10:40, after
+Codex's review; the first, 10:00 to 10:13, is superseded (below).
+`tools/benchmarks/non_llm_decider_probe.py` asked every prompt of the curated 76, the interim 389
+and a new 80-prompt tuning set:
+
+- **Control:** `qwen3.5:4b`, the framework's request rebuilt in Python, with no guards and one arm.
+  It scored 330 of 389 and 70 of 76 in both runs; the sweeps had 330 and 69.
+- **Three embedders**, `qwen3-embedding:0.6b`, `embeddinggemma:300m` and `bge-m3:567m`, each used
+  three ways: nearest description, nearest reference examples (kNN), and a softmax head trained on
+  the examples. The 90 reference examples were written new.
+- **A keyword parser with rules**, no model.
+- **Cascades** to the 4B, and **a hybrid** where the engine chooses and the 4B writes only the line.
+- Every threshold was tuned on the tuning set, never on an evaluation prompt. The references and the
+  tuning set pass `check-examples` against both sets, templates and filled strings.
+
+**Why there were two runs.** The first run of `check-examples` caught 11 of the reference and
+tuning lines matching interim prompts word for word (one model wrote both). Codex's review then
+found two holes in the check: `{X}` placeholders never became wildcards, and the filled strings
+were never checked. Five more templates failed once both were fixed. It also found the control's
+refusal example worded "by the Atlantis" where the C# writes "by Atlantis". All were fixed and every
+stage run again. The first run's best engine scored 279 and 60, so the conclusion did not change.
+
+**Results** (correct answers, curated /76 and interim /389; noise floors 8 and 3.6):
+
+| Engine | Curated | Interim | Impossible /64 | Median s | Resident MB |
+|---|---:|---:|---:|---:|---:|
+| `qwen3.5:4b`, control | 70 | 330 | 49 | 0.543 | 2,995 |
+| `bge-m3` + head | 63 | 271 (−15.2) | 31 | 0.045 | 657 |
+| `embeddinggemma` + head | 57 | 269 (−15.7) | 39 | 0.073 | 653 |
+| `qwen3-embedding:0.6b` + head | 58 | 259 (−18.3) | 30 | 0.050 | 939 |
+| best kNN (`bge-m3`) | 61 | 254 (−19.5) | 33 | 0.045 | 657 |
+| best descriptions (`embeddinggemma`) | 46 | 220 (−28.3) | 32 | 0.073 | 653 |
+| keyword parser and rules | 51 | 205 (−32.1) | 58 | under 0.001 | 0 |
+| cascade, `bge-m3` + head, then the 4B | 68 | 329 (−0.3) | 48 | 0.556 | 3,652, summed |
+
+- **Every engine is beyond noise below the control on both sets.** Examples nearly solve commands
+  with a target (61 of 66 against 66). They do not solve impossible requests (31 against 49),
+  conversation (46 against 61) or the curated set's situations (10 of 19 against 17).
+- **`none` comes only from thresholds, and they trade.** Engines that refuse well hardly act: the
+  zero-shot `bge-m3` refuses 54 of 64 impossible requests and acts correctly on 60 of 233.
+- **The `bge-m3` cascade, tuned on the 80 prompts, is within noise of the 4B on both sets** while
+  answering 28% of the interim decisions and 49% of the curated ones itself. The other three cascades
+  lost 2.6 to 8.5 points. Read descriptively off the interim set, the head's most confident half
+  gave 331 of 389. That cut was chosen on the evaluation prompts, so it is a hypothesis.
+- **The hybrid** (`embeddinggemma` + head choosing, best on the tuning set) keeps the engine's 269.
+  It takes 0.463 s median against the 4B's 0.543 on the interim set, and the same on the curated set.
+- **No reranker ran.** Ollama has no rerank route. `hf.co/ggml-org/Qwen3-Reranker-0.6B-Q8_0-GGUF`
+  does not support generate, and through `/api/embed` it returns zero vectors.
+  `dengcao/Qwen3-Reranker-0.6B:Q8_0` generates, but with a uniform −11.93 log-probability on every
+  token.
+
+**What we now believe.** No non-generative engine replaces the 4B on these prompts. An embedding
+first stage that answers only its confident decisions might take a quarter to a half of them off
+the 4B at no cost. That rests on one tuning on 80 prompts. It needs its own A/B through `EvalRunner`
+with the guards on, a reference bank, and a larger tuning set the developer writes.
+
+**What would change this.** A reranker running (llama.cpp's server, or a future Ollama rerank route);
+examples written by people; a larger tuning set; another agent's action set; the guards on.
+
+**Conditions.** The control ran without the guards, so it is not `EvalRunner`'s score.
+`qwen3-embedding:0.6b` was 2,563 MB resident at its default context in the first slice and 939 MB at
+`num_ctx` 2048. Raw data is in `.scratch/non-llm-deciders/` in the lead's laptop checkout: `runs/full`
+(this run), `runs/full-v1` (the superseded one), `summary.json`, the curve script and the logs.
+
+### Decision models: Gemini Decision 1 and Jev are hosted only, the open ones wait on a pull and a gateway route, and their question format on our own 4B is 3.2 times faster and 15 points worse (12 November 2026)
+
+**The question.** The lead asked to look into "those new models Like Jev" and Google's "gemini
+decision 1", and "simillar local ones". These are decision models: they score a closed list of
+options for a typed question in one forward pass and generate no text. Could one make our decision?
+The research, with sources, is in [`non-llm-deciders.md`](non-llm-deciders.md), "Decision models".
+
+**What we found.**
+- Gemini Decision 1 (Google DeepMind, 11 November) and Jev (TypeSafe AI, 15 September) are hosted
+  only, with no weights. Neither can run on our card, and no key was available to try them.
+- Open-weight decision models are in the Ollama library: `tev1:4b` (4.4 to 4.6 GB), `d1:3b`
+  (3.7 GB), `strands-decider:2b` (2.0 GB) and others. Ollama serves them on `/v1/systemone`, which
+  the RTX 5080's gateway does not expose. The lead approved three pulls: `tev1:4b` (4,611 MB), `d1:3b`
+  (3,731 MB) and `strands-decider:2b` (1,975 MB, an MLX build that may need Apple silicon). Ollama
+  refuses all three on `/api/chat` and `/api/generate`, since they have only the `decision`
+  capability, so **no decision model has run** until the lead opens the route.
+
+**What was run.** The question format itself, on `qwen3.5:4b`. The new `decide` stage of
+`tools/benchmarks/non_llm_decider_probe.py` asks two `choice` questions in Tev1's prompt and
+Standard One's layout: the action, over the available actions and `none`, then the target. It reads
+each answer from the first token's probabilities over the option letters, `num_predict` 1, the
+"label-probability readout". The control is the framework's request, re-run in the same lock. RTX
+5080, Docker Ollama 0.40.14, one model resident, 11:08 to 11:14. Every token spelling a letter adds to
+it, and the result is normalised over the letters seen. Ollama returns only the top 20, and 16 of 208
+target questions missed one or two of their 12 letters. A first version kept only the larger spelling
+of a letter; Codex caught it, and the fixed re-run changed no answer.
+
+| | Curated /76 | Interim /389 | Impossible /64 | Said `none` when acting /233 | Median / p90 s |
+|---|---:|---:|---:|---:|---|
+| `qwen3.5:4b`, framework request (control) | 70 | 330 | 49 | 12 | 0.453 / 0.503 |
+| `qwen3.5:4b`, decision questions | 62 | 272 (−14.9) | 45 | 44 | 0.140 / 0.259 |
+
+- **3.2 times faster at the median and beyond noise worse on both sets.** It is −14.9 on the interim set and −10.5
+  on the curated one.
+- **It answers `none` to commands.** Simple commands fell to 30 of 65 against 64; "Come with me." got
+  `none` 0.52 and `follow_player` 0.19.
+- **Situations rose**: 46 of 65 against 39 (+10.8, just beyond the per-category floor). That is one
+  category in one run.
+- **A cascade within the one model**, the readout first and the full request when its margin was low,
+  sent 85% of decisions on, scored 321 (within noise) and was slower overall (0.582 s median).
+
+**What we now believe.** The format alone, on a model not trained for it, does not reach the 4B.
+Whether training does is the open question. `tev1:4b`, Qwen3.5-4B fine-tuned for decisions, would
+answer it like for like through the same stage.
+
+**What would change this.** Any open decision model run on both sets against this control.
+
+Raw data: `.scratch/non-llm-deciders/runs/decide-full/` in the lead's laptop checkout (`decide-full-v1/`
+is the superseded first run), and `decide_cascade.py` beside it.
+
+### The open decision models on our sets: `tev1:4b`, `strands-decider:2b` and `d1:3b` score 21 to 26 points below `qwen3.5:4b` and refuse commands (12 November 2026)
+
+**What was run.** After the lead opened `/v1/systemone` on the RTX 5080's gateway, the three decision
+models pulled earlier ran on their own route against `qwen3.5:4b`, in one lock session from 14:38 to
+14:50 (Docker Ollama 0.40.14, one model resident at a time). The probe's `systemone` stage asks each
+prompt as one request with two `choice` questions, the action and the target, in the wording of the
+decision-question entry above. The control is the framework's request; the 4B's decision-question
+readout ran beside it. Ten-prompt slices first. Details are in
+[`non-llm-deciders.md`](non-llm-deciders.md), "The open decision models on our sets".
+
+| | Curated /76 | Interim /389 | Impossible /64 | Said `none` when acting /233 | Median s | Resident MB |
+|---|---:|---:|---:|---:|---:|---:|
+| `qwen3.5:4b`, framework request (control) | 70 | 330 | 49 | 12 | 0.471 | 2,995 |
+| `qwen3.5:4b`, decision questions | 62 | 272 (−14.9) | 45 | 44 | 0.104 | 2,995 |
+| `tev1:4b` | 56 | 248 (−21.1) | 49 | 69 | 0.104 | 5,457 |
+| `strands-decider:2b` | 49 | 231 (−25.4) | 57 | 61 | 0.121 | up to 10,002 |
+| `d1:3b` | 42 | 228 (−26.2) | 64 | 154 | 0.057 | 3,120 |
+
+- **All three are beyond noise below the control on both sets**, and below the 4B asked the same
+  questions.
+- **They refuse commands**: 26 to 29 of 65 simple commands against 64.
+  - `d1` answered `none` to 154 of the 233 prompts that wanted an action, so its perfect score on
+    impossible requests is a never-acting agent's.
+  - `strands-decider`'s 57 of 64 impossible requests is +12.5 on the control, beyond that category's
+    floor, but it also refused 61 actions.
+- **As a first stage, they barely help.** With a margin threshold tuned on the 80 tuning prompts, each
+  cascade to the 4B sent 76% to 96% of the interim decisions on, and scored 318 to 330.
+- `strands-decider` loaded on Ollama's MLX runner in the Linux container, but grew to 10 GB resident.
+
+**What we now believe.** On our prompts and in this wording, no decision model is a better decider than
+the 4B, or a better first stage than an embedding engine.
+
+**What would change this.** Question wording tuned on new prompts (a shorter or empty `none`
+criterion), a decision model fine-tuned on a game's own decisions, or a larger decision model.
+
+Raw data: `.scratch/non-llm-deciders/runs/dm-final/` in the lead's laptop checkout.
+
+### The storyteller's stage S2: titles fixed, twice the kinds of event, choices in character, tales mostly left unfinished; nothing in the war worse (12 November 2026)
+
+GreyBoxStrategy, `personas` table, five `qwen3.5:4b` seats, RTX 5080 (Docker Ollama 0.40.14), seeds 1 to 20, four arms interleaved in blocks of five seeds, one Unity run and lock window per arm-block: **s1** (`default+storyteller`, the control), **s1-title** (`+title-call`), **s2-free** (`+s2+chains-free`) and **s2-skel** (`+s2+chains-skeleton`). Paired by seed with `compare.py`; "beyond" when the 95% interval excludes 0. The control reproduced S1's published numbers (titles missing 47%, 6.65 kinds a game, 29% of hit rulers naming the event). Kit and data: `.scratch/storyteller-s2/`.
+
+- **Titles:** the second call (a scribe agent) cut titles missing from 47% to 0% in all three arms (beyond); titles distinct within a game 60% → 92 to 96%, shared across games 72% → 38 to 48%. Cost 0.35 to 0.39 s an event.
+- **Variety:** kinds of event a game 6.65 → 10.55 (free) and 11.30 (skeleton), beyond. Dilemmas 17% and 29% of events; story-only 12 to 13%; trait events 9 to 12%.
+- **The war:** battles, conquests, wars, peace, lead changes, eliminations and turns within noise in every arm, except free tales: domination 60% → 80% (just beyond). Rulers' sense and voice within, except names its target 66% → 73% (free). η² of aggression 0.81 (s1), 0.80, 0.85, 0.82, all p < 0.001.
+- **Fairness:** gifts 42% → 36% and 29%, value against standing −0.37 → −0.25 and −0.21 (both beyond): a milder rubber band, since dilemmas count as neither gift nor blow.
+- **Hit rulers naming the event:** 29% → 22% in both S2 arms (beyond). The title-call arm alone: 28% (within).
+- **Choices in character:** a pretender was paid off by the builder and the merchant 15 of 15 times and defied by the warmonger and the proud ruler 11 of 11. Elsewhere the model takes the active option almost always (quarantine 62 of 64, hire sellswords 33 of 34, call the muster 44 of 48), whatever the persona.
+- **Chains:** free 2.2 started a game (length 3.6, 0.75 long tales a game), skeleton 1.1 (length 2.3), both beyond. Most are left unfinished: free 8 of 44 completed (2 by `end_tale`), skeleton 4 of 22; the model rarely tells a due stage or closes a tale.
+- **History:** 5% and 6% of stories name a real happening, 0.2% and 0.7% invent one (replaced). One reader, 60 events: 3 refer to what happened, none invents.
+- **Story fit (one reader, not blind, 60 events):** 50 fit, 5 partly (wrong size, invented consequence), 5 not (wrong country or event, or replaced); dilemma stories set up the choice in 9 of 15, are flat in 5, decide it in 1. New defects: numbers in words pass the digit check, and a target id leaked once ("the lords of tale_8").
+- **Smoke finding:** with dilemmas merely open on 40% of turns and tales on 30%, the 4B chose 1 dilemma in 28 events and began no tale; S2 therefore has the game deal each turn's kind.
+- **Latency:** event seconds a turn 0.74 → 1.05 (title call), 1.23 and 1.27 (S2); storyteller prompt 1,363 → about 1,900 tokens, median call 0.73 → 0.85 s.
+- Measured with seeded province terrain; after merging #273 the terrain and coast come from the map's own data (unmeasured wording change, same kind of content).
+
+### Painted Realm's writs turn, live (R1c): 7.1 s of model time a turn, armies used, treaties made, personas still distinct; no Classic game ends in 40 turns, and statements repeat far more (13 November 2026)
+
+GreyBoxStrategy (#20), rules v2 slice R1c. `personas` table, five `qwen3.5:4b` seats, RTX 5080 (Docker Ollama 0.40.14). **Main comparison:** the writs turn (`-strategyTurn writs -strategyCap 40`, Classic, conquest) against today's one-move game (`default`), seeds 1 to 20, interleaved in blocks of five seeds (w1 o1 w2 o2 w3 o3 w4 o4), one Unity run and one lock window a block. Blocks w1 to o3 ran on 12 November from 19:45; the lead paused the card at 21:15, and **w4 and o4 ran a day later (13 November, 15:53 to 16:23) in a new lock session**, same seeds and settings. Blocks pooled by `aggregate.py`; the scorecard numbers are the mean of the four blocks. Kit and data: `.scratch/realm-build-map/r1c/`.
+
+- **Endings:** writs 20 of 20 unfinished at the 40-turn cap. One-move 12 domination, 8 at its turn limit, 25.1 turns on average. **No Classic writs game finishes in 40 turns**, so the numbers below describe the first 40 turns of the writs game, not whole games.
+- **Model time:** writs 7.13 s a turn (median 7.10, 90th percentile 8.54), 14.4 decisions a turn at about 0.50 s each, 1.46 s a ruler; six rulers would be about 8.7 s. Inside the 7 to 9 s estimate, at its top. One-move 2.45 s a turn, 4.7 decisions.
+- **Orders a ruler a turn:** 3.06 writs: 1.55 court orders, 1.16 army orders, 0.23 army holds; 0.21 refused at resolution.
+- **Wasted orders:** court `none` 245 of 6,080 (4%), army `none` 899 of 4,528 (20%).
+- **Illegal answers:** 62 of 11,496 (0.5%), 61 of them army orders the game held as "not offered". A march the rules allow but the twelve-target list left out passed the marshal's availability, which followed the rules alone. **Fixed after the main run:** the court's and the marshal's availability now also ask whether the move is among the decision's offered moves (`WritRuler.NotOffered`; test `ATargetTheListLeftOut_IsContained_NotHeldByTheGame`, seen failing without it). The extra runs below have the fix: 0 illegal answers in 16,183.
+- **Rulers' sense, writs against one-move** (model behaviour only):
+  - idle 6% against 10%;
+  - refused at resolution 1% against 6%;
+  - aims at the weaker 58% against 63%;
+  - contained by a guard 1% against 2%;
+  - accepts peace when losing 16% against 24%, when winning 8% against 17%.
+- **Voice:**
+  - statements given 99% against 98%, 12.9 words against 13.6;
+  - names its target 81% against 72%;
+  - contradicts its move 13% against 19%;
+  - invented grievances 1% in both;
+  - **repeated word for word 35% against 5%**, the one clear regression. The top line, "We fortify borders and save gold rather than fight before the odds are in our favour.", came 55 times. The army statement rule (R1b) waits for its own A/B.
+- **Not comparable across the two games** (other rules, other pace): answers an attack 21% / 74%, provinces changing hands 0.41 / 1.14 a turn, turns with no change 69% / 25%, eliminations 0.30 / 1.50 a game, battles 1.74 / 1.47 a turn, final map Gini 0.32 / 0.54, peace made 3.35 / 1.75 and wars declared 9.25 / 5.80 a game.
+- **Armies:**
+  - 2.20 a ruler a turn: 0.47 marching, 0.36 holding, 1.46 waiting for orders.
+  - 59% of ruler-turns have two or more armies; those rulers order 1.60 armies while 2.14 wait.
+  - In 20% of ruler-turns more armies wait than were ordered, because three writs cap the orders.
+  - 25% of ruler-turns with armies give no army order.
+  - 80% of army answers are a march. Rulers use several armies; what leaves armies idle is the writ cap, not the model.
+- **Treaties:** 67 made in 800 game-turns. The court offered white peace 799 times, demanded occupied land 119 and ceded it 30. Envoys accepted 92, refused 789, answered `none` 7.
+- **Character:**
+  - Army holds by persona: builder 89%, merchant 17%, opportunist 22%, proud 3%, warmonger 6% (η² 0.68, p < 0.001, 100 seat-games).
+  - Treaties accepted: merchant 48 of 100, opportunist 30 of 112, builder 11 of 103, proud 2 of 250, warmonger 1 of 323.
+  - Council η², writs against one-move: aggression 0.20 / 0.84, peace 0.56 / 0.72, recruit 0.62 / 0.15, raising taxes 0.21 / 0.39, fortify 0.15 / 0.25, all p ≤ 0.005. On the writs turn the persona shows in what the court builds (recruits: warmonger 51%, builder 32%), in army orders and in treaty answers, more than in declaring war.
+- **Army orders, quoted:**
+  - warmonger: "Gold is for soldiers; march to ashby!"
+  - proud: "Merrow's capital falls! We strike back for every inch of land lost!"
+  - opportunist: "Brindle is neutral and weak; I will take it before others do."
+  - warmonger: "Corwick is Orsk's; I march to seize his forts before he grows too strong!"
+- **Five uncapped writs games** (seeds 21 to 25, `-strategyCap 300`, never reached; with the fix):
+  - 4 ended in stalemate and 1 with one country left (proud Ilvar, turn 220); 192.8 turns on average (165 to 220).
+  - Model time 6.50 s a turn (90th percentile 7.85).
+  - 2.2 eliminations a game, final Gini 0.66, 83% of turns with no change.
+  - 17.6 peace treaties a game.
+  - Repeated word for word 44%.
+  - η² aggression 0.53, peace 0.63, recruit 0.74 (25 seat-games, p ≤ 0.02).
+  - A game played to its end takes about 190 turns, far from an hour's game.
+- **Medium generated world, capped at 40** (seeds 31 to 35, map seed 1; with the fix):
+  - **None of the five finished**; all stood unfinished at 40 turns.
+  - Model time 8.02 s a turn (90th percentile 9.51), 16.3 decisions.
+  - Provinces changing hands 0.98 a turn.
+  - 3.71 armies a ruler, 1.73 ordered.
+  - 13 treaties in 200 game-turns.
+  - Repeated word for word 38%.
+  - η² aggression 0.72, peace 0.62 (p ≤ 0.001); recruit and fortify not significant at 25 seat-games.
+- No default changed. Open: the game's length, statement repetition (the army statement rule's A/B), and whether a fourth writ or standing orders would use the waiting armies.
+
+### Painted Realm's writs turn: showing a ruler its own last lines cuts word-for-word repeats from 36% to 22%; one voice a turn makes them worse (13–14 November 2026)
+
+GreyBoxStrategy (#20), after R1c's one regression (statements repeated word for word 35% on the writs turn against 5% in the one-move game). `personas` table, five `qwen3.5:4b` seats, RTX 5080 (Docker Ollama 0.40.14), `-strategyTurn writs -strategyCap 40`, Classic. Three arms, the same seeds 1 to 15, interleaved in blocks of five seeds (c1 a1 b1 c2 a2 b2 c3 a3 b3), one Unity run and one lock window a block:
+
+- **control**: the writs turn as it was (`default`, now `default+no-own-lines`);
+- **A, one voice** (`+one-voice`): only a ruler's first court decision of a turn carries a statement. The framework cannot ask a decision without its `statement` field (it is always required, an empty string allowed), so the game asks the others to leave it empty with a plain line and drops any line written anyway. The framework's own way, `DecideOptions.AskForStatement` (#266), merged a minute after the run ended and is not measured here;
+- **B, own lines** (`+own-lines`): a decision that speaks reads the ruler's last four distinct lines, with "Say something new, not one of these."
+
+Nothing like either had been measured (findings and build plan Appendix A checked); the lines are the game's own, and no evaluation prompt is used. A probe of 2 games an arm came first (repeats 31% / 42% / 16%); A looked no use, so the combined arm C was not run. **n = 15 games an arm:** R1c put a game's repeat share at an SD of about 0.04, so 15 paired seeds pin a difference to about ±3 points, well inside the probe's gaps; treaties (SD about 2.2 a game) stay the noisy measure. Block b2 was cut at 21:46 on 13 November when the lead needed the card, and rerun from the start after the pause (23:41 to 00:06 on 14 November); the cut block is not counted. Kit and data: `.scratch/realm-build-map/voice/`, `python compare.py full c a b`. "Beyond" means the 95% interval of the paired difference over the 15 seeds excludes 0.
+
+| | control | A, one voice | B, own lines |
+|---|---|---|---|
+| Repeated word for word | 35.6% | 44.5% (+8.9, beyond) | **21.6% (−13.9, beyond)** |
+| Decisions with a statement | 99% | 35% | 99% |
+| Words a statement | 12.8 | 13.0 | 13.6 (+0.8, beyond) |
+| Illegal answers | 0 | 0 | 0 |
+| Model seconds a turn | 7.18 | 5.53 (−1.66, beyond) | 7.18 (within) |
+| Treaties a game | 3.3 | 1.4 (−1.9, beyond) | 4.1 (+0.8, within) |
+| Persona η² aggression / peace / recruit (75 seat-games, all p ≤ 0.002) | 0.20 / 0.63 / 0.63 | 0.22 / 0.31 / 0.55 | 0.36 / 0.65 / 0.69 |
+
+- **B wins** on the one thing it was for, with legality, model time and treaties unchanged and every persona η² as high or higher. The top line fell from 54 uses ("We fortify borders and save gold rather than fight before the odds are in our favour.") to 17. **Made the demo's default** (`ModelSeatOptions.Default.OwnLines`, writs turn only); the framework's defaults are unchanged.
+- **A loses:** the few lines left repeat more (the one court line a turn says the same thing turn after turn), the model wrote a statement anyway on 1,259 of the 6,036 decisions asked to stay silent (21%), and treaties fell by more than half, with the peace η² halved (0.63 → 0.31). The statement seems to carry part of the diplomacy. It saves 1.7 s a turn, so asking without the field for model time alone is worth its own run with #266's `AskForStatement`, which also leaves the statement rules out of the prompt.
+- What B does not reach: 22% is still far above the one-move game's 5%; a ruler shown four lines can still return to a fifth.
+- **A defect in arm B as measured, found after the run:** the rulers' agents keep 12 observation lines, the call's own lines count first, and the sources fill the rest, so the last source lines are cut. The own-lines line pushed out "Ordered this turn" (the orders already given) and, now and then, an army's moves line. In 5 scripted 40-turn games the ordered line was missing from 780 of 1,817 later orders (43%) with own lines against 21 in the control, and the moves line from 21 of 1,625 army orders against none. The rulers measured in B therefore often did not see their earlier orders of the turn; its legality held regardless (0 illegal answers). **Fixed with the default:** with own lines on, the agents keep 13 lines, which restores exactly the control's lines (21 and 0 in the same probe); test `TheCourtAndTheMarshal_ReadLocalFacts_AndTheirOwnMovesLine` failed without the fix. The fixed default is unmeasured live until the next A/B, which carries a `default+no-own-lines` arm to confirm it.
+
+### Painted Realm R3, unit types: the counter rule changes 6% of battles and lengthens a scripted game by 5 turns (14 November 2026)
+
+GreyBoxStrategy (#20), rules v2 3.3, `GameRules.UnitTypes`. Scripted only, no model: the `.NET 9` harness of `Sim/`
+(`.scratch/realm-build-map/r3/`), 100 Classic games of the `mixed` lineup on seeds 1 to 100, writs turn, conquest.
+
+| | turns (mean, median, p90) | endings | battles a game | treaties a game |
+|---|---|---|---|---|
+| off | 77, 75, 106 | 97 last standing, 3 stalemate | 147 | 7.6 |
+| on | 82, 77, 112 | 97 last standing, 2 stalemate, 1 unfinished | 158 | 7.3 |
+| on, counter strength 0 | 77, 75, 106 | 96 last standing, 3 stalemate, 1 unfinished | 149 | 7.1 |
+
+- **Off is today's game:** the harness prints the same line as before the change (turns, endings, battles, treaties all equal), and the pinned tests check it game by game.
+- **Mix** (every army, every turn): 44% pikes, 13% riders, 43% bows. Riders cost double, so the scripts buy few.
+- **Counters:** 82% of battles had an effect of 1% or more for one side; the mean gap between the sides' multipliers was 0.42; the result would have gone the other way without counters in 6.1% of battles (by plain strength × roll against the result).
+- With the counter strength at 0 the pace returns to the control's, so the longer games come from the counters themselves, not from the costs.
+- Every offered move was legal in all 100 games, and each army's types summed to its soldiers every turn.
+- Unmeasured: how a model ruler chooses types (next part, with the `recruit_*` orders in its prompt).
+
+### Painted Realm pacing candidates, scripted: occupation turning into ownership and the end of the last stand leave the scripted pace where it was (14 November 2026)
+
+GreyBoxStrategy (#20), candidates 1 and 3 of the rules v2 page's "Why Classic stalls" (R1c's uncapped model games took about 190 turns, 83% of them with no province changing hands). Scripted only: the `.NET 9` harness (`pace classic 100`), 100 Classic games of the `mixed` lineup, seeds 1 to 100, writs turn, conquest, 12-turn stalemate.
+
+| | turns (mean, median, p90) | endings | treaties a game |
+|---|---|---|---|
+| both off | 77, 75, 106 | 97 last standing, 3 stalemate | 7.6 |
+| ownership after 8 turns | 75, 71, 104 | 94, 6 | 7.2 |
+| ownership after 5 turns | 75, 71, 99 | 98, 1, 1 unfinished | 6.6 |
+| break when all occupied | 76, 75, 103 | 97, 3 | 6.2 |
+| ownership after 8, and break | 75, 73, 104 | 94, 6 | 6.0 |
+| ownership after 5, and break | 74, 74, 99 | 97, 3 | 5.4 |
+
+- **No candidate changes the scripted pace** by more than 3 turns: scripted rulers push a war to elimination, so they never stall the way the models do.
+- With the scripts made as peaceable as the models (white peace offered at a war score of 30 or less and accepted at 10 or less, wars settled after 8 turns), every game ended in a 12-turn stalemate after 29 turns; the candidates changed almost nothing (only ownership after 5 turns with the break moved the first elimination, from turn 19 to 27): peace comes before an occupation is old enough.
+- What it means: the scripted series cannot choose between the candidates. The stall is the models' (white peace offered 806 times in five uncapped games), so the choice needs a live run with the settings on.
+
+### Painted Realm's writs turn, silent armies: asking army orders without a statement saves 0.6 s a turn, but treaties may fall, so the demo keeps every line (14 November 2026)
+
+GreyBoxStrategy (#20), the #151 row that `DecideOptions.AskForStatement` (#290) owes, and the follow-up the one-voice result asked for. `personas` table, five `qwen3.5:4b` seats, RTX 5080 (Docker Ollama 0.40.14), `-strategyTurn writs -strategyCap 40`, Classic, seeds 1 to 15, interleaved in blocks of five seeds (n1 d1 s1 n2 d2 s2 n3 d3 s3, 01:38 to 05:07), one Unity run and one lock window a block, nothing else on the card or on the laptop's CPU:
+
+- **d, control**: today's `default`, own lines on;
+- **s, silent armies** (`default+silent-armies`): the marshal's army orders are asked with `AskForStatement = false`, so no `statement` field in the schema and no statement rules, example lines or own lines in the prompt. Both court orders, treaty answers and dilemmas keep their line;
+- **n**, `default+no-own-lines`, to confirm live the own-lines default as fixed after the last A/B (13 observation lines).
+
+Nothing like it measured before but the one-voice arm (13–14 November), which asked for the field and threw the line away. Kit and data: `.scratch/realm-build-map/voice/`, `python compare.py silent d s` (and `n d s`). "Beyond" means the 95% interval of the paired difference over the 15 seeds excludes 0.
+
+| | d, control | s, silent armies | n, no own lines |
+|---|---|---|---|
+| Model seconds a turn | 6.87 | **6.28 (−0.59, beyond)** | 7.01 (within d) |
+| Seconds an army order | 0.50 | 0.33 (−0.16, beyond) | 0.48 |
+| Repeated word for word, all lines / court lines | 20.8% / 20.3% | 23.5% / 21.7% (both within) | 35.6% / 32.1% (beyond d) |
+| Decisions with a statement | 99% | 54% | 99% |
+| Illegal answers | 0 | 0 | 0 |
+| Treaties a game | 4.7 | 3.5 (−1.1, within; 95% [−3.0, +0.7]) | 3.3 (within d) |
+| Persona η² aggression / peace / recruit (75 seat-games, all p ≤ 0.002) | 0.37 / 0.55 / 0.59 | 0.40 / 0.66 / 0.52 | 0.20 / 0.63 / 0.63 |
+
+- **Time is a clear win, but not a large one:** 8.5% of a turn. An army order is short, so leaving its line out saves a third of an army order and little of a turn.
+- **Treaties are the doubt:** 1.1 fewer a game, inside the noise (SD about 2.5 a game) but not ruled out, and in the same direction as one voice's halving. Peace η² rose, recruit η² fell by 0.07. With "no loss elsewhere" the rule, **silent armies stay an arm**; `default` asks every decision for a line. Settling it would take about 40 games an arm, given the treaties' noise.
+- **Why one voice lost treaties.** Statements reach no other ruler: the envoy decision reads "{country} proposes a treaty." and the terms, never the proposer's words. A line reaches only its own ruler, through its memory (the last four decisions, kept whole) and the own-lines line. So the loss came from inside the ruler's own prompt, and two causes are left: one voice's plain line telling most decisions to leave the statement empty, which a small model may read as "do little", and memory entries with no line, which keep what a ruler did but not why. Silent armies removes the first (no line at all, no field) and keeps the second for army orders only, and lost less (−1.1 against −1.9); that fits the first cause being the larger, but this run cannot separate them. Armies may be silent where an order's line feeds nothing; whether a ruler's memory of its marches needs their reasons is the open part.
+- **The fixed own lines hold live:** d against n, repeats −14.7 points (beyond), treaties +1.3 and time within, every illegal count 0.
+
+### A closed choice beside action and target: Ollama's grammar holds an enum and a bounded array of target ids on `/api/chat`, and a parameter written after `statement` lands in the statement (14 November 2026)
+
+The probe #266 item 2 asks for before any design for typed parameters, with no framework code:
+`tools/benchmarks/closed_choice_grammar_probe.py`. It sends hand-written schemas shaped as
+`JsonSchemaSerializer` writes them (`required`, `propertyOrdering`, `additionalProperties: false`)
+and checks every reply in code. It is not an accuracy claim, and there is no control arm: it asks
+what the grammar allows, not which answer is better.
+
+**Conditions.** RTX 5080, Docker Ollama 0.40.14, over the network (home or VPN), through the
+gateway; `qwen3.5:4b` alone resident (`ps` empty before), temperature 0.7, seed 7, `think: false`,
+`num_predict` 200. One storyteller system prompt (four countries; events famine, windfall, none;
+strengths minor, major), six stimuli that push against the constraints (three countries, "every
+country", "catastrophic", none at all), 6 requests an arm. Raw replies:
+`.scratch/266-gaps/probe-20261114-0214.jsonl` in this worktree (`266-framework-gaps-459b69`).
+
+**Arms.** `strength` (enum `minor`/`major`) after `target`; `strength` after `statement`;
+`targets`, an array of the country ids with `minItems` 1 and `maxItems` 2; the same with
+`uniqueItems`.
+
+| `/api/chat` with `format` | n | Parsed | Key order kept | Enum value | Array, 1–2 allowed ids | No duplicate |
+|---|---:|---:|---:|---:|---:|---:|
+| `strength` after `target` | 6 | 6 | 6 | 6 | – | – |
+| `strength` after `statement` | 6 | 6 | 6 | 6 | – | – |
+| `targets`, 1–2 | 6 | 6 | 6 | – | 6 | 6 |
+| `targets`, 1–2, `uniqueItems` | 6 | 6 | 6 | – | 6 | 6 |
+
+- **The grammar held every constraint.** Every `strength` was `minor` or `major`, "worse than
+  anything before" included. Every array held one or two allowed ids: "Strike orsk, kesh and
+  fenmark" and "Strike every country" came back as two, so `maxItems` cuts silently, and "Nothing
+  should happen to anyone" still struck two, because `minItems` 1 forces one (a game wanting
+  "nobody" needs `minItems` 0 or the `none` action to take no targets).
+- **The key order was kept on all 24**, as the schema gave it. `qwen3.5:4b` takes Ollama's
+  rendered path (`renderer_parser`, 5 November), so this says nothing about the native path, which
+  sorts keys alphabetically; there `strength` and `targets` would both sort after `statement`,
+  the order that failed here (next point). That path is not covered: it needs a model served through its GGUF
+  template (`MiniCPM5-2B` logged that path on 4 November), which was not pulled.
+- **A parameter after `statement` is written into the statement.** With `strength` last, 3 of 6
+  statements were the bare word `minor` or `major` ("Strike orsk, kesh and fenmark": statement
+  `minor`, strength `major`). With `strength` before `statement`, none were. The model never reads
+  the schema (10 October), so it writes what the prompt asks for ("how hard") in the first free
+  slot. A design should put parameters before `statement`, as `target` is (DR-008's order rule),
+  and say in the prompt what each one is.
+- **`uniqueItems` is not shown to do anything.** The two array arms gave identical replies, seed
+  for seed, and no reply in either repeated an id, so whether the grammar enforces it is unknown.
+- **Pairing is not in the grammar.** `none` came with a strength and a target (`orsk`) or two
+  targets; nothing ties a parameter to an action in these schemas, as `TakesNoTarget` (#245) does
+  for the target.
+- **The OpenAI-compatible endpoint was not reached.** The gateway answers 403 for
+  `/v1/chat/completions` by design (it exposes `/v1/systemone` only,
+  `tools/ollama-server/README.md`), so that arm stopped after its first refusals, 5 requests. It
+  needs a local Ollama, never compared with this one, or a gateway route, which is not this probe's
+  to add.
+- Replies took 0.4 to 1.0 s, the first 6.6 s (the load).
+
+**What would change this.** A native-path model that keeps a parameter's value valid but moves it
+after `statement`, which would make the field order unreachable by schema for such models, as
+for `target` (5 November). A reply with a repeated id under `uniqueItems`. A later Ollama that
+changes either path.
+
+### Painted Realm R3, generals: scripted, they shorten a Classic game by 6 turns alone and leave it as it was with unit types (14 November 2026)
+
+GreyBoxStrategy (#20), rules v2 3.5, `GameRules.Generals`. Scripted only, no model: the `.NET 9` harness of `Sim/` (`pace classic 100 rule:Generals=True`), 100 Classic games of the `mixed` lineup on seeds 1 to 100, writs turn, conquest.
+
+| | turns (mean, median, p90) | endings | battles a game | treaties a game |
+|---|---|---|---|---|
+| off | 77, 75, 106 | 97 last standing, 3 stalemate | 147 | 7.6 |
+| generals | 71, 68, 100 | 94 last standing, 6 stalemate | 144 | 7.3 |
+| generals and unit types | 78, 72, 115 | 96 last standing, 3 stalemate, 1 unfinished | 156 | 7.2 |
+
+- Off, the harness prints the same line as before the change.
+- Traits are drawn evenly from seven, so a side's edge from its commander is up to 10 to 15%, about the size of the counter rule's; scripted rulers do not choose by trait, so these numbers say what the traits do to battles, not how a ruler plays to them.
+- Unmeasured: how the model rulers read "led by Nessa the Wary"; the switch stays off until a live run.
+
+### Painted Realm R3, sieges: scripted, a siege lengthens a Classic game by 3 turns alone, and the three R3 rules together shorten it by 3 (14 November 2026)
+
+GreyBoxStrategy (#20), rules v2 3.7, `GameRules.Sieges`. Scripted only: the `.NET 9` harness (`pace classic 100 rule:Sieges=True`), 100 Classic games of the `mixed` lineup on seeds 1 to 100, writs turn, conquest.
+
+| | turns (mean, median, p90) | endings | battles a game | treaties a game |
+|---|---|---|---|---|
+| off | 77, 75, 106 | 97 last standing, 3 stalemate | 147 | 7.6 |
+| sieges | 80, 77, 112 | 94 last standing, 5 stalemate, 1 unfinished | 142 | 7.7 |
+| sieges, generals and unit types | 74, 71, 102 | 97 last standing, 3 stalemate | 140 | 7.6 |
+
+- Fewer battles with sieges: a walled province is no longer stormed through its militia, and the turns spent before it falls lengthen a war.
+- With all three R3 rules on, the game is 3 turns shorter than off. The rules are not independent: siegewright and three-to-one make sieges short where a general or a big army is.
+- Unmeasured live; the switch stays off.
+
+### Painted Realm R3, supply: scripted, stores lengthen a Classic game by 13 turns, mostly because hungry armies go home (14 November 2026)
+
+GreyBoxStrategy (#20), rules v2 3.6, model B, `GameRules.Supply`. Scripted only: the `.NET 9` harness (`pace classic 100 rule:Supply=True`), 100 Classic games of the `mixed` lineup on seeds 1 to 100, writs turn, conquest.
+
+| | turns (mean, median, p90) | endings | battles a game | treaties a game |
+|---|---|---|---|---|
+| off | 77, 75, 106 | 97 last standing, 3 stalemate | 147 | 7.6 |
+| supply, scripts that ignore it | 80, 76, 109 | 96 last standing, 3 stalemate, 1 unfinished | 153 | 7.7 |
+| supply, scripts that go home at 1 store | 90, 85, 122 | 91 last standing, 5 stalemate, 4 unfinished | 163 | 7.6 |
+| all four R3 rules | 84, 83, 116 | 93 last standing, 6 stalemate, 1 unfinished | 149 | 8.3 |
+
+- The stores themselves cost little: scripts that ignore them lose soldiers to hunger and still finish 3 turns later. Going home to refill is what slows a war, by another 10 turns: an army that leaves its front for two or three turns gives the enemy time.
+- The first elimination moves from turn 19 to 21: early wars stall at the first long march.
+- Unmeasured live: whether a model ruler reads "stores 1 of 4" as a reason to come home. The switch stays off.
+
+### Painted Realm pacing settings, live: occupation turning into ownership makes the models' games longer, because each province that passes resets the stalemate counter (14 November 2026)
+
+GreyBoxStrategy (#20), the two settings of #305 on the models. `personas` table, five `qwen3.5:4b` seats with today's default options, RTX 5080 (Docker Ollama 0.40.14), `-strategyTurn writs -strategyCap 300` (uncapped but for R1c's 300-turn guard), Classic, conquest. Control (both off) against `-strategyRules OccupationBecomesOwnership=8;BreakWhenAllOccupied=true` (both on), on R1c's uncapped seeds 21 and 22, one game a block, interleaved (c21 t21 c22 t22, 05:36 to 06:50). Seed 23 was not run: the tech lead ended the run after the first pair answered the question. Kit and data: `.scratch/realm-build-map/pace-live/`, `python report.py`.
+
+| | turns | ending | turns with no province changing | provinces changing hands a turn | treaties | eliminations | armies waiting a ruler-turn | leader at three quarters of the land | provinces passed by occupation |
+|---|---|---|---|---|---|---|---|---|---|
+| c21, off | 107 | stalemate | 84% | 0.24 | 10 | 1 | 1.71 | never | – |
+| t21, on | 300 | unfinished (guard) | 74% | 0.30 | 32 | 2 | 2.08 | never | 54 |
+| c22, off | 95 | stalemate | 87% | 0.22 | 8 | 1 | 2.68 | never | – |
+| t22, on | 198 | stalemate | 79% | 0.26 | 10 | 2 | 2.52 | turn 160 | 22 |
+
+- **What it can show:** in both pairs the treatment game ran about twice as long or more, land moved more often, and two realms fell instead of one. The direction is the same in both, and the mechanism is plain in the records: a province passing by occupation counts as a change of land, so the 12-turn stalemate counter restarts and a stalled war that used to end in a stalemate goes on.
+- **What it cannot show:** with two games an arm, nothing about size; and with both settings on together, nothing about either alone. The realm breaks (2 a game against 1) may be either rule's.
+- **No default changes.** Both settings stay off. The rules v2 page lists what the result suggests instead: ownership that does not reset the stalemate counter, the break rule alone, or a cheaper `demand_occupied`, each for its own live pair.
+- The runner gained a deadline (no block starts that would end past 08:00, by the longest block so far plus 10%) and `-strategyRules`, which #309 brought to `test`.
+
+### Painted Realm stalemate counter by war score, scripted: ordinary scripts do not notice it, and peaceable ones end later (14 November 2026)
+
+GreyBoxStrategy (#20), `GameRules.StalemateByWarScore` (the tech lead's pick after the pacing settings' live look). Scripted only: the `.NET 9` harness, 100 Classic games of the `mixed` lineup on seeds 1 to 100, writs turn, conquest, 12-turn stalemate. "Peaceable" is the earlier stand-in for the models (white peace offered at a war score of 30 or less and accepted at 10 or less, wars settled after 8 turns: `exp:`/`cau:` `WhitePeaceAtScore=30`, `AcceptWhitePeaceAtScore=10`, `StuckWarTurns=8`).
+
+| | ordinary scripts: turns, endings | peaceable scripts: turns, endings, treaties |
+|---|---|---|
+| off | 77; 97 last standing, 3 stalemate | 29; 100 stalemate; 26.7 |
+| ownership after 8 | 75; 94, 6 | 29; 100 stalemate; 26.7 |
+| counter by war score | 77; 98, 2 | 44; 100 stalemate; 42.6 |
+| counter by war score, ownership after 8 | 75; 94, 6 | 44; 100 stalemate; 42.6 |
+
+- Ordinary scripts press wars to the end, so the counter rarely matters to them.
+- Peaceable scripts settle every war fast and declare the next. With the counter by war score, each new war and each 10-point swing restarts it, so their games run 15 turns longer and make more treaties, still ending in stalemates. Ownership after 8 changes nothing for them: peace comes before any occupation is old enough.
+- What it cannot show: how the models' long stalled wars, where land moves by occupation for a hundred turns, behave under it. That needs the live pair the tech lead holds for later.
+
+### Painted Realm R3, unit types live, a first look: the models recruit by type without one illegal answer, but mostly pikes, and do not answer the type they see (14 November 2026)
+
+GreyBoxStrategy (#20), `GameRules.UnitTypes` (#306, #309) on the models before it is switched on. `personas` table, five `qwen3.5:4b` seats with today's default options, RTX 5080 (Docker Ollama 0.40.14), `-strategyTurn writs -strategyCap 40`, Classic, conquest. Off (`o`) against on (`u`, `-strategyRules UnitTypes=true`), the same seeds 1 to 6, one game a block, interleaved (o1 u1 … o6 u6, 06:50 to 07:50); a seventh off game ran before the 08:00 deadline stopped the runner and is left out. Kit and data: `.scratch/realm-build-map/units-live/`, `python report.py`.
+
+| | off | on |
+|---|---|---|
+| Decisions, illegal answers | 3,345, 0 | 3,298, 0 |
+| Court recruits | 605 `recruit` | 788 by type: 505 pikes (64%), 150 riders (19%), 133 bows (17%); no plain `recruit` |
+| Recruits that counter the largest type the court sees (rules v2 9.2) | – | 157 of 714 (22%; chance 33%) |
+| Battles a game; with a counter note; won by the countering side with fewer soldiers | 81; –; – | 79; 289 of 474; 25 |
+| Model seconds a turn | 6.75 | 6.79 (paired +0.04, SD 1.02 over 6 seeds: within) |
+| Prompt tokens: court, army, treaty | 1,172, 1,232, 1,178 | 1,258, 1,283, 1,226 (+86, +51, +48) |
+| Treaties a game | 4.2 | 2.5 (paired −1.7, SD 2.3: within) |
+| Persona η² aggression / peace / recruit (30 seat-games) | 0.75 / 0.32 / 0.38 | 0.92 / 0.51 / 0.42 |
+
+- **What works:** every order by type was legal and offered, the courts used all three, the time a turn did not change, and the personas stayed as distinct or more. The prompt grew by 50 to 90 tokens.
+- **What does not, yet:** the courts answer what they see with pikes. Of 714 recruits made while a rival line said "mostly" one type, 344 were pikes against pikes (the counter is bows) and only 22% countered it, below the 33% of choosing at random. The descriptions say what beats what ("pikes beat riders, and bows beat pikes"), but the 4B reads its own army's type as the one to add. Riders are bought at twice the price and still 19%.
+- **Lines that name types,** 1,232 of them. Good: "Bows rise at ashby; I crush orsk's pikes before they strike again." "Riders strike bows; we raise forces to crush Merrow's garrison at Glimmerford." Wrong: "Pikes stand firm against bows; gold is dust, but Ilvarion's steel remains." (bows beat pikes). Repeated: "Pikes shall march to every province, for land is never given!"
+- **What it can and cannot show:** six games an arm, capped at 40 turns, so time, treaties and η² only within noise; the counter share is a large count (714 recruits) but from six games' worth of situations. No switch flips on it. The counter share is the thing to fix before unit types are on: a counters line in the court's facts ("orsk is mostly pikes: bows beat pikes") is the next A/B.
+
+### Painted Realm R3, all army rules on, a first look: legal and no slower, with more battles and fewer treaties; armies left holding abroad starve where they stand (15 November 2026)
+
+GreyBoxStrategy (#20), every R3 army rule at once before any is switched on: unit types, generals, sieges, supply and fog (#306, #309 to #311, #313, #314). `personas` table, five `qwen3.5:4b` seats with today's default options, RTX 5080 (Docker Ollama 0.40.14), `-strategyTurn writs -strategyCap 40`, Classic, conquest. Control (`c`, all off) against all on (`a`, `-strategyRules "UnitTypes=true;Generals=true;Sieges=true;Supply=true;Fog=true"`), the same seeds 1 to 6, one game a block, interleaved (c1 a1 … c6 a6, 00:30 to 01:40), on test at 250d85b. Kit and data: `.scratch/realm-build-map/allrules-live/`, `python report.py`.
+
+| | control | all on |
+|---|---|---|
+| Decisions; illegal answers; guard rewrites; orders refused by the rules | 3,435; 0; 20; 163 (4.7%) | 3,366; 0; 27; 188 (5.6%) |
+| Model seconds a turn | 8.23 | 7.77 (paired −0.46, SD 0.82 over 6 seeds: within) |
+| Wars declared, battles, a game | 10.0, 82 | 8.0, 102 |
+| Sieges begun; taken; broken; open at the end | – | 15; 14; 1; 0 |
+| Soldiers lost to hunger; armies starved out | – | 381 over 172 army-turns; 16 |
+| Provinces changing hands a game; turns with no change | 17.2; 72% | 16.0; 75% |
+| Treaties a game | 4.8 | 2.3 |
+| Lines that repeat one already said in the game | 21% | 19% |
+
+- **What works:** no illegal answer in 3,366 decisions with every rule on, and no slower. The orders refused by the rules rose by one point. The rulers' lines follow the new rules ("I raise taxes to fund pikes that will crush the bows and secure our starving borders").
+- **Sieges end the turn they begin.** 14 of 15 were taken the same turn: the provinces besieged had one fort each (one had two) _(corrected 15 November: an earlier version said every Classic province has one fort; Classic starts its 5 capitals with one fort and its other 20 provinces with none, and 11 of the 15 sieges were at capitals, the other 4 at provinces the courts had fortified)_, a siege of one fort takes 2 turns, and an army three times the garrison of 10 takes one off. Working as written; a siege only lasts on a capital or a fortified province, which this board has few of.
+- **A rule bug: armies left holding abroad starve where they stand.** 16 armies starved three turns or more in one place, the longest seven (`a5`'s morrow_host at harrow: held on turn 25 with full stores, empty on turn 32, starved to turn 38, never asked again). The supply rule never woke an army as its stores ran out (wake condition 6 of rules v2 1.3 was not built), so a hold given with full stores stood until the army died. Its own PR wakes it; the all-on arm is to be run again on it, so the hunger row and everything that depends on it (battles, land, treaties) are not a result yet.
+- **A typo in the facts:** with generals and supply both on, an army reads "led by Morrow the Forager,, stores 4 of 4"; the same PR fixes it.
+- **Treaties fell again** (4.8 to 2.3 a game; unit types alone, 4.2 to 2.5 on 14 November). Six games, within noise either time, but the same direction twice.
+- **What it can and cannot show:** six games an arm, capped at 40 turns, a first look; no default changes on it. The all-on arm with the hunger fix is the next run, and 15 pairs would make it a result.
+
+### Painted Realm R3, the counters line: told what beats what, the courts counter the type they see 67% of the time against 20%; the personas stop differing in which types they buy (15 November 2026)
+
+GreyBoxStrategy (#20), `GameRules.CountersLine` with unit types on in both arms. The recruit orders' descriptions already said what beats what, but a model served by Ollama never reads the schema (findings, 10 October), so the 4B had never been told. The line puts it in the court's facts, "Pikes beat riders, riders beat bows, and bows beat pikes; orsk is mostly riders, which pikes beat", one clause for each rival the facts name that is mostly one type, and a march's detail names the largest type among the enemy armies there ("enemy armies 30, mostly riders"). `personas` table, five `qwen3.5:4b` seats with today's default options, RTX 5080 (Docker Ollama 0.40.14), `-strategyTurn writs -strategyCap 40`, Classic, conquest. Control (`u`, `-strategyRules UnitTypes=true`, the line off: its default during the run) against the line (`k`, `UnitTypes=true;CountersLine=true`), the same seeds 1 to 12, one game a block, interleaved, in two runs of six pairs (01:44 to 02:51, then 02:52 to 03:58; the second to confirm the first). Kit and data: `.scratch/realm-build-map/counters-live/`, `python report.py`, `python paired.py`.
+
+| | control | the line |
+|---|---|---|
+| Decisions, illegal answers | 6,763, 0 | 6,879, 0 |
+| Recruits by type: pikes, riders, bows | 1,056, 327, 249 (65%, 20%, 15%) | 613, 554, 744 (32%, 29%, 39%) |
+| Recruits that counter the largest type the court sees (rules v2 9.2) | 294 of 1,481 (20%; chance 33%); per game 7% to 41% | 1,155 of 1,724 (67%); per game 53% to 78% |
+| Battles a game; won by the countering side; and with fewer soldiers | 87; 59% of 608; 63 | 99; 64% of 907; 117 |
+| Model seconds a turn | 7.62 | 7.75 (paired +0.13, SE 0.20) |
+| Prompt tokens, court | 1,258 | 1,290 |
+| Treaties a game | 3.1 | 2.7 (paired −0.42, SE 0.82) |
+| Persona η² (60 seat-games an arm): aggression; peace | 0.95; 0.63 | 0.92; 0.50 |
+| Persona η², how often a seat recruits (its share of decisions that are a recruit) | 0.23 (p 0.006) | 0.14 (p 0.09) |
+| Persona η², which types it picks (its recruits' share that are pikes; riders; bows) | 0.51; 0.33; 0.31 (p ≤ 0.001) | 0.02; 0.08; 0.03 (p 0.30 to 0.86) |
+
+- **The line works, and held over the second six pairs:** 64% in the first six, 67% over twelve; every game with the line (53% to 78%) above the best without (41%). The courts now buy all three types and buy what beats what they see; battles won by the countering side rose, and battles a game with it.
+- **Nothing measured got worse beyond noise:** no illegal answer in either arm, model time a turn +0.13 s (SE 0.20), treaties −0.42 a game (SE 0.82). Persona η² for aggression fell 0.03 (bootstrap over seeds 95% −0.05 to +0.00, the control's own two halves differ by 0.06) and for peace 0.13 (−0.25 to +0.04; the control's halves differ by 0.29): within noise, though aggression's interval only just reaches zero.
+- **The cost:** the personas no longer differ in which types they buy (η² 0.31 to 0.51 down to 0.02 to 0.08), and somewhat less in how often they recruit (0.23 to 0.14). Told what beats what they face, every persona buys the same answer.
+- **Lines:** "We recruit bows to counter orsk's pikes before they grow too strong." "Riders mount to hunt bows; gold spent wisely on the army that beats them." Wrong: "We raise pikes at our capital to counter Kesh's bows" (bows beat pikes).
+- **Decision (the tech lead's rule, set before the second six pairs were read):** the share held, and illegal answers, time, treaties and the aggression and peace η² were not worse beyond noise, so `CountersLine` is on by default from 15 November; it does nothing unless unit types are on. The recruit η² drop is the cost, recorded here for the lead. `-strategyRules "CountersLine=false"` runs the old prompt as an arm. Unit types themselves stay off.
+- **What it can and cannot show:** twelve games an arm capped at 40 turns, one model; the counter share is a large count, the η² differences are from 60 seat-games an arm.
+
+### Painted Realm R3, all army rules on, run again with the hunger wake and the siege floor: sieges now last and are relieved; armies are woken to starve and mostly attack on (15 November 2026)
+
+The all-on arm of "all army rules on, a first look" (15 November), run again on the fixes it led to (#322: an army abroad is asked again as its stores run low and each turn it starves; a siege lasts two turns at least). All five rules, no counters line, so it compares with the first look: `-strategyRules "UnitTypes=true;Generals=true;Sieges=true;Supply=true;Fog=true"`, seeds 1 to 6, one game a block, the same table, model, card and settings. Every block ran on test at 2e35705 (#322 and #323 in, #326's counters line not yet), from a checkout that did not change during the run (03:58 to 04:33). **The control was not rerun:** the all-off games of the first look (00:30 to 01:40, this session, the same machine and card) stand as the control, so the comparison is two to three hours apart rather than interleaved, and the fixes cannot touch an arm with supply and sieges off. Kit and data: `.scratch/realm-build-map/allrules-live/` (`rerun/`; `python report.py combined2`).
+
+| | control (first look) | all on, first look | all on, again |
+|---|---|---|---|
+| Illegal answers; refused by the rules | 0; 4.7% | 0; 5.6% | 0; 5.6% |
+| Model seconds a turn | 8.23 | 7.77 | 7.85 (paired −0.38, SD 0.55) |
+| Battles a game; wars | 82; 10.0 | 102; 8.0 | 103; 8.8 |
+| Sieges begun; taken; lasted past the turn they began; relieved (broken) | – | 15; 14; 1; 1 | 18; 5; 5; 13 |
+| Soldiers lost to hunger; armies starved out; starving 3+ turns in one place | – | 381; 16; 16 | 592; 20; 25 |
+| Provinces changing hands a game; turns with no change | 17.2; 72% | 16.0; 75% | 14.7; 77% |
+| Treaties a game | 4.8 | 2.3 | 3.2 |
+
+How the marshals answered the hunger wakes (the march's target as the order read it):
+
+| Wake | Attacked (enemy land) | Marched elsewhere (neutral or occupied) | Went home | Held |
+|---|---|---|---|---|
+| "stores running low", 140 | 84 | 33 | 14 | 9 |
+| "starving", 122 | 71 | 20 | 13 | 18 |
+
+- **Sieges work as meant now:** every siege taken lasted past the turn it began, and most were relieved (13 of 18 broken). Before the floor, 14 of 15 fell the turn they began.
+- **The hunger wake fires, and the 4B mostly attacks on.** Asked as their stores ran low or while starving, the marshals went home about one time in ten and attacked deeper six times in ten. Hunger is worse than in the first look (592 soldiers lost against 381; 25 stretches of starving in place against 16, the longest ten turns: `a2`'s aldo_host, asked on turns 15 and 16 and holding, then not asked again until it starved out).
+- **About half of the starving army-turns got no ask at all** (138 of 252): the wake adds the army to the queue, but the rules ask the most urgent armies first (a hostile army beside it, then size) within the writs, and a starving army is not ranked as urgent. That is a rules question, not a bug in the fix, and is put to the tech lead: a starving army first in the queue, or a standing order to go home when stores run out, would each be an A/B.
+- **What it can and cannot show:** six games an arm, 40 turns, a control from earlier in the session; enough to see that sieges now last and that hunger is not solved by asking, not enough for battles, land or treaties. No default changes.
+
+### Painted Realm R3, hunger first, live: starving armies asked first and told the way home lose a fifth as many soldiers to hunger, and the realms fight less (15 November 2026)
+
+GreyBoxStrategy (#20), `GameRules.HungerFirst` (#330) on the models. `personas` table, five `qwen3.5:4b` seats with today's default options, RTX 5080 (Docker Ollama 0.40.14), `-strategyTurn writs -strategyCap 40`, Classic, conquest. Both arms have all five army rules and the counters line on (test's head 6c43f7a, where `CountersLine` is on by default): control `c`, `-strategyRules "UnitTypes=true;Generals=true;Sieges=true;Supply=true;Fog=true"`, against `a`, the same plus `HungerFirst=true`. Seeds 1 to 6, one game a block, interleaved (c1 a1 … c6 a6, 06:30 to 07:38), from a checkout that did not change during the run; no Unity test ran beside it. Kit and data: `.scratch/realm-build-map/hungerfirst-live/`, `python report.py` and `python noask.py data`.
+
+| | off (`c`) | on (`a`) |
+|---|---|---|
+| Decisions; illegal answers; refused by the rules | 3,424; 0; 5.3% | 3,369; 0; 4.4% |
+| Model seconds a turn | 7.91 | 7.73 (paired −0.19, SD 0.23) |
+| Soldiers lost to hunger; army-turns starving | 580; 258 | 125; 54 |
+| Armies starved out; starving 3+ turns in one place | 13; 24 | 0; 4 |
+| Starving army-turns with no ask the next turn (a game's last turn has no next) | 114 of 252 (45%) | 21 of 50 (42%) |
+| Battles a game; wars | 103; 8.0 | 93; 9.7 |
+| Sieges begun; taken; relieved (broken) | 31; 7; 24 | 16; 5; 11 |
+| Provinces changing hands a game; turns with no change | 15.5; 74% | 11.8; 80% |
+| Treaties a game | 2.8 | 3.8 |
+
+How the marshals answered the hunger wakes (the march's target as the order read it):
+
+| Wake | | Attacked (enemy land) | Marched elsewhere (neutral or occupied) | Went home | Held |
+|---|---|---|---|---|---|
+| "stores running low" | off, 106 | 69 | 21 | 14 | 2 |
+| | on, 120 | 11 | 7 | 99 | 3 |
+| "starving" | off, 137 | 99 | 25 | 7 | 6 |
+| | on, 18 | 4 | 1 | 11 | 2 |
+
+- **Hunger fell in every pair** (soldiers lost, off against on: 100/10, 72/20, 81/41, 144/36, 126/0, 57/18), and no army starved out. The mechanism is in the answers: told "Stores for 1 more turn here, then it starves" and the nearest land that feeds it, a marshal goes home five times in six, where without it it attacked on two times in three. So most armies go home before they starve, and few are ever starving.
+- **The ask itself barely changed:** of the army-turns that did starve, about as many went unasked the next turn (42% against 45%). Why those few went unasked was not checked. The fall is in how many starve, not in how often a starving one is asked.
+- **The cost is fighting.** Battles fell in 5 pairs of 6 (103 a game against 93), sieges begun by half, and land changed hands less (11.8 a game against 15.5, lower in 5 pairs of 6): the armies that went home were not at the front. Treaties rose a little (3.8 against 2.8).
+- **What it can and cannot show:** six pairs, 40 turns. The direction of hunger is the same in all six and large; battles and land move the same way in five of six, enough to name a cost but not its size. The queue and the facts are one switch, so nothing here says which of them did it. Legal and no slower.
+- **No default changes.** `HungerFirst` stays off; the tech lead decides. The starving no-ask share is recounted here by one stated rule (an army that lost soldiers to hunger at the end of a turn, with no army request of its own the next turn); by that rule the second all-on run's 138 of 252 is 133 of 253.
+
+### Painted Realm stalemate counter by war score, live: it never lengthened a model game, and ended two of four sooner (15 November 2026)
+
+GreyBoxStrategy (#20), `GameRules.StalemateByWarScore` on the models, the live pair the scripted entry of 14 November left owed. `personas` table, five `qwen3.5:4b` seats with today's default options, RTX 5080 (Docker Ollama 0.40.14), `-strategyTurn writs -strategyCap 300` (uncapped but for the 300-turn guard), Classic, conquest, the writs turn's 12-turn stalemate. Off (`s`) against `-strategyRules StalemateByWarScore=true` (`w`), seeds 31 to 34, one game a block, interleaved (s31 w31 s32 w32 04:32 to 06:30; s33 w33 s34 w34 07:38 to 08:33), every block on test at f203752. **All four pairs ran.** The tech lead put the HungerFirst A/B between pairs 2 and 3; the checkout was put back on f203752 for pairs 3 and 4, and each block was started only if it would end by 09:45. Some of pairs 1 and 2 shared the laptop's CPU with Unity test runs; nothing here is timed. Kit and data: `.scratch/realm-build-map/stalemate-live/`, `python report.py`.
+
+| Seed | off: turns, ending | on: turns, ending | battles off, on | provinces changing hands off, on | turns with no change | treaties off, on |
+|---|---|---|---|---|---|---|
+| 31 | 300, unfinished (guard) | 300, unfinished (guard) | 483, 483 | 41, 41 | 90% | 21, 21 |
+| 32 | 300, unfinished (guard) | 187, stalemate | 509, 350 | 35, 22 | 93%, 94% | 11, 6 |
+| 33 | 135, stalemate | 121, stalemate | 163, 160 | 35, 31 | 87% | 24, 21 |
+| 34 | 134, stalemate | 134, stalemate | 195, 195 | 31, 31 | 81% | 17, 17 |
+| Mean | 217; 2 stalemate, 2 unfinished | 186; 3 stalemate, 1 unfinished | | | | |
+
+- **The two arms play the same game.** The counter is in no prompt, and `qwen3.5:4b` answered the same request the same way, so with the step timings set aside each pair's records are identical turn for turn until one rule ends the game: seed 31 for all 300 turns, seed 34 to the same last turn (134) by both rules, seeds 32 and 33 until the rule on ended it (turn 187 against 300, 121 against 135). The comparison is therefore not of two samples but of two stopping rules on one game each, and every difference above (battles, land, treaties) is only the turns the shorter game did not play.
+- **On these four games the rule never kept a game going** that the old counter ended, and it ended two sooner, one of them a game that otherwise ran into the guard. The scripted worry, peaceable play that new wars and 10-point swings keep restarting, did not show in these four; why each rule stopped where it did, turn by turn, was not traced.
+- **What it cannot show:** four games, two of which neither rule ends in 300 turns. Uncapped Classic games of the off arm lasted 95 to 300 turns across this run and the pacing run of 14 November (seeds 21 and 22, 107 and 95); four seeds say nothing about how often a game runs into the guard.
+- **No default changes.** `StalemateByWarScore` stays off; the tech lead decides. Because the arms are one game each, more seeds of the off arm alone would answer more: the rule on can be judged by where it would have stopped, if the counter were replayed from the records, which is not built.
+
+### Painted Realm R3, land traditions live: courts lean 7 points more toward their land's type, the persona still decides most of it (16 November 2026)
+
+GreyBoxStrategy (#20), `GameRules.LandTraditions` (#336, off) on the models. `personas` table, five `qwen3.5:4b` seats with today's default options, RTX 5080 (Docker Ollama 0.40.14), `-strategyTurn writs -strategyCap 40`, Classic, conquest. Control `n`, the defaults of 15 November (all six army rules and the counters line on), against `l`, the same plus `-strategyRules LandTraditions=true`. Seeds 1 to 12, one game a block, interleaved (n1 l1 as the first slice 22:20 to 22:31, then n2 l2 … n12 l12 to 00:30), every block on test at 42e0ec8 from a checkout that did not change during the run; no Unity test ran beside it. Kit and data: `.scratch/realm-build-map/landbonus-live/`, `python land_report.py`, `python report.py`, `python paired.py`, `python extra.py`.
+
+On Classic each seat starts on three provinces, so its starting land is fixed: valen, orsk (pikes 15%) and kesh (pikes 5%, riders 5%) lean to pikes, ilvar and merrow (riders 15%) to riders, no seat to bows. Personas rotate across seats with period 5 (seed 1 = 6 = 11), so over 12 seeds each persona sat on each seat two or three times and seat and persona are not the same grouping. A seat-game is one country in one game, with its court's typed recruits as shares of pikes, riders and bows (60 an arm).
+
+| | n (off) | l (land traditions) | l − n, 95% over seeds |
+|---|---|---|---|
+| Illegal answers | 0 of 6,858 | 0 of 6,972 | |
+| Recruits: pikes, riders, bows | 57%, 15%, 29% (1,761) | 58%, 16%, 27% (1,758) | |
+| Share of a seat's recruits in its starting land's top type (chance 33%) | 40.2% | 47.5% | **+7.3 points [+2.8, +11.6]**, l higher in 10 of 12 pairs |
+| η² of the pike share by persona / by seat / by top tradition | 0.61 / 0.01 / 0.00 | 0.51 / 0.08 / 0.07 (p 0.03) | seat +0.07 [−0.17, +0.29]; persona −0.10 [−0.28, +0.13] |
+| η² of the rider share by persona / seat / top tradition | 0.25 / 0.05 / 0.02 | 0.35 / 0.10 / 0.07 (p 0.03) | seat +0.05 [−0.15, +0.26]; persona +0.10 [−0.11, +0.31] |
+| η² of the bow share by persona / seat / top tradition | 0.60 / 0.02 / 0.00 | 0.40 / 0.04 / 0.03 | seat +0.02 [−0.15, +0.19]; persona −0.20 [−0.34, +0.01] |
+| Recruits of the type the court's own land line names first | (no line) | 856 of 1,758 (49%) | |
+| Counter share (a rival mostly one type, the counter bought) | 79% of 423 | 77% of 461 | |
+| Battles a game | 96.4 | 99.8 | +3.3 [−6.0, +12.3] |
+| Provinces changing hands a game | 13.3 | 12.8 | −0.4 [−3.0, +2.3] |
+| Treaties a game | 3.8 | 4.8 | +1.0 [−0.4, +2.3], l more in 9 of 12 |
+| Model seconds a turn | 7.45 | 7.61 | +0.17 (SE 0.10) |
+| Court prompt tokens | 1,381 | 1,400 | the one line |
+
+- **The land moves recruiting, a little.** With the rule on, a seat buys 7 points more of the type its starting land favours, a paired interval that excludes zero, and the seat and its top tradition explain 7 to 10% of the pike and rider shares where they explained 0 to 5% without it (permutation p 0.03 for the top tradition). Half the court's recruits are the type its land line names first; pikes are 58% of all recruits and lead most lines, so that 49% is not measured against a control and says little alone. Which part comes from the court reading the line and which from battles going differently was not separated: the rule changes both.
+- **The persona still decides most of it.** The persona explains 35 to 51% of each type's share with the rule on (25 to 61% off). Its η² fell for pikes and bows and rose for riders, all within the bootstrap. The personas were not told to prefer any type, and the land did not erase them; it tilted them.
+- **Nothing else broke.** 0 illegal answers in either arm; the counters line works as before (77% against 79%); battles, land changing hands and time a turn within noise; the line costs about 19 prompt tokens. Treaties went up in 9 of 12 pairs, an interval that crosses zero.
+- **What 12 pairs cannot show:** the games are capped at 40 turns and none finished, so nothing about who wins or how long a game lasts. No seat on Classic leans to bows, so a bow tradition is untested, and the starting land stands for land that changes during a game. One map: on a generated world the land differs more between seats, which is where the rule should matter, and no generated-world pair was run. The η² differences between arms are within their intervals; only the +7-point match is outside.
+- **No default changes.** `LandTraditions` stays off; the tech lead decides.
+
+### One declared parameter on the evaluation sets: 5.7 points lost on the interim 389 on `qwen3.5:4b`, beyond the floor, for the whole of what a parameter changes; nothing on the curated 76 (16 November 2026)
+
+DR-023's first step (#266 item 2, the pull request that builds it): an action may declare a closed
+choice beside its target. Declaring one changes three things in every call that offers the action:
+the schema is paired, the prompt lists the actions and targets, and the action's branch asks for
+the field between `target` and `statement`. This run measures what that costs an agent whose task
+has nothing to do with the parameter.
+
+**Arms**, through `EvalRunner`, interleaved prompt by prompt inside each run:
+
+- **control**: the defaults, the request as it has always been;
+- **parameter**: the same agent with one harmless parameter on `move_to`, `pace` (`walk` or `run`,
+  "how fast to go"), given by `EvalLegality.ActionParameters`; no default value;
+- **pair-list**: `PairTargetsWithActions` and `ListActionsAndTargets` on, no parameter: what a
+  parameter forces, without the field.
+
+The labels are scored on action and target; the pace is never judged. Two runs a set: control
+against parameter, and pair-list against parameter.
+
+**Conditions.** RTX 5080, Docker Ollama 0.40.14, over the network (home or VPN), `qwen3.5:4b`
+alone resident (2995 MB in VRAM, `ps` empty before each hold), temperature 0, framework
+0.4.0-preview.2 with the pull request's code, `checkTarget` on, the 9 November state wording. Three
+holds of the card's lock on 16 November, 17:51 to 18:24 local: the curated set's two runs in one,
+then each interim run in its own, the model unloaded between. Unity batch mode on the laptop.
+Entry point, wrapper and the four reports: `.scratch/266-gaps/ab/` in the lead's main checkout
+(`C:\Unity_Projects\agenerela\.scratch\266-gaps\ab\`, reports in `reports-20261116-1751/`),
+copied there from the worktree `266-framework-gaps-459b69`.
+
+| Set | Run | A | B (parameter) | B − A | Floor | |
+|---|---|---:|---:|---:|---:|---|
+| Curated 76 | control vs parameter | 69 (90.8%) | 69 (90.8%) | 0.0 | 8.1 | within noise |
+| Curated 76 | pair-list vs parameter | 70 (92.1%) | 69 (90.8%) | −1.3 | 8.1 | within noise |
+| Interim 389 | control vs parameter | 331 (85.1%) | 309 (79.4%) | **−5.7** | 3.6 | beyond noise |
+| Interim 389 | pair-list vs parameter | 323 (83.0%) | 309 (79.4%) | −3.6 | 3.6 | at the floor |
+
+The parameter arm gave the same counts in both of its runs on each set (69 and 309), so the two
+runs can be read together: on the interim set, control 331, pair-list 323, parameter 309. Control
+against pair-list was not a run of its own; their difference, 2.1 points, comes from two runs and
+is inside the floor.
+
+**Where the answers went** (interim, all 389 a arm):
+
+| | control | pair-list | parameter |
+|---|---:|---:|---:|
+| Answered `none` | 142 | 120 | 116 |
+| Answered `move_to` | 113 | 130 | 142 |
+| Wrong where `none` was expected | 24 | 40 | 44 |
+| Wrong `none` where an action was expected | 10 | 4 | 4 |
+| `impossible_request` correct, of 64 | 50 | 43 | 43 |
+| Contained by the grounding guard | 4 | 0 | 0 |
+| Pipeline errors | 0 | 0 | 0 |
+| Latency, median | 0.47 s | 0.48 s | 0.50 s |
+
+- **What the table supports.** Declaring one parameter, with everything it changes (the pairing,
+  the list and the field), costs 5.7 points on the interim set, beyond the floor, and nothing on
+  the curated set. That is the only difference here that clears its floor.
+- **The cost is acting when nothing was asked.** Against control, the parameter arm gives 20 more
+  wrong answers where `none` was expected (24 to 44) and 6 fewer missed commands (10 to 4). It
+  handles 7 fewer impossible requests, and the guard contains none where it contained 4.
+- **How the cost splits between the list with pairing and the field is suggestive only.**
+  Pair-list sits between the two (323), with most of the unasked actions already there (40). But
+  control against pair-list comes from two separate runs and is inside the floor, and pair-list
+  against parameter (14 answers, 7 of them in `situation`, 48 to 41) sits exactly at it. The
+  parameter arm answers `move_to`, the action that carries the field, 12 more times than pair-list
+  does, which fits Appendix A's note that a longer description draws a small model; it is not
+  shown here.
+- **The grammar and the checks held.** No pipeline error, no reply without a pace or with one not
+  offered, and no statement that was a bare `walk` or `run` in 930 parameter-arm replies: placed
+  before the statement, the value stays out of it, as the 14 November probe found.
+- **Latency** is about 0.03 s a decision more with the field, on the median.
+- The curated 76 shows nothing at its floor of 8.1; its categories moved in opposite directions
+  (situation −3 answers, event +3) and cancel.
+
+**What it means.** No default changes: a parameter is off unless a developer declares one, and an
+agent that declares none sends the request it always sent (tests hold that). For a developer it
+says the feature is not free on the 4B: on a task that never uses the parameter, declaring one
+costs about 6 points in this set, mostly as unasked actions, so declare parameters where the game
+needs the value. It does not say
+whether a parameter is better than bundled ids (`windfall_major`) where the game does need the
+value: that is the storyteller's A/B, DR-023's question 5, still owed (#151).
+
+**Not measured.** `qwen3.5:2b`. The list or the pairing each alone (#151 has those runs). A
+shorter wording of the parameter on its action's line, or an example without the value. An action
+list without the target list. A model on Ollama's native path, which would sort the field after
+the statement.
+
+**What would change this.** The storyteller table showing parameters match or beat bundled ids
+where the value matters. A wording that brings the parameter arm back to pair-list's score, which
+would say the 14 answers are the line's length and not the field. A second interim run that does
+not reproduce 331 against 309.
+
+### The storyteller's strength as a parameter against bundled ids: equally legal, no closer to the game's state, majors moved from gifts onto blows, for 0.09 s and 5.5 tokens more a decision (16 November 2026)
+
+DR-023's question 5. GreyBoxStrategy's storyteller (#20) chooses how hard four of its events strike
+(`windfall`, `bad_harvest`, `plague`, `volunteers`): `minor` about half the usual amount, `major`
+about one and a half times it, with one rule, "no two major events in a row, whoever they strike".
+Two arms, the same events, rule and amounts (`GameRules.EventStrength`, off by default; tests hold
+the two forms landing the same event from the same reply):
+
+- **bundled**: `default+storyteller+strength-bundled`, two actions an event (`windfall_minor`,
+  `windfall_major`), the major ones left out of the schema after a major;
+- **param**: `default+storyteller+strength-param`, one action with a `strength` parameter, no
+  default, its `major` value left out by the per-value check after a major.
+
+**Conditions.** `personas` table, five `qwen3.5:4b` seats and the storyteller, RTX 5080 (Docker
+Ollama 0.40.14) under the card's lock, seeds 1 to 20, the arms interleaved in blocks of five seeds
+(bundled first in blocks 0 and 2, param first in 1 and 3), one Unity batch run and lock hold per
+arm-block, 16 November 20:05 to 21:10 local, every block whole on its first try. Paired by seed;
+"beyond" when the 95% interval excludes 0. Kit and data: `.scratch/storyteller-params/` in the
+lead's main checkout (`strength_report.py` for the strength rows, `compare.py` for the game).
+
+| Measure (per game, paired by seed) | bundled | param | param − bundled | 95% interval | |
+|---|---:|---:|---:|---:|---|
+| Legal answers | 100% | 100% | 0 | 0 to 0 | within |
+| Contained, pipeline errors, bare-value statements | 0% | 0% | 0 | | within |
+| Major share of events with a strength | 14% | 17% | +2 | −4 to +7 | within |
+| Major on blows to the leader | 22% | 33% | +14 | −0 to +27 | within |
+| Major on blows to the others | 9% | 24% | +13 | +1 to +25 | **beyond** |
+| Major on gifts to the weaker | 10% | 0% | −12 | −18 to −5 | **beyond** |
+| Major on gifts to the stronger | 16% | 5% | −12 | −22 to −2 | **beyond** |
+| Strength follows standing (r, per game) | 0.01 | 0.06 | +0.08 | −0.05 to +0.21 | within |
+| Story agrees with strength (word count) | 76% | 74% | −4 | −20 to +12 | within |
+| Statements naming `minor` or `major` | 3% | 12% | +9 | +6 to +13 | **beyond** |
+| Titles present | 49% | 53% | +3 | −5 to +10 | within |
+| Kinds of event a game | 5.85 | 6.45 | +0.60 | +0.16 to +1.04 | **beyond** |
+| Events a game | 19.9 | 22.5 | +2.6 | −0.4 to +5.5 | within |
+| Calls where the value check left `major` out | – | 12% | | | |
+| Seconds a decision, median | 0.80 | 0.89 | +0.09 | +0.06 to +0.13 | **beyond** |
+| Prompt tokens, mean | 1,408 | 1,375 | −31 | −50 to −13 | **beyond** |
+| Completion tokens, mean | 52.8 | 58.3 | +5.5 | +4.3 to +6.7 | **beyond** |
+
+Major by event, all 20 games: bundled `bad_harvest` 20/74, `volunteers` 18/80, `windfall` 4/75,
+`plague` 0/72; param `bad_harvest` 51/94, `volunteers` 3/88, `windfall` 0/58, `plague` 0/78.
+Seconds at p90: 1.26 and 1.29. In the game: turns with no change 17% → 23% and stories replaced by
+the invented-history check 1% → 4%, both beyond; value tracks standing −0.25 → −0.37, beyond (the
+leaders lose more, from the harder harvests); wars, battles, eliminations, the map's Gini, lead
+changes and the character test (aggression eta² 0.83 and 0.77, p 0.000 both) within or unchanged.
+
+- **The grammar and the checks held in both forms.** Every answer legal, none contained, no
+  pipeline error, no reply without a strength, no statement that was a bare value. In the smoke
+  game, read by hand, `strength` came before `statement` in all 19 replies carrying one.
+- **The parameter form does not make strength follow the game.** Neither form ties strength to a
+  country's standing (r 0.01 and 0.06). Blows to the leader are major a third of the time in
+  param against a fifth in bundled, a difference just inside its interval.
+- **What it changes is where the majors go, by kind of event, not by state.** With one id to read,
+  the model makes harvests major half the time and almost never anything else; with two ids, it
+  spreads its majors over harvests and volunteers. So the param arm's gifts are almost all minor,
+  its blows harder, and the leaders lose more.
+- **The story mentions the strength more often**: 12% of statements say "a major bad harvest"
+  against 3%. The word stays out of the field's place, so this is wording, not a leak.
+- **Cost:** +0.09 s on the median decision (11%), +5.5 completion tokens (10%), 31 prompt tokens
+  fewer (the event is listed once, not twice). Legal answers cost nothing.
+
+**Verdict.** On this table the parameter form does nothing the bundled ids do not: the same
+legality, no closer tie to the game's state, the same share of majors. It moves the majors from
+gifts onto blows, and costs about a tenth more time and output tokens a decision. 20 games can tell
+the cost and the shift by kind of event. They cannot tell whether either form follows the state:
+r sits near 0 in both with an interval of ±0.13, and blows to the leader are at the interval's
+edge. A form that did follow the state would need a measure built for it, or more games.
+
+**A limit of the parameter form found here, for DR-023's second step.** A per-value check
+(`IsAvailableValue`) sees the action and the value, never the target. So a rule that depends on
+both, "not major on the same country twice", cannot be said in the parameter form, while the
+bundled form says it through the target check of `windfall_major`. This A/B used a rule without a
+target so the two arms matched. DR-023 records it beside `also_targets`; nothing is built around
+it.
+
+**What it means.** No default changes: the storyteller asks no strength unless a table sets
+`+strength-bundled` or `+strength-param`. For a developer, both forms work on the 4B; bundled ids
+are cheaper and can carry a per-target rule, and a parameter keeps the action list short. The
+model's choice of strength looks driven by the event's kind in either form.
+
+**Not measured.** `qwen3.5:2b`. A rule per target, which only the bundled form can carry. A
+strength given a default. More than two values. Ollama's native path, which would sort the field
+after the statement.
+
+**What would change this.** A run where one form ties strength to standing beyond its interval.
+A strength measure that needs no word counts (the agreement row counts big and small words).
+Living Vale's quantity A/B (DR-023's measurement 5) going the other way.
+
+### Painted Realm R3, land traditions on generated worlds: the same 8-point lean as on Classic, and 8 points fewer counters (16 November 2026)
+
+GreyBoxStrategy (#20), `GameRules.LandTraditions` (#336, off), the Classic A/B of this morning repeated on generated worlds. `personas` table, five `qwen3.5:4b` seats with today's default options, RTX 5080 (Docker Ollama 0.40.14), `-strategyTurn writs -strategyCap 40 -strategyMap medium -strategyMapSeed k`, conquest. Control `n`, the defaults of 15 November, against `l`, the same plus `-strategyRules LandTraditions=true`. Pair k plays world k (seed k) in both arms, k = 1 to 12, one game a block, interleaved: n1 l1 as the first slice (17:19 to 17:35), then n2 l2 … n12 l12 to 22:27, with a minute's gap between blocks for other sessions' turns on the card. Every block ran on test at 523acf5 from a checkout that did not change during the run, so before #344's change to the screen's fog (which no ruler reads). Headless Unity tests ran on the laptop beside some blocks; they share no GPU with the 5080, but may have slowed the game's own steps. Kit and data: `.scratch/realm-build-map/landbonus-live/`, `python land_report_gen.py`, then `report.py`, `paired.py` and `extra.py`, each with `data-gen`.
+
+A medium world has five realms, each starting on its own land, so the starting traditions differ from world to world. Each seat's top type was read from the `l` arm's first court request ("Our land makes …"): over 60 seat-games, riders lead 28, bows 19, pikes 13, so unlike Classic every type is somebody's. Personas rotate with period 5 as before. Country ids differ by world, so "by seat" means nothing here and is left out.
+
+| | n (off) | l (land traditions) | l − n, 95% over worlds |
+|---|---|---|---|
+| Illegal answers | 0 of 7,974 | 0 of 7,971 | |
+| Recruits: pikes, riders, bows | 62%, 15%, 23% (2,001) | 56%, 20%, 24% (2,008) | |
+| Share of a seat's recruits in its land's top type (chance 33%) | 23.9% | 32.0% | **+8.1 points [+2.4, +13.4]**, l higher in 9 of 12 worlds |
+| … for seats whose land leans to pikes (13), riders (28), bows (19) | 56%, 14%, 17% | 64%, 23%, 24% | each type up 7 to 9 points |
+| η² of the pike, rider, bow share by persona | 0.45, 0.34, 0.36 | 0.44, 0.28, 0.37 | −0.01 [−0.23, +0.19], −0.05 [−0.22, +0.11], +0.00 [−0.26, +0.27] |
+| η² of the pike, rider, bow share by top tradition | 0.06, 0.14 (p 0.01), 0.02 | 0.01, 0.07, 0.01 | −0.05 [−0.25, +0.08], −0.07 [−0.29, +0.07], −0.01 [−0.20, +0.14] |
+| Counter share (a rival mostly one type, the counter bought) | 80% of 497 | 71% of 526 | **−8.2 [−13.5, −3.5]**, l lower in 10 of 12 |
+| Battles a game | 93.1 | 88.6 | −4.5 [−11.3, +2.4] |
+| Provinces changing hands a game | 36.2 | 36.1 | −0.1 [−3.6, +3.6] |
+| Treaties a game | 2.8 | 2.1 | −0.8 [−2.0, +0.5] |
+| Model seconds a turn | 10.35 | 10.46 | +0.10 (SE 0.45) |
+| Court prompt tokens | 1,501 | 1,536 | the line, about 35 |
+
+- **The lean holds on a generated world.** A seat buys 8 points more of its land's type with the rule on (7 on Classic), and here every type is tested: seats on hills, plains and forest each lean their way by 7 to 9 points, so the bow tradition Classic could not test works like the others.
+- **It costs counters, which Classic did not show.** Facing a rival that is mostly one type, courts bought the counter 80% of the time without the rule and 71% with it, lower in 10 of 12 worlds. On Classic the two were 79% and 77%. A plausible reading is that on a generated world more seats lean to a type that is not the counter of what they face, and the land line pulls against the counters line; this run cannot tell that from noise in how often each pairing came up.
+- **The persona still decides most of it, and the top tradition explains no more than before.** The persona explains 28 to 44% of each share in both arms. The top tradition's η² did not rise (it fell, within its intervals), so the lean is a shift of every seat toward its land rather than a sorting of seats by land; with 12 worlds the η² intervals are about ±0.2 wide and could hide a real rise.
+- **Nothing else moved beyond noise.** 0 illegal answers in either arm; battles, land, treaties and time a turn within their intervals; the line costs about 35 prompt tokens (19 on Classic).
+- **What 12 worlds cannot show:** the games are capped at 40 turns and none finished, so nothing about who wins or whether the lean helps a realm. One map size, one generator setting, one model. The match counts a seat's land at the start; land taken during the game changes the line and is not followed. Whether the lost counters cost battles was not measured: battles fell 4.5 a game, within noise, and the counter's side won about as often in both arms (72% and 70%).
+- **No default changes.** `LandTraditions` stays off; the tech lead decides.
+
+### The run queue's first blocks on the RTX 5080 machine: a game played beside Ollama takes the same model time a turn as one driven from the laptop (18 November 2026)
+
+The runner (`tools/live-runs/runner/`, step 2 of its `DESIGN.md`), played by hand with `runq.py run --on-server`: Unity 6000.3.23f1 in batch mode on the RTX 5080 machine itself, calling the Docker Ollama 0.40.14 gateway on `127.0.0.1:11436`, no other model resident, no Unity test or asset job beside it. Two requests:
+
+- **One scripted block** (`-strategyTable scripted`, seed 1, cap 40, at b616caf): done in 1.4 minutes, the first in a new worktree, import included.
+- **One model pair**, the first slice of the 16 November land-traditions run replayed: `personas` table, five `qwen3.5:4b` seats, `-strategyTurn writs -strategyCap 40`, Classic, seed 1, at 42e0ec8, `n1` (defaults) then `l1` (`-strategyRules LandTraditions=true`). `size_vram` 3.14 GB, all on the GPU. Both done on the first try, 6.4 and 5.5 minutes. Results on branch `runs/901-runner-model-pair-check`.
+
+| | n1, runner | l1, runner | 16 November, laptop-driven, mean of seeds 1 to 12 (n, l) |
+|---|---|---|---|
+| Model seconds a turn | 7.38 | 7.76 | 7.45, 7.61 |
+| Battles, provinces changing hands, treaties | 95, 10, 3 | 100, 18, 7 | 96.4, 13.3, 3.8 (n) |
+
+- **The network hop from the laptop costs little here.** Model seconds a turn, summed over the five courts' `model_s` in `writs-turns.csv`, are within a few tenths of the laptop-driven arms' means. This is one seed against a twelve-seed mean, and the 16 November figure came from that run's own `report.py`, which may sum differently; seed 1's laptop rows are in its kit on the laptop (`.scratch/realm-build-map/landbonus-live/`) and were not compared turn by turn. So it says the runner is not slower, not by how much it is faster.
+- **Answers were not compared with the laptop's game** for the same reason, so whether the runner's seed-1 games are the laptop's turn for turn (as two arms of one rule were on 15 November) is open.
+- **What would change it:** the same seed-1 pair driven from the laptop on the same day, as `DESIGN.md` step 2 asks, which this machine cannot do alone. Until then, times from the runner are recorded as their own kind (its `manifest.json` says which runner played), as the design says.
+
+### The run queue's first request from the laptop, and the economy's first game: taxes toggled, almost nothing built (18 November 2026)
+
+**What.** Request 002, the first sent to the RTX 5080 run queue (#376, #377) from the laptop:
+Painted Realm's writs turn with free orders, five `qwen3.5:4b` rulers with personas, Classic, seed 1,
+40 turns, without the economy (`x1`) and with it (`e1`, #372 and #374). Played on the 5080 machine
+itself through its gateway, Ollama 0.40.14, `size_vram` 3.14 GB. n = one game an arm.
+Details: [`docs/run-requests/002-economy-smoke/results.md`](../run-requests/002-economy-smoke/results.md).
+
+**Seen.**
+- The queue played both blocks at the first try, 10.4 and 10.9 minutes, with nobody at either machine.
+- No illegal answer, no answer that was not offered and no error in either arm.
+- With the economy, 79 of 448 council answers changed the tax level, toggling between high and
+  normal every turn or two, and 2 built anything (a barracks, a farm; no market).
+- It cost 20% more calls a turn (25.2 to 30.2) and 109 more prompt tokens a council request
+  (1,371 to 1,480), with a largest request of 1,934 tokens.
+
+**What it means.** Not an accuracy result (one seed, hard rule 2). It is a rules result: a free,
+always-offered tax change gets toggled, and buildings at these prices and words are ignored. The
+economy's live check (E3) should wait for a change to both, and compare against this game.
+
+**Would change it.** The same toggling and neglect on more seeds after a tax change costs
+something or locks for some turns would point at the prompt rather than the rules.

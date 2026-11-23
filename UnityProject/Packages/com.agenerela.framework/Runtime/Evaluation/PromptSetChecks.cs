@@ -64,7 +64,7 @@ namespace Agenerela.Evaluation
 
         /// <summary>
         /// Where <paramref name="profile"/> and the actions <paramref name="set"/> declares disagree:
-        /// an action only one of them has, or one whose need for a target differs. <c>none</c> is in
+        /// an action only one of them has, or one whose target differs: required, optional or never taken. <c>none</c> is in
         /// every set and no profile. The window shows these and never fixes them.
         /// </summary>
         public static IReadOnlyList<string> CompareWithProfile(PromptSet set, AgentProfile profile)
@@ -82,8 +82,14 @@ namespace Agenerela.Evaluation
                 else if (declared.NeedsTarget != action.RequiresTarget)
                 {
                     differences.Add(action.RequiresTarget
-                        ? $"'{action.Id}' requires a target in the profile, but the set says it takes none"
-                        : $"'{action.Id}' takes no target in the profile, but the set says it needs one");
+                        ? $"'{action.Id}' requires a target in the profile, but the set says it does not"
+                        : $"'{action.Id}' does not require a target in the profile, but the set says it does");
+                }
+                else if (declared.TakesNoTarget != action.TakesNoTarget)
+                {
+                    differences.Add(action.TakesNoTarget
+                        ? $"'{action.Id}' takes no target in the profile, but the set says it may take one"
+                        : $"'{action.Id}' may take a target in the profile, but the set says it takes none");
                 }
             }
 
@@ -163,11 +169,13 @@ namespace Agenerela.Evaluation
                 return;
             }
 
+            // Three states since DR-020, not two: an action requires a target, never takes one, or
+            // leaves it optional. Only the first two constrain the answer.
             if (declared.NeedsTarget && noTarget)
             {
                 add(PromptRule.ActionNeedsTarget, $"{action} needs a target, so it cannot take no_target");
             }
-            else if (!declared.NeedsTarget && (targets.Count != 1 || !noTarget))
+            else if (declared.TakesNoTarget && (targets.Count != 1 || !noTarget))
             {
                 add(PromptRule.ActionTakesNoTarget, $"{action} takes no target: use no_target");
             }
@@ -179,7 +187,36 @@ namespace Agenerela.Evaluation
             }
         }
 
+        /// <summary>
+        /// True when every line of an example's situation (<see cref="ActionDefinition.ExampleObservations"/>)
+        /// is one of <paramref name="observations"/>, by <see cref="MatchesExample"/>, a <c>{0}</c>
+        /// standing for any target. An example with no situation matches any observations, so it is
+        /// judged on its stimulus alone, as before (#216 item 1).
+        /// </summary>
+        public static bool MatchesSituation(IEnumerable<string> observations, IEnumerable<string> situation)
+        {
+            var seen = (observations ?? Enumerable.Empty<string>()).Where(o => !string.IsNullOrWhiteSpace(o)).ToList();
+            foreach (string line in situation ?? Enumerable.Empty<string>())
+            {
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                if (!seen.Any(o => MatchesExample(o, line))) return false;
+            }
+
+            return true;
+        }
+
+        private static bool HasSituation(IEnumerable<string> situation) =>
+            situation != null && situation.Any(l => !string.IsNullOrWhiteSpace(l));
+
         private static void CheckExamples(EvalPrompt prompt, AgentProfile profile, System.Action<PromptRule, string> add)
+        {
+            CheckExamples(prompt, profile, add, withSituations: true);
+        }
+
+        // withSituations: whether the examples are shown with their observations. An arm that shows
+        // them without (DecideOptions.ExampleObservations off) shows the bare stimulus, which is then
+        // judged alone, as every example was before #216 item 1.
+        internal static void CheckExamples(EvalPrompt prompt, AgentProfile profile, System.Action<PromptRule, string> add, bool withSituations)
         {
             // Every line an example shows the model: its stimulus, and its statement (#190, G14).
             void Check(string text, string what)
@@ -200,10 +237,14 @@ namespace Agenerela.Evaluation
                     Check(action.CounterExampleStatement, $"{action.Id}'s counter-example statement");
                 }
 
-                if (action != null && MatchesExample(prompt.Stimulus, action.ExampleStimulus))
+                // An example with a situation (#216 item 1) is its stimulus and its observations
+                // together: a prompt that asks the same thing in another situation is a new prompt.
+                if (action != null && MatchesExample(prompt.Stimulus, action.ExampleStimulus) &&
+                    (!withSituations || MatchesSituation(prompt.Observations, action.ExampleObservations)))
                 {
-                    add(PromptRule.StimulusIsExample,
-                        $"The stimulus is {action.Id}'s example \"{action.ExampleStimulus}\": never score on a few-shot example (hard rule 4)");
+                    add(PromptRule.StimulusIsExample, HasSituation(action.ExampleObservations) && withSituations
+                        ? $"The stimulus and observations are {action.Id}'s example \"{action.ExampleStimulus}\" in its situation: never score on a few-shot example (hard rule 4)"
+                        : $"The stimulus is {action.Id}'s example \"{action.ExampleStimulus}\": never score on a few-shot example (hard rule 4)");
                 }
 
                 // Shown answered with none, so scoring on it measures nothing either (#190).

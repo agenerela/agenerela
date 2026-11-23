@@ -6,6 +6,7 @@
         "UnityEditor.TestRunner",
         "GreyBoxStrategy.Sim",
         "GreyBoxStrategy.Replay",
+        "GreyBoxStrategy.Chart",
         "GreyBoxStrategy.Screen",
         "GreyBoxStrategy",
         "Agenerela"

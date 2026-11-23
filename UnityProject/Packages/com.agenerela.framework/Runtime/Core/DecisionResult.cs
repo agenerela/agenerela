@@ -20,8 +20,9 @@ namespace Agenerela
         /// <summary>
         /// What the model said, as parsed, before any guard. The same object as
         /// <see cref="Decision"/> when every guard passed and no stray target was dropped
-        /// (<see cref="ActionDefinition.TakesNoTarget"/>, <see cref="DecisionTelemetry.TargetIgnored"/>);
-        /// null for a pipeline error.
+        /// (<see cref="ActionDefinition.TakesNoTarget"/>, <see cref="DecisionTelemetry.TargetIgnored"/>)
+        /// and no guard replaced the statement (<see cref="GuardVerdict.ReplaceStatement"/>,
+        /// <see cref="DecisionTelemetry.StatementsReplaced"/>); null for a pipeline error.
         /// </summary>
         public AgentDecision ModelDecision { get; }
 
@@ -66,6 +67,10 @@ namespace Agenerela
         // The decision waiting to be remembered, under MemoryCommit.OnExecute; null otherwise, and
         // once settled it stays, marked, so nothing remembers it twice (DR-018).
         internal PendingMemory Pending { get; set; }
+
+        // Whether the call chose among DecideOptions.Choices (DR-022): Execute then runs no handler
+        // and no re-check, since the choices were the call's, not the agent's.
+        internal bool FromChoices { get; set; }
 
         /// <summary>
         /// A result no guard stopped: <see cref="ModelDecision"/> is <paramref name="decision"/>

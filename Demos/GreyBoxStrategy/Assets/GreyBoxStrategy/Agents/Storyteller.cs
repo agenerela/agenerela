@@ -12,6 +12,8 @@ namespace GreyBoxStrategy
     public sealed class StorytellerDecision
     {
         public int Seed;
+        /// <summary>Why the history guard replaced the story (#292), or null; <see cref="Statement"/> stays the model's.</summary>
+        public string HistoryReplaced;
         /// <summary>The turn the event was for (the upkeep it lands at).</summary>
         public int Turn;
         /// <summary>What the model answered, before any guard.</summary>
@@ -36,6 +38,18 @@ namespace GreyBoxStrategy
         public bool Queued;
         /// <summary>How many events were open to it (template and target pairs).</summary>
         public int Open;
+        /// <summary>The title call's answer and seconds (<c>+title-call</c>); null and 0 without one.</summary>
+        public string TitleStatement;
+        public float TitleLatencySeconds;
+        /// <summary>The strength the model asked (from the action id or the parameter), and the one decided; null without one (DR-023's A/B).</summary>
+        public string ModelStrength;
+        public string Strength;
+        /// <summary>How many parameters took their default, and how many values a per-value check left out, from the telemetry.</summary>
+        public int ArgumentsDefaulted;
+        public int ValuesUnavailable;
+        public int CompletionTokens;
+        /// <summary>True when the preset's chance to act said not this turn: no call was made.</summary>
+        public bool Skipped;
 
         public bool Contained => Verdict == GuardVerdictKind.RewriteToNone;
     }
@@ -43,34 +57,39 @@ namespace GreyBoxStrategy
     /// <summary>A target the storyteller can name: a country, a group or a province, described as it stands.</summary>
     internal sealed class EventTarget : IDescribedTarget
     {
-        private readonly World world;
+        private readonly Game game;
 
-        public EventTarget(World world, string id)
+        public EventTarget(Game game, string id)
         {
-            this.world = world;
+            this.game = game;
             Id = id;
         }
 
         public string Id { get; }
-        public string Description => EventRules.Describe(world, Id);
+        public string Description => Storyteller.Describe(game, Id);
     }
 
     /// <summary>The storyteller's targets: the living countries, the groups and the provinces, in categories <c>country</c>, <c>group</c> and <c>province</c>.</summary>
     internal sealed class EventTargetSource : ITargetSource
     {
-        private readonly World world;
+        private readonly Game game;
 
-        public EventTargetSource(World world)
+        public EventTargetSource(Game game)
         {
-            this.world = world;
+            this.game = game;
         }
 
         public void Collect(AgentContext ctx, TargetRegistry into)
         {
-            foreach (var c in world.Alive) into.Register(c.Id, new EventTarget(world, c.Id), Storyteller.CountryCategory);
-            foreach (string g in EventGroups.All) into.Register(g, new EventTarget(world, g), Storyteller.GroupCategory);
+            var world = game.World;
+            foreach (var c in world.Alive) into.Register(c.Id, new EventTarget(game, c.Id), Storyteller.CountryCategory);
+            foreach (string g in EventGroups.All) into.Register(g, new EventTarget(game, g), Storyteller.GroupCategory);
             foreach (var p in world.ProvinceList.Where(p => p.Owner != null))
-                into.Register(p.Id, new EventTarget(world, p.Id), Storyteller.ProvinceCategory);
+                into.Register(p.Id, new EventTarget(game, p.Id), Storyteller.ProvinceCategory);
+            // S2: the tales that can still be continued, in a category of their own.
+            if (game.Story.Chains != ChainMode.None)
+                foreach (var c in game.Chains.Where(c => c.IsOpenTarget && c.LastTurn >= game.NextTurn - ChainSkeletons.IdleTurns))
+                    into.Register(c.Id, new EventTarget(game, c.Id), Storyteller.TaleCategory);
         }
     }
 
@@ -106,6 +125,8 @@ namespace GreyBoxStrategy
         public const string CountryCategory = "country";
         public const string GroupCategory = "group";
         public const string ProvinceCategory = "province";
+        public const string TaleCategory = "tale";
+        public const string ScribeId = "scribe";
         /// <summary>How many past events the "Told so far" line names.</summary>
         public const int ToldLines = 5;
 
@@ -134,6 +155,7 @@ namespace GreyBoxStrategy
             this.game = game ?? throw new ArgumentNullException(nameof(game));
             this.options = options ?? ModelSeatOptions.Default;
             var w = game.World;
+            rules = game.Story;
             string countries = EventRules.Join(w.CountryList.Select(c => c.Id).ToList());
             var identity = new AgentIdentity
             {
@@ -152,6 +174,19 @@ namespace GreyBoxStrategy
                                  + "as in \"Title Of The Event: what happened to whom.\" "
                                  + "Name only the country or province it strikes. No numbers.",
             };
+            // Stage S2: what the new pieces need it to know, only when they are on (S1's prompt is unchanged otherwise).
+            if (rules.Choices) identity.Knowledge.Add("A dilemma asks the ruler it strikes to choose between options the game offers; tell the situation, not the choice.");
+            if (rules.Chains == ChainMode.Free)
+                identity.Knowledge.Add("A tale is a story over several turns: an event on a tale_ target continues that tale and strikes its subject again; end_tale closes it. Keep tales rare and worth following.");
+            if (rules.Chains == ChainMode.Skeleton)
+                identity.Knowledge.Add("A begin_ action starts a tale the game has planned; while a tale_ target is listed, its next event continues that tale. Tell how each follows from the last.");
+            if (rules.History)
+                identity.Knowledge.Add("The recent happenings line is what really happened: a story may follow from it and name those in it, but never invent a battle or a capture.");
+            if (rules.Traits) identity.Knowledge.Add("Every province has a terrain, a landmark and a resource; a story may use them.");
+            if (rules.Settings.StoryOnly && rules.IsS2) identity.Knowledge.Add("omen is a story only, with no effect.");
+            if (rules.TitleCall)
+                identity.StatementRules = "One or two sentences telling what happened, and where. Name only the countries and places it strikes"
+                                          + (rules.History ? ", or those in the recent happenings" : "") + ". No numbers.";
             Agent = new Agent(identity, Array.Empty<ActionDefinition>(), provider)
             {
                 Id = AgentId,
@@ -159,9 +194,84 @@ namespace GreyBoxStrategy
                 // No memory of its replies: the "Told so far" line says what happened instead (gap 6).
                 Memory = null,
             };
-            Agent.TargetSources.Add(new EventTargetSource(w));
+            // +history: the history check is a guard that replaces the story and keeps the event (#292).
+            if (rules.History && this.options.HistoryGuard) Agent.Guards.Add(new HistoryGuard(game));
+            Agent.TargetSources.Add(new EventTargetSource(game));
             Agent.ObservationSources.Add(new StorytellerFacts(this));
-            foreach (var t in EventRules.Templates) Register(t);
+            foreach (var t in EventRules.TemplatesFor(rules)) Register(t);
+            if (rules.TitleCall) Scribe = NewScribe(provider);
+        }
+
+        private readonly StoryRules rules;
+
+        /// <summary>The second agent that titles each story (<c>+title-call</c>), or null.</summary>
+        public Agent Scribe { get; }
+
+        private static Agent NewScribe(ILLMProvider provider)
+        {
+            var identity = new AgentIdentity
+            {
+                Name = "The Chronicler's scribe",
+                Role = "the scribe who gives each event in a chronicle its title",
+                Personality = "Brief and vivid.",
+                Goals = "A title a reader remembers.",
+                StatementRules = "Only the title: two to five words, as in \"The Weeping Statue\" or \"Salt in the Wells\". No numbers.",
+            };
+            var scribe = new Agent(identity, Array.Empty<ActionDefinition>(), provider) { Id = ScribeId, Memory = null, MaxObservations = 4 };
+            scribe.Actions.Register(new ActionDefinition { Id = "title", Description = "Give the event its title.", TakesNoTarget = true },
+                DelegateActionHandler.WithResult(ctx => true, (ctx, d) => ActionResult.Done()));
+            return scribe;
+        }
+
+        // The title the scribe gave the event being queued, read by the handler.
+        private string calledTitle;
+        // What the history guard did to the event being queued (its reason, and the model's own words), read by the handler.
+        private string historyReplaced, modelStatement;
+
+        /// <summary>
+        /// The history check as a guard (#292): a story that tells of a fight that never happened is replaced
+        /// by the template's own line, under the model's title, and the event stands. The game's
+        /// <see cref="Game.HistoryVerdict"/> decides, so the verdict is the one the event's check gave before.
+        /// </summary>
+        public sealed class HistoryGuard : IDecisionGuard
+        {
+            public const string GuardName = "history";
+            private readonly Game game;
+            public HistoryGuard(Game game) { this.game = game; }
+            public string Name => GuardName;
+
+            public GuardVerdict Inspect(GuardInput input)
+            {
+                var d = input.Decision;
+                if (d == null || d.ActionId == ActionRegistry.None) return GuardVerdict.Pass;
+                var v = game.HistoryVerdict(d.ActionId, d.TargetId, d.Statement);
+                return v == null ? GuardVerdict.Pass : GuardVerdict.ReplaceStatement(v.Value.reason, v.Value.statement);
+            }
+        }
+
+        /// <summary>A target's line in the storyteller's list: S1's, with a province's traits and a tale's story so far in S2.</summary>
+        public static string Describe(Game game, string id)
+        {
+            var w = game.World;
+            var chain = game.Events.Chain(id);
+            if (chain != null) return DescribeTale(game, chain);
+            string line = EventRules.Describe(w, id);
+            if (game.Story.Traits && w.IsProvince(id)) line += "; " + w.Traits[id].Line;
+            return line;
+        }
+
+        private static string DescribeTale(Game game, Chain c)
+        {
+            string events = string.Join("; ", c.Events.Select(e =>
+                $"turn {e.Turn} {e.Template}" + (e.Choices.Count > 0 ? ", " + string.Join(", ", e.Choices.Select(kv => $"{kv.Key} chose {kv.Value}")) : "")));
+            string line = $"the tale \"{c.Title}\" of {c.Subject}: {events}";
+            if (c.Mode == ChainMode.Skeleton)
+            {
+                var k = ChainSkeletons.Named(c.Skeleton);
+                int next = ChainSkeletons.NextStage(k, c);
+                if (next >= 0) line += $"; next: {string.Join(" or ", k.Stages[next].Templates)}";
+            }
+            return line;
         }
 
         public Agent Agent { get; }
@@ -169,32 +279,100 @@ namespace GreyBoxStrategy
         /// <summary>Every call, in order.</summary>
         public List<StorytellerDecision> Decisions { get; } = new List<StorytellerDecision>();
 
+        /// <summary>The strength parameter of an event in the parameter form (DR-023): its line in the prompt says what each value does.</summary>
+        public static ActionParameter StrengthParameter() => new ActionParameter
+        {
+            Name = "strength",
+            Description = "how hard it strikes: minor about half of that, major about one and a half times",
+            Values = EventRules.Strengths.ToArray(),
+        };
+
+        /// <summary>The bundled form's description of one strength of an event: the event's own line and what the strength does to it.</summary>
+        public static string BundledDescription(EventTemplate t, string strength) =>
+            t.Description + (strength == EventRules.Minor ? " Minor: about half of that." : " Major: about one and a half times that.");
+
+        // An event with an amount in a game that asks a strength (GameRules.EventStrength): two actions in the
+        // bundled form, one with a parameter in the other. Every other event is registered as before.
         private void Register(EventTemplate t)
         {
+            var form = game.Rules.EventStrength;
+            if (form == EventStrengthForm.Bundled && EventRules.TakesStrength(t.Id))
+            {
+                foreach (string s in EventRules.Strengths) Register(t, EventRules.BundledId(t.Id, s), BundledDescription(t, s), s);
+                return;
+            }
+            Register(t, t.Id, t.Description, null);
+        }
+
+        private void Register(EventTemplate t, string actionId, string description, string strength)
+        {
+            bool parameter = game.Rules.EventStrength == EventStrengthForm.Parameter && EventRules.TakesStrength(t.Id);
             var categories = new List<string>();
-            if ((t.Takes & EventTargetKind.Country) != 0) categories.Add(CountryCategory);
-            if ((t.Takes & EventTargetKind.Group) != 0) categories.Add(GroupCategory);
-            if ((t.Takes & EventTargetKind.Province) != 0) categories.Add(ProvinceCategory);
+            bool taleOnly = t.TaleOnly || t.Feature == EventFeature.ChainDilemma;
+            if (!taleOnly && (t.Takes & EventTargetKind.Country) != 0) categories.Add(CountryCategory);
+            if (!taleOnly && (t.Takes & EventTargetKind.Group) != 0) categories.Add(GroupCategory);
+            if (!taleOnly && (t.Takes & EventTargetKind.Province) != 0) categories.Add(ProvinceCategory);
+            if (rules.Chains != ChainMode.None && t.Skeleton == null) categories.Add(TaleCategory);
             var definition = new ActionDefinition
             {
-                Id = t.Id,
-                Description = t.Description,
+                Id = actionId,
+                Description = description,
                 RequiresTarget = true,
                 TargetCategories = categories.ToArray(),
+                Parameters = parameter ? new[] { StrengthParameter() } : null,
             };
             var handler = DelegateActionHandler.WithResult(
-                ctx => EventRules.TargetIds(game.World).Any(id => game.WhyNotEvent(t.Id, id) == null),
+                // In the parameter form the action is open when some target is; the strength is the value check's.
+                ctx => EventRules.TargetIds(game.World, game.Events).Any(id => game.WhyNotEvent(t.Id, id, strength) == null
+                                                                              || (parameter && game.WhyNotEvent(t.Id, id) == null)),
                 (ctx, d) =>
                 {
-                    game.QueueEvent(new StoryEvent(d.ActionId, d.TargetId, d.Statement));
+                    string s = strength;
+                    if (parameter) d.TryGetArgument("strength", out s);
+                    game.QueueEvent(new StoryEvent(t.Id, d.TargetId, d.Statement, calledTitle)
+                    {
+                        HistoryReplaced = historyReplaced,
+                        ModelStatement = historyReplaced != null ? modelStatement : null,
+                        Strength = s,
+                    });
                     return ActionResult.Done();
                 });
             handler.IsAvailableFor = (ctx, target) =>
             {
-                string why = game.WhyNotEvent(t.Id, target);
+                string why = parameter ? game.WhyNotEvent(t.Id, target) : game.WhyNotEvent(t.Id, target, strength);
                 return why == null ? Availability.Yes : Availability.No(why);
             };
+            if (parameter)
+                handler.IsAvailableValue = (ctx, name, value) =>
+                {
+                    string why = EventRules.WhyNotStrength(game.World, game.Events, t.Id, value);
+                    return why == null ? Availability.Yes : Availability.No(why);
+                };
             Agent.Actions.Register(definition, handler);
+        }
+
+        /// <summary>
+        /// Every event open now as the model sees it, as (action id, target) pairs: S1's list in a game
+        /// that asks no strength; the bundled ids (<c>windfall_major</c>) with their strength's rule in the
+        /// bundled form; the event's own id, open when some strength is, in the parameter form.
+        /// </summary>
+        public List<(string action, string target)> OpenActions()
+        {
+            var open = EventRules.Open(game.World, game.Events, game.NextTurn, rules);
+            var form = game.Rules.EventStrength;
+            if (form == EventStrengthForm.None) return open;
+            var list = new List<(string, string)>();
+            foreach (var (template, target) in open)
+            {
+                if (!EventRules.TakesStrength(template)) list.Add((template, target));
+                else if (form == EventStrengthForm.Bundled)
+                {
+                    foreach (string s in EventRules.Strengths)
+                        if (EventRules.WhyNotStrength(game.World, game.Events, template, s) == null) list.Add((EventRules.BundledId(template, s), target));
+                }
+                else if (EventRules.Strengths.Any(s => EventRules.WhyNotStrength(game.World, game.Events, template, s) == null)) list.Add((template, target));
+            }
+            return list;
         }
 
         // --- What it reads --------------------------------------------------------------------
@@ -216,6 +394,7 @@ namespace GreyBoxStrategy
             }
             string open = OpenLine();
             if (open != null) lines.Add(open);
+            if (rules.History) lines.Add(HappeningsLine());
             lines.Add(ToldLine());
             if (options.Inspiration) lines.Add(InspirationLine(turn));
             return lines;
@@ -224,15 +403,21 @@ namespace GreyBoxStrategy
         /// <summary>The events open now, by template, in the game's words: the N1 workaround, as the rulers' moves line is.</summary>
         public string OpenLine()
         {
-            var open = EventRules.Open(game.World, game.Events, game.NextTurn);
+            var open = OpenActions();
             if (open.Count == 0) return null;
             var parts = new List<string>();
-            foreach (var t in EventRules.Templates)
+            foreach (var t in EventRules.TemplatesFor(rules))
             {
-                var targets = open.Where(o => o.template == t.Id).Select(o => o.target).ToList();
-                if (targets.Count == 0) continue;
-                string list = targets.Count == 1 ? targets[0] : string.Join(", ", targets.Take(targets.Count - 1)) + " or " + targets[targets.Count - 1];
-                parts.Add($"{t.Id} {((t.Takes & EventTargetKind.Province) != 0 ? "in" : "on")} {list}");
+                var ids = game.Rules.EventStrength == EventStrengthForm.Bundled && EventRules.TakesStrength(t.Id)
+                    ? EventRules.Strengths.Select(s => EventRules.BundledId(t.Id, s)).ToList()
+                    : new List<string> { t.Id };
+                foreach (string id in ids)
+                {
+                    var targets = open.Where(o => o.action == id).Select(o => o.target).ToList();
+                    if (targets.Count == 0) continue;
+                    string list = targets.Count == 1 ? targets[0] : string.Join(", ", targets.Take(targets.Count - 1)) + " or " + targets[targets.Count - 1];
+                    parts.Add($"{id} {((t.Takes & EventTargetKind.Province) != 0 ? "in" : "on")} {list}");
+                }
             }
             return "Events open now: " + string.Join("; ", parts) + ".";
         }
@@ -242,6 +427,10 @@ namespace GreyBoxStrategy
         {
             var told = game.Events.LastTold(ToldLines);
             if (told.Count == 0) return "Told so far: nothing yet.";
+            // With the title call, by template and target only: no title to copy (S1's finding).
+            if (rules.TitleCall)
+                return "Told so far: " + string.Join("; ", told.Select(e =>
+                    $"{e.Template} {(e.Province != null ? "in" : "on")} {e.Target} (turn {e.Turn})")) + ".";
             return "Told so far: " + string.Join("; ", told.Select(e =>
                 $"\"{e.Title}\" ({e.Template} {(e.Province != null ? "in" : "on")} {e.Target}, turn {e.Turn})")) + ".";
         }
@@ -257,7 +446,26 @@ namespace GreyBoxStrategy
             return $"Inspiration, if you want it: {Inspirations[a]}, {Inspirations[b]}.";
         }
 
+        /// <summary>"Recent happenings: turn 7: kesh took fenmark from orsk; ...", from the game's reports (<c>+history</c>).</summary>
+        public string HappeningsLine()
+        {
+            var recent = History.Recent(History.Of(game), game.NextTurn);
+            if (recent.Count == 0) return "Recent happenings: none worth telling yet.";
+            return "Recent happenings: " + string.Join("; ", recent.Select(h => $"turn {h.Turn}: {h.Text}")) + ".";
+        }
+
         public string Stimulus() => $"Turn {game.NextTurn}. What happens?";
+
+        /// <summary>The title call's options (<c>+title-call</c>).</summary>
+        public DecideOptions TitleOptions() => new DecideOptions
+        {
+            StimulusLabel = "Title",
+            ListActionsAndTargets = true,
+            Priority = DecisionPriority.Background,
+            CheckTarget = false,
+            StatementRulesWording = options.RulesWording,
+            MaxReplyTokens = options.StorytellerMaxReplyTokens,
+        };
 
         public DecideOptions OptionsForCall() => new DecideOptions
         {
@@ -269,6 +477,7 @@ namespace GreyBoxStrategy
             TargetGroundingThreshold = options.GroundingThreshold,
             StatementRulesWording = options.RulesWording,
             PairTargetsWithActions = true,
+            MaxReplyTokens = options.StorytellerMaxReplyTokens,
         };
 
         // --- Asking it ------------------------------------------------------------------------
@@ -277,10 +486,33 @@ namespace GreyBoxStrategy
         /// Asks for the next upkeep's event, and queues it on the game when there is one. Not asked
         /// before <see cref="GameRules.EventFirstTurn"/>, nor when no event is open; then returns null.
         /// </summary>
+        /// <summary>What the scribe is asked: the event in the game's words, and the story.</summary>
+        public string TitleStimulus(AgentDecision d)
+        {
+            var t = EventRules.Template(EventRules.TryParseBundled(d.ActionId, out string bundled, out _) ? bundled : d.ActionId);
+            string story = EventRules.SplitTitle(d.Statement ?? "").story;
+            return $"Title this event. {t?.Description} The story: \"{(story.Length > 0 ? story : d.Statement)}\"";
+        }
+
+        // The strength a decision carries: in the id (bundled) or as the parameter; null when none.
+        private string StrengthOf(AgentDecision d)
+        {
+            if (d == null) return null;
+            if (EventRules.TryParseBundled(d.ActionId, out _, out string s)) return s;
+            return d.TryGetArgument("strength", out s) ? s : null;
+        }
+
         public async Awaitable<StorytellerDecision> TellAsync(CancellationToken ct = default)
         {
             if (game.IsOver || game.NextTurn < game.Rules.EventFirstTurn) return null;
-            var open = EventRules.Open(game.World, game.Events, game.NextTurn);
+            // The preset's chance to act at all this turn (1 in S1: always asked).
+            if (Dice.Unit(game.Seed, game.NextTurn, AgentId, "act") >= rules.Settings.ActChance)
+            {
+                var skipped = new StorytellerDecision { Seed = game.Seed, Turn = game.NextTurn, Skipped = true };
+                Decisions.Add(skipped);
+                return skipped;
+            }
+            var open = OpenActions();
             if (open.Count == 0) return null;
 
             var result = await Agent.DecideAsync(Stimulus(), OptionsForCall(), ct);
@@ -294,7 +526,8 @@ namespace GreyBoxStrategy
                 ModelTarget = result?.ModelDecision?.TargetId,
                 Action = result?.Decision?.ActionId,
                 Target = result?.Decision?.TargetId,
-                Statement = result?.Decision?.Statement ?? result?.ModelDecision?.Statement,
+                // The model's own words, as before the history check became a guard (#292).
+                Statement = result?.ModelDecision?.Statement ?? result?.Decision?.Statement,
                 LatencySeconds = t?.LatencySeconds ?? 0,
                 PromptTokens = t?.PromptTokens ?? 0,
                 Verdict = t?.Verdict,
@@ -302,14 +535,34 @@ namespace GreyBoxStrategy
                 Guard = t != null && t.GuardsFired.Count > 0 ? t.GuardsFired[0] : null,
                 Error = result == null ? PipelineErrorKind.ProviderFailed : t?.ErrorKind,
             };
+            record.ModelStrength = StrengthOf(result?.ModelDecision);
+            record.Strength = StrengthOf(result?.Decision);
+            record.ArgumentsDefaulted = t?.ArgumentsDefaulted?.Count ?? 0;
+            record.ValuesUnavailable = t?.ValuesUnavailable?.Count ?? 0;
+            record.CompletionTokens = t?.CompletionTokens ?? 0;
             string asked = record.ModelAction;
+            // Legal: an event offered on that target, and in the parameter form a strength offered for it.
             record.ModelAnswerLegal = asked != null && (asked == ActionRegistry.None
-                || open.Any(o => o.template == asked && o.target == record.ModelTarget));
+                || (open.Any(o => o.action == asked && o.target == record.ModelTarget)
+                    && (game.Rules.EventStrength != EventStrengthForm.Parameter || !EventRules.TakesStrength(asked)
+                        || (record.ModelStrength != null && EventRules.WhyNotStrength(game.World, game.Events, asked, record.ModelStrength) == null))));
             Decisions.Add(record);
 
             var d = result?.Decision;
             if (d == null || d.ActionId == ActionRegistry.None) return record;
+            calledTitle = null;
+            if (Scribe != null)
+            {
+                var named = await Scribe.DecideAsync(TitleStimulus(d), TitleOptions(), ct);
+                record.TitleStatement = named?.Decision?.Statement ?? named?.ModelDecision?.Statement;
+                record.TitleLatencySeconds = named?.Telemetry?.LatencySeconds ?? 0;
+                calledTitle = record.TitleStatement;
+            }
+            historyReplaced = t?.StatementsReplaced.FirstOrDefault(x => x.Guard == HistoryGuard.GuardName)?.Reason;
+            modelStatement = result.ModelDecision?.Statement;
+            record.HistoryReplaced = historyReplaced;
             Agent.Execute(result, out var outcome);
+            calledTitle = historyReplaced = modelStatement = null;
             record.Execution = outcome.Status;
             record.ExecutionReason = outcome.Reason;
             record.Queued = outcome.Succeeded;

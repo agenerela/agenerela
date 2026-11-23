@@ -8,6 +8,12 @@ namespace GreyBoxStrategy
     public sealed class ProvinceInfo
     {
         public ProvinceInfo(string id, string name, int column, int row, string startOwner, bool isCapital, int startForts)
+            : this(id, name, column, row, startOwner, isCapital, startForts, Terrain.Plains, false, false, 0, null, null, null)
+        {
+        }
+
+        public ProvinceInfo(string id, string name, int column, int row, string startOwner, bool isCapital, int startForts,
+            Terrain terrain, bool isCoastal, bool hasPort, int population, string good, string region, string special)
         {
             Id = id;
             Name = name;
@@ -16,6 +22,13 @@ namespace GreyBoxStrategy
             StartOwner = startOwner;
             IsCapital = isCapital;
             StartForts = startForts;
+            Terrain = terrain;
+            IsCoastal = isCoastal;
+            HasPort = hasPort;
+            Population = population;
+            Good = good;
+            Region = region;
+            Special = special;
         }
 
         /// <summary>The id a move names, unique across provinces and countries.</summary>
@@ -28,6 +41,21 @@ namespace GreyBoxStrategy
         public string StartOwner { get; }
         public bool IsCapital { get; }
         public int StartForts { get; }
+
+        // --- Rules v2 (R0): carried by every map, read by no rule yet --------------------------
+        /// <summary>The land, for the terrain rules R3 adds. Today's game never reads it.</summary>
+        public Terrain Terrain { get; }
+        /// <summary>Touches the sea or an inland sea.</summary>
+        public bool IsCoastal { get; }
+        public bool HasPort { get; }
+        /// <summary>Population at the start (v2 section 4.1); 0 on a map that does not set it.</summary>
+        public int Population { get; }
+        /// <summary>The trade good it makes (v2 section 4.5), or null.</summary>
+        public string Good { get; }
+        /// <summary>The id of the region it belongs to, or null.</summary>
+        public string Region { get; }
+        /// <summary>The special place's template id (<c>old_castle</c>...), or null.</summary>
+        public string Special { get; }
     }
 
     /// <summary>One country as the game starts it.</summary>
@@ -83,6 +111,9 @@ namespace GreyBoxStrategy
                 if (!ids.Add(p.Id)) throw new ArgumentException($"Duplicate id {p.Id}.");
         }
 
+        /// <summary>The data this map was built from (<see cref="WorldMap.ToDefinition"/>), or null when built in code.</summary>
+        public WorldMap Source { get; internal set; }
+
         /// <summary>In seat order, which is also the order the log lists them.</summary>
         public IReadOnlyList<CountryInfo> Countries { get; }
         public IReadOnlyList<ProvinceInfo> Provinces { get; }
@@ -98,9 +129,9 @@ namespace GreyBoxStrategy
         public bool AreNeighbours(string a, string b) => Neighbours(a).Contains(b);
 
         /// <summary>
-        /// The standard map: a 5 × 5 board of 25 provinces. Four countries hold a corner each, Merrow
-        /// holds the middle column's centre, and ten neutral provinces lie between them, so the
-        /// first turns are a land grab and the map starts filling with colour from turn 1.
+        /// The standard map: the <b>Classic</b> preset, today's 25-province board, loaded from its data
+        /// (<see cref="ClassicMap"/>). Four countries hold a corner each, Merrow holds the middle
+        /// column's centre, and ten neutral provinces lie between them.
         /// </summary>
         /// <remarks>
         /// <code>
@@ -111,65 +142,9 @@ namespace GreyBoxStrategy
         /// row 3  thornbury K  ravenholt .  pilgrimsrest M duskvale .  ilmoor I
         /// row 4  keshtar*K    marrowfield K southgate .  oakhollow I  ilvarion*I
         /// </code>
-        /// Borders are the four orthogonal neighbours. * is a capital. The board is symmetric
-        /// left to right and top to bottom, so no corner starts better than another.
+        /// Borders are the four orthogonal neighbours. * is a capital. Until R0 this board was built
+        /// here in code; a test keeps that code and checks the data gives the same map in every field.
         /// </remarks>
-        public static MapDefinition Standard()
-        {
-            var countries = new[]
-            {
-                new CountryInfo("valen", "Valen", "Proud and quick to take offence; believes strength earns respect.", 40, 30),
-                new CountryInfo("orsk", "Orsk", "A merchant republic; prefers coin to blood, never forgets a betrayal.", 40, 30),
-                new CountryInfo("merrow", "Merrow", "Small and devout; defends what it has and trusts no one.", 40, 30),
-                new CountryInfo("kesh", "Kesh", "Hill clans under one banner; fierce in war, quick to make peace when it pays.", 40, 30),
-                new CountryInfo("ilvar", "Ilvar", "Ambitious and patient; strikes whoever is weakest.", 40, 30),
-            };
-
-            string[,] ids =
-            {
-                { "highmoor", "ashby", "stonereach", "corwick", "orskhaven" },
-                { "brindle", "fenmark", "templegate", "saltmere", "redcliff" },
-                { "westmarch", "harrow", "merrowdeep", "glimmerford", "eastwatch" },
-                { "thornbury", "ravenholt", "pilgrimsrest", "duskvale", "ilmoor" },
-                { "keshtar", "marrowfield", "southgate", "oakhollow", "ilvarion" },
-            };
-            string[,] names =
-            {
-                { "Highmoor", "Ashby", "Stonereach", "Corwick", "Orskhaven" },
-                { "Brindle", "Fenmark", "Templegate", "Saltmere", "Redcliff" },
-                { "Westmarch", "Harrow", "Merrowdeep", "Glimmerford", "Eastwatch" },
-                { "Thornbury", "Ravenholt", "Pilgrim's Rest", "Duskvale", "Ilmoor" },
-                { "Keshtar", "Marrowfield", "Southgate", "Oakhollow", "Ilvarion" },
-            };
-            var owners = new Dictionary<string, string>
-            {
-                ["highmoor"] = "valen", ["ashby"] = "valen", ["brindle"] = "valen",
-                ["orskhaven"] = "orsk", ["corwick"] = "orsk", ["redcliff"] = "orsk",
-                ["merrowdeep"] = "merrow", ["templegate"] = "merrow", ["pilgrimsrest"] = "merrow",
-                ["keshtar"] = "kesh", ["thornbury"] = "kesh", ["marrowfield"] = "kesh",
-                ["ilvarion"] = "ilvar", ["ilmoor"] = "ilvar", ["oakhollow"] = "ilvar",
-            };
-            var capitals = new HashSet<string> { "highmoor", "orskhaven", "merrowdeep", "keshtar", "ilvarion" };
-
-            var provinces = new List<ProvinceInfo>();
-            for (int r = 0; r < 5; r++)
-            for (int c = 0; c < 5; c++)
-            {
-                string id = ids[r, c];
-                owners.TryGetValue(id, out string owner);
-                bool capital = capitals.Contains(id);
-                provinces.Add(new ProvinceInfo(id, names[r, c], c, r, owner, capital, capital ? 1 : 0));
-            }
-
-            var borders = new List<(string, string)>();
-            for (int r = 0; r < 5; r++)
-            for (int c = 0; c < 5; c++)
-            {
-                if (c + 1 < 5) borders.Add((ids[r, c], ids[r, c + 1]));
-                if (r + 1 < 5) borders.Add((ids[r, c], ids[r + 1, c]));
-            }
-
-            return new MapDefinition(countries, provinces, borders);
-        }
+        public static MapDefinition Standard() => ClassicMap.Load().ToDefinition();
     }
 }

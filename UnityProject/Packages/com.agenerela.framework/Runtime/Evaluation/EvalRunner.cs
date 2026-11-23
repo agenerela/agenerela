@@ -336,8 +336,11 @@ namespace Agenerela.Evaluation
                 .Concat(PromptSetChecks.CompareWithProfile(Set, Profile))
                 .Concat(IdleExampleProblems(ArmA, prompts))
                 .Concat(IdleExampleProblems(ArmB, prompts))
+                .Concat(BareExampleProblems(ArmA, prompts))
+                .Concat(BareExampleProblems(ArmB, prompts))
                 .Concat(LegalityProblems(ArmA, prompts))
                 .Concat(LegalityProblems(ArmB, prompts))
+                .Distinct()
                 .ToList();
             if (problems.Count > 0)
             {
@@ -370,6 +373,22 @@ namespace Agenerela.Evaluation
                 if (string.IsNullOrWhiteSpace(extra.Id) || setIds.Contains(extra.Id) || !extraIds.Add(extra.Id))
                 {
                     yield return $"arm '{arm.Name}': extra target '{extra.Id}' is blank, the set's own, or listed twice.";
+                }
+            }
+
+            foreach (var entry in legality.ActionParameters)
+            {
+                if (!Profile.Actions.Any(asset => asset != null && asset.Action != null && asset.Action.Id == entry.Key))
+                {
+                    yield return $"arm '{arm.Name}': its legality gives parameters to '{entry.Key}', which is not one of the profile's actions.";
+                }
+
+                foreach (var parameter in entry.Value ?? new ActionParameter[0])
+                {
+                    if (!ActionParameter.Validate(parameter, out string why))
+                    {
+                        yield return $"arm '{arm.Name}': action '{entry.Key}': {why}";
+                    }
                 }
             }
 
@@ -415,6 +434,26 @@ namespace Agenerela.Evaluation
         // An arm's own idle example, and its statement (#190, G14), replace the profile's, which
         // PromptSetChecks has checked, so they are checked here: scoring a prompt the model was
         // shown in an example measures nothing (hard rule 4).
+        // An arm that shows the examples without their situations (DecideOptions.ExampleObservations
+        // off) shows each one's bare stimulus, so hard rule 4 judges that alone there (#216 item 1).
+        private IEnumerable<string> BareExampleProblems(EvalArm arm, List<(string Category, EvalPrompt Prompt)> prompts)
+        {
+            if (arm == null || arm.Options == null || arm.Options.ExampleObservations || Profile == null)
+            {
+                yield break;
+            }
+
+            foreach (var (_, prompt) in prompts)
+            {
+                var found = new List<string>();
+                PromptSetChecks.CheckExamples(prompt, Profile, (rule, message) => found.Add($"{prompt.Id}: {message}"), withSituations: false);
+                foreach (string problem in found)
+                {
+                    yield return problem;
+                }
+            }
+        }
+
         private IEnumerable<string> IdleExampleProblems(EvalArm arm, List<(string Category, EvalPrompt Prompt)> prompts)
         {
             var texts = new[]
@@ -710,8 +749,7 @@ namespace Agenerela.Evaluation
         // without its request counts as asking.
         private static bool AsksForStatement(DecisionResult result)
         {
-            var fields = result.Request?.Schema?.Fields;
-            return fields == null || fields.Any(f => f != null && f.Name == DecisionSchema.StatementFieldName);
+            return result.Request?.Schema?.AsksForStatement ?? true;
         }
 
         // The lines every prompt of the arm is told whatever it asks: the arm's own, the state's,
@@ -765,10 +803,16 @@ namespace Agenerela.Evaluation
                 var declared = Set.FindAction(action.Id);
                 var handler = new DelegateActionHandler(ctx => declared.IsAvailableIn(ToJson(ctx.State)), (ctx, d) => { });
                 var legality = run.Arm.Legality;
-                if (legality != null && legality.ActionCategories.TryGetValue(action.Id, out var categories))
+                string[] categories = null;
+                ActionParameter[] parameters = null;
+                bool ownCategories = legality != null && legality.ActionCategories.TryGetValue(action.Id, out categories);
+                bool ownParameters = legality != null && legality.ActionParameters.TryGetValue(action.Id, out parameters);
+                if (ownCategories || ownParameters)
                 {
-                    // A copy with the arm's categories, so the shared profile asset never changes.
-                    agent.Actions.Register(WithCategories(action, categories), handler);
+                    // A copy with the arm's categories and parameters, so the shared profile asset never changes.
+                    agent.Actions.Register(
+                        WithCategories(action, ownCategories ? categories : action.TargetCategories,
+                                       ownParameters ? parameters : action.Parameters), handler);
                 }
                 else
                 {
@@ -801,7 +845,7 @@ namespace Agenerela.Evaluation
 
         // The profile's definition with an arm's own target categories (#151): every field copied, so
         // its examples and description read as the profile's do.
-        private static ActionDefinition WithCategories(ActionDefinition action, string[] categories)
+        private static ActionDefinition WithCategories(ActionDefinition action, string[] categories, ActionParameter[] parameters)
         {
             return new ActionDefinition
             {
@@ -812,9 +856,11 @@ namespace Agenerela.Evaluation
                 ExampleStimulus = action.ExampleStimulus,
                 PreferredExampleTargets = action.PreferredExampleTargets == null ? null : (string[])action.PreferredExampleTargets.Clone(),
                 ExampleStatement = action.ExampleStatement,
+                ExampleObservations = action.ExampleObservations == null ? null : (string[])action.ExampleObservations.Clone(),
                 CounterExampleStimulus = action.CounterExampleStimulus,
                 CounterExampleStatement = action.CounterExampleStatement,
                 TargetCategories = categories == null ? null : (string[])categories.Clone(),
+                Parameters = EvalLegality.CopyOf(parameters),
             };
         }
 
@@ -984,6 +1030,7 @@ namespace Agenerela.Evaluation
                     CounterExamples = arm.Options.CounterExamples,
                     IdleExampleStatement = arm.Options.IdleExampleStatement,
                     ExampleStatements = arm.Options.ExampleStatements,
+                    ExampleObservations = arm.Options.ExampleObservations,
                     ExampleTargetFallback = arm.Options.ExampleTargetFallback,
                     PairTargetsWithActions = arm.Options.PairTargetsWithActions,
                     LegalTargets = arm.Options.LegalTargets.ToString(),
