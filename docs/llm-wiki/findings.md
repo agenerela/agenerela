@@ -4747,3 +4747,42 @@ economy's live check (E3) should wait for a change to both, and compare against 
 
 **Would change it.** The same toggling and neglect on more seeds after a tax change costs
 something or locks for some turns would point at the prompt rather than the rules.
+
+### Painted Realm free orders, the court's prompt A/B on the home server: both new prompts stay legal and make a court stop sooner (23 November 2026)
+
+**What.** Request 003: under free orders (#20), a court's later request told what its earlier orders settled
+(`CourtTurnFacts`) or asked for "another order, or none" (`CourtNoneWording`), against neither. The `personas` table,
+five `qwen3.5:4b` rulers, writs turn, Classic, 40 turns, seeds 1 to 3, one game a block, interleaved by seed, test
+`c544c13`. The home server's RTX 4070 SUPER behind its gate (`5728506a6d6b`), one clean lease a block, the model
+warmed first. n = three games an arm, 8,614 decisions. A third machine: not comparable with the RTX 5080's runs.
+Details: [`docs/run-requests/003-free-orders-prompt-ab/results.md`](../run-requests/003-free-orders-prompt-ab/results.md).
+
+**Seen.**
+- No illegal and no not-offered answer in any arm.
+- Court orders a realm a turn: control 1.31, `CourtTurnFacts` 0.98, `CourtNoneWording` 0.95, lower than the control
+  on the same seed in all six pairs; seed 1 alone barely differs.
+- Hence fewer calls and seconds a turn: 21.2 model seconds a turn, against 19.2 and 18.2 on the same seed and turn.
+  Seconds a call and prompt length are unchanged.
+
+**What it means.** Not an accuracy result: legal answers are 100% in every arm, so the prompts cannot be told apart
+on them. Both prompts change behaviour the same way, toward fewer orders a turn, and the seconds follow from that, not
+from faster calls. Whether a court that stops sooner plays a better game is the lead's call.
+
+**Would change it.** More seeds where the control gives as few orders as the arms (as seed 1 did) would say the fall
+is the games' paths, not the prompts.
+
+### Painted Realm free orders, the 12 s played check on the home server: End turn waits 0.8 s after turn 1, 2 s on average (23 November 2026)
+
+**What.** Request 004: `FreeOrdersLiveCheck`, rule mode with free orders, a stand-in player who plans for 12 s a turn
+then presses End turn, four `qwen3.5:4b` rulers, six turns, seeds 1 to 3. Same session, machine and leases as the
+entry above. n = 18 turns, no failed call. Details:
+[`docs/run-requests/004-free-orders-played-12s/results.md`](../run-requests/004-free-orders-played-12s/results.md).
+
+**Seen.** End turn waited 1.99 s on average and 18.49 s at most. Turns 2 to 6 waited 0.76 s on average, 2.50 s at
+most, mostly treaty terms. Turn 1 waited 18.5, 2.0 and 3.9 s, with three or four rulers still deciding.
+
+**What it means.** With a 12 s playback the rulers' deciding hides behind it from turn 2 on. Turn 1, which has no
+playback before it, is where a player waits.
+
+**Would change it.** A slower turn-1 start on longer games or other maps, or treaty terms that grow with the number of
+wars, would move the figure.
