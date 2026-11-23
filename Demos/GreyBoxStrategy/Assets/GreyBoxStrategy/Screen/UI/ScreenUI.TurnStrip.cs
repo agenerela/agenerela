@@ -207,6 +207,6 @@ namespace GreyBoxStrategy.Realm
         public static IconKind BuildingIcon(Building b) => b switch
         {
             Building.Market => IconKind.Market, Building.Barracks => IconKind.Barracks, _ => IconKind.Farm,
-        }
+        };
     }
 }

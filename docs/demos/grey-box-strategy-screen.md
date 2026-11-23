@@ -432,6 +432,35 @@ longer prints a rival's army order the fog hides, nor shows that marshal's words
 is the one test the strip and the chronicle share. The watch mode's top bar takes measured steps too: the countries'
 lesser stats go, then their names (the crest and the tooltip name each).
 
+**The economy on the screen (23 November, in testing).** With `GameRules.Economy` on (it needs free orders; no
+New game switch yet, `ReplayDirector.NextEconomy` from the CLI and the tests), in rule mode and in watch mode:
+- **The top bar** adds two stats after the provinces: **manpower**, "25 / 30" with "+6 a turn" (or "full") under it,
+  and the **tax level**, "Normal" with "x1 income". Each tooltip says what it does: a soldier recruited takes one man,
+  the cap and growth come from provinces held and barracks; and the three levels, with their income factor and what
+  they do to stability. The treasury's tooltip says income is the provinces' yield at the tax level.
+- **The province panel's Holding tab**: **Yield**, "+12 a turn", whose tooltip splits it into the province's 10, its
+  land (terrain and coast) and each building; and **Buildings**, the three icons (market, barracks, farm), each lit
+  where it stands, with what each would add there in the tooltip. A realm's panel adds its manpower and taxes where
+  your court knows its treasury.
+- **The council**: the three tax levels replace Raise taxes, the level in force marked "now"; the three buildings
+  stand beside Fortify, each button with its cost and the most it would add in a province offered ("40 gold · up to
+  +8 gold"). A building order opens **a list of your provinces** the rules offer, each with its land, what it yields
+  now and what the building would add, the most first; a click gives the order. A list rather than a click on the
+  map, because the gain is the choice and a list shows every province's side by side; the map would hide it in
+  tooltips. Under the gold line, the same line for manpower: the men your levies hold back and those left. A shut
+  button gives the rules' reason (`WritLegality.WhyNotCourt`, asked with your queued orders' gold and men held back),
+  so a levy short of men says manpower; a tax level says one a turn.
+- **The turn strip and the chronicle**: a building has its own icon on the strip ("built a market") and the
+  chronicle's line "Ilvar builds a market in Highmoor"; a tax level is "set taxes" with the coins icon, "Kesh sets
+  taxes high".
+- **The map** shows no building marks: a province at the default zoom already carries its name, its fort and an army
+  badge, and up to three more marks would crowd the small ones, so the province panel carries them.
+In watch mode a scripted game's courts, which know nothing of the economy, set a tax level by their stability and buy
+the building that adds most where 20 gold would stay (`ScriptedWorldGame.EconomyHand`), so a watched game shows it.
+The numbers are the rules' own (`World.Yield`, `ManpowerCap`, `TaxFactor`, `WritLegality.BuildingGain`); the replay
+keeps each province's buildings and each realm's tax level as the events land. `EconomyScreenTests` checks the
+numbers, the council and the replay without a scene. With the economy off the screen is as before.
+
 The numbers, the outliner's rows and the feed's filters come from `ScreenModels`, which `ScreenModelsTests` checks
 without a scene.
 
