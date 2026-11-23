@@ -265,8 +265,7 @@ namespace Agenerela.Tests.Evaluation
                 set.SaveCategory(set.FindCategory("situation"));
 
                 var after = Parse(File.ReadAllText(path));
-                Assert.That(JToken.DeepEquals(before, after), Is.True, $"The history changed on a round trip:
-{after}");
+                Assert.That(JToken.DeepEquals(before, after), Is.True, $"The history changed on a round trip:\n{after}");
                 Assert.That(after["prompts"][1]["history"], Is.Null, "A prompt with no history gained one on saving.");
             }
         }
