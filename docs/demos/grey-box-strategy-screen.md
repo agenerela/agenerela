@@ -434,7 +434,7 @@ lesser stats go, then their names (the crest and the tooltip name each).
 
 **The economy on the screen (23 November, in testing).** With `GameRules.Economy` on (it needs free orders; no
 New game switch yet, `ReplayDirector.NextEconomy` from the CLI and the tests), in rule mode and in watch mode:
-- **The top bar** adds two stats after the provinces: **manpower**, "25 / 30" with "+6 a turn" (or "full") under it,
+- **The top bar** adds two stats after the provinces: **manpower**, "25 / 30 (+6)" ("30 / 30" when full),
   and the **tax level**, "Normal" with "x1 income". Each tooltip says what it does: a soldier recruited takes one man,
   the cap and growth come from provinces held and barracks; and the three levels, with their income factor and what
   they do to stability. The treasury's tooltip says income is the provinces' yield at the tax level.

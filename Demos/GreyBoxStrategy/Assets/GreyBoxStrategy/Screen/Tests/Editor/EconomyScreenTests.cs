@@ -46,7 +46,7 @@ namespace GreyBoxStrategy.Screen.Tests
             me.Taxes = TaxLevel.High;
             var s = StateOf(w);
             var bar = ScreenModels.TopBar(s, me.Id, 10, true, 25, null, CountryLook.NameOf, x => x, w.Rules).ToDictionary(x => x.Key);
-            Assert.That(bar["men"].Value, Is.EqualTo($"25 / {w.ManpowerCap(me)}"), "manpower of its cap, the rules' ManpowerCap");
+            Assert.That(bar["men"].Value, Is.EqualTo($"25 / {w.ManpowerCap(me)} (+{w.ManpowerGrowth(me)})"), "manpower of its cap and growth, the rules' ManpowerCap and ManpowerGrowth");
             Assert.That(bar["men"].Sub, Is.EqualTo($"+{w.ManpowerGrowth(me)} a turn"), "the rules' ManpowerGrowth");
             Assert.That(bar["men"].Tip, Does.Contain("Each soldier recruited takes 1"));
             Assert.That(bar["tax"].Value, Is.EqualTo("High"));
@@ -54,7 +54,7 @@ namespace GreyBoxStrategy.Screen.Tests
             Assert.That(bar["tax"].Tip, Does.Contain("Low: income x0.8").And.Contain("High: income x1.3; stability falls 1 a turn"));
             Assert.That(bar["gold"].Tip, Does.Contain("at high taxes (x1.3)"));
             me.Manpower = w.ManpowerCap(me);
-            Assert.That(ScreenModels.TopBar(StateOf(w), me.Id, 10, true, 25, null, CountryLook.NameOf, x => x, w.Rules).First(x => x.Key == "men").Sub, Is.EqualTo("full"));
+            Assert.That(ScreenModels.TopBar(StateOf(w), me.Id, 10, true, 25, null, CountryLook.NameOf, x => x, w.Rules).First(x => x.Key == "men").Value, Is.EqualTo($"{me.Manpower} / {me.Manpower}"), "full: no growth shown");
         }
 
         [Test]

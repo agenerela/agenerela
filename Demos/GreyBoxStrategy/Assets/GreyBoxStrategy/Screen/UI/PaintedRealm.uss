@@ -854,6 +854,6 @@
 .build-choice { flex-direction: row; align-items: center; height: 24px; margin: 0 0 3px 0; padding-left: 7px; padding-right: 7px; font-size: 12px; background-color: rgba(210, 173, 98, 0.1); border-width: 1px; border-color: rgba(201, 164, 90, 0.35); border-radius: 0; color: rgb(234, 223, 198); -unity-text-align: middle-left; }
 .build-choice:hover { border-color: rgb(210, 173, 98); }
 .build-choice > Label { margin: 0; padding: 0; }
-.build-choice-name { flex-grow: 1; flex-shrink: 1; }
-.build-choice-land { color: rgb(170, 158, 130); font-size: 11px; margin-right: 8px; }
+.build-choice > .build-choice-name { flex-grow: 1; flex-shrink: 1; }
+.build-choice > .build-choice-land { color: rgb(170, 158, 130); font-size: 11px; margin-right: 8px; }
 .build-choice-gain { color: rgb(150, 200, 120); -unity-font-style: bold; }

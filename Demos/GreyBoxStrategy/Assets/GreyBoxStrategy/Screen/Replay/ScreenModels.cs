@@ -130,7 +130,7 @@ namespace GreyBoxStrategy.Replay
         /// <summary>The top bar's manpower: "25 / 30", "+6 a turn" under it (or "full"), and what it does.</summary>
         public static Stat Manpower(CountryState c) => new Stat
         {
-            Key = "men", Value = $"{c.Manpower} / {c.ManpowerCap}", Sub = c.Manpower >= c.ManpowerCap ? "full" : $"+{c.ManpowerGrowth} a turn",
+            Key = "men", Value = c.Manpower >= c.ManpowerCap ? $"{c.Manpower} / {c.ManpowerCap}" : $"{c.Manpower} / {c.ManpowerCap} (+{c.ManpowerGrowth})", Sub = c.Manpower >= c.ManpowerCap ? "full" : $"+{c.ManpowerGrowth} a turn",
             Tone = c.Manpower < 5 ? -1 : 0,
             Tip = $"Manpower: {c.Manpower} of {c.ManpowerCap} men who can still be raised.\nEach soldier recruited takes 1; a levy is cut to the men left.\n" +
                   $"+{c.ManpowerGrowth} a turn, up to the cap: each province you hold raises men, and each barracks more.",
@@ -340,7 +340,7 @@ namespace GreyBoxStrategy.Replay
                 if (HasEconomy(s))
                 {
                     var men = Manpower(c);
-                    rows.Add(new Row { Key = "men", Label = "Manpower", Value = $"{men.Value} · {men.Sub}", Amount = c.Manpower, Max = Math.Max(1, c.ManpowerCap), Tip = men.Tip });
+                    rows.Add(new Row { Key = "men", Label = "Manpower", Value = men.Value, Amount = c.Manpower, Max = Math.Max(1, c.ManpowerCap), Tip = men.Tip });
                     rows.Add(new Row { Key = "tax", Label = "Taxes", Value = $"{TaxName(c.Taxes)} · x{TaxFactor(rules, c.Taxes):0.0#}", Tone = c.Taxes == TaxLevel.High ? -1 : 0, Tip = Taxes(c, rules).Tip });
                 }
             }
