@@ -19,12 +19,16 @@ namespace GreyBoxStrategy.Realm
         // The new turn in testing, for rule games from New game (and the CLI); off by default.
         private static bool nextFreeOrders;
         public static bool NextFreeOrders { get => nextFreeOrders; set => nextFreeOrders = value; }
+        // The economy (#372, #374), which needs free orders; off by default, set by the CLI and the tests for now.
+        private static bool nextEconomy;
+        public static bool NextEconomy { get => nextEconomy; set => nextEconomy = value; }
 
         /// <summary>A setup's rules with New game's R3 settings: unchanged for the one-move game.</summary>
         public static GameRules RulesFor(GameSetup setup, MapDefinition map)
         {
             var rules = WithArmySettings(setup.BuildRules(map), nextUnitTypes, nextGenerals, nextSieges, nextSupply);
             if (nextFreeOrders && rules != null && rules.Turn == TurnStyle.Writs) rules.FreeOrders = true;
+            if (nextEconomy && rules != null && rules.FreeOrders) rules.Economy = true;
             return rules;
         }
 

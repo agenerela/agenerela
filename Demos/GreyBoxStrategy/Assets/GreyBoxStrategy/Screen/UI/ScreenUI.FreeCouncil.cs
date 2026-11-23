@@ -31,8 +31,7 @@ namespace GreyBoxStrategy.Realm
         private CountryRequest endWaitingFor;
 
         /// <summary>Your court's orders this turn, as the panel builds them into <see cref="Plan"/>.</summary>
-        public CourtList Court(CountryRequest req) => new CourtList(Plan.Courts, req.World.Country(You)?.Gold ?? 0,
-            m => WritLegality.CourtOrderCost(req.World, You, m), given => WritLegality.CourtMovesAfter(req.World, You, given));
+        public CourtList Court(CountryRequest req) => CourtList.For(req.World, You, Plan.Courts);
 
         private void ShowFreeOrders(string status)
         {
@@ -89,6 +88,8 @@ namespace GreyBoxStrategy.Realm
                 var what = new Label(Describe(m)) { tooltip = m.Detail }; what.AddToClassList("court-what"); row.Add(what);
                 int cost = court.CostOf(m);
                 if (cost > 0) { var c = new Label($"−{cost} gold"); c.AddToClassList("court-cost"); row.Add(c); }
+                int menOf = court.MenOf(m);
+                if (menOf > 0) { var c = new Label($"−{menOf} men"); c.AddToClassList("court-cost"); row.Add(c); }
                 var x = new Button(() =>
                 {
                     var dropped = court.RemoveAt(at);
@@ -107,14 +108,30 @@ namespace GreyBoxStrategy.Realm
             gold.Add(new Label($"· {court.Committed} committed") { name = "court-committed" });
             var left = new Label($"· {court.Left} left"); left.AddToClassList(court.Left > 0 ? "good" : "bad"); gold.Add(left);
             body.Add(gold);
+            // The economy: the same line for manpower, which levies hold back as they hold gold.
+            if (court.HasManpower)
+            {
+                var men = new VisualElement { tooltip = "Men your levies will raise are held back as you add them: a levy is cut to the men left." }; men.AddToClassList("court-gold");
+                men.Add(new Icon(IconKind.Men, 13) { Tint = new Color32(200, 170, 150, 255) });
+                men.Add(new Label($"{court.Manpower} manpower"));
+                men.Add(new Label($"· {court.MenCommitted} held back") { name = "court-men-committed" });
+                var menLeft = new Label($"· {court.MenLeft} left"); menLeft.AddToClassList(court.MenLeft > 0 ? "good" : "bad"); men.Add(menLeft);
+                body.Add(men);
+            }
             // The buttons: each adds an order; one shut says why, in its tooltip and the status line.
             var buttons = new VisualElement(); buttons.AddToClassList("order-moves");
             var recruits = w.Rules.UnitTypes ? Actions.RecruitTypes : new[] { Actions.Recruit };
-            foreach (string action in recruits.Concat(new[] { Actions.RaiseTaxes, Actions.Fortify, Actions.DeclareWar, Actions.OfferWhitePeace, Actions.DemandOccupied, Actions.CedeOccupied }))
+            bool economy = w.Rules.EconomyOn;
+            // The economy: the three tax levels in place of raise_taxes, and the three buildings beside the fort, each with
+            // its cost and gain on the button.
+            var kinds = economy
+                ? recruits.Concat(new[] { Actions.Fortify }).Concat(Actions.Builds).Concat(Actions.TaxLevels).Concat(new[] { Actions.DeclareWar, Actions.OfferWhitePeace, Actions.DemandOccupied, Actions.CedeOccupied })
+                : recruits.Concat(new[] { Actions.RaiseTaxes, Actions.Fortify, Actions.DeclareWar, Actions.OfferWhitePeace, Actions.DemandOccupied, Actions.CedeOccupied });
+            foreach (string action in kinds)
             {
                 var offered = court.Offered(action);
                 string a = action;
-                string why = offered.Count > 0 ? null : court.WhyShut(action) ?? WhyNotCourtAction(w, action) ?? "not offered this turn";
+                string why = offered.Count > 0 ? null : court.WhyShut(action) ?? EconomyWhyNot(w, action) ?? WhyNotCourtAction(w, action) ?? "not offered this turn";
                 var b = new Button(() =>
                 {
                     if (why != null) { if (ordersStatus != null) ordersStatus.text = $"{CourtLabel(a)}: {why}"; return; }
@@ -129,13 +146,19 @@ namespace GreyBoxStrategy.Realm
                     b.Add(new Label(ArmyLook.RecruitName(action)) { pickingMode = PickingMode.Ignore });
                     var note = new Label(ArmyLook.RecruitNote(w.Rules, rt)) { pickingMode = PickingMode.Ignore }; note.AddToClassList("recruit-note"); b.Add(note);
                 }
+                if (economy) EconomyButton(b, w, action, offered);
                 if (why != null) { b.AddToClassList("off"); b.tooltip = "Not offered: " + why; }
-                else b.tooltip = Actions.RecruitsType(action) is UnitType tt ? ArmyLook.RecruitTooltip(w.Rules, tt, w.Levy(w.Country(You), tt)) : Explain(action);
+                else b.tooltip = Actions.RecruitsType(action) is UnitType tt ? ArmyLook.RecruitTooltip(w.Rules, tt, w.Levy(w.Country(You), tt)) : Explain(action, w.Rules);
                 if (openCourt == action) b.AddToClassList("on");
                 buttons.Add(b);
             }
             body.Add(buttons);
-            if (openCourt != null)
+            if (openCourt != null && Actions.BuildsWhat(openCourt) != null)
+            {
+                // A building order: your provinces it is offered in, each with what it would add there, the most first.
+                body.Add(BuildChoiceList(court, w, openCourt, status));
+            }
+            else if (openCourt != null)
             {
                 var chips = new VisualElement(); chips.AddToClassList("chips"); chips.style.marginTop = 6;
                 foreach (var m in court.Offered(openCourt))
@@ -194,6 +217,66 @@ namespace GreyBoxStrategy.Realm
         }
 
         private string lastCourtNote;
+
+        // The economy's reason a kind is shut, picked from the rules' WhyNotCourt (a building asks your own provinces).
+        private string EconomyWhyNot(World w, string action) =>
+            Actions.BuildsWhat(action) != null || Actions.SetsTaxes(action) != null ? PlainOrNull(CourtList.WhyNotAction(w, You, action)) : null;
+
+        private string PlainOrNull(string why) => why == null ? null : Words.Plain(why);
+
+        /// <summary>
+        /// The economy's buttons: a building's name with its icon, its cost and what it adds (the most it would add in a
+        /// province offered); a tax level's name, its income factor, and "now" on the level in force.
+        /// </summary>
+        private void EconomyButton(Button b, World w, string action, List<Move> offered)
+        {
+            if (Actions.BuildsWhat(action) is Building bd)
+            {
+                b.text = "";
+                b.AddToClassList("econ");
+                var head = new VisualElement { pickingMode = PickingMode.Ignore }; head.AddToClassList("econ-head");
+                head.Add(new Icon(BuildingIcon(bd), 13) { Tint = BuildingTint(bd), pickingMode = PickingMode.Ignore });
+                head.Add(new Label(Cap(ScreenModels.BuildingName(bd))) { pickingMode = PickingMode.Ignore });
+                b.Add(head);
+                int best = offered.Select(m => w.Province(m.Target)).Where(p => p != null).Select(p => WritLegality.BuildingGain(w, p, bd)).DefaultIfEmpty(0).Max();
+                string gain = bd == Building.Barracks ? $"+{w.Rules.BarracksManpower} men, +{w.Rules.BarracksCap} cap" : best > 0 ? $"up to +{best} gold" : "+gold a turn";
+                var note = new Label($"{WritLegality.BuildingCost(w.Rules, bd)} gold · {gain}") { pickingMode = PickingMode.Ignore }; note.AddToClassList("econ-note"); b.Add(note);
+            }
+            else if (Actions.SetsTaxes(action) is TaxLevel level)
+            {
+                b.text = "";
+                b.AddToClassList("econ");
+                bool now = w.Country(You)?.Taxes == level;
+                var head = new VisualElement { pickingMode = PickingMode.Ignore }; head.AddToClassList("econ-head");
+                head.Add(new Icon(IconKind.Taxes, 13) { Tint = new Color32(232, 196, 92, 255), pickingMode = PickingMode.Ignore });
+                head.Add(new Label($"{Cap(ScreenModels.TaxName(level))} taxes") { pickingMode = PickingMode.Ignore });
+                b.Add(head);
+                var note = new Label($"x{ScreenModels.TaxFactor(w.Rules, level):0.0#} income" + (now ? " · now" : "")) { pickingMode = PickingMode.Ignore }; note.AddToClassList("econ-note"); b.Add(note);
+                if (now) b.AddToClassList("current");
+            }
+        }
+
+        // The provinces a building order is offered in, as rows: name, land, what it yields now, what it would add.
+        private VisualElement BuildChoiceList(CourtList court, World w, string action, string status)
+        {
+            var box = new VisualElement(); box.AddToClassList("build-choices");
+            var bd = Actions.BuildsWhat(action).Value;
+            var choices = court.BuildChoices(w, action);
+            box.Add(Text($"Build a {ScreenModels.BuildingName(bd)} in, for {WritLegality.BuildingCost(w.Rules, bd)} gold:", "src"));
+            foreach (var c in choices)
+            {
+                var mm = c.Move;
+                var row = new Button(() => { court.Add(mm); openCourt = null; PlanChanged?.Invoke(); ShowOrders(status); })
+                    { tooltip = $"{Describe(mm)}: {mm.Detail}. It yields {c.Yield} gold a turn now, before taxes." };
+                row.AddToClassList("build-choice");
+                var n = new Label(Cap(c.Province)); n.AddToClassList("build-choice-name"); row.Add(n);
+                var l = new Label($"{c.Land} · yields {c.Yield}"); l.AddToClassList("build-choice-land"); row.Add(l);
+                var g = new Label(bd == Building.Barracks ? $"+{c.Gain} men" : $"+{c.Gain} gold"); g.AddToClassList("build-choice-gain"); row.Add(g);
+                box.Add(row);
+            }
+            if (choices.Count == 0) box.Add(Text("No province of yours is offered for it now.", "src"));
+            return box;
+        }
 
         private void ShowDeciding(VisualElement into, Button end)
         {

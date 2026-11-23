@@ -76,6 +76,8 @@ namespace GreyBoxStrategy.Replay
         ArmiesMerged,
         /// <summary>The human player split an army in the council (#20): <see cref="ReplayEvent.ArmyOrder"/> has what it did.</summary>
         ArmySplit,
+        /// <summary>Economy, E2: a court bought a market, barracks or farm in one of its provinces (<see cref="ReplayEvent.Building"/>).</summary>
+        Build,
     }
 
     /// <summary>An army at one moment, as the map draws its piece.</summary>
@@ -251,6 +253,9 @@ namespace GreyBoxStrategy.Replay
         public string AttackMix, DefenceMix;
         /// <summary>A treaty's term (<c>demand_occupied</c>, <c>cede_occupied</c>, <c>offer_white_peace</c>), offered or landed.</summary>
         public string Term;
+        /// <summary>A <see cref="ReplayEventKind.Build"/>: "market", "barracks" or "farm". A <see cref="ReplayEventKind.Taxes"/> with the
+        /// economy: the level set, "low", "normal" or "high" (null for the one-off <c>raise_taxes</c>).</summary>
+        public string Building, TaxLevel;
         /// <summary>Whether a term landed without being asked, at a war score of 90 or more.</summary>
         public bool Enforced;
         /// <summary>A treaty: the provinces whose owner changed, and those returned to their owner (the hatching lifts).</summary>

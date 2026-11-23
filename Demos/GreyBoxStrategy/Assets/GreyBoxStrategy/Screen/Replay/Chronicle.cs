@@ -113,7 +113,12 @@ namespace GreyBoxStrategy.Replay
                     break;
                 case ReplayEventKind.Taxes:
                     line.Category = ChronicleCategory.Economy;
-                    line.Text = $"{N(e.Country)} raises taxes";
+                    // The economy: a standing level set; without it, the one-off raise.
+                    line.Text = e.TaxLevel != null ? $"{N(e.Country)} sets taxes {e.TaxLevel}" : $"{N(e.Country)} raises taxes";
+                    break;
+                case ReplayEventKind.Build:
+                    line.Category = ChronicleCategory.Building;
+                    line.Text = $"{N(e.Country)} builds a {e.Building} in {P(e.Province)}";
                     break;
                 case ReplayEventKind.General:
                     line.Category = ChronicleCategory.War;
@@ -294,7 +299,7 @@ namespace GreyBoxStrategy.Replay
 
         /// <summary>The kinds that are a ruler's own orders: grouped by ruler and turn in the chronicle.</summary>
         public static bool IsOrder(ReplayEventKind k) =>
-            k == ReplayEventKind.Recruit || k == ReplayEventKind.Taxes || k == ReplayEventKind.Fort || k == ReplayEventKind.Hold
+            k == ReplayEventKind.Recruit || k == ReplayEventKind.Taxes || k == ReplayEventKind.Fort || k == ReplayEventKind.Build || k == ReplayEventKind.Hold
             || k == ReplayEventKind.ArmyOrder || k == ReplayEventKind.WarDeclared || k == ReplayEventKind.TermOffered || k == ReplayEventKind.Refused;
 
         /// <summary>

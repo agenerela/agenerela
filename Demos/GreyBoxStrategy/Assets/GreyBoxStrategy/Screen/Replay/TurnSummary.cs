@@ -7,7 +7,7 @@ namespace GreyBoxStrategy.Replay
     /// <summary>One thing a realm did in a turn, for the turn strip: a kind for its icon, the chronicle's words, its ruler's line.</summary>
     public sealed class TurnDeed
     {
-        /// <summary>recruit, fortify, tax, war, peace, cede, demand, march, siege, hold, attack, army, refused, hidden.</summary>
+        /// <summary>recruit, fortify, tax (raised), taxes (a level set), market, barracks, farm, war, peace, cede, demand, march, siege, hold, attack, army, refused, hidden.</summary>
         public string Kind;
         public string Text;
         /// <summary>What the ruler said with it, or null.</summary>
@@ -87,7 +87,9 @@ namespace GreyBoxStrategy.Replay
             {
                 case ReplayEventKind.Recruit: return "recruit";
                 case ReplayEventKind.Fort: return "fortify";
-                case ReplayEventKind.Taxes: return "tax";
+                case ReplayEventKind.Taxes: return e.TaxLevel != null ? "taxes" : "tax";
+                // The economy, E2: the building's own name, so its icon says which.
+                case ReplayEventKind.Build: return e.Building ?? "build";
                 case ReplayEventKind.WarDeclared: return "war";
                 case ReplayEventKind.PeaceOffered: case ReplayEventKind.PeaceAccepted: case ReplayEventKind.PeaceMutual: return "peace";
                 case ReplayEventKind.TermOffered:
