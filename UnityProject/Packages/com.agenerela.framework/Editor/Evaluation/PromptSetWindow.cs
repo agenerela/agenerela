@@ -84,6 +84,12 @@ namespace Agenerela.Editor.Evaluation
         private PromptSetLabelView labelView;
         private PromptSetAgreementView agreementView;
 
+        // The agreement cohort beside the set (#148), null when there is none; why it could not be
+        // read, when it could not; and whether Label mode asks the whole set instead.
+        private AgreementCohort cohort;
+        private string cohortError;
+        private bool labelWholeSet;
+
         [MenuItem("Window/Agenerela/Prompt Set")]
         public static void Open()
         {
@@ -627,14 +633,56 @@ namespace Agenerela.Editor.Evaluation
                 return;
             }
 
+            var asked = DrawCohortChoice();
+
             if (labelView == null || labelView.Annotator != you)
             {
                 // Everything Label mode is given: prompts with no answer in them, and the choices.
-                labelView = new PromptSetLabelView(you, BlindPrompt.Queue(set, labels, you), LabelChoices.From(set), Record,
-                    LabelProgress.TotalFor(set, you));
+                labelView = new PromptSetLabelView(you, BlindPrompt.Queue(set, labels, you, cohort: asked), LabelChoices.From(set), Record,
+                    LabelProgress.TotalFor(set, you, asked));
             }
 
             labelView.Draw();
+        }
+
+        // Whose prompts Label mode asks: the agreement cohort's when one sits beside the set (#148),
+        // so a second annotator is not asked the whole grown set, unless the toggle chooses it.
+        // Returns the cohort to ask, or null for the whole set. The cohort holds ids only, no answers.
+        private AgreementCohort DrawCohortChoice()
+        {
+            if (cohortError != null)
+            {
+                EditorGUILayout.HelpBox($"{AgreementCohort.FileName} could not be read, so Label mode asks the whole set: {cohortError}", MessageType.Warning);
+                return null;
+            }
+
+            if (cohort == null)
+            {
+                return null;
+            }
+
+            int inSet = set.Prompts.Count(p => cohort.Contains(p.Id));
+            string line = labelWholeSet
+                ? $"Labelling the whole set, {set.Prompts.Count()} prompts, not only the {inSet} of the agreement cohort."
+                : $"Labelling the {inSet} prompts of the agreement cohort{(cohort.Issue != null ? $" (#{cohort.Issue})" : "")}, from {AgreementCohort.FileName}.";
+            if (inSet < cohort.Count)
+            {
+                line += $" {cohort.Count - inSet} of its ids are not in the set.";
+            }
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                EditorGUILayout.LabelField(line, EditorStyles.wordWrappedMiniLabel);
+                bool whole = GUILayout.Toggle(labelWholeSet, new GUIContent("Whole set", "Label every prompt of the set instead of only the cohort's."),
+                    GUILayout.Width(80));
+                if (whole != labelWholeSet)
+                {
+                    labelWholeSet = whole;
+                    labelView = null;
+                }
+            }
+
+            return labelWholeSet ? null : cohort;
         }
 
         private bool Record(BlindPrompt prompt, LabelAnswer answer)
@@ -675,8 +723,19 @@ namespace Agenerela.Editor.Evaluation
                 }
             }
 
+            cohort = null;
+            cohortError = null;
             if (set != null)
             {
+                try
+                {
+                    cohort = AgreementCohort.FindBeside(set);
+                }
+                catch (Exception e) when (e is IOException || e is InvalidDataException || e is UnauthorizedAccessException)
+                {
+                    cohortError = e.Message;
+                }
+
                 writeView = new PromptSetWriteView(set, () => profile, () => you, OnFilesWritten);
                 RefreshLabels();
             }

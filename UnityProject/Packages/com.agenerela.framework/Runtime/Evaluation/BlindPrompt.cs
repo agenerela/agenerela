@@ -60,7 +60,9 @@ namespace Agenerela.Evaluation
         /// </summary>
         /// <param name="labels">The label files, usually <see cref="PromptSet.LoadLabels"/>.</param>
         /// <param name="categoryId">Only this category; null for all of them.</param>
-        public static IReadOnlyList<BlindPrompt> Queue(PromptSet set, IEnumerable<AnnotatorLabels> labels, string annotator, string categoryId = null)
+        /// <param name="cohort">Only the prompts of this cohort (#148); null for the whole set.</param>
+        public static IReadOnlyList<BlindPrompt> Queue(PromptSet set, IEnumerable<AnnotatorLabels> labels, string annotator, string categoryId = null,
+                                                       AgreementCohort cohort = null)
         {
             var files = labels.ToList();
             var queue = new List<BlindPrompt>();
@@ -73,6 +75,11 @@ namespace Agenerela.Evaluation
 
                 foreach (var prompt in category.Prompts)
                 {
+                    if (cohort != null && !cohort.Contains(prompt.Id))
+                    {
+                        continue;
+                    }
+
                     bool wrote = prompt.LabelledBy != null && prompt.LabelledBy.Contains(annotator);
                     if (!wrote && !AgreementReport.AnnotatorsOf(prompt, files).Contains(annotator))
                     {

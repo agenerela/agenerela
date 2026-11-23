@@ -63,6 +63,83 @@ namespace Agenerela.Tests.Evaluation
             }
         }
 
+        // ---- The agreement cohort (#148) ----------------------------------------------------------
+
+        private AgreementCohort WriteCohort(params string[] ids)
+        {
+            var manifest = new JObject
+            {
+                ["issue"] = 148,
+                ["categories"] = new JArray { new JObject { ["id"] = "any", ["promptIds"] = new JArray(ids) } },
+            };
+            File.WriteAllText(Path.Combine(fixture.Folder, AgreementCohort.FileName), manifest.ToString());
+            return AgreementCohort.FindBeside(fixture.Load());
+        }
+
+        [Test]
+        public void WithACohortTheQueueHoldsOnlyItsPrompts()
+        {
+            var cohort = WriteCohort("target_002", "situation_001");
+            var set = fixture.Load();
+
+            var queue = BlindPrompt.Queue(set, set.LoadLabels(), "Bo", cohort: cohort);
+
+            Assert.That(queue.Select(p => p.Id), Is.EquivalentTo(new[] { "target_002", "situation_001" }));
+            Assert.That(BlindPrompt.Queue(set, set.LoadLabels(), "Bo").Count, Is.GreaterThan(queue.Count), "Without the cohort, the whole set is asked.");
+        }
+
+        [Test]
+        public void WithACohortTheProgressCountsOnlyItsPrompts()
+        {
+            var cohort = WriteCohort("target_001", "target_002", "situation_001");
+            var set = fixture.Load();
+
+            // Maxim wrote all three, so he is asked none of them; Bo is asked the three.
+            Assert.That(LabelProgress.TotalFor(set, "Bo", cohort), Is.EqualTo(3));
+            Assert.That(LabelProgress.TotalFor(set, "Maxim", cohort), Is.EqualTo(0));
+            Assert.That(LabelProgress.TotalFor(set, "Bo"), Is.EqualTo(set.Prompts.Count()));
+        }
+
+        [Test]
+        public void ACohortGivesAwayNoAnswer()
+        {
+            // The cohort is ids only: what Label mode is given with it is still blind.
+            var cohort = WriteCohort("target_002");
+            var set = fixture.Load();
+            string seen = JsonConvert.SerializeObject(BlindPrompt.Queue(set, set.LoadLabels(), "Bo", cohort: cohort))
+                        + JsonConvert.SerializeObject(cohort);
+
+            foreach (string secret in new[] { "attack_target", "wolf\"", "SECRET_NOTE", "Maxim", "expected" })
+            {
+                Assert.That(seen, Does.Not.Contain(secret), $"Label mode with a cohort holds '{secret}'.");
+            }
+        }
+
+        [Test]
+        public void NoCohortFileIsNoCohortAndABrokenOneIsInvalidData()
+        {
+            Assert.That(AgreementCohort.FindBeside(fixture.Load()), Is.Null);
+
+            File.WriteAllText(Path.Combine(fixture.Folder, AgreementCohort.FileName), "{ \"categories\": [] }");
+            Assert.That(() => AgreementCohort.FindBeside(fixture.Load()), Throws.TypeOf<InvalidDataException>());
+
+            File.WriteAllText(Path.Combine(fixture.Folder, AgreementCohort.FileName), "not json");
+            Assert.That(() => AgreementCohort.FindBeside(fixture.Load()), Throws.TypeOf<InvalidDataException>());
+        }
+
+        [Test]
+        public void OurCohortIsTheSeventySixPeoplesPromptsAndAllAreInTheSet()
+        {
+            var set = PromptSet.Load(Path.Combine(EvalFixtures.OurSetFolder(), "agent.json"));
+            var cohort = AgreementCohort.FindBeside(set);
+
+            Assert.That(cohort, Is.Not.Null, "Our set has no agreement-subset.json beside it.");
+            Assert.That(cohort.Count, Is.EqualTo(76));
+            Assert.That(cohort.PromptIds.Where(id => set.Prompts.All(p => p.Id != id)), Is.Empty, "A cohort id is not in our set.");
+            Assert.That(set.Prompts.Where(p => cohort.Contains(p.Id)).SelectMany(p => p.LabelledBy).Distinct(),
+                Has.None.EqualTo("claude (tech lead session)"), "An AI-written prompt is in the people's cohort.");
+        }
+
         [Test]
         public void TheQueueGivesAwayNoAnswerNoteOrLabel()
         {
