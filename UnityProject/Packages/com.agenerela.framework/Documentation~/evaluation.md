@@ -285,6 +285,14 @@ much of the model is in GPU memory. A model not fully on the GPU, or not residen
 warning at the top of the report. For any provider other than Ollama, the version and the
 residency say "not checked".
 
+**A warm-up out of field order refuses the run** (#180). If any warm-up reply's fields came in an
+order other than the schema's (`DecisionTelemetry.OrderLost`), the run stops before the arm's
+first prompt, naming the arm and the model: every answer would measure that order as well as the
+model, and the settled order (action, then target, then statement) is the measured one. Ollama's
+native template path does this, sorting the schema's keys (findings, 5 November 2026). Set
+`AllowOrderLost` on the runner for a run that measures the order on purpose; the report records
+it. In a `Sequential` run, arm B's warm-up comes after all of arm A.
+
 **Two orders.** `Interleaved`, the default, asks each prompt in A and then in B, so drift over
 the session hits both alike; both arms must be on one model. `Sequential` runs all of A,
 unloads its model (`keep_alive: 0`) and waits until it has left memory, then runs all of B: for
@@ -349,7 +357,9 @@ reports, how targets and state reached the model, and per arm its config, provid
 version, `checkTarget`, warm-up and what was in VRAM); the five outcomes per arm, with accuracy
 as correct out of every prompt asked, pipeline errors included; the noise check; the outcomes
 per category; every answer that was not correct, with what the model said and the guard's
-reason; and the reply checks. `report.json` holds all of that and every answer, correct ones too, and reads back with
+reason; and the reply checks. Beside the noise check, **Field order** counts each arm's replies
+in the schema's order, out of it, and not checked, with the warm-ups out of order, and marks an arm
+with any out of order "order lost"; such an arm is also a warning at the top. `report.json` holds all of that and every answer, correct ones too, and reads back with
 `EvalReport.FromJson`.
 
 **The noise check.** A difference between the arms smaller than the noise floor is marked
@@ -357,6 +367,15 @@ reason; and the reply checks. `report.json` holds all of that and every answer, 
 10 points at n ≈ 50, scaled as a proportion's standard error scales: `10 × √(50 / n)`, about 16
 points at n = 20 and 5 at n = 200. It is checked over the whole set and per category, each with
 its own n, so a category of six prompts needs a very large difference before it says anything.
+
+**The field order.** Each answer's `OrderLost` is true when its reply's fields came in an order
+other than the schema's, false when they kept it, and null when no reply was read, a pipeline
+error, so the order was not checked: that is never counted as kept. The arm's `OrderKept`,
+`OrderLost` and `OrderNotChecked` count them, and `OrderFlagged` is true when any came out of
+order. Nothing is rescored: an answer out of order keeps its outcome. A difference between two
+arms of which one is flagged is not a model result, whatever the noise check says. The check
+reads the reply's raw text, so it holds for any provider whose text is the model's own; a provider
+that rewrote the model's JSON before returning it would always look in order.
 
 ### Reply checks: what the agent said
 
@@ -443,11 +462,11 @@ you compare with.
 | `BlindPrompt`, `LabelChoices` | Everything Label mode is given |
 | `AnnotatorLabels`, `LabelAnswer` | One person's label file, and one `action/target` answer |
 | `AgreementReport`, `PromptAgreement` | Agreement overall and per prompt |
-| `EvalRunner`, `EvalArm`, `EvalArmOrder` | An A/B run: `RunAsync`, `Classify`, `DescribeState`, `PlainStateLines`, `WarmUpRequests`, `Order`, `Progress` |
+| `EvalRunner`, `EvalArm`, `EvalArmOrder` | An A/B run: `RunAsync`, `Classify`, `DescribeState`, `PlainStateLines`, `WarmUpRequests`, `AllowOrderLost`, `Order`, `Progress` |
 | `EvalProgress`, `EvalPhase`, `EvalCancelledException` | How far a run has come, and a cancelled run's `Partial` report |
 | `EvalReport` | What a run found: `Conditions`, `Arms`, `Noise`, `Answers`, `NotCorrect`, `Cancelled`; `Save`, `ToJson`, `FromJson`, `ToMarkdown` |
 | `EvalConditions`, `EvalArmConditions`, `ResidencyReading`, `ResidentModel` | What it ran under |
-| `EvalArmResult`, `OutcomeCounts`, `NoiseCheck`, `EvalAnswer` | Its counts, noise check and answers |
+| `EvalArmResult`, `OutcomeCounts`, `NoiseCheck`, `EvalAnswer` | Its counts, noise check and answers; an arm's `OrderKept`, `OrderLost`, `OrderNotChecked` and `OrderFlagged`, an answer's `OrderLost` |
 | `ReplyChecks`, `ReplyFlag`, `ReplyFinding`, `ReplyCounts` | The checks on each statement: `Check`, `AssistantPhrases`; an answer's `ReplyFlags`, an arm's `Replies`, `EvalArm.MaxStatementLength`, `EvalReport.FlaggedReplies` |
 
 All of it is in the `Agenerela.Evaluation` namespace, under `Runtime/Evaluation/`, and reads and

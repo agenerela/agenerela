@@ -16,6 +16,14 @@ While the version stays `0.x`, the public API may change in any release.
   after the statement, as Ollama's native chat path produces by sorting the schema's keys
   (findings, 5 November 2026). Flagged, never refused: the decision is read and judged as any
   other, and the log line has no such key when the order held. Nothing sent to a model changes.
+- **The evaluation runner checks the field order** (#180). Each arm's replies are counted in the
+  schema's order, out of it, and not checked when no reply was read (`EvalArmResult.OrderKept`,
+  `OrderLost`, `OrderNotChecked`, `OrderFlagged`; each answer's `EvalAnswer.OrderLost`, null when
+  not checked), shown in the report's new "Field order" table beside the noise check, with a
+  warning for an arm with any out of order. A run whose warm-up replies come back out of order
+  refuses to start, naming the arm and the model, unless `EvalRunner.AllowOrderLost` is set; the
+  report records it (`EvalConditions.AllowOrderLost`) and each arm's `WarmUpOrderLost`. Nothing
+  is rescored. A report written before reads back with every count 0.
 - **`ProviderCapabilities.SupportsPairedSchema`** (#266 item 2, DR-023), true by default and for
   Ollama. On a provider that says false, an agent refuses an action that declares a parameter at
   setup, with an `InvalidOperationException` naming the action and the provider: at construction,
