@@ -864,6 +864,37 @@ Variant B's empty picture frames are filled, from an art pack made ahead of time
   has its picture, at the right shape; a missing picture is null; and a realm's panel hangs the portrait the
   catalogue chose. The three that read the pack were seen failing before the pack existed.
 
+### The economy, part 3: taxes stick, and the court is told what a building gains (23 November; #372, #374)
+
+Run request 002's economy game (one seed, `qwen3.5:4b`) changed the tax level 79 times in 448 council answers and built
+twice in 40 turns. Two rule changes, still under `GameRules.Economy` (off):
+
+- **A tax change sticks for `TaxLockTurns` (5) turns.** After a court sets the level, none of the three tax orders is
+  offered until five turns have passed (set on turn 1, offered again on turn 6). The rule is in
+  `WritLegality.WhyNotCourt`, so the offer and the re-check agree, and its reason is "taxes were set 2 turns ago; they
+  can change in 3". The court reads "Taxes: high (income x1.3; stability falls 1 a turn), can change in 3 turns." The
+  realm's own turn is `Country.TaxesSetTurn` (0: never set), the wait `World.TaxTurnsLeft`; 0 turns is the old rule.
+  A lock rather than a stability cost: a cost still leaves the order offered every turn, while the lock takes it out of
+  the list, so a model court cannot toggle it and a model court's three orders a turn go to something else.
+- **The moves line names each building**, with its price, where it may go and what it gains there, the most first:
+  "build a farm (30 gold): +5 gold a turn at corwick, +3 at orskhaven or redcliff". Before, the line ("Moves open to
+  us") listed recruits, forts and wars and never a building; the action list said "+5 gold a turn there (+8 on a coast)"
+  and the target list held all 29 provinces and countries, with a province's whole yield rather than the gain. About
+  60 more prompt tokens on a request that offers a building (+256 characters on average, at most +372, replayed below).
+  Prices and gains are unchanged.
+
+**What the replay found.** The 1,208 answers of game e1 replayed through the rules headlessly (all of them matched what
+was offered, none left over): a building was offered in 129 of 448 council requests, 90 of 187 courts' first requests.
+In those 90 the court recruited 74 times and built once. After a recruit a building was still affordable in 31 of 207
+requests, since a levy takes up to its whole cost in gold. A court's spendable gold at its first request was 28 at the
+median (13 and 53 at the quartiles), 40 or more in 67 of 187. Late in the game gold piled up (Merrow 274 at turn 30,
+its levies cut by manpower) and the court answered `none` with every building offered. So gold was short early, but
+the larger gap was what the court read: never the building in its moves line, never its gain.
+
+**Tests**, each seen failing once against a deliberate break: `EconomyTaxLockTests` (no tax order for the lock's turns,
+the reason, the line the court reads, other realms not waiting, offered again after), and in `EconomyBuildingTests` the
+moves line's buildings, prices, places and gains, and a model court's prompt carrying them.
+
 ### The economy, part 2: market, barracks, farm (18 November)
 
 Under the same switch (`GameRules.Economy`, with free orders). A court buys a building at once with gold, by an order on
@@ -906,7 +937,8 @@ reads is the same byte for byte. Every number is a starting sketch, to be tuned 
 - **Terrain.** A held province yields its owner `IncomePerProvince` (10), plus 2 on plains (farmland), 3 on hills and
   mountains (mines) and 3 on a coast (trade). An occupied one still gives its occupier half the base.
 - **Taxes are a standing level**, set by a court order (`taxes_low`, `taxes_normal`, `taxes_high`) in place of the
-  one-off `raise_taxes`. Each is offered only when it differs from the level now, and one a turn.
+  one-off `raise_taxes`. Each is offered only when it differs from the level now, and one a turn. Since part 3, a
+  change then sticks for `TaxLockTurns` turns.
   - Low: income x0.8, stability +1 a turn and +1 more below 3.
   - Normal: income x1, stability +1 a turn, as before.
   - High: income x1.3, stability -1 a turn while above 1.

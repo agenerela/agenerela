@@ -37,7 +37,8 @@ namespace GreyBoxStrategy
             if (rules.EconomyOn)
                 lines.Add($"Manpower: {me.Manpower} of {world.ManpowerCap(me)}, +{world.ManpowerGrowth(me)} a turn. "
                           + $"Taxes: {me.Taxes.ToString().ToLowerInvariant()} (income x{world.TaxFactor(me.Taxes):0.0#}; "
-                          + (me.Taxes == TaxLevel.High ? "stability falls 1 a turn)." : me.Taxes == TaxLevel.Low ? "stability recovers faster)." : "stability recovers 1 a turn).") );
+                          + (me.Taxes == TaxLevel.High ? "stability falls 1 a turn)" : me.Taxes == TaxLevel.Low ? "stability recovers faster)" : "stability recovers 1 a turn)")
+                          + (world.TaxTurnsLeft(me) is int wait && wait > 0 ? $", can change in {(wait == 1 ? "1 turn" : $"{wait} turns")}." : "."));
             if (armies.Count > 0)
             {
                 // With unit types (R3), each army's mix: "maren_host 50 (25 pikes, 15 riders, 10 bows) at stonereach".
@@ -126,8 +127,13 @@ namespace GreyBoxStrategy
             return $"besieging {p.Id}, turn {p.SiegeTurns} of {needed}";
         }
 
-        /// <summary>The court's moves as one line among its facts, from the moves it was offered.</summary>
-        public static string CourtMovesLine(IReadOnlyList<Move> legal)
+        /// <summary>
+        /// The court's moves as one line among its facts, from the moves it was offered. With the economy, each building
+        /// its price, where and what it gains there (with <paramref name="world"/>): "build a market (40 gold): +8 gold a
+        /// turn at ashby or brindle, +5 at highmoor". Without it the line named no building, and in run request 002 the
+        /// courts built twice in 40 turns.
+        /// </summary>
+        public static string CourtMovesLine(IReadOnlyList<Move> legal, World world = null)
         {
             var parts = new List<string>();
             void Add(string action, string verb)
@@ -144,12 +150,31 @@ namespace GreyBoxStrategy
             Add(Actions.RecruitBows, "recruit bows");
             Add(Actions.Fortify, "fortify");
             Add(Actions.RaiseTaxes, "raise taxes");
+            foreach (string build in Actions.Builds)
+                if (BuildPart(world, legal, build) is string part) parts.Add(part);
             Add(Actions.DeclareWar, "declare war on");
             Add(Actions.OfferWhitePeace, "offer white peace to");
             Add(Actions.DemandOccupied, "demand what we occupy from");
             Add(Actions.CedeOccupied, "cede what is occupied to");
             return parts.Count == 0 ? null : "Moves open to us: " + string.Join("; ", parts) + ".";
         }
+
+        // "build a farm (30 gold): +5 gold a turn at ashby, +3 at brindle or highmoor": provinces by what the building gains
+        // there, the most first, each group in the order offered.
+        private static string BuildPart(World world, IReadOnlyList<Move> legal, string action)
+        {
+            var at = legal.Where(m => m.Action == action && m.Target != null).Select(m => m.Target).ToList();
+            if (at.Count == 0) return null;
+            var what = Actions.BuildsWhat(action).Value;
+            string verb = $"build a {what.ToString().ToLowerInvariant()}";
+            if (world == null) return verb + " at " + Or(at);
+            string unit = what == Building.Barracks ? "manpower" : "gold";
+            var groups = at.GroupBy(id => WritLegality.BuildingGain(world, world.Province(id), what)).OrderByDescending(g => g.Key)
+                .Select((g, i) => $"+{g.Key}{(i == 0 ? $" {unit} a turn" : "")} at {Or(g.ToList())}");
+            return $"{verb} ({WritLegality.BuildingCost(world.Rules, what)} gold): " + string.Join(", ", groups);
+        }
+
+        private static string Or(IReadOnlyList<string> xs) => xs.Count == 1 ? xs[0] : string.Join(", ", xs.Take(xs.Count - 1)) + " or " + xs.Last();
 
         /// <summary>An army's orders as one line: "Orders open to maren_host: march to fenmark (neutral, garrison 9; next to us), ...; hold."</summary>
         public static string ArmyMovesLine(string armyId, IReadOnlyList<Move> legal)
