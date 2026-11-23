@@ -171,10 +171,10 @@ LF line endings. Those hashes identify the originals, and are not updated after 
 Selection used no second-person answers; none existed on 12 November.
 
 A person other than either writer (Maxim and Yevhen) labels this cohort in the Prompt Set
-window's **Label** mode, with their own name. Before #147 grows the set, this is simply every
-prompt the window offers. If it has grown, the coordinator prepares a working copy of the
-set with just the frozen ids before handing it over; the annotator must not inspect the
-prompt JSON or Agreement tab. Bring the unchanged `labels/<person>/` files back to this set.
+window's **Label** mode, with their own name. Since #147 grew the set to 209, Label mode reads
+`agreement-subset.json` and asks only the cohort's 76 prompts, saying so above each one; leave
+its **Whole set** toggle off. The annotator must not inspect the prompt JSON or Agreement tab.
+Their answers land in `labels/<person>/` as usual.
 Never put an AI answer under a person's name.
 
 There are 73 single-answer originals. The three open choices (`situation_016`,

@@ -204,6 +204,14 @@ carries only so the answer can be filed: a prompt among the impossible requests 
 answered by that. The prompts come in an order of your own
 rather than the set's, which groups them by category.
 
+**An agreement cohort.** When an `agreement-subset.json` sits beside the set file, Label mode
+asks only the prompts it names, and says so above the prompt ("Labelling the 76 prompts of the
+agreement cohort"); the progress count is the cohort's. The **Whole set** toggle beside that line
+asks every prompt instead. The file is a fixed subset frozen for a second annotator before the set
+grows (`AgreementCohort`; only its `categories[].promptIds` are read, and it holds no answers), so
+the person checking agreement is not asked prompts added later. A file that cannot be read is
+shown as a warning, and the whole set is asked.
+
 **Save answer** writes your answer to your own file under `labels/<you>/` and moves on. An answer once
 saved is never replaced, even if you change your mind: agreement is measured on first answers.
 **Skip** leaves a prompt for later. Commit your label files like any other.

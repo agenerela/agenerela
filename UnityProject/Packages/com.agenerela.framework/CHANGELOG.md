@@ -10,6 +10,10 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **Label mode asks only the agreement cohort** (#148, with #147). With an `agreement-subset.json`
+  beside the set, `BlindPrompt.Queue` (its new `cohort` argument) and the progress count hold only
+  the cohort's prompts, a line says so, and a **Whole set** toggle asks every prompt instead.
+  `AgreementCohort` reads the file's prompt ids, and nothing else.
 - **Multi-turn prompts** (#147). A prompt's optional `history` (`EvalPrompt.History`, a list of
   `HistoryTurn`: `label`, `stimulus`, `action`, `target`, optional `statement`) holds the turns it
   is asked after, oldest first. `EvalRunner` stages them in a `RollingHistory` of the prompt's own
