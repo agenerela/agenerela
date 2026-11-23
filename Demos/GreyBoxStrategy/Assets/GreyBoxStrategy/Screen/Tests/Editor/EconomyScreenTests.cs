@@ -239,7 +239,7 @@ namespace GreyBoxStrategy.Screen.Tests
             var econ = Buttons(ui, "econ");
             Assert.That(econ.Count, Is.EqualTo(6), "three buildings and three tax levels");
             Assert.That(econ.Count(b => b.ClassListContains("current")), Is.EqualTo(1), "the level in force is marked");
-            Assert.That(econ.First(b => b.ClassListContains("current")).tooltip, Does.Contain("taxes are already normal"));
+            Assert.That(econ.First(b => b.ClassListContains("current")).tooltip, Does.Contain("Taxes are already normal"));
             Assert.That(Buttons(ui, "order-move").Any(b => b.text == "Raise taxes"), Is.False, "no raise_taxes with the economy");
             var market = econ.First(b => b.Q<Label>().text == "Market");
             Assert.That(market.Query<Label>().ToList().Select(l => l.text), Has.Some.StartsWith($"{w.Rules.MarketCost} gold · up to +"));
