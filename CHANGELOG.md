@@ -31,6 +31,10 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: the economy's rules after its first game** (#20, #378). With `GameRules.Economy`, a tax change locks the
+  tax orders for `TaxLockTurns` (5) turns, and the court's moves line names each building with its price, places and gain:
+  run request 002's courts toggled taxes 79 times and built twice in 40 turns.
+
 - **Painted Realm: the economy, part 2** (#20). Under `GameRules.Economy`: a market (+5 gold, +8 on a coast), a
   barracks (+3 manpower a turn, +10 to the cap) and a farm (+3 gold, +5 on plains; three farms steady the realm),
   each bought at once with gold by a court order on one of our held provinces, one of each a province and one building
