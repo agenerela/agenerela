@@ -18,7 +18,7 @@ is for. A line per file or group, no more.
 | `GreyBoxStrategy.Chart` | `Screen/Chart/` | Sim | Drawing a generated world's chart (CPU and the data the GPU pass reads) |
 | `GreyBoxStrategy.Screen` | `Screen/` (the rest) | all of the above, Input System | The running game: director, map, UI, sound, live sessions |
 | `GreyBoxStrategy.Editor` | `Editor/` | Sim, Agents | Menu items for headless runs |
-| `GreyBoxStrategy.Screen.Editor` | `Screen/Editor/` | Screen | Builds the `Watch` scene, art import settings |
+| `GreyBoxStrategy.Screen.Editor` | `Screen/Editor/` | Screen, Replay, Sim, Agents | Builds the `Watch` scene, art import settings; `FreeOrdersLiveCheck`, rule mode played headless against model rulers |
 | `GreyBoxStrategy.Tests.Editor` | `Tests/Editor/` | Sim, Agents | Rules, map, model seats, storyteller |
 | `GreyBoxStrategy.Screen.Tests.Editor` | `Screen/Tests/Editor/` | everything | The screen's models, sessions, layout |
 
