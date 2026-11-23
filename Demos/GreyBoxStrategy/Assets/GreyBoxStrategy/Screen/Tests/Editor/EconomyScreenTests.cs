@@ -77,7 +77,7 @@ namespace GreyBoxStrategy.Screen.Tests
             var w = EconomyWorld();
             var me = w.CountryList.First();
             var p = w.ProvinceList.Where(x => x.Owner == me.Id).OrderByDescending(x => x.Info.IsCoastal).First();
-            int index = w.ProvinceList.IndexOf(p);
+            int index = w.ProvinceList.ToList().IndexOf(p);
             var q = new RealmQueries(Replay(w), w.Map, w.Rules);
             var before = ScreenModels.ProvinceRows(StateOf(w), index, q, true, CountryLook.NameOf).ToDictionary(r => r.Key);
             Assert.That(before["income"].Value, Is.EqualTo($"+{w.Yield(p)} a turn"), "World.Yield");
@@ -103,7 +103,7 @@ namespace GreyBoxStrategy.Screen.Tests
         {
             var w = EconomyWorld(economy: false);
             var me = w.CountryList.First();
-            int index = w.ProvinceList.FindIndex(x => x.Owner == me.Id);
+            int index = w.ProvinceList.ToList().FindIndex(x => x.Owner == me.Id);
             var rows = ScreenModels.ProvinceRows(StateOf(w), index, new RealmQueries(Replay(w), w.Map, w.Rules), true, CountryLook.NameOf);
             Assert.That(rows.Any(r => r.Key == "buildings"), Is.False);
             Assert.That(rows.First(r => r.Key == "income").Value, Is.EqualTo($"+{w.Rules.IncomePerProvince} a turn"));
