@@ -101,6 +101,11 @@ schema yes.
 
 On Ollama's native chat path a schema's keys come back sorted (findings, 5 November 2026). The
 framework detects that from the reply, whatever the provider: `DecisionTelemetry.OrderLost`.
+Why it matters: writing the statement before the target breaks the settled field order, measured
+as costing accuracy, so a game reads the flag and a model comparison must not run under it. The
+evaluation runner counts it per arm and refuses a run whose warm-ups come back out of order
+([evaluation.md](evaluation.md#running-an-ab), #180). It is false both when the order held and
+when the reply could not be read; the runner tells those apart by whether a reply was read.
 
 **What was built (#88).** `new Agent(profile, new OllamaProvider(new OllamaSettings()))`
 decides against `qwen3.5:4b` at `http://127.0.0.1:11434`. `OllamaSettings` is a plain class
