@@ -31,6 +31,11 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: the economy on screen** (#20, #379). When `GameRules.Economy` is on: manpower and the tax level on the
+  top bar, a province's yield and buildings, tax levels and buildings as council orders with their cost, gain and the
+  rules' reason when shut (a building picks its province from a list), and buildings and tax changes in the turn strip
+  and chronicle. Off, the screen is unchanged.
+
 - **Painted Realm: the economy's rules after its first game** (#20, #378). With `GameRules.Economy`, a tax change locks the
   tax orders for `TaxLockTurns` (5) turns, and the court's moves line names each building with its price, places and gain:
   run request 002's courts toggled taxes 79 times and built twice in 40 turns.
