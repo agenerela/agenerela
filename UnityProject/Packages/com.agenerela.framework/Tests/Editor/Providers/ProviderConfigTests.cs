@@ -69,7 +69,11 @@ namespace Agenerela.Tests
             Assert.That(settings.Model, Is.EqualTo("llama3.2:3b"));
             Assert.That(settings.TimeoutSeconds, Is.EqualTo(12f));
             Assert.That(settings.TokenAlternatives, Is.EqualTo(20));
+            Assert.That(settings.TokenProbabilities, Is.True, "Asked for unless unticked (#107).");
             Assert.That(settings.ApiKey, Is.Empty, "No variable named, no key.");
+
+            config.TokenProbabilities = false;
+            Assert.That(config.ToSettings().TokenProbabilities, Is.False);
             Assert.That(config.ApiKeyVariable, Is.Empty);
             Assert.That(config.Provider, Is.TypeOf<OllamaProvider>());
         }

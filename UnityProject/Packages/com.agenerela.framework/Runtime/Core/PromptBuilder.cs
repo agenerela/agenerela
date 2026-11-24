@@ -229,7 +229,7 @@ namespace Agenerela
             {
                 // With no statement field, the rules for one are not sent either (#266).
                 SystemPrompt = SystemPrompt(ctx.Identity, schema.AsksForStatement ? options.StatementRulesWording : (StatementRulesWording?)null,
-                    choices, options.TargetRule ? TargetRuleLine(schema) : null),
+                    choices, options.TargetRule ? TargetRuleLine(schema) : null, schema.StatementName),
                 FewShotBlock = fewShotBlock,
                 Observations = ObservationsBlock(block),
                 // Copied, so a memory strategy changing its list afterwards does not change a
@@ -253,7 +253,7 @@ namespace Agenerela
             {
                 SystemPrompt = decided.SystemPrompt,
                 Stimulus = string.Format(RefusalLineTemplate, ctx.Stimulus, EndSentence(verdict.ModelReason.Trim())),
-                Schema = DecisionSchema.StatementOnly(),
+                Schema = DecisionSchema.StatementOnly(decided.Schema?.StatementName ?? DecisionSchema.StatementFieldName),
                 AgentName = decided.AgentName,
                 StimulusText = decided.StimulusText,
                 StimulusLabel = decided.StimulusLabel,
@@ -560,7 +560,8 @@ namespace Agenerela
         // rule, each when there is one. With no knowledge and no rules the prompt is exactly what
         // it was before them (#190, Living Vale #14). A null wording sends no rules line: the
         // schema asks for no statement (#266).
-        private static string SystemPrompt(AgentIdentity identity, StatementRulesWording? wording, string choices, string targetRule)
+        private static string SystemPrompt(AgentIdentity identity, StatementRulesWording? wording, string choices, string targetRule,
+                                           string statementName = DecisionSchema.StatementFieldName)
         {
             var lines = new List<string>(7);
 
@@ -585,7 +586,7 @@ namespace Agenerela
             string rules = OneLine(identity.StatementRules);
             if (rules.Length > 0 && wording.HasValue)
             {
-                lines.Add(RulesPrefix(wording.Value) + EndSentence(rules));
+                lines.Add(RulesPrefix(wording.Value, statementName) + EndSentence(rules));
             }
 
             lines.Add(InstructionLine);
@@ -603,15 +604,25 @@ namespace Agenerela
             return string.Join("\n", lines);
         }
 
-        // The words before the statement rules (#244 item 8).
-        private static string RulesPrefix(StatementRulesWording wording)
+        // The words before the statement rules (#244 item 8), named for the field as the schema
+        // names it (DR-008): "Your dialogue: " when the call named it dialogue. With the default
+        // name, each is its constant, byte for byte.
+        private static string RulesPrefix(StatementRulesWording wording, string statementName)
         {
+            string prefix;
             switch (wording)
             {
-                case StatementRulesWording.HowItShouldRead: return StatementRulesHowItReads;
-                case StatementRulesWording.InYourOwnWords: return StatementRulesOwnWords;
-                default: return StatementRulesPrefix;
+                case StatementRulesWording.HowItShouldRead: prefix = StatementRulesHowItReads; break;
+                case StatementRulesWording.InYourOwnWords: prefix = StatementRulesOwnWords; break;
+                default: prefix = StatementRulesPrefix; break;
             }
+
+            if (string.IsNullOrWhiteSpace(statementName) || statementName == DecisionSchema.StatementFieldName)
+            {
+                return prefix;
+            }
+
+            return prefix.Replace(DecisionSchema.StatementFieldName, statementName.Replace('_', ' '));
         }
 
         // "You are <name>, <role>. <personality>", leaving out whichever parts are empty. A

@@ -332,6 +332,94 @@ namespace Agenerela.Tests.Evaluation
         }
 
         [Test]
+        public async Task AnArmThatNamesTheFieldDialogueAsksStagesAndRecordsIt()
+        {
+            // The DR-008 rename's two arms (#151): A as it is, B with the prototype's name.
+            var statement = new FakeProvider(Reply("stop_following", "no_target", "Very well."));
+            var dialogue = new FakeProvider("{\"action\":\"stop_following\",\"target\":\"no_target\",\"dialogue\":\"Very well.\"}");
+
+            var report = await Fixtures.NotCancelled(
+                Runner(new[] { Released }, null, statement, dialogue, null, new DecideOptions { StatementFieldName = DecisionSchema.DialogueFieldName }).RunAsync());
+
+            var asked = Request(dialogue, "You can go now.");
+            Assert.That(asked.Schema.Fields.Select(f => f.Name), Is.EqualTo(new[] { "action", "target", "dialogue" }));
+            Assert.That(asked.History[1], Is.EqualTo("{\"action\":\"follow_player\",\"target\":\"no_target\",\"dialogue\":\"Lead on.\"}"),
+                "The staged history keeps the name the arm asks under.");
+            Assert.That(Request(statement, "You can go now.").History[1], Does.Contain("\"statement\":\"Lead on.\""));
+
+            Assert.That(report.Conditions.Arms.Select(a => a.StatementFieldName), Is.EqualTo(new[] { "statement", "dialogue" }));
+            Assert.That(report.Answers.Select(a => a.ModelStatement), Is.All.EqualTo("Very well."), "Both arms read their own field.");
+            Assert.That(report.Arms.Select(a => a.OrderLost), Is.All.EqualTo(0));
+            Assert.That(report.ToMarkdown(), Does.Contain("Arm B named the free-text field `dialogue`.").And.Not.Contain("Arm A named"));
+            Assert.That(EvalReport.FromJson(report.ToJson()).Conditions.Arms[1].StatementFieldName, Is.EqualTo("dialogue"));
+        }
+
+        [Test]
+        public async Task AnArmThatIgnoresHistoryAsksEachPromptAloneAndSaysSo()
+        {
+            // History on against off (#151): B is asked the multi-turn prompt as if it had none.
+            var a = new FakeProvider(Reply("stop_following", "no_target"));
+            var b = new FakeProvider(Reply("stop_following", "no_target"));
+            var runner = Runner(new[] { Released }, null, a, b);
+            runner.ArmB.IgnoreHistory = true;
+
+            var report = await Fixtures.NotCancelled(runner.RunAsync());
+
+            Assert.That(Request(a, "You can go now.").History, Has.Count.EqualTo(4), "Arm A lost the history.");
+            Assert.That(Request(b, "You can go now.").History, Is.Empty, "Arm B was sent the history it ignores.");
+            Assert.That(report.Conditions.Arms.Select(c => c.IgnoreHistory), Is.EqualTo(new[] { false, true }));
+            Assert.That(report.ToMarkdown(), Does.Contain("Arm B ignored each prompt's history").And.Not.Contain("Arm A ignored"));
+            Assert.That(EvalReport.FromJson(report.ToJson()).Conditions.Arms[1].IgnoreHistory, Is.True);
+            Assert.That(new EvalArm("C", fixtures.Config(a, "FakeC")).IgnoreHistory, Is.False, "Off by default.");
+        }
+
+        [Test]
+        public async Task AnArmsAddedExampleIsShownInThatArmOnly()
+        {
+            // A free choice answered with an action (#151), in B alone.
+            var a = new FakeProvider(Reply("move_to", "bridge"));
+            var b = new FakeProvider(Reply("move_to", "bridge"));
+            var added = new List<FewShotExample> { new FewShotExample("Use your own judgement.", "move_to", "bridge", "I'll watch from the bridge.") };
+            var runner = Runner(new[] { Bridge }, null, a, b, optionsB: new DecideOptions { AddedExamples = added });
+            added.Add(new FewShotExample("Added later.", "none"));
+
+            var report = await Fixtures.NotCancelled(runner.RunAsync());
+
+            string line = "\"Use your own judgement.\" -> action: move_to, target: bridge, statement: \"I'll watch from the bridge.\"";
+            Assert.That(Request(b, "Meet me over at the bridge.").FewShotBlock, Does.Contain(line));
+            Assert.That(Request(b, "Meet me over at the bridge.").FewShotBlock, Does.Not.Contain("Added later."), "The arm's options are copied when it is made.");
+            Assert.That(Request(a, "Meet me over at the bridge.").FewShotBlock, Does.Not.Contain("Use your own judgement."));
+            Assert.That(report.Conditions.Arms[0].AddedExamples, Is.Empty);
+            Assert.That(report.Conditions.Arms[1].AddedExamples, Is.EqualTo(new[] { "\"Use your own judgement.\" -> move_to, bridge" }));
+            Assert.That(report.ToMarkdown(), Does.Contain("Arm B added 1 few-shot example(s)").And.Not.Contain("Arm A added"));
+        }
+
+        [Test]
+        public async Task AnArmsAddedExampleThatIsAPromptIsRefused()
+        {
+            var provider = new FakeProvider(Reply("none", "no_target"));
+            var runner = Runner(new[] { Bridge }, new[] { Quiet }, provider, provider,
+                optionsB: new DecideOptions { AddedExamples = new List<FewShotExample> { new FewShotExample("Meet me over at the bridge!", "none") } });
+
+            var e = await Refused(runner);
+
+            Assert.That(e.Message, Does.Contain("target_001").And.Contain("arm 'B'").And.Contain("added example").And.Contain("hard rule 4"));
+            Assert.That(provider.Requests, Is.Empty);
+        }
+
+        [Test]
+        public async Task AnArmsAddedStatementThatIsAPromptIsRefused()
+        {
+            var provider = new FakeProvider(Reply("none", "no_target"));
+            var runner = Runner(new[] { Bridge }, new[] { Quiet }, provider, provider,
+                optionsB: new DecideOptions { AddedExamples = new List<FewShotExample> { new FewShotExample("Use your own judgement.", "none", null, "The square is empty.") } });
+
+            var e = await Refused(runner);
+
+            Assert.That(e.Message, Does.Contain("situation_001").And.Contain("added example's statement"));
+        }
+
+        [Test]
         public async Task AnArmThatAsksForNoStatementStagesNone()
         {
             var provider = new FakeProvider(Reply("stop_following", "no_target"));

@@ -37,6 +37,13 @@ namespace Agenerela.Evaluation
         /// provider, and in a report written before it existed, which asked for 5.
         /// </summary>
         [JsonProperty("tokenAlternatives", NullValueHandling = NullValueHandling.Ignore)] public int? TokenAlternatives;
+        /// <summary>
+        /// Whether an Ollama arm asked for token probabilities
+        /// (<see cref="Agenerela.Providers.OllamaSettings.TokenProbabilities"/>, #107); null for another
+        /// provider, and in a report written before it existed, which always asked. False, the arm sent
+        /// the target rule and the grounding guard read nothing.
+        /// </summary>
+        [JsonProperty("tokenProbabilities", NullValueHandling = NullValueHandling.Ignore)] public bool? TokenProbabilities;
         [JsonProperty("askForRefusalLine")] public bool AskForRefusalLine;
         [JsonProperty("idleExampleStimulus")] public string IdleExampleStimulus;
         [JsonProperty("listActionsAndTargets")] public bool ListActionsAndTargets;
@@ -61,6 +68,11 @@ namespace Agenerela.Evaluation
         /// before it existed, which used <c>YourStatement</c>.
         /// </summary>
         [JsonProperty("statementRulesWording")] public string StatementRulesWording;
+        /// <summary>
+        /// What the arm named the free-text field (<see cref="DecideOptions.StatementFieldName"/>,
+        /// DR-008); null in a report written before it existed, which named it <c>statement</c>.
+        /// </summary>
+        [JsonProperty("statementFieldName", NullValueHandling = NullValueHandling.Ignore)] public string StatementFieldName;
         /// <summary>The arm's own <see cref="EvalArm.StatementRules"/>, in place of the profile's; null when it kept the profile's.</summary>
         [JsonProperty("statementRules", NullValueHandling = NullValueHandling.Ignore)] public string StatementRules;
         /// <summary>The arm's own target legality (<see cref="EvalArm.Legality"/>, #151); null when it ran the set as it is.</summary>
@@ -84,6 +96,17 @@ namespace Agenerela.Evaluation
         /// #151); false in a report written before it existed.
         /// </summary>
         [JsonProperty("summariseTargets")] public bool SummariseTargets;
+        /// <summary>
+        /// Whether the arm ignored each prompt's history (<see cref="EvalArm.IgnoreHistory"/>, #151);
+        /// false in a report written before it existed, which staged it.
+        /// </summary>
+        [JsonProperty("ignoreHistory")] public bool IgnoreHistory;
+        /// <summary>
+        /// The arm's added few-shot examples (<see cref="DecideOptions.AddedExamples"/>, #151), each as
+        /// "stimulus -&gt; action, target"; empty when it added none, and in a report written before
+        /// they existed.
+        /// </summary>
+        [JsonProperty("addedExamples")] public List<string> AddedExamples = new List<string>();
         [JsonProperty("priority")] public string Priority;
         [JsonProperty("observations")] public List<string> Observations = new List<string>();
         /// <summary>The arm's <see cref="EvalArm.Knowledge"/>, added to the profile's; empty in a report written before it existed.</summary>

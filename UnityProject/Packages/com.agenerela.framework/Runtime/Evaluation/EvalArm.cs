@@ -93,6 +93,14 @@ namespace Agenerela.Evaluation
         /// </summary>
         public bool SummariseTargets { get; set; }
 
+        /// <summary>
+        /// Whether the arm ignores each prompt's <c>history</c> (#147, #151): false unless set, which
+        /// puts a multi-turn prompt's earlier turns in the agent's memory before its stimulus is asked.
+        /// On, every prompt is asked alone, as a prompt without history always is, and scored against
+        /// the same label, so an A/B run measures what the history adds.
+        /// </summary>
+        public bool IgnoreHistory { get; set; }
+
         /// <summary>The arm's name in the report.</summary>
         public string Name { get; }
 
