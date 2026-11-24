@@ -19,3 +19,5 @@ MonoBehaviour:
     ExampleStimulus: You can stay put now.
     PreferredExampleTargets: []
     ExampleStatement: 'Understood, I''ll hold here.'
+    CounterExampleStimulus: Standing watch all day must get dull.
+    CounterExampleStatement: It has its quiet hours.

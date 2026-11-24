@@ -21,5 +21,7 @@ MonoBehaviour:
     - well
     - bridge
     ExampleStatement: Heading over there now.
+    CounterExampleStimulus: Is the {0} far from here?
+    CounterExampleStatement: Not far, just down the road.
     TargetCategories:
     - place

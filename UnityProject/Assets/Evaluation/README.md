@@ -96,8 +96,13 @@ written. A test checks that our set breaks none of them.
   (`ExampleStatement` on each action and `IdleExampleStatement`, #151) were written here first,
   since the demo's guard has none: "Lead the way, I'm right behind you.", "Understood, I'll hold
   here.", "Heading over there now.", "Stand back, I'll deal with it." and "Aye, quiet enough for
-  now.". An arm with `ExampleStatements = false` sends the prompt from before them; `PromptSetStartTests`
-  checks that none matches a prompt.
+  now.". Its actions' counter-examples, each answered with `none` (`CounterExampleStimulus` and
+  `CounterExampleStatement`, #151), were written here too: "You walk the same rounds every day, don't
+  you?" / "Same rounds, rain or shine.", "Standing watch all day must get dull." / "It has its quiet
+  hours.", "Is the {0} far from here?" / "Not far, just down the road." and "Have you ever had to fight
+  a {0}?" / "Once or twice, never gladly.". An arm with `ExampleStatements = false` and
+  `CounterExamples = false` sends the prompt from before both; `PromptSetStartTests` checks that none
+  matches a prompt.
 - **Targets are registered ids, not descriptions.** Name a concrete `wolf`, not
   `nearby_enemy`. A new target goes into `agent.json` first, with its category: a label
   `move_to` / `wolf` is refused, because `move_to` takes places.
