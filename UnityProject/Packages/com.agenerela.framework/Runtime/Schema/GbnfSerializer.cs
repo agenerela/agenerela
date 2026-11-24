@@ -323,4 +323,4 @@ namespace Agenerela
             output.Append(Hex[value & 0xf]);
         }
     }    
-}
+}   
