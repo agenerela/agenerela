@@ -128,10 +128,10 @@ part D is mostly the video. If a rehearsal runs long, cut slide 14 to one line f
 - **The demo video** (slides 12–13) is being made in another session. Insert it on slide 13
   (Insert → Video in Google Slides), update slide 12's list to match its order, and keep a
   backup `.mp4`.
-- **Re-check slide 7's statuses** the day before: image generation (the framework part merged
-  in #394; the game's part is open), speech (DR-024, not built), and **map naming and
-  backstory, for which no issue, branch or commit existed on 24 November**. It is shown as
-  Planned; drop the row if it is not going to be filed.
+- **Re-check slide 7's statuses** the day before: the evaluation harness (Phase 4) and the
+  speech provider (DR-024, not built on 24 November). Slides 7 and 9 list framework features
+  only, the ones any game can use; a game's own features (Painted Realm's map naming, its
+  pictures in the court) belong in the demo, not in the requirements.
 - **Re-run the numbers** (`numbers.md` says how) if more merges land, and change the slides with them.
 - **Phase 4** closes on 7 December, the first presentation day. If the second annotator's
   agreement (#148) lands, slides 5, 7, 11 and 14 change from In work.
