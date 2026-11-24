@@ -29,7 +29,7 @@ modules with one decision passing through them, drawn for the system-design prac
 | [`png/00-sitemap.png`](png/00-sitemap.png) | Sitemap and screen flow: both zones, plus the six steps of one decision | — |
 | [`png/01-agent-profile.png`](png/01-agent-profile.png) | **Agent Profile & Actions** — Inspector for the profile asset | Assets in Phase 1 (#4, #15); Inspector polish in Phase 5 |
 | [`png/02-agent-behaviour.png`](png/02-agent-behaviour.png) | **Agent Behaviour** — the component that puts an agent in a scene | Component in Phase 2; polish in Phase 5 |
-| [`png/03-decision-log.png`](png/03-decision-log.png) | **Decision Log** — why an agent did what it did | Phase 5, over the Phase 1 telemetry types (#3) |
+| [`png/03-decision-log.png`](png/03-decision-log.png) | **Decision Log** — why an agent did what it did | Phase 5: built in #172, over the decision feed (#166) |
 | [`png/04-evaluation-report.png`](png/04-evaluation-report.png) | **Evaluation Report** — A/B over the labelled prompt set | Phase 4: built in #146; UI Toolkit in #179 |
 | [`png/05-village.png`](png/05-village.png) | **GreyBoxVillage play screen** — talking to the guard | Grey box today (#19); real decisions in Phase 2 |
 | [`png/06-strategy.png`](png/06-strategy.png) | **GreyBoxStrategy turn screen** — countries as agents | Grey box next (#20); real decisions in Phase 3 |
@@ -39,6 +39,14 @@ modules with one decision passing through them, drawn for the system-design prac
 **Screen 1 has one planned change.** The idle example moves from its own section onto the
 locked `none` row of the action list, which expands like the other rows (build plan §2.7).
 The figure still draws the separate section.
+
+**Screen 3 is built** (#172), and differs from the figure in four ways. A fifth outcome, *not
+executed yet*, marks a decision nothing has run. The guard list names every guard the decision's
+pipeline held, built-in ones included, as passed, stopped or not run, rather than a fixed three.
+The telemetry also says which of DR-013's three places the provider config came from. **Add to
+evaluation prompts** is not there yet; it waits on the Prompt Set window (#160). The figure is not
+redrawn yet. [The package's guide](../../UnityProject/Packages/com.agenerela.framework/Documentation~/decision-log.md)
+describes the window as built.
 
 **Screen 4 is redrawn as built** (#146, #179). The window stacks the lab figure's six numbered
 parts in one column, takes the model from each arm's provider config instead of a Model field,

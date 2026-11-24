@@ -10,6 +10,18 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **The Decision Log window** (#172, screen 3): **Window → Agenerela → Decision Log**. Every
+  decision any agent makes in Play mode is a row, newest first, with its outcome (executed, no
+  action, contained by a guard, error, or not executed yet), what it was asked and what came of it,
+  both values when a guard changed the move (`attack_target · training_dummy ⇒ none`). Filters by
+  outcome, agent and stimulus; the detail shows what was asked and offered, the raw reply, every
+  guard in order as passed, stopped or not run, the result, and the telemetry, the provider config
+  and where it came from included. Copy as JSON, Export .jsonl (the decision log format), Select
+  agent in scene, Clear, Clear on Play and Recording. It keeps 1,000 decisions across leaving Play
+  mode, and subscribes to the feed only while open and recording. `DecisionTelemetry.GuardOrder`
+  records every guard the pipeline held, in order, and decision log version 4 writes it as `guards`.
+  See `Documentation~/decision-log.md`.
+
 - **A prompt-size budget** (#151, #392). `PromptBudget` and `PromptTrim` set a budget per agent
   (`Agent.PromptBudget`) or per call (`DecideOptions.PromptBudget`). It is estimated before sending
   from characters (3 a token by default) and judged on the provider's count after. Optional trims

@@ -7,7 +7,8 @@ namespace Agenerela.Editor.UI
 {
     /// <summary>
     /// What happened to one decision, as the Decision Log shows it (screen 3 ③). Four outcomes
-    /// that look identical in the game, "the agent did nothing", but need different fixes.
+    /// that look identical in the game, "the agent did nothing", but need different fixes, and a
+    /// fifth for a decision nothing has executed yet (#172).
     /// </summary>
     /// <remarks>
     /// Not <see cref="DecisionOutcome"/>: that grades an answer against a label for the
@@ -26,12 +27,15 @@ namespace Agenerela.Editor.UI
 
         /// <summary>The request failed, so nothing was decided.</summary>
         Error,
+
+        /// <summary>Decided, but nothing has executed it yet (#172).</summary>
+        NotExecuted,
     }
 
     /// <summary>
     /// The icon for one <see cref="Outcome"/> (#167), from Unity's built-in icons only, with a
     /// tooltip saying what it means. The Decision Log, its filters and the Evaluation Report all
-    /// draw the same four.
+    /// draw the same ones.
     /// </summary>
     [UxmlElement]
     internal partial class OutcomeIcon : Image
@@ -73,6 +77,7 @@ namespace Agenerela.Editor.UI
             Outcome.NoAction => "no-action",
             Outcome.Contained => "contained",
             Outcome.Error => "error",
+            Outcome.NotExecuted => "not-executed",
             _ => throw new ArgumentOutOfRangeException(nameof(outcome), outcome, null),
         };
 
@@ -83,6 +88,7 @@ namespace Agenerela.Editor.UI
             Outcome.NoAction => "No action",
             Outcome.Contained => "Contained",
             Outcome.Error => "Error",
+            Outcome.NotExecuted => "Not executed yet",
             _ => throw new ArgumentOutOfRangeException(nameof(outcome), outcome, null),
         };
 
@@ -93,12 +99,14 @@ namespace Agenerela.Editor.UI
             Outcome.NoAction => "No action: the model chose to do nothing.",
             Outcome.Contained => "Contained: a guard blocked the choice.",
             Outcome.Error => "Error: the request failed, so nothing was decided.",
+            Outcome.NotExecuted => "Not executed yet: decided, but nothing has run it yet.",
             _ => throw new ArgumentOutOfRangeException(nameof(outcome), outcome, null),
         };
 
         /// <summary>
-        /// The built-in icon's name. These four match the wireframe's ✓ ○ ⚠ ✕ and the Test Runner
-        /// and Console, so a developer reads them without a legend.
+        /// The built-in icon's name. The first four match the wireframe's ✓ ○ ⚠ ✕ and the Test Runner
+        /// and Console, so a developer reads them without a legend; not executed yet is the Test
+        /// Runner's stopwatch: still waiting.
         /// </summary>
         internal static string IconName(Outcome outcome) => outcome switch
         {
@@ -106,6 +114,7 @@ namespace Agenerela.Editor.UI
             Outcome.NoAction => "TestIgnored",
             Outcome.Contained => "console.warnicon.sml",
             Outcome.Error => "console.erroricon.sml",
+            Outcome.NotExecuted => "TestStopwatch",
             _ => throw new ArgumentOutOfRangeException(nameof(outcome), outcome, null),
         };
 

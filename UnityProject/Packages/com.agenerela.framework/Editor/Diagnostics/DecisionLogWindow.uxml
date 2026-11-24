@@ -1,0 +1,41 @@
+<!--
+    The Decision Log window's structure (#172, screen 3). Layout is in DecisionLogWindow.uss;
+    colour, type and the kit's pieces come from Agenerela.uss (#167). Elements with a name are
+    filled or wired by DecisionLogUi; what repeats (the outcome filters, the rows, the detail's
+    sections) is built there, from the kit.
+-->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:VisualElement name="decision-log" class="dl">
+        <uie:Toolbar name="toolbar" class="dl-toolbar">
+            <uie:ToolbarToggle name="recording" text="Recording" tooltip="Record every decision any agent makes while this window is open. Off, nothing is recorded and the game pays nothing for this window." />
+            <uie:ToolbarButton name="clear" text="Clear" tooltip="Remove every decision from the log." />
+            <uie:ToolbarToggle name="clear-on-play" text="Clear on Play" tooltip="Clear the log each time Play mode starts, as the Console's own toggle does." />
+            <uie:ToolbarSpacer />
+            <uie:ToolbarMenu name="agent-menu" text="All agents" tooltip="Show one agent's decisions." />
+            <ui:VisualElement name="outcome-filters" class="dl-outcome-filters" />
+            <ui:VisualElement class="dl-grow" />
+            <uie:ToolbarSearchField name="search" class="dl-search" tooltip="Find decisions by what the agents were asked: the stimulus or its label." />
+            <uie:ToolbarButton name="export" text="Export .jsonl" tooltip="Save the decisions shown as a JSON-lines file, oldest first, in the format DecisionLogReader reads." />
+        </uie:Toolbar>
+
+        <ui:TwoPaneSplitView name="split" fixed-pane-index="0" fixed-pane-initial-dimension="460" orientation="Horizontal" class="dl-split">
+            <!-- ① The decisions -->
+            <ui:VisualElement name="list-pane" class="dl-list-pane">
+                <ui:VisualElement class="dl-list-header">
+                    <ui:Label text="Time · agent" class="ag-muted dl-col-who" />
+                    <ui:Label text="Asked → result" class="ag-muted dl-col-what" />
+                    <ui:Label text="Latency" class="ag-muted dl-col-latency" />
+                </ui:VisualElement>
+                <ui:ListView name="list" fixed-item-height="38" selection-type="Single" virtualization-method="FixedHeight" class="dl-list" />
+                <ui:Label name="empty" class="ag-muted dl-empty" />
+                <ui:Label name="status" class="ag-muted dl-status" />
+            </ui:VisualElement>
+
+            <!-- ④ to ⑥ The decision selected -->
+            <ui:ScrollView name="detail-scroll" class="dl-detail-scroll">
+                <ui:Label name="no-selection" text="Click a decision to see the whole story: what the agent was asked, what the model was offered and answered, what each guard did, and the telemetry." class="ag-muted dl-empty dl-wrap" />
+                <ui:VisualElement name="detail" class="dl-detail" />
+            </ui:ScrollView>
+        </ui:TwoPaneSplitView>
+    </ui:VisualElement>
+</ui:UXML>

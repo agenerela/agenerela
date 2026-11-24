@@ -5,7 +5,7 @@ using NUnit.Framework;
 
 namespace Agenerela.Tests.UI
 {
-    /// <summary>The four outcome icons of the Decision Log (screen 3 ③, #167).</summary>
+    /// <summary>The outcome icons of the Decision Log (screen 3 ③, #167, #172).</summary>
     public sealed class OutcomeIconTests
     {
         private static readonly Outcome[] Outcomes = (Outcome[])Enum.GetValues(typeof(Outcome));
@@ -26,7 +26,7 @@ namespace Agenerela.Tests.UI
         }
 
         [Test]
-        public void TheFourOutcomesLookDifferent()
+        public void EveryOutcomeLooksDifferent()
         {
             var images = Outcomes.Select(OutcomeIcon.Icon).ToList();
 

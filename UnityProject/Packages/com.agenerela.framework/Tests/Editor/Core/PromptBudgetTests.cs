@@ -269,7 +269,7 @@ namespace Agenerela.Tests
             Assert.That(line.PromptCharacters, Is.EqualTo(withFirst));
             Assert.That(line.PromptTokensEstimated, Is.EqualTo(withFirst));
             Assert.That(line.PromptTrims, Is.EqualTo(new[] { "OptionalObservations: 1 line" }));
-            Assert.That(DecisionLogLine.CurrentVersion, Is.EqualTo(3));
+            Assert.That(DecisionLogLine.CurrentVersion, Is.AtLeast(3), "Version 3 added the budget fields.");
 
             var free = await Fixtures.NotCancelled(Woodcutter(new FakeProvider(Chop)).DecideAsync("What now?", Options()));
             var plain = DecisionLogLine.From(new DecisionFeedEntry(agent, free, DecisionStage.Decided, null, DateTime.UtcNow, 2));

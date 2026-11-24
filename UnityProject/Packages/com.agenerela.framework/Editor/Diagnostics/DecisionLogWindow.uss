@@ -1,0 +1,246 @@
+/*
+ * The Decision Log window's layout (#172, screen 3). Colours, type and the kit's pieces come
+ * from Agenerela.uss (#167) through its --ag-* variables; nothing here sets a colour of its own.
+ */
+
+.dl {
+    flex-grow: 1;
+}
+
+.dl-grow {
+    flex-grow: 1;
+}
+
+.dl-wrap {
+    white-space: normal;
+}
+
+/* Toolbar */
+
+.dl-outcome-filters {
+    flex-direction: row;
+}
+
+.dl-filter {
+    flex-direction: row;
+    align-items: center;
+}
+
+.dl-filter .ag-outcome {
+    margin-right: var(--ag-space-xs);
+}
+
+.dl-search {
+    width: 180px;
+    flex-shrink: 1;
+}
+
+/* ① The list */
+
+.dl-split {
+    flex-grow: 1;
+}
+
+.dl-list-pane {
+    flex-grow: 1;
+    min-width: 280px;
+}
+
+.dl-list-header {
+    flex-direction: row;
+    padding-top: var(--ag-space-s);
+    padding-bottom: var(--ag-space-s);
+    padding-left: var(--ag-space-m);
+    padding-right: var(--ag-space-m);
+    border-bottom-width: 1px;
+    border-color: var(--ag-line);
+    font-size: var(--ag-font-size-small);
+}
+
+.dl-list {
+    flex-grow: 1;
+}
+
+.dl-row {
+    flex-direction: row;
+    align-items: center;
+    padding-left: var(--ag-space-m);
+    padding-right: var(--ag-space-m);
+    height: 38px;
+}
+
+.dl-row .ag-outcome {
+    margin-right: var(--ag-space-m);
+}
+
+.dl-col-who {
+    width: 120px;
+    flex-shrink: 0;
+}
+
+.dl-col-what {
+    flex-grow: 1;
+    flex-shrink: 1;
+    overflow: hidden;
+}
+
+.dl-col-latency {
+    width: 56px;
+    flex-shrink: 0;
+    -unity-text-align: middle-right;
+}
+
+.dl-row__time {
+    font-size: var(--ag-font-size-small);
+}
+
+.dl-row__agent,
+.dl-row__asked {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dl-row__result {
+    -unity-font-definition: var(--ag-font-mono);
+    font-size: var(--ag-font-size-small);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dl-empty {
+    padding: var(--ag-space-xl);
+    -unity-text-align: middle-center;
+}
+
+.dl-status {
+    padding-top: var(--ag-space-s);
+    padding-bottom: var(--ag-space-s);
+    padding-left: var(--ag-space-m);
+    padding-right: var(--ag-space-m);
+    border-top-width: 1px;
+    border-color: var(--ag-line);
+    font-size: var(--ag-font-size-small);
+}
+
+/* ④ to ⑥ The detail */
+
+.dl-detail-scroll {
+    flex-grow: 1;
+    min-width: 260px;
+}
+
+.dl-detail {
+    padding: var(--ag-space-l);
+}
+
+.dl-header {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: var(--ag-space-s);
+}
+
+.dl-header .ag-outcome {
+    margin-right: var(--ag-space-m);
+}
+
+.dl-header__title {
+    font-size: var(--ag-font-size-big);
+    -unity-font-style: bold;
+}
+
+.dl-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-top: var(--ag-space-s);
+    margin-bottom: var(--ag-space-s);
+}
+
+.dl-actions > Button {
+    margin-left: 0;
+    margin-right: var(--ag-space-s);
+}
+
+.dl-field {
+    flex-direction: row;
+    margin-bottom: var(--ag-space-xs);
+}
+
+.dl-field__label {
+    width: 130px;
+    flex-shrink: 0;
+}
+
+.dl-field__value {
+    flex-grow: 1;
+    flex-shrink: 1;
+    white-space: normal;
+}
+
+.dl-mono {
+    -unity-font-definition: var(--ag-font-mono);
+    font-size: var(--ag-font-size-small);
+    white-space: normal;
+}
+
+.dl-reply {
+    white-space: pre-wrap;
+    padding: var(--ag-space-m);
+    border-width: 1px;
+    border-color: var(--ag-surface-line);
+    border-radius: var(--ag-radius);
+    background-color: var(--ag-surface);
+}
+
+.dl-guard {
+    flex-direction: row;
+    align-items: flex-start;
+    margin-bottom: var(--ag-space-s);
+}
+
+.dl-guard__index {
+    width: 18px;
+    flex-shrink: 0;
+}
+
+.dl-guard__name {
+    width: 190px;
+    flex-shrink: 0;
+    -unity-font-definition: var(--ag-font-mono);
+    font-size: var(--ag-font-size-small);
+    white-space: normal;
+}
+
+.dl-guard__step {
+    width: 120px;
+    flex-shrink: 0;
+    -unity-font-style: bold;
+}
+
+.dl-guard--stopped .dl-guard__step,
+.dl-guard--refused .dl-guard__step {
+    color: var(--ag-warning);
+}
+
+.dl-guard--failed .dl-guard__step {
+    color: var(--ag-error);
+}
+
+.dl-guard--not-run {
+    opacity: 0.6;
+}
+
+.dl-guard__reason {
+    flex-grow: 1;
+    flex-shrink: 1;
+    white-space: normal;
+}
+
+.dl-result--contained {
+    border-left-width: 3px;
+    border-left-color: var(--ag-warning);
+}
+
+.dl-result--error {
+    border-left-width: 3px;
+    border-left-color: var(--ag-error);
+}

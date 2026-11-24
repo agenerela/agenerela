@@ -42,6 +42,16 @@ namespace Agenerela
         /// </summary>
         public static event Action<DecisionFeedEntry> Recorded;
 
+        /// <summary>
+        /// Whether <paramref name="handler"/> is subscribed right now: for a tool's tests, such as the
+        /// Decision Log's check that a closed window leaves the feed alone (#172).
+        /// </summary>
+        internal static bool IsSubscribed(Action<DecisionFeedEntry> handler)
+        {
+            var subscribers = Recorded;
+            return subscribers != null && Array.IndexOf(subscribers.GetInvocationList(), handler) >= 0;
+        }
+
         internal static void RaiseDecided(Agent agent, DecisionResult result)
         {
             if (Recorded != null)

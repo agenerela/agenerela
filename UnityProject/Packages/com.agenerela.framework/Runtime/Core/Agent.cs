@@ -1772,10 +1772,15 @@ namespace Agenerela
             string running = null;
             GuardVerdict verdict;
             AgentDecision decision;
+
+            // A copy, so a guard that edits the list while it runs cannot break the loop, and the
+            // order recorded is the order run (#172).
+            var developer = Guards.ToArray();
+            RecordGuardOrder(input.Telemetry, developer);
             try
             {
                 // The decision as the guards left it: its statement replaced, if a guard replaced it (#266 item 4).
-                verdict = GuardPipeline.Run(AllGuards(name => running = name), input, "", out decision);
+                verdict = GuardPipeline.Run(AllGuards(developer, name => running = name), input, "", out decision);
             }
             catch (Exception e)
             {
@@ -2091,7 +2096,7 @@ namespace Agenerela
 
         // Each guard in the order they run, telling running how to name it just before it does, so
         // a guard that throws is named in the warning.
-        private IEnumerable<IDecisionGuard> AllGuards(Action<string> running)
+        private static IEnumerable<IDecisionGuard> AllGuards(IDecisionGuard[] guards, Action<string> running)
         {
             foreach (var guard in BuiltInGuards)
             {
@@ -2099,8 +2104,6 @@ namespace Agenerela
                 yield return guard;
             }
 
-            // A copy, so a guard that edits the list while it runs cannot break the loop.
-            var guards = Guards.ToArray();
             for (int i = 0; i < guards.Length; i++)
             {
                 var guard = guards[i];
@@ -2112,6 +2115,24 @@ namespace Agenerela
 
                 running($"'{NameOf(guard)}' (Guards[{i}])");
                 yield return guard;
+            }
+        }
+
+        // Every guard this decision's pipeline holds, in the order they run, named as GuardsFired
+        // names them, so a tool can say which passed and which never ran (#172). A null entry is
+        // recorded as "Guards[i]", which is how the pipeline error it causes names it.
+        private static void RecordGuardOrder(DecisionTelemetry telemetry, IDecisionGuard[] developer)
+        {
+            var order = telemetry.GuardOrder;
+            order.Clear();
+            foreach (var guard in BuiltInGuards)
+            {
+                order.Add(NameOf(guard));
+            }
+
+            for (int i = 0; i < developer.Length; i++)
+            {
+                order.Add(developer[i] == null ? $"Guards[{i}]" : NameOf(developer[i]));
             }
         }
 
