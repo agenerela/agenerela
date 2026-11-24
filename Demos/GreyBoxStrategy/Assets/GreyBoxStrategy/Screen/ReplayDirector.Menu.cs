@@ -29,7 +29,7 @@ namespace GreyBoxStrategy.Realm
         }
 
         /// <summary>The UI scale now: the settings' fixed step, or automatic from the screen's size.</summary>
-        private float CurrentUiScale() => settings != null && settings.UiScale > 0 ? settings.UiScale : UiScale.For(Screen.width, Screen.height);
+        private float CurrentUiScale() => (settings != null && settings.UiScale > 0 ? settings.UiScale : UiScale.For(Screen.width, Screen.height)) * demoUiScale;
 
         private void ApplyScale()
         {
