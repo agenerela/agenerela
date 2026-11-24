@@ -79,6 +79,75 @@ namespace Agenerela
             return grammar.ToString();
         }
 
+        // A paired schema is a choice of complete objects. Each object's action and target
+        // enums are narrowed to that pair, matching JsonSchemaSerializer's root anyOf branches.
+        private static string SerializePairs(IReadOnlyList<SchemaField> fields,
+            IReadOnlyList<ActionTargets> pairs)
+        {
+            ValidatePairs(fields, pairs);
+
+            var grammar = new StringBuilder();
+            var branches = new List<string>(pairs.Count);
+            for (var i = 0; i < pairs.Count; i++)
+            {
+                branches.Add("pair-" + i + "-object");
+            }
+
+            AppendRule(grammar, "root", "ws (" + string.Join(" | ", branches) + ") ws");
+            for (var i = 0; i < pairs.Count; i++)
+            {
+                AppendPairObjectRules(grammar, fields, pairs[i], i);
+            }
+
+            AppendJsonStringRules(grammar);
+            AppendRule(grammar, "ws", "[ \\t\\n]{0,20}");
+            return grammar.ToString();
+        }
+
+        private static void AppendPairObjectRules(StringBuilder grammar,
+            IReadOnlyList<SchemaField> fields, ActionTargets pair, int pairIndex)
+        {
+            var prefix = "pair-" + pairIndex + "-";
+            AppendRule(grammar, prefix + "object",
+                GbnfTerminal("{") + " ws " + prefix + "fields-0 ws " + GbnfTerminal("}"));
+
+            for (var i = 0; i < fields.Count; i++)
+            {
+                var field = fields[i];
+                var values = field.AllowedValues;
+                if (field.Name == DecisionSchema.ActionFieldName)
+                {
+                    values = pair.Actions;
+                }
+                else if (field.Name == DecisionSchema.TargetFieldName)
+                {
+                    values = pair.Targets;
+                }
+
+                AppendRule(grammar, prefix + "field-" + i,
+                    GbnfTerminal(JsonQuote(field.Name)) + " ws " + GbnfTerminal(":") + " ws " + prefix + "value-" + i);
+
+                if (values == null)
+                {
+                    AppendRule(grammar, prefix + "value-" + i, "json-string");
+                }
+                else
+                {
+                    var alternatives = new List<string>(values.Count);
+                    foreach (var value in values)
+                    {
+                        alternatives.Add(GbnfTerminal(JsonQuote(value)));
+                    }
+
+                    AppendRule(grammar, prefix + "value-" + i,
+                        "(" + string.Join(" | ", alternatives) + ")");
+                }
+            }
+
+            AppendFieldSequenceRules(grammar, fields, prefix);
+        }
+
+
         // Builds grammar rules that control how field appear in the JSON object.
         // Keeps fields in thier original order.
         private static void AppendFieldSequenceRules(StringBuilder grammar, IReadOnlyList<SchemaField> fields)
