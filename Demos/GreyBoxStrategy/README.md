@@ -829,6 +829,42 @@ a hungry one none from its hunger line.
   tag, every turn's end tags each siege with the game's own turns, every army has its stores at every moment, and a
   hungry army shows the warning to you and not to a rival (broken by not reading the line of a siege that ended).
 
+### A painted court for every new world (24 November; DR-025)
+
+At New game, behind the loading card, each ruler of a generated world gets a portrait and a banner made for that
+world, through the framework's image provider (`Agenerela.ComfyUI`, DR-025) on the team's ComfyUI server.
+- **When:** after the world is made and its game is set up, before the chart is laid out and before any decision is
+  asked for. A picture unloads the decision model on a shared card, so none is ever made during play. The card shows
+  "Painting Valen's ruler (3 of 10). Esc: skip"; Esc stops asking, and the rest fall back.
+- **What is asked:** the art pack's own style line, word for word, then
+  - **a portrait** (768 × 896, the pack's size, so the head crop fits): king or queen, age, hair, complexion and
+    beard chosen by a stable hash of the world's seed and the realm, the persona's look (two each; a neutral one
+    for your realm), in the realm's map colour with gilt trim;
+  - **a banner** (640 × 896): a swallow-tailed war banner on a dark wall, in the realm's colour, with one beast or
+    device (14) chosen by the realm's name.
+  The prompts are `RulerArtPrompts`; the same world always asks for the same pictures.
+- **A backstory seam:** `RulerSubject.Backstory`, empty today, joins the portrait's prompt as untrusted text, capped at
+  160 characters and cleaned by `ImagePromptBuilder`, so a generated world history can colour the faces without
+  steering the art direction.
+- **The cache:** `<persistentDataPath>/painted-realm-art/<world seed>/`, one PNG per request key. A world painted once
+  starts with no server at all.
+- **Fallbacks:** on the server's first failure (down, busy, a missing model, a timeout of 150 s), past a 300 s budget,
+  or on Esc, nothing more is asked; every picture not in the cache falls back to the art pack's face and the coded
+  banner. A world always starts.
+- **A painted frame:** the model sometimes paints a white frame around the picture despite the prompt (3 of the first
+  20). `RulerArtServer.LooksFramed` spots a bright band on two of the top, left and right edges, and the picture is asked
+  for up to twice more, each time with another seed; the clean one is kept under the first request's key too, and if every try is framed the art pack's picture hangs.
+- **Where they hang:** the portrait wherever a ruler's portrait hangs (until you click your own to choose a pack
+  face); the banner in place of the coded banner beside the top bar. The small crests stay coded, since a painted
+  charge does not read at 14 px.
+- **The server:** `COMFY_URL` and `COMFY_API_TOKEN` from the environment; in the Editor, when unset, the main
+  checkout's `tools/comfyui/.env`, read as `comfy.py` reads it and never logged. The home server has the int8 model,
+  so every request names `z_image_turbo_int8_convrot.safetensors` (`PAINTED_REALM_COMFY_UNET` overrides it).
+- **Headless:** `CourtArtCheck.RunFromCommandLine -courtSeeds 7,21 -courtOut <folder>` paints worlds through the same
+  path, for a contact sheet.
+- **Tests** (`RulerArtTests`): the prompts, the cache on a second visit and with no server, the stop on the first
+  failure, Esc, the budget, the frame check and its retry. Each was seen failing.
+
 ### Generated art: the first pack (16 November)
 
 Variant B's empty picture frames are filled, from an art pack made ahead of time and shipped with the game.

@@ -9,7 +9,8 @@
         "GreyBoxStrategy.Chart",
         "GreyBoxStrategy.Screen",
         "GreyBoxStrategy",
-        "Agenerela"
+        "Agenerela",
+        "Agenerela.ComfyUI"
     ],
     "includePlatforms": [
         "Editor"

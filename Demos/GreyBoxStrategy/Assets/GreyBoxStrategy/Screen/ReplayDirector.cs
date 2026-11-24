@@ -76,6 +76,7 @@ namespace GreyBoxStrategy.Realm
             cam = Camera.main;
             // A generated world is made, played and drawn behind a loading card, off the main thread
             // where it can be, so the screen never freezes while it waits.
+            if (pendingWorld == null) RulerArtServer.Clear(); // the court art is a generated world's alone
             if (pendingWorld != null) yield return LoadGeneratedWorld();
             else if (pendingClassic != null) yield return LoadClassicWrits();
             StartScreen();

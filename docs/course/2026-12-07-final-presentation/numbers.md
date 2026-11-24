@@ -1,6 +1,6 @@
 # Every number in the final deck, and where it came from
 
-Read on **24 November 2026**, from `origin/test` at `fca765f` and the GitHub API. Re-run the
+Read on **24 November 2026**, from `origin/test` at `c32baec` (after #394, #395, #396 and #398 merged) and the GitHub API. Re-run the
 commands before presenting and change `build-deck.js` and this page together if anything moved.
 GitHub numbers come from [`numbers/fetch_gh.py`](numbers/fetch_gh.py) (pulls every pull request with
 its reviews and every issue through `gh api graphql` into `numbers/data/`, not committed) and
@@ -22,32 +22,31 @@ Hard rule 2: n, the control and the noise floor are on the slide with each resul
 
 | Slide | Number | Source |
 |---|---|---|
-| 3 | Version 0.4.0-preview.2, released 16 November | Tag `v0.4.0-preview.2` (commit date 16 Nov; GitHub release 17 Nov UTC); `package.json` |
-| 3 | 159 runtime C# files | `find UnityProject/Packages/com.agenerela.framework/Runtime -name "*.cs" \| wc -l` |
-| 3 | 1,800+ tests | 1,836 lines with `[Test]`, `[UnityTest]` or `[TestCase]` under the package's `Tests/` (`grep -rE "^\s*\[(Test\|UnityTest\|TestCase\b)" Tests \| wc -l`); shown rounded down |
+| 3 | Prototype, 2B model: 58.5% → 84.9% correct with the constrained schema and few-shot examples, A/B, n = 53 an arm; noise floor about 10 points at n = 53 | Build plan Appendix A and "Statistical power" in findings |
+| 3 | About $165 per 100 hours for 30 agents at 6 decisions a minute on a cloud API (Flash-Lite pricing, ~194 tokens in, 38 out) | Build plan Appendix A |
 | 3, 14 | 3 demo games built on it (GreyBoxVillage, Living Vale, Painted Realm) | `Demos/README.md`; GreyBoxVillageClassic is a frozen copy, not counted |
 | 5, 6, 11 | Phase gates and dates: Phase 1 closed 11 Oct (due 5 Oct), Phase 2 closed 25 Oct (due moved 19 → 29 Oct), Phase 3 closed 3 Nov (due 9 Nov), Phase 4 due 7 Dec; Phases 5–8 due 22 Feb to 26 Apr 2027 | `AGENTS.md` "Current state"; GitHub milestones (`gh api repos/agenerela/agenerela/milestones?state=all`); `docs/course/2026-10-20-github-roadmap/README.md` for the moved date |
 | 6 | Six initial requirements, owners and issue numbers | Build plan §6.6 (the SRS of 10 September); issue numbers checked as closed by their assignees |
-| 7 | Status of each added requirement | `git log origin/test`; PR #392 (merged 24 Nov), PR #394 (open); retry and profiles exist only on an unmerged session branch; **map naming and backstory: no issue, branch or commit found on 24 Nov** |
-| 10 | 16 decision records, DR-009 to DR-024, with their dates | Build plan §7, each record's Status line |
+| 7 | Status of each added requirement | `git log origin/test`; PR #392 (prompt budget), #395 (retry and profiles, DR-026) and #394 (image provider's framework part, DR-025) merged 24 Nov; the game's image part is still open; speech is DR-024, accepted, nothing built in the framework; **map naming and backstory: no issue, branch or commit found on 24 Nov** |
+| 10 | 18 decision records, DR-009 to DR-026, with their dates | Build plan §7, each record's Status line |
 
 ## GitHub (slides 15, 16, 19, 20)
 
 | Slide | Number | Source |
 |---|---|---|
-| 16 | 295 merged pull requests: 263 into `test`, 26 into demo branches (19 `69-living-vale`, 5 `153-gbv-v2`, 2 `gbv-lab`), 6 into `main` | `stats.py` |
+| 16 | 299 merged pull requests: 267 into `test`, 26 into demo branches (19 `69-living-vale`, 5 `153-gbv-v2`, 2 `gbv-lab`), 6 into `main` | `stats.py` |
 | 16 | Into `main`: #1 (CODEOWNERS and PR template), #95 (phases 0 and 1), releases #100, #114, #132, #339 | `stats.py`, base `main` |
-| 16 | Merged a month: 28 Sep, 46 Oct, 221 Nov (to 24 Nov) | `stats.py`, by `mergedAt` |
-| 16 | 871 commits on `test`, merges excluded | `git rev-list --count origin/test --no-merges` |
+| 16 | Merged a month: 28 Sep, 46 Oct, 225 Nov (to 24 Nov) | `stats.py`, by `mergedAt` |
+| 16 | 878 commits on `test`, merges excluded | `git rev-list --count origin/test --no-merges` |
 | 16 | 92 issues, 54 closed as completed, 38 open | `stats.py` |
 | 15, 16 | 4 release tags: v0.2.0 (18 Oct), v0.3.0 (25 Oct), v0.4.0-preview.1 (29 Oct), v0.4.0-preview.2 (16 Nov) | `git tag -l`; `git log -1 --format=%ad <tag>`. `pre-rebase-209` is a backup tag, not a release |
 | 15 | Protection: `test` requires the "Hygiene checks" status, no force-push, no deletion, no required reviews; `main` also restricts pushes to Draganoider | `gh api repos/agenerela/agenerela/branches/{main,test}/protection` |
-| 15 | 290 distinct pull-request branches; 140 branches on GitHub today | `stats.py` (unique `headRefName`); `git ls-remote --heads origin \| wc -l` |
+| 15 | 294 distinct pull-request branches; 143 branches on GitHub today | `stats.py` (unique `headRefName`); `git ls-remote --heads origin \| wc -l` |
 | 17 | 17 hygiene checks | `grep -c "^def check_" tools/ci/hygiene.py` |
-| 19 | Commits per member: Yevhen 820, Maxim 21, Hero 16, Tim 7, Tigran 4, Hunter 2, "Claude" 1 (total 871) | `git log origin/test --no-merges --format='%an\|%ae' \| sort \| uniq -c`, authors matched to logins by e-mail (table below) |
-| 19 | Merged PRs by author: Draganoider 270, phupanawat 9, MaximGolubitsky 6, TimBrustinov 5, JaySlifer 4, Hunaveli 1 | `stats.py` |
+| 19 | Commits per member: Yevhen 827, Maxim 21, Hero 16, Tim 7, Tigran 4, Hunter 2, "Claude" 1 (total 878) | `git log origin/test --no-merges --format='%an\|%ae' \| sort \| uniq -c`, authors matched to logins by e-mail (table below) |
+| 19 | Merged PRs by author: Draganoider 274, phupanawat 9, MaximGolubitsky 6, TimBrustinov 5, JaySlifer 4, Hunaveli 1 | `stats.py` |
 | 19 | Issues closed as completed, by assignee: Draganoider 26, phupanawat 10, MaximGolubitsky 5, TimBrustinov 5, JaySlifer 3, Hunaveli 2, none 3 | `stats.py` |
-| 19, 20 | Formal reviews of someone else's PR: 15 by Draganoider on 11 PRs (#36, #39, #57, #61, #63, #74, #96, #118, #155, #181, #319); none by others; 11 of 295 merged PRs had one | `stats.py`. Reviews written as plain PR comments are not counted |
+| 19, 20 | Formal reviews of someone else's PR: 15 by Draganoider on 11 PRs (#36, #39, #57, #61, #63, #74, #96, #118, #155, #181, #319); none by others; 11 of 299 merged PRs had one | `stats.py`. Reviews written as plain PR comments are not counted |
 
 ### Git authors and GitHub logins
 

@@ -286,7 +286,7 @@ namespace GreyBoxStrategy.Realm
             if (Writs)
             {
                 // Variant B (#20): the realm's banner hangs below the bar, the ruler's portrait frame beside it.
-                var banner = new RealmBanner(look) { tooltip = head.tooltip }; banner.RegisterCallback<ClickEvent>(_ => CountryPressed?.Invoke(me));
+                var banner = new RealmBanner(look, painted: RulerArtServer.FlagOf(me)) { tooltip = head.tooltip }; banner.RegisterCallback<ClickEvent>(_ => CountryPressed?.Invoke(me));
                 followBar.Add(banner);
                 followBar.Add(MyPortrait(me));
                 StatBar(s, me, c, look, n, net);

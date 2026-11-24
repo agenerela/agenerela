@@ -78,7 +78,7 @@ the placeholder text on each section slide.
 | 27 | Demo of about 5 minutes; an embedded video is better than a live demo | Slide 13, a placeholder for the recorded video |
 | 28 | Demo: the features, how to use the software, and how it responds to user actions | That is the video's job. Slide 12 lists the features to watch for, and slide 14 says where things stand |
 | 29 | Demo without a finished system: each member's component, partial results and resources | Not needed, because the system works. Slide 14 says what is still open, and the plan |
-| 30 | GitHub: how many branches, and the purpose of each | Slide 15: 290 pull-request branches, and what `test`, `main`, feature and demo branches are for |
+| 30 | GitHub: how many branches, and the purpose of each | Slide 15: 294 pull-request branches, and what `test`, `main`, feature and demo branches are for |
 | 31 | GitHub: the work shown by commits on the branches | Slide 16: commits, merged pull requests by month and by base branch |
 | 32 | GitHub: merge rules and the merges done | Slide 15's rules, and slide 16's merge counts and release PR numbers |
 | 33 | GitHub: problems with git or GitHub, the solutions and their results; 2–3 minutes | Slide 17; part E takes about 2:15 |
@@ -128,8 +128,8 @@ part D is mostly the video. If a rehearsal runs long, cut slide 14 to one line f
 - **The demo video** (slides 12–13) is being made in another session. Insert it on slide 13
   (Insert → Video in Google Slides), update slide 12's list to match its order, and keep a
   backup `.mp4`.
-- **Re-check slide 7's statuses** the day before: provider retry and settings profiles (an
-  unmerged branch on 24 November), image generation (PR #394, open), and **map naming and
+- **Re-check slide 7's statuses** the day before: image generation (the framework part merged
+  in #394; the game's part is open), speech (DR-024, not built), and **map naming and
   backstory, for which no issue, branch or commit existed on 24 November**. It is shown as
   Planned; drop the row if it is not going to be filed.
 - **Re-run the numbers** (`numbers.md` says how) if more merges land, and change the slides with them.

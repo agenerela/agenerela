@@ -22,6 +22,13 @@ namespace GreyBoxStrategy.Realm
             set => PlayerPrefs.SetInt(YourFaceKey, ((value % ArtCatalogue.PlayerFaces) + ArtCatalogue.PlayerFaces) % ArtCatalogue.PlayerFaces);
         }
 
+        // Set when you click your own portrait: you chose a face from the pack, so a generated one no longer shows for you.
+        private bool chosePackFace;
+
+        /// <summary>The ruler's generated portrait this game (DR-025), or null: none was made, or you picked a pack face for yours.</summary>
+        private Texture2D GeneratedFace(string country) =>
+            chosePackFace && country == You ? null : RulerArtServer.PortraitOf(country);
+
         private Dictionary<string, string> rulerFaces;
         private string rulerFacesFor;
 
@@ -48,7 +55,7 @@ namespace GreyBoxStrategy.Realm
         private Image RulerFace(string country)
         {
             var look = CountryLook.Of(country);
-            var tex = ArtCatalogue.Portrait(FaceOf(country));
+            var tex = GeneratedFace(country) ?? ArtCatalogue.Portrait(FaceOf(country));
             if (tex != null) return new Image { image = tex, uv = HeadCrop, scaleMode = ScaleMode.ScaleAndCrop };
             return new Image { image = portraits, uv = Faces.Uv(Players?.GetValueOrDefault(country)?.Persona, (look?.Slot ?? 0) % 2), scaleMode = ScaleMode.ScaleAndCrop };
         }
@@ -59,7 +66,7 @@ namespace GreyBoxStrategy.Realm
         /// </summary>
         private VisualElement RulerPortrait(string country, float width, float height, string tip = null)
         {
-            var tex = ArtCatalogue.Portrait(FaceOf(country), small: height <= 80);
+            var tex = GeneratedFace(country) ?? ArtCatalogue.Portrait(FaceOf(country), small: height <= 80);
             if (tex != null) return Framed(tex, new Rect(0, 0, 1, 1), width, height, tip);
             string persona = Players?.GetValueOrDefault(country)?.Persona;
             if (portraits != null && persona != null)
@@ -87,7 +94,9 @@ namespace GreyBoxStrategy.Realm
             if (mine && e is Image img)
                 img.RegisterCallback<ClickEvent>(_ =>
                 {
-                    YourFace = YourFace + 1;
+                    // The first click leaves the generated face for the pack's face you last chose; later ones step on.
+                    if (!chosePackFace && RulerArtServer.PortraitOf(country) != null) chosePackFace = true;
+                    else YourFace = YourFace + 1;
                     if (ArtCatalogue.Portrait(FaceOf(country)) is Texture2D next) img.image = next;
                 });
             return e;
