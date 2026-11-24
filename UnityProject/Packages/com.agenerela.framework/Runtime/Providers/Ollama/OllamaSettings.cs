@@ -46,12 +46,23 @@ namespace Agenerela.Providers
         public float Temperature = 0f;
 
         /// <summary>
-        /// Seconds to wait for a whole reply before failing with
+        /// Seconds to wait for a whole reply to one attempt before failing with
         /// <see cref="ProviderErrorKind.Timeout"/>. Counts from sending, so it includes loading
         /// the model when it was not resident: about 8 s for <c>qwen3.5:2b</c> on an 8 GB laptop
-        /// GPU, checked on Ollama 0.34.2.
+        /// GPU, checked on Ollama 0.34.2. Behind a queueing gateway it includes the wait for a
+        /// turn too: the team's home server holds a request up to 120 s before answering 503.
+        /// An attempt sent again under <see cref="Retry"/> gets its own, cut short to what
+        /// <see cref="RetryPolicy.DeadlineSeconds"/> leaves.
         /// </summary>
         public float TimeoutSeconds = 30f;
+
+        /// <summary>
+        /// When a request is sent again after the server answered busy (HTTP 429 or 503), and how
+        /// long the whole call may take (DR-026). Unless set: up to 3 sends with at most 10 s of
+        /// pauses, no deadline beyond that. <see cref="RetryPolicy.None"/> sends once, as before
+        /// DR-026. Copied when the provider is built.
+        /// </summary>
+        public RetryPolicy Retry = new RetryPolicy();
 
         /// <summary>
         /// How many alternatives each generated token's probabilities carry, sent as

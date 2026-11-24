@@ -46,6 +46,7 @@ no budget. A field that is null is left out.
 | `error` | A pipeline error's `kind` and `message` |
 | `provider`, `providerConfig`, `modelName`, `frameworkVersion` | Who answered |
 | `latencySeconds`, `queueWaitSeconds`, `backlogWaitSeconds`, `queuedAhead` | How long it took, and how long it waited |
+| `retries`, `retryWaitSeconds` | How many times the provider sent it again because the server was busy, and the seconds that took before the attempt that answered, kept out of `latencySeconds`; left out when it was sent once (DR-026) |
 | `promptTokens`, `completionTokens` | As the provider reported them |
 | `promptCharacters`, `promptTokensEstimated` | The request's text in characters, and its tokens estimated from them before sending, on every line ([prompt.md](prompt.md#a-budget-for-the-prompts-size)) |
 | `promptBudget`, `overBudget`, `promptTrims` | The prompt budget the call was measured against, whether the prompt went over it after every trim, and each trim that left something out; the line has no such keys with no budget, and no `promptTrims` when none fired |

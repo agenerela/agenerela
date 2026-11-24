@@ -266,6 +266,7 @@ namespace Agenerela.Tests
         [TestCase(PipelineErrorKind.ProviderMalformedResponse, true)]
         [TestCase(PipelineErrorKind.ProviderFailed, true)]
         [TestCase(PipelineErrorKind.ProviderDown, true)]
+        [TestCase(PipelineErrorKind.ProviderRateLimited, true)]
         [TestCase(PipelineErrorKind.RequestPreparation, false)]
         [TestCase(PipelineErrorKind.UnreadableReply, false)]
         [TestCase(PipelineErrorKind.GuardFailed, false)]
@@ -287,7 +288,7 @@ namespace Agenerela.Tests
                 PipelineErrorKind.ProviderTimeout, PipelineErrorKind.ProviderRejected, PipelineErrorKind.ProviderServerError,
                 PipelineErrorKind.ProviderMalformedResponse, PipelineErrorKind.ProviderFailed, PipelineErrorKind.UnreadableReply,
                 PipelineErrorKind.GuardFailed, PipelineErrorKind.ProviderDown, PipelineErrorKind.Superseded,
-                PipelineErrorKind.BacklogFull, PipelineErrorKind.ChainTooLong,
+                PipelineErrorKind.BacklogFull, PipelineErrorKind.ChainTooLong, PipelineErrorKind.ProviderRateLimited,
             };
 
             Assert.That(Enum.GetValues(typeof(PipelineErrorKind)), Is.EquivalentTo(classified),

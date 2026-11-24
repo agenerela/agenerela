@@ -661,7 +661,9 @@ namespace GreyBoxStrategy.Realm
 
         private IEnumerator Gate()
         {
+            AtGate = true;
             while (!playing && !stepOnce) yield return null;
+            AtGate = false;
             stepOnce = false;
         }
 
@@ -744,10 +746,12 @@ namespace GreyBoxStrategy.Realm
                         continue;
                     }
                     if (pauseBefore != null && e.Kind.ToString() == pauseBefore) { pauseBefore = null; playing = false; ui.SetPlaying(false, speed); }
+                    if (DemoHoldBefore != null && DemoHoldBefore(e)) { DemoHoldBefore = null; playing = false; ui.SetPlaying(false, speed); }
                     yield return Gate();
                     Current = e.Kind.ToString();
                     yield return Land(e);
                     Current = "";
+                    if (DemoHoldAfter != null && DemoHoldAfter(e)) { DemoHoldAfter = null; playing = false; ui.SetPlaying(false, speed); }
                 }
                 // The turn strip: what each realm did, once the turn has landed (ScreenUI.TurnStrip.cs).
                 ui.ShowTurnStrip(turn.Turn, turn.Events, turn.End);

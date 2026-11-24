@@ -19,7 +19,7 @@ namespace Agenerela.Tests
         }
 
         [Test]
-        public void PipelineErrorKindHasItsFourteenKindsInOrder()
+        public void PipelineErrorKindHasItsFifteenKindsInOrder()
         {
             // Serialized as positions too, so a new kind goes at the end (#87). The last four are
             // the requests a game's own rule kept from being sent (#190).
@@ -28,7 +28,7 @@ namespace Agenerela.Tests
                 "RequestPreparation", "ProviderUnreachable", "ModelNotFound", "ProviderTimeout",
                 "ProviderRejected", "ProviderServerError", "ProviderMalformedResponse",
                 "ProviderFailed", "UnreadableReply", "GuardFailed",
-                "ProviderDown", "Superseded", "BacklogFull", "ChainTooLong",
+                "ProviderDown", "Superseded", "BacklogFull", "ChainTooLong", "ProviderRateLimited",
             }));
         }
 

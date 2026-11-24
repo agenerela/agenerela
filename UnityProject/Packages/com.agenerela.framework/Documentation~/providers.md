@@ -109,8 +109,9 @@ when the reply could not be read; the runner tells those apart by whether a repl
 
 **What was built (#88).** `new Agent(profile, new OllamaProvider(new OllamaSettings()))`
 decides against `qwen3.5:4b` at `http://127.0.0.1:11434`. `OllamaSettings` is a plain class
-with `Endpoint`, `Model`, `ContextSize` (4096), `Temperature` (0), `TimeoutSeconds` (30) and
-`ApiKey` (empty); the provider copies it when built. An `OllamaProviderConfig` asset holds the
+with `Endpoint`, `Model`, `ContextSize` (4096), `Temperature` (0), `TimeoutSeconds` (30),
+`Retry` (a `RetryPolicy`, [below](#a-busy-server-retries-and-a-deadline)) and `ApiKey` (empty); the
+provider copies it when built. An `OllamaProviderConfig` asset holds the
 same fields, except that it names the environment variable holding the key rather than the key,
 and is how most games choose one: see [Provider config assets](#provider-config-assets) below.
 
@@ -154,7 +155,8 @@ and the decision as JSON.
 From the reply, `message.content` becomes `Text` exactly as received, `prompt_eval_count` and
 `eval_count` the token counts (0 when Ollama leaves them out), `logprobs` the token
 probabilities (null when it sends none), and `model` the new `ProviderResult.Model`.
-`LatencySeconds` is wall-clock time from sending to the reply.
+`LatencySeconds` is wall-clock time from sending to the reply, of the attempt that answered when
+there were retries.
 
 Failures throw `ProviderException`:
 
@@ -164,13 +166,52 @@ Failures throw `ProviderException`:
 | HTTP 404 with an `error` saying the model was not found, as 0.34.2 answers: `{"error":"model 'x' not found"}` | `ModelNotFound`, with the `ollama pull` command |
 | No reply within `TimeoutSeconds`, and the caller did not cancel | `Timeout` |
 | HTTP 401, a gateway wanting a key | `Rejected`, saying whether a key was sent and that `ApiKey` (or the config's API Key Variable) must hold the server's |
+| HTTP 429 or 503, a server saying it is busy, still so when `Retry` runs out | `RateLimited`, saying which limit ran out (DR-026) |
 | Any other 4xx, including a 404 without that `error`, which is not Ollama's chat endpoint | `Rejected`, with the status code and Ollama's `error` |
-| Any 5xx | `ServerError` |
+| Any other 5xx | `ServerError` |
 | A 2xx whose body is not one JSON object with a `message.content` string, or whose counts or `logprobs` are the wrong shape | `MalformedResponse` |
 
 The caller's cancellation aborts the HTTP request and throws `OperationCanceledException`,
 even if the timeout has also run out. An address with a user name or password in it is named
 in messages without them.
+
+### A busy server: retries and a deadline
+
+A server shared by several clients makes them take turns. The team's home server puts a gate in
+front of its card that holds a request up to 120 s while another client has the card, then
+answers **503 with `Retry-After`**; a cloud API answers 429 the same way. Before DR-026 the
+provider failed on the first such answer, and a game or a live test stopped although nothing was
+broken. Now `OllamaSettings.Retry`, a `RetryPolicy`, sends it again (DR-026):
+
+| Field | Default | What it bounds |
+|---|---|---|
+| `MaxAttempts` | 3 | Sends of one request, the first included; 1 never retries (`RetryPolicy.None`) |
+| `MaxWaitSeconds` | 10 | All the pauses between attempts, together |
+| `DeadlineSeconds` | 0, none | The whole call from the first send, every attempt and pause; each attempt's `TimeoutSeconds` is cut short to what is left |
+| `BackoffSeconds`, `MaxBackoffSeconds` | 0.5, 8 | The pause when the server gives no `Retry-After`: doubling each retry, held to the most, then jittered to between half and all of it |
+
+- **Only a busy answer is retried**, 429 and 503 (`RetryPolicy.IsBusy`). Never another 4xx, which
+  sending again cannot change, never another 5xx, never a timeout, a refused connection or the
+  caller's cancellation. A decision request changes nothing on the server, so sending it twice is
+  safe. The lifecycle calls (`ListModelsAsync`, `WarmUpAsync`, `UnloadAsync`) retry the same way.
+- **The pause** is what `Retry-After` asks for, whole seconds or an HTTP date
+  (`RetryPolicy.RetryAfterSeconds`), else the back-off.
+- **It gives up at once** when the next pause would pass `MaxWaitSeconds` or end past
+  `DeadlineSeconds`, rather than wait a pause it knows is too long, and throws `RateLimited`.
+- **Cancelling during a pause** ends it at once, as `OperationCanceledException`.
+- **What it cost is recorded.** `ProviderResult.Retries` and `RetryWaitSeconds` (from the first
+  send to the start of the attempt that answered), and the same two on a `ProviderException`.
+  `Agent` copies them into `DecisionTelemetry.Retries` and `RetryWaitSeconds`, and keeps the wait
+  **out of `LatencySeconds`**, so a request that waited for a busy server never reads as a slow
+  model. The decision log writes them as `retries` and `retryWaitSeconds`, left out when there were
+  none ([logging-decisions.md](logging-decisions.md)).
+
+`RetryPolicy.FailFast` (2 sends within 3 s) suits a shipped game, whose own fallback should run;
+`RetryPolicy.Patient` (up to 30 sends within 10 minutes) suits development against a shared,
+queued server, and agents running tests on it. A behind-a-gateway timeout also counts the wait for
+a turn, so a patient config raises `TimeoutSeconds` past the gate's 120 s. The
+[settings profiles](#settings-profiles-development-and-production) choose between the two.
+`RetryPolicy` is a plain serializable class, so another provider holds one the same way.
 
 **Transport.** `System.Net.Http.HttpClient`, one per provider, behind an
 `HttpMessageHandler` the EditMode tests replace to capture the body and script Ollama's
@@ -295,7 +336,8 @@ var guard = new Agent(profile, ProviderConfig.Resolve().Provider);
 - **One provider per config.** `ProviderConfig.Provider` builds the provider the first time it
   is read and returns that same instance after, so every agent on one config shares one
   provider, and so one queue (#89). `MaxInFlight` (default 1) is that queue's limit.
-- **Resolution** is the agent's own config, then the project default. `AgentBehaviour`'s
+- **Resolution** is the agent's own config, then the active profile's, then the project default
+  ([Settings profiles](#settings-profiles-development-and-production)). `AgentBehaviour`'s
   **Provider** field is that own config ([agents-in-a-scene.md](agents-in-a-scene.md)). A destroyed
   config counts as none. With neither, `Resolve` throws `InvalidOperationException`: "Create one with Create →
   Agenerela → Ollama Provider, and set it in Project Settings → Agenerela". DR-013's middle
@@ -315,6 +357,50 @@ var guard = new Agent(profile, ProviderConfig.Resolve().Provider);
   `AgenerelaSettings` forgets the settings asset it found, and the built providers are dropped
   as above. Each static that needs no reset says why in `Tests/Editor/DomainReloadTests.cs`,
   which fails on any new static field nothing resets (#190, G8).
+
+### Settings profiles: Development and Production
+
+One project, two ways to run (DR-026). While it is developed, its agents ask a shared server and
+wait their turn; once it ships, they ask the player's local model and fail fast, so the game's own
+fallback runs. Each way is an **`AgenerelaProfile`** asset (**Create → Agenerela → Settings
+Profile**) naming the provider config agents without one of their own use. **Project Settings →
+Agenerela → Profiles** names the **Development** and the **Production** profile, and which one the
+Editor uses.
+
+The active profile, `AgenerelaSettings.ActiveProfileKind`, is the first of:
+
+1. the **`AGENERELA_PROFILE`** environment variable, `Development` or `Production` (or `dev`,
+   `prod`), any case, in the Editor and in a build alike. A value naming neither is ignored, and
+   `ActiveProfileReason` says so;
+2. in the Editor only, **Editor Uses** in Project Settings, when it is not Automatic. A build never
+   reads it, so a choice made to try Production in the Editor cannot ship by mistake;
+3. the build: Development in the Editor and in a development build, Production in a release build.
+
+`ProviderConfig.Resolve(own)` is then the agent's own config, else the active profile's, else the
+**Default Provider**. A project with no profiles, and a profile that names no config, resolve to the
+Default Provider exactly as before. A game that builds its providers in code reads
+`AgenerelaSettings.ActiveProvider` as a template: `(ActiveProvider as OllamaProviderConfig).ToSettings()`,
+then sets its own model.
+
+**Where the server is.** An `OllamaProviderConfig`'s **Endpoint Variable** names an environment
+variable holding the address, such as `AGENERELA_OLLAMA_URL`; set, it replaces **Endpoint**. Not set,
+the config uses **Endpoint**, a local Ollama, and sends **no key**, since the key belongs to the server
+the variable names. So one Development config serves a teammate on the shared server and one without
+it. Nothing in a profile or a config is secret: keys stay in the variables a config names (hard
+rule 1). The Editor reads its environment when it starts; restart it, and Unity Hub, after setting one.
+
+A profile holds decision provider configs only. An image provider config
+([images.md](images.md)) lives in its own assembly, which the core cannot name, so a profile gains an
+image slot when the settings page gets one (#359, DR-026).
+
+A typical pair, as the demo games set it up:
+
+| | Development | Production |
+|---|---|---|
+| Endpoint Variable | `AGENERELA_OLLAMA_URL` (falls back to `127.0.0.1:11434`) | none: `127.0.0.1:11434` |
+| API Key Variable | `AGENERELA_OLLAMA_API_KEY` | none |
+| Timeout Seconds | 180: the gate's 120 s queue plus the model | the game's own, such as 30 |
+| Retry | `Patient`: 30 sends, 600 s of pauses, a 600 s deadline | `FailFast`: 2 sends within 3 s |
 
 ### Adding a provider config
 
@@ -651,6 +737,12 @@ guard.Backlog = new DecisionBacklog(0, BacklogOverflow.RefuseNewest); // none wh
 ## Still open
 
 - **Token-based rate limits**, above. Phase 6.
+
+## Images
+
+An image backend is not an `ILLMProvider`: it has its own interface, `IImageProvider`, with a
+cache, a prompt builder and a ComfyUI provider in its own assembly. See [images.md](images.md)
+(DR-024, DR-025).
 
 ## Extension points — where the next things go
 

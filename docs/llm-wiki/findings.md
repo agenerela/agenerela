@@ -5067,3 +5067,16 @@ sends (the schema is not read by an Ollama model). Script: `.scratch/prompt-budg
   about 330 real tokens. Not changed: that changes what history is sent, and needs its own A/B.
 - **Would change it.** Another model's tokenizer, another language, or prompts heavy in ids and numbers. The framework
   records `PromptCharacters` beside `PromptTokens` on every decision, so a game can check its own ratio.
+
+### The home server's Ollama does not generate images (24 November 2026)
+
+**What.** Whether Ollama could be the image backend instead of ComfyUI (#359, DR-025). `x/z-image-turbo` was
+pulled on the home server (Docker Ollama 0.40.14, Linux, RTX 4070 SUPER), then asked for a portrait and a flag
+through the gate's `/api/generate`, 1024×1024, with `.scratch/ollama-image/test.py`.
+
+**Result.** Both requests: HTTP 400, `{"error":"image generation models are not currently supported"}`. The model
+pulls, but this build will not run it. Public reports disagree on whether Ollama's experimental image generation
+(January 2026, macOS first) ever reached Linux, and say it was withdrawn in a later release.
+
+**What it means.** Images stay on ComfyUI, behind the framework's `IImageProvider`, so an Ollama backend can be
+added if a later Ollama runs image models on Linux. Re-run `test.py` after an Ollama upgrade.

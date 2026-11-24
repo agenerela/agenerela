@@ -199,6 +199,7 @@ machine's only.
 | `cannot reach ...` | The home server is off, or this machine is not on the home network or the VPN | Ask the user |
 | `... is not exposed through the gateway` | A route the gate never passes, such as deleting a model | Report it; that is done on the server, by the user |
 | a check passes with `.env` but Unity gets a 401, or reaches the old server | The user variables `AGENERELA_OLLAMA_URL` and `AGENERELA_OLLAMA_API_KEY` override `.env`, and a running Unity keeps the values it started with | Compare the two without printing the key; ask the user to fix the variable, then restart Unity and Unity Hub |
+| the framework's `RateLimited`, or `retries` in a decision log line | The card was busy: the gate answered 503, and `OllamaProvider` sent the request again after its `Retry-After` until its `RetryPolicy` ran out (DR-026) | Nothing, when it then answered: the wait is in `retryWaitSeconds`, not `latencySeconds`. When it ran out, use the Development profile (patient, 10 minutes) or raise the config's Retry limits; never loop on top of it |
 
 ## When something goes wrong
 

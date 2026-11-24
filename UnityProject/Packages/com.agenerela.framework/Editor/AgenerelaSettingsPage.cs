@@ -7,8 +7,8 @@ namespace Agenerela.Editor
 {
     /// <summary>
     /// <b>Project Settings → Agenerela</b>: names the provider config every agent without one of its
-    /// own uses, and the two an evaluation run compares, arm A and arm B (DR-013, #145). It holds
-    /// nothing else.
+    /// own uses, the Development and Production profiles and the Editor's choice between them
+    /// (DR-026), and the two configs an evaluation run compares, arm A and arm B (DR-013, #145).
     /// </summary>
     /// <remarks>
     /// The value is kept in <see cref="AgenerelaSettings"/>, which this page creates at
@@ -22,6 +22,16 @@ namespace Agenerela.Editor
 
         private static readonly GUIContent DefaultLabel = new GUIContent("Default Provider",
             "The provider config every agent without one of its own uses.");
+
+        private static readonly GUIContent DevelopmentLabel = new GUIContent("Development",
+            "The profile for the Editor and development builds, such as a provider config that waits for a shared server.");
+
+        private static readonly GUIContent ProductionLabel = new GUIContent("Production",
+            "The profile for a release build, such as a provider config that fails fast.");
+
+        private static readonly GUIContent EditorProfileLabel = new GUIContent("Editor Uses",
+            "Which profile the Editor runs. Automatic is Development. A build goes by its type; the " +
+            AgenerelaSettings.ProfileVariable + " environment variable overrides both.");
 
         private static readonly GUIContent ArmALabel = new GUIContent("Arm A",
             "The provider config an evaluation run asks first, such as OllamaLocal. Agents never read it.");
@@ -45,7 +55,8 @@ namespace Agenerela.Editor
             {
                 label = "Agenerela",
                 guiHandler = _ => Draw(),
-                keywords = new[] { "Agenerela", "Provider", "Default Provider", "Model", "Ollama", "Evaluation", "Arm A", "Arm B" },
+                keywords = new[] { "Agenerela", "Provider", "Default Provider", "Model", "Ollama", "Evaluation", "Arm A", "Arm B",
+                                   "Profile", "Development", "Production" },
             };
         }
 
@@ -87,6 +98,17 @@ namespace Agenerela.Editor
             }
 
             EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Profiles", EditorStyles.boldLabel);
+            if (settings != null)
+            {
+                DrawProfiles(settings, readOnly);
+            }
+            else if (GUILayout.Button("Create Settings for Profiles", GUILayout.Width(220)))
+            {
+                settings = CreateSettings(AssetPath);
+            }
+
+            EditorGUILayout.Space();
             EditorGUILayout.LabelField("Evaluation", EditorStyles.boldLabel);
             settings = ArmField(settings, ArmALabel, Slot.ArmA, readOnly);
             settings = ArmField(settings, ArmBLabel, Slot.ArmB, readOnly);
@@ -100,6 +122,46 @@ namespace Agenerela.Editor
             {
                 EditorGUILayout.LabelField("Saved in", AssetDatabase.GetAssetPath(settings), EditorStyles.miniLabel);
             }
+        }
+
+        // The profile fields through a SerializedObject, which records the undo and marks the asset
+        // dirty; saved at once, as the provider slots are.
+        private static void DrawProfiles(AgenerelaSettings settings, bool readOnly)
+        {
+            var serialized = new SerializedObject(settings);
+            using (new EditorGUI.DisabledScope(readOnly))
+            {
+                EditorGUILayout.PropertyField(serialized.FindProperty(nameof(AgenerelaSettings.Development)), DevelopmentLabel);
+                EditorGUILayout.PropertyField(serialized.FindProperty(nameof(AgenerelaSettings.Production)), ProductionLabel);
+                EditorGUILayout.PropertyField(serialized.FindProperty(nameof(AgenerelaSettings.EditorProfile)), EditorProfileLabel);
+            }
+
+            if (!readOnly && serialized.ApplyModifiedProperties())
+            {
+                AssetDatabase.SaveAssetIfDirty(settings);
+            }
+
+            var active = AgenerelaSettings.ActiveProvider;
+            EditorGUILayout.HelpBox(
+                $"Active now: {AgenerelaSettings.ActiveProfileKind}. {AgenerelaSettings.ActiveProfileReason} " +
+                $"Agents without a config of their own use {(active != null ? active.name : "nothing")}. " +
+                "Keys never go in a profile or a config: a config names the environment variable that holds one.",
+                MessageType.None);
+        }
+
+        /// <summary>Creates the settings at <paramref name="createAt"/>, or returns the project's own.</summary>
+        internal static AgenerelaSettings CreateSettings(string createAt)
+        {
+            var settings = Find();
+            if (settings != null)
+            {
+                return settings;
+            }
+
+            CreateFolders(Path.GetDirectoryName(createAt).Replace('\\', '/'));
+            settings = ScriptableObject.CreateInstance<AgenerelaSettings>();
+            AssetDatabase.CreateAsset(settings, createAt);
+            return settings;
         }
 
         private static AgenerelaSettings ArmField(AgenerelaSettings settings, GUIContent label, Slot slot, bool readOnly)

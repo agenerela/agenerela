@@ -31,6 +31,7 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: a demo director for the presentation video** (#20, #398). A timeline of cursor moves, clicks, callouts, dims and titles played over a replay, with elements found by selector; its 56-second sample on the live seed-123 game; and an MP4 capture that runs with the editor in the background.
 - **Painted Realm: free orders' prompt arms and the live-run reports** (#20, #380). Two A/B arms, both off:
   `CourtTurnFacts` (a court's later request reads what its earlier orders settled) and `CourtNoneWording` (it is asked for
   "the next order, or none"); a live-check harness; and `tools/live-runs/free-orders/report.py` and

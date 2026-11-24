@@ -683,15 +683,16 @@ namespace Agenerela.Tests
         }
 
         [TestCase(HttpStatusCode.BadRequest, "{\"error\":\"top_logprobs must be between 0 and 20\"}", ProviderErrorKind.Rejected, "400", "top_logprobs must be between 0 and 20")]
-        [TestCase((HttpStatusCode)429, "{\"error\":\"too many requests\"}", ProviderErrorKind.Rejected, "429", "too many requests")]
+        [TestCase((HttpStatusCode)429, "{\"error\":\"too many requests\"}", ProviderErrorKind.RateLimited, "429", "too many requests")]
         [TestCase(HttpStatusCode.InternalServerError, "{\"error\":\"model requires more system memory\"}", ProviderErrorKind.ServerError, "500", "model requires more system memory")]
-        [TestCase(HttpStatusCode.ServiceUnavailable, "", ProviderErrorKind.ServerError, "503", "(nothing)")]
+        [TestCase(HttpStatusCode.ServiceUnavailable, "", ProviderErrorKind.RateLimited, "503", "(nothing)")]
         public async Task OtherStatusesAreRejectedOrServerErrors(HttpStatusCode status, string body, ProviderErrorKind kind,
                                                                  string code, string said)
         {
+            // Sent once: a busy 429 or 503 retried is OllamaRetryTests' (DR-026).
             var handler = ScriptedHandler.Replying(body, status);
 
-            var failure = await Fails(Provider(handler).RequestAsync(Request(), CancellationToken.None));
+            var failure = await Fails(Provider(handler, new OllamaSettings { Retry = RetryPolicy.None }).RequestAsync(Request(), CancellationToken.None));
 
             Assert.That(failure.Kind, Is.EqualTo(kind));
             Assert.That(failure.Message, Does.Contain("HTTP " + code));

@@ -596,7 +596,9 @@ namespace Demos.GreyBoxVillage.Editor
             AddTargetable(go, name.ToLowerInvariant(), description, "person");
 
             var behaviour = go.AddComponent<AgentBehaviour>();
-            behaviour.Provider = provider;
+            // None of its own: the agents ask the active profile's config, Resources/AgenerelaSettings
+            // (DR-026), whose Production one is the provider config made here.
+            behaviour.Provider = null;
             behaviour.FindTargetsNearby = true;
             // Every place in the village, the evaluation set's included, fits under the cap.
             behaviour.Targets = new ProximityTargetSource { Radius = 90f, Cap = 24, Categories = GuardCategories };
@@ -640,7 +642,7 @@ namespace Demos.GreyBoxVillage.Editor
             collider.radius = 0.4f;
             AddTargetable(go, name.ToLowerInvariant(), description, "person");
             var behaviour = go.AddComponent<AgentBehaviour>();
-            behaviour.Provider = provider;
+            behaviour.Provider = null; // The active profile's, as for the guards (DR-026).
             behaviour.FindTargetsNearby = true;
             behaviour.Targets = new ProximityTargetSource { Radius = 90f, Cap = 24, Categories = categories };
             behaviour.NoticeNearby = false;
