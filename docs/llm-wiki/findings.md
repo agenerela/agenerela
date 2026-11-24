@@ -4883,3 +4883,86 @@ slower: median 0.62 s against 0.50 s (2995 MB against 2254 MB in VRAM).
 none, so both arms would send one prompt), a free-choice example (no place in the profile for an
 example whose answer is a free choice, and one profile serves both arms), history on against off
 (`EvalRunner` always stages a prompt's history; no per-arm switch).
+
+### The economy's live check (E3) on the home server: legal, built by persona, and 35% of court prompts over the limit (23 November 2026)
+
+**What.** Request 005: Painted Realm's writs turn with free orders, the `personas` table, five `qwen3.5:4b` courts,
+Classic, 40-turn cap, one game a block, without the economy (`x`) and with it (`e`, #372, #374 and the tax lock of
+#378), seeds 1 to 3, interleaved x1 e1 x2 e2 x3 e3, at test `9ab0e1b`.
+
+**Conditions.** The home server, RTX 4070 SUPER 12 GB, Docker Ollama 0.40.14 behind the gate (commit `5728506a6d6b`),
+over the home network, one clean lease a block (#12196, #13098, #14045, #15219, #16328, #17479) and the laptop lock,
+the model warmed first, Unity batch mode on the lead's laptop on mains. Nothing voided. Details and the per-persona
+table: [`run-requests/005-economy-e3/results.md`](../run-requests/005-economy-e3/results.md).
+
+| | x | e |
+|---|---:|---:|
+| Illegal answers | 2 of 3,215 | 0 of 3,091 |
+| Court prompt tokens, mean (max) | 1,403 (1,769) | 1,539 (2,021) |
+| Court requests over 1,600 tokens | 8% | 35% |
+| Calls a turn; model seconds a turn | 26.8; 23.8 | 25.8; 20.9 |
+| Battles a game (mean of 3) | 85 | 103 |
+
+- **Legal and played.** No illegal answer with the economy. 59 buildings in three games, chosen by persona: the
+  merchant 12 of the 13 markets from turns 1 to 4, the warmonger and the opportunist barracks early, the proud late.
+  The builder bought least and latest, nothing in one game.
+- **Taxes:** high at turn 1 almost everywhere, then about three changes a seat in 40 turns, never low; nothing flips
+  turn by turn now that #378 locks a change.
+- **Cost:** 136 more prompt tokens a court request, and 35% of court requests over the 1,600-token limit. Calls and
+  model time a turn did not rise; the x arm's figure includes two 90 s requests in one turn of x1, worth about 1.5 s a
+  turn of the 2.85 s difference.
+- **No claim beyond the pattern.** Three games an arm, one map and model, capped games none finished: an anecdote
+  under hard rule 2. Never compared with request 002 (RTX 5080).
+- **Would change it.** Six seeds, or the prompt brought under its limit, before the economy is judged; the battle
+  count (+18 a game) needs more seeds to separate from how seeds play. No default changes.
+
+### #151's switch runs on the 209 set, and five of them again on the 4B: the action list helps the 4B, the idle example helps the 4B where it costs the 2B (23 November 2026)
+
+Three runs the switches of #385 made possible, on `qwen3.5:2b`, then the five prompt-side runs again on `qwen3.5:4b`
+(both arms that model), straight after E3. Same conditions as "#151's first runs on the 209 set" above: the 209 set
+at `1a940f4`, `VillageGuard`, guards on, interleaved, temperature 0, the home server under one clean lease a run
+(gate `5728506a6d6b`), every model unloaded inside each lease first, 2254 MB (2B) or 2995 MB (4B) all in VRAM, field
+order kept on every reply, no warnings, no pipeline errors; framework at test `60e435c` (#385). Reports:
+[`runs/2026-11-23-phase4/`](runs/2026-11-23-phase4/README.md), the 4B's in the `-4b` folders.
+
+| Run | Model | Lease | A | B | B − A | Floor 4.9 | Same answer |
+|---|---|---|---:|---:|---:|---|---:|
+| `statement` against `dialogue` (`StatementFieldName`, DR-008) | 2B | #18526 | 138 | 139 | +0.5 | within | 208 |
+| | 4B | #21088 | 173 | 171 | −1.0 | within | 208 |
+| Probabilities and the grounding guard against `TokenProbabilities = false`, which sends the one-line target rule (#107) | 2B | #18953 | 139 | 147 | +3.8 | within | 169 |
+| | 4B | #20661 | 171 | 169 | −1.0 | within; events −10.0 beyond 9.1 | 183 |
+| History against `IgnoreHistory` | 2B | #19380 | 138 | 134 | −1.9 | within | 202 |
+| | 4B | #21515 | 173 | 172 | −0.5 | within | 204 |
+| Idle example against `IdleExampleStimulus = ""` | 4B | #19807 | 173 | 170 | −1.4 | within; conversation −17.6 beyond 17.1 | 177 |
+| `ListActionsAndTargets` off against on | 4B | #20234 | 170 | 184 | **+6.7** | **beyond**; situations +15.5 beyond 9.3 | 185 |
+
+- **The field's name.** No change in what the model chose on either model (208 of 209 the same). On the 2B the
+  `dialogue` arm repeated an example line in its text 15 times against 4 ("Strike the wolf!" 11 times, the idle line
+  twice); on the 4B neither arm echoed. No reply wrote `dialogue:` or `statement:` into its text (checked by hand:
+  `ReplyChecks` knows only `statement:`). **What it suggests:** keep `statement`; on the 2B the old name invites echoes.
+- **The one-line target rule.** Without probabilities there is no grounding guard, so wrong answers are not stopped
+  (2B 62 wrong but legal against 52, 4B 40 against 33). The rule also changes what the model picks (40 and 26 answers
+  differ): on the 2B more `none` (70 against 59) and all 15 impossible requests right without a guard; on the 4B
+  `none` 75 against 56 and events −10.0, beyond their floor. It is faster: median 0.45 s against 0.52 s (2B),
+  0.65 s against 0.73 s (4B), with no probabilities to send. One echo leak flagged on the 4B. Both within noise
+  overall. **What it suggests:** for a provider without probabilities the rule is a fair stand-in on the 2B; on the
+  4B it makes events passive.
+- **History.** Only the 22 multi-turn prompts can differ. With their history the 2B got 15 of 22 right, without it
+  11; the 4B 19 and 18. The 2B's +18.2 on the 22 is above the floor the runner's formula gives at n = 22 (15.1), but it
+  is a hand count on a subset the runner does not score as a category, from one run: it suggests history helps the 2B
+  on these cases, not a result. Overall both within noise.
+- **The idle example on the 4B.** Without it the 4B answers `none` 31 times against 57 and acts unasked far more
+  (19 wrong-but-legal answers where `none` was the label, against 5), losing conversation by 17.6 points, beyond that
+  category's floor; it wins the `stop_following` and situation prompts the 2B also wins. Overall within noise. On the
+  2B the same switch was +5.3 (above). **What it suggests:** the idle example earns its place on the 4B; dropping it
+  helps only the 2B, so any change would be per model. The 9 November sweep found the same split.
+- **`ListActionsAndTargets` on the 4B** is +6.7, beyond noise, almost all from situations (+15.5) and `none` answers
+  turned into moves (`none` 44 against 58); unasked actions 8 against 4. On the 2B it was +4.8, within. **What it
+  suggests:** a case to turn it on for 4B-class models, for the lead to weigh against the longer prompt.
+- **The control is not perfectly repeatable on the 4B.** Its defaults arm scored 173, 173, 173, 170 and 171 in the
+  six runs here. Its answers matched the model comparison's 4B arm on every prompt in four runs, and differed on 9 in
+  the list run and 5 in the target-rule run (also 5 on the 2B's target-rule run). A guess, not checked: the arm
+  beside it sends a different prompt, and the server's prompt cache then hands the control slightly different
+  numbers. A 2 or 3 point swing in a control is inside the floor, but it is why a single run within a few points is
+  never read as a result.
+- **No default changes.**
