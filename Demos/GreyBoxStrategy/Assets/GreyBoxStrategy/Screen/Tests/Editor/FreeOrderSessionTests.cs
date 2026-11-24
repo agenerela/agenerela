@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Agenerela.Providers;
 using GreyBoxStrategy.Realm;
 using GreyBoxStrategy.Replay;
+using Newtonsoft.Json;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -170,6 +171,112 @@ namespace GreyBoxStrategy.Screen.Tests
             Assert.That(late.waits, Is.All.LessThan(0.5), "pressed late, End turn waits for no ruler");
             Assert.That(now.decisions, Is.Not.Empty);
             Assert.That(now.decisions, Is.EqualTo(late.decisions), "the rulers' orders are the same whenever you press End turn");
+        }
+
+        // Turn 1 of one game. Begun early (a generated world's session starts behind the loading card): every ruler has
+        // finished its turn-1 orders before the screen is built and your council read. Otherwise the screen is built as
+        // the session starts, and the rulers' calls are held until your plan is in, so each ruler's later requests are
+        // asked after your orders landed. Returns what the screen opened on, your council, and every ruler's input.
+        private async Task<(string opening, string council, string rulersSaw, string rulersDid)> PlayFirstTurn(bool begunEarly)
+        {
+            var setup = GameSetup.Writs(5);
+            var map = setup.BuildMap();
+            var rules = setup.BuildRules(map);
+            rules.FreeOrders = true;
+            World w = null;
+            var provider = Rulers(() => w);
+            var scripted = provider.Callback;
+            var saw = new System.Collections.Generic.List<string>();
+            int? firstTurn = null;
+            provider.Callback = r =>
+            {
+                // Turn 1's calls only: turn 2's begin the moment turn 1 resolves.
+                firstTurn = firstTurn ?? w?.Turn;
+                if (r.AgentId != null && !r.IsRefusalLine && w != null && w.Turn == firstTurn)
+                    saw.Add($"{r.AgentId} | {r.Request.Observations} | {r.Request.Stimulus} | {string.Join(",", r.Request.History)} | {string.Join(",", r.OfferedActions)} | {string.Join(",", r.OfferedTargets)}");
+                return scripted(r);
+            };
+            var s = new RuleSession(You, "qwen3.5:4b", "default", 5, Path.Combine(folder, (begunEarly ? "early" : "now") + ".jsonl"), (m, world) => { w = world; return provider; }, null, map, rules);
+            provider.Hold = !begunEarly;
+            var run = s.RunAsync();
+            if (begunEarly) await Until(() => s.RulersDeciding == 0 && s.WaitingFor == RuleSession.Waiting.Orders && s.Orders != null, "the rulers to finish turn 1 behind the loading card");
+            // The screen is built on the game as the director builds it, and your council drawn from the request.
+            var g = s.BuildReplay();
+            string opening = $"{g.Turns.Count} turns | " + JsonConvert.SerializeObject(g.Initial);
+            await Until(() => s.WaitingFor == RuleSession.Waiting.Orders && s.Orders != null, "your turn-1 council");
+            var court = s.Orders;
+            string council = $"{court.Turn} | {string.Join(",", court.Legal)} | " + JsonConvert.SerializeObject(ReplayBuilder.StateOf(court.World, g.ProvinceIds, g.Initial));
+            if (!begunEarly) Assert.That(s.RulersDeciding, Is.EqualTo(4), "held: no ruler has finished when your council opens");
+
+            var plan = new RuleSession.WritsPlan();
+            var recruit = court.Legal.FirstOrDefault(m => m.Action == Actions.Recruit || Actions.RecruitTypes.Contains(m.Action));
+            if (recruit != null) plan.Courts.Add(recruit);
+            var taxes = court.Legal.FirstOrDefault(m => m.Action == Actions.RaiseTaxes);
+            if (taxes != null) plan.Courts.Add(taxes);
+            // An order that holds gold back at once (Country.Reserved), the one change your court makes before resolution.
+            var paid = court.Legal.FirstOrDefault(m => m.Action != Actions.None && !plan.Courts.Contains(m) && WritLegality.CourtOrderCost(court.World, You, m) > 0);
+            if (paid != null) plan.Courts.Insert(0, paid);
+            foreach (var a in court.World.ArmiesOf(You).Where(a => !a.Marching).OrderBy(a => a.Id))
+                if (WritLegality.ArmyMoves(court.World, You, a.Id).FirstOrDefault(m => m.Action == Actions.March) is Move march) plan.Armies[a.Id] = march;
+            Assert.That(paid, Is.Not.Null, "your plan holds gold back, which the rulers could see if your orders reached them");
+            Assert.That(plan.Armies.Count, Is.GreaterThan(0), "and marches");
+            s.Plan(plan);
+            for (int i = 0; i < 8000 && s.Resolved < 1 && s.Error == null; i++)
+            {
+                if (s.WaitingFor == RuleSession.Waiting.Models) provider.Release();
+                if (s.WaitingFor == RuleSession.Waiting.Envoy) s.Answer(false);
+                await Task.Delay(5);
+            }
+            Assert.That(s.Resolved, Is.EqualTo(1), "turn 1 resolved");
+            var did = s.BuildRecording().Decisions.Where(d => d.Turn == 1 && d.AgentId != null && !d.AgentId.StartsWith(You, StringComparison.Ordinal))
+                .Select(d => $"{d.AgentId} {d.Moment} {d.ArmyId} {d.Action} {d.Target}");
+            s.Stop();
+            await run;
+            Assert.That(s.Error, Is.Null);
+            return (opening, council, string.Join("\n", saw), string.Join(" | ", did));
+        }
+
+        [Test]
+        public async Task Rulers_begun_behind_the_loading_card_decide_on_the_same_snapshot_and_show_you_nothing_early()
+        {
+            var now = await PlayFirstTurn(begunEarly: false);
+            var early = await PlayFirstTurn(begunEarly: true);
+            Assert.That(now.rulersSaw, Is.Not.Empty);
+            Assert.That(early.rulersSaw, Is.EqualTo(now.rulersSaw), "every ruler's turn-1 input is the same: your orders never reach it, early start or not");
+            Assert.That(early.rulersDid, Is.EqualTo(now.rulersDid), "so the rulers' turn-1 orders are the same");
+            Assert.That(early.opening, Is.EqualTo(now.opening), "the screen opens on the same game, with none of the rulers' turn-1 orders in it");
+            Assert.That(early.council, Is.EqualTo(now.council), "your council offers the same moves on the same map");
+        }
+
+        [Test]
+        public async Task A_session_made_for_the_court_painting_asks_no_ruler_until_it_runs()
+        {
+            // The director makes the session behind the loading card for the court's personas, paints the court, and only
+            // then runs it: a picture unloads the decision model on a shared card (DR-025), so no ruler may call before.
+            var setup = GameSetup.Writs(5);
+            var map = setup.BuildMap();
+            var rules = setup.BuildRules(map);
+            rules.FreeOrders = true;
+            World w = null;
+            var provider = Rulers(() => w);
+            var scripted = provider.Callback;
+            int calls = 0, providersMade = 0;
+            provider.Callback = r => { calls++; return scripted(r); };
+            var s = new RuleSession(You, "qwen3.5:4b", "default", 5, Path.Combine(folder, "held.jsonl"), (m, world) => { providersMade++; w = world; return provider; }, null, map, rules);
+
+            var g = s.BuildReplay();
+            Assert.That(g.Initial, Is.Not.Null, "the screen's opening exists before the rulers run");
+            var personas = s.Players.Where(p => p.Key != You).Select(p => p.Value.Persona).ToList();
+            Assert.That(personas.Count, Is.EqualTo(map.Countries.Count - 1));
+            Assert.That(personas, Has.All.Not.Null, "every ruler's persona is there for the painting");
+            await Task.Delay(200);
+            Assert.That((s.Started, providersMade, calls), Is.EqualTo((false, 0, 0)), "no provider made and no call while the court is painted");
+
+            var run = s.RunAsync();
+            await Until(() => calls > 0, "the rulers' first call once the session runs");
+            s.Stop();
+            await run;
+            Assert.That(s.Error, Is.Null);
         }
 
         [Test]

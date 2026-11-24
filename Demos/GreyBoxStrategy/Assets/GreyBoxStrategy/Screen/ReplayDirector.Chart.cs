@@ -80,6 +80,8 @@ namespace GreyBoxStrategy.Realm
                 string serverWhy = null;
                 yield return Gateway.CheckServer(w => serverWhy = w);
                 if (serverWhy != null) { ui?.ShowMenuStatus(serverWhy); yield break; }
+                // The model loads while the world is made behind the loading card.
+                Gateway.WarmUp(model);
             }
             pendingRule = new PendingRule { Slot = slot, Model = scripted ? "scripted" : model, Scripted = scripted, Arm = arm };
             StartGeneratedWatch(size, shape, seed, countries, true, victory);
@@ -184,11 +186,30 @@ namespace GreyBoxStrategy.Realm
             var ruling = pendingRule;
             pendingRule = null;
             MapDefinition liveMap = null; GameRules liveRules = null;
+            if (ruling != null)
+            {
+                // A rule game: its map and rules first, so its session is made now, behind the loading card, for the court's
+                // personas; its rulers begin once the court is painted and decide while the chart is laid out and the screen
+                // built (request 004: turn 1 was End turn's long wait).
+                var defining = System.Threading.Tasks.Task.Run(() => { var d = world.ToDefinition(); return (d, RulesFor(setup, d)); });
+                while (!defining.IsCompleted) yield return null;
+                if (defining.IsFaulted)
+                {
+                    Debug.LogException(defining.Exception.GetBaseException());
+                    world = null;
+                    loading.Close();
+                    yield break;
+                }
+                (liveMap, liveRules) = defining.Result;
+                string you = world.Countries[Mathf.Clamp(ruling.Slot, 0, world.Countries.Count - 1)].Id;
+                BeginRuleEarly(you, ruling.Model, ruling.Scripted, ruling.Arm, setup.Seed, liveMap, liveRules);
+            }
             var preparing = System.Threading.Tasks.Task.Run(() =>
             {
+                if (ruling != null) return ((Recording)null, (ReplayGame)null, ChartImage.Make(world, chartWidth, setup.Seed, gpu));
                 var mapDef = world.ToDefinition();
                 var rules = RulesFor(setup, mapDef);
-                if (liveModel != null || ruling != null)
+                if (liveModel != null)
                 {
                     // Played live: only the chart is made here; the game starts once the world is drawn.
                     liveMap = mapDef; liveRules = rules;
@@ -205,6 +226,8 @@ namespace GreyBoxStrategy.Realm
             if (preparing.IsFaulted)
             {
                 Debug.LogException(preparing.Exception.GetBaseException());
+                earlyRule?.Stop();
+                earlyRule = null;
                 world = null;
                 loading.Close();
                 yield break;
@@ -223,15 +246,17 @@ namespace GreyBoxStrategy.Realm
             }
             if (ruling != null)
             {
-                // The screen is built on the game as it stands before turn 1; the rule session takes over once it is (StartScreen).
-                string you = world.Countries[Mathf.Clamp(ruling.Slot, 0, world.Countries.Count - 1)].Id;
-                var opening = new RuleSession(you, ruling.Model, ruling.Arm ?? "default", setup.Seed, null, (m, w) => null, null, liveMap, liveRules);
-                game = opening.BuildReplay();
+                // The screen is built on the game as it stands before turn 1, which the session begun above keeps showing
+                // until a turn resolves however far its rulers have got; the screen takes the session over once it is (StartScreen).
+                string you = earlyRule.You;
+                game = earlyRule.BuildReplay();
                 ruleStart = (you, ruling.Model, ruling.Scripted, ruling.Arm, setup.Seed, liveMap, liveRules);
             }
             // Each ruler's portrait and banner, from the image server or the cache, before any decision is asked for:
             // a picture unloads the decision model on a shared card (DR-025), so none is made during play.
             yield return PaintCourt(loading, setup.MapSeed ?? setup.Seed);
+            // A rule game's rulers wait for the painting (BeginRuleEarly), then decide while the chart is laid out.
+            if (ruling != null) StartEarlyRulers(courtPainted);
             loading.Set("Laying out the chart...", 0.95f);
             yield return null;
             CountryLook.UseWorld(world);
