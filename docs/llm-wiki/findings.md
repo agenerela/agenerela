@@ -4988,3 +4988,53 @@ errors. Reports: `runs/2026-11-23-phase4/grounding-076/` and `grounding-076-4b/`
 - **What it suggests:** 0.76 costs nothing measured here and frees four right answers on the 2B. The 0.6 the
   GreyBoxStrategy demo uses lets five wrong answers through on the same set. This is one set and one run per model,
   inside the floor, so it is a candidate for the lead, not a calibrated threshold; DR-016's 0.8 stays the default.
+
+### #151 after #384, the action list again on the 4B, and a free-choice example: counter-examples make the 4B answer "none", example statements are what it echoes, the paired schema changes nothing (23 November 2026)
+
+Eleven `EvalRunner` A/B runs on the 209 set, guards on, interleaved, temperature 0, the home server (gate
+`5728506a6d6b`), each under its own clean lease with every model unloaded inside it first, field order kept on every
+answer, no warnings, no pipeline errors. Reports: `runs/2026-11-23-phase4/`, one folder a row. Floor 4.9 at n=209.
+
+**Read the two halves apart.** The list repeat and the free-choice runs ran at test `60e435c` on set `1a940f4`, like
+every run above. The eight #384 runs ran at test `4485e83` on set `ab2d30b`: #384 changed the default prompt (example
+statements and counter-examples shown, cross-category pairs rejected) and the set's targets (categories), so their
+controls (2B 141 to 142, 4B 164) are **not comparable** with 138 and 173, and no number below crosses that line.
+
+| Run | Model | Lease | Arm A | Arm B | Difference | Same answer |
+|---|---|---|---:|---:|---:|---:|
+| `ListActionsAndTargets` off / on, again (`list-4b-repeat/`) | 4B | #27545 | 170 | 184 | **+6.7** | 185 |
+| Plain / one free-choice example (`freechoice/`) | 2B | #27972 | 138 | 143 | +2.4 | 173 |
+| Plain / one free-choice example (`freechoice-4b/`) | 4B | #28399 | 173 | 173 | 0.0 | 185 |
+| Templated / summarised targets (`summarise/`) | 2B | #31165 | 142 | 145 | +1.4 | 186 |
+| Flat / paired schema (`pair/`) | 2B | #31592 | 142 | 142 | 0.0 | 207 |
+| No example statements / defaults (`statements/`) | 2B | #32019 | 140 | 141 | +0.5 | 187 |
+| No counter-examples / defaults (`counters/`) | 2B | #32446 | 140 | 142 | +1.0 | 188 |
+| Templated / summarised targets (`summarise-4b/`) | 4B | #32873 | 164 | 162 | −1.0 | 195 |
+| Flat / paired schema (`pair-4b/`) | 4B | #33300 | 164 | 164 | 0.0 | 208 |
+| No example statements / defaults (`statements-4b/`) | 4B | #33727 | 157 | 167 | +4.8 | 195 |
+| No counter-examples / defaults (`counters-4b/`) | 4B | #34154 | 174 | 164 | −4.8 | 181 |
+
+- **The action list on the 4B repeats exactly.** All 418 answers match the first run's (#20234), so the +6.7 beyond
+  the floor is the same measurement twice at temperature 0, not a second sample of the model. Wrong `none` answers
+  fall from 14 to 3.
+- **The free-choice example** (the tech lead's wording; no evaluation prompt uses that stimulus or a close paraphrase,
+  hard rule 4) is within noise on both. It moves answers to `move_to` (2B 81 to 104, 4B 93 to 113) and away from
+  `none` (2B 60 to 49, 4B 57 to 41), and `north_tower`, the example's own target, is chosen more (2B 8 to 13, wrong
+  1 to 2; 4B 12 to 16, wrong 2 to 4).
+- **Counter-examples cost the 4B 10 answers, 0.1 below the floor.** 16 of the 17 prompts the 4B gets right without
+  them and wrong with them are an action turned into `none`, mostly `move_to` in situations and events; `none`
+  answers go from 54 to 77. On the 2B the two arms are within 1 point.
+- **The example statements are what the model echoes.** Without them, the 4B's reply check flags no echo at all
+  (0 of 209, 193 different statements); with them, 68 replies copy an example statement word for word (139 different;
+  "Understood, I'll hold here." 21 times). On the 2B, 86 replies copy an example statement with them (119 different; "Heading over there now." 50 times), and without them 11 echo the stimulus instead. By the request's own test (stimulus echoes fall, statement echoes
+  do not take their place, accuracy holds), the statements fail it on both models. Accuracy:
+  4B +4.8, 0.1 inside the floor, with events +10 against a floor of 9.1; 2B +0.5.
+- **The paired schema changes nothing measurable:** 207 and 208 of 209 answers identical. Ollama never shows the model
+  the schema (findings, 10 October), so pairing can act only on what sampling allows.
+- **Summarised targets** are within noise on both, with 23 (2B) and 14 (4B) answers changed.
+
+**What it suggests, for the lead to decide:** counter-examples are the largest cost to the 4B among #384's switches (174
+without them, 164 with, at `4485e83`), and are worth a repeat on the 4B before they stay on by default; example
+statements buy the 4B a little accuracy at the price of about a third of its replies being copies, a trade the
+lead decides; `PairTargetsWithActions` has nothing to show on this set; the action list's 4B gain is solid at
+temperature 0. One set, one run per row, all within or at the floor but the list: candidates, not results.
