@@ -222,13 +222,49 @@ namespace GreyBoxStrategy.Realm
             }
         }
 
-        public static ILLMProvider Provider(string model) => DevProvider.Wrap(new OllamaProvider(new OllamaSettings
+        public static ILLMProvider Provider(string model) => DevProvider.Wrap(new OllamaProvider(Settings(model)));
+
+        // One set of settings for the game's provider and the warm-up's: a warm-up with another context size would load
+        // the model a second time when the first decision came.
+        private static OllamaSettings Settings(string model) => new OllamaSettings
         {
             Endpoint = Environment.GetEnvironmentVariable(UrlVariable),
             ApiKey = Key,
             Model = model,
             TimeoutSeconds = 90f,
-        }));
+        };
+
+        private static string warming;
+
+        /// <summary>
+        /// Loads <paramref name="model"/> on the server now, through the framework's <see cref="IModelLifecycle.WarmUpAsync"/>,
+        /// so turn 1's first decisions do not wait for it: a rule game unloads its model when it ends, so the next game
+        /// starts cold without this. Not awaited by anyone; a failure is a warning, as the game's own check tells the
+        /// person what is wrong. Nothing is sent while another session holds the card or it is paused for a measurement.
+        /// </summary>
+        public static async void WarmUp(string model)
+        {
+            if (string.IsNullOrWhiteSpace(model) || model == "scripted" || WhyNotSet() != null || DevFaults.ServerDown) return;
+            if (Paused || (ReadLock() is LockNote note && note.Pid != Pid)) return;
+            if (warming == model) return; // one at a time: New game and its start both ask
+            warming = model;
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            try
+            {
+                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(90)))
+                    await new OllamaProvider(Settings(model)).WarmUpAsync(cts.Token);
+                LastWarmUpSeconds = watch.Elapsed.TotalSeconds;
+                Debug.Log($"Painted Realm: {model} warmed in {LastWarmUpSeconds:0.00} s");
+            }
+            // The kind only: the provider's own message can carry the server's address.
+            catch (ProviderException e) { Debug.LogWarning($"Painted Realm: warming {model} failed ({e.Kind})."); }
+            catch (OperationCanceledException) { Debug.LogWarning($"Painted Realm: warming {model} took over 90 s; stopped waiting."); }
+            catch (Exception e) { Debug.LogWarning($"Painted Realm: warming {model} failed ({e.GetType().Name})."); }
+            finally { if (warming == model) warming = null; }
+        }
+
+        /// <summary>For the Unity CLI: how long the last warm-up took, in seconds; 0 before any.</summary>
+        public static double LastWarmUpSeconds { get; private set; }
 
         /// <summary>Leaves the card as it was found: asks the server to unload the model (keep_alive 0).</summary>
         public static async Awaitable Unload(string model)

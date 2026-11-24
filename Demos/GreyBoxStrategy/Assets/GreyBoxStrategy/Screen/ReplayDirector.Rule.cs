@@ -77,20 +77,52 @@ namespace GreyBoxStrategy.Realm
         /// </summary>
         private void BeginRuleOn(string country, string model, bool scripted, string arm, int gameSeed, MapDefinition map, GameRules rules)
         {
+            if (earlyRule != null && earlyRule.You == country)
+            {
+                // Begun behind the loading card: its provider and lock are the session's already.
+                BeginRule(country, earlyRule.Model, gameSeed, null, null, arm, map, rules);
+                return;
+            }
+            var (providerFor, cardLock) = RuleSeats(model, scripted, gameSeed, map);
+            BeginRule(country, scripted ? "scripted" : model, gameSeed, providerFor, cardLock, arm, map, rules);
+            if (scripted && rule != null) rule.Dev = true;
+        }
+
+        // The rulers' provider and the card's lock for a rule game on a world already made.
+        private (Func<string, World, ILLMProvider>, RuleSession.ICardLock) RuleSeats(string model, bool scripted, int gameSeed, MapDefinition map)
+        {
             if (!scripted)
             {
                 ruleLock = new CardLock(model, $"rule game on the writs turn, {model} with personas, seed {gameSeed}, {map.Provinces.Count} provinces");
-                BeginRule(country, model, gameSeed, (m, w) => Gateway.Provider(m), ruleLock, arm, map, rules);
-                return;
+                return ((m, w) => Gateway.Provider(m), ruleLock);
             }
             var rng = new System.Random(gameSeed);
             World world = null;
             var provider = new ScriptedProvider { Callback = r => ScriptedRuler(r, rng, world) };
             provider.Otherwise(ScriptedReply.Decide("none", statement: "We wait."));
             var wrapped = DevProvider.Wrap(provider);
-            BeginRule(country, "scripted", gameSeed, (m, w) => { world = w; return wrapped; }, null, arm, map, rules);
-            if (rule != null) rule.Dev = true;
+            return ((m, w) => { world = w; return wrapped; }, null);
         }
+
+        /// <summary>
+        /// A rule game on a generated world, begun behind the loading card as soon as its map and rules exist, before the
+        /// chart is drawn and the screen built: turn 1's rulers decide while the world is laid out and the first-turn help
+        /// is read, where before they started only once the screen was up (request 004: turn 1 was End turn's one long
+        /// wait). Nothing about the game changes: the session plays exactly as one begun by <see cref="BeginRule"/>, which
+        /// takes it over once the screen is built.
+        /// </summary>
+        private void BeginRuleEarly(string country, string model, bool scripted, string arm, int gameSeed, MapDefinition map, GameRules rules)
+        {
+            var (providerFor, cardLock) = RuleSeats(model, scripted, gameSeed, map);
+            earlyRule = CreateRule(country, scripted ? "scripted" : model, gameSeed, providerFor, cardLock, arm, map, rules);
+            if (scripted) earlyRule.Dev = true;
+        }
+
+        /// <summary>A session begun by <see cref="BeginRuleEarly"/>, until <see cref="BeginRule"/> takes it over.</summary>
+        private RuleSession earlyRule;
+        // When this game's session began, for the log line saying how long turn 1's rulers had before your council showed.
+        private DateTime ruleBegan;
+        private bool headStartLogged;
 
         private IEnumerator StartRule(string country, string model, int gameSeed, string arm, MapDefinition map = null, GameRules rules = null)
         {
@@ -103,6 +135,7 @@ namespace GreyBoxStrategy.Realm
             if (serverWhy != null) { ui.ShowMenuStatus(serverWhy); yield break; }
             model = string.IsNullOrWhiteSpace(model) ? "qwen3.5:4b" : model.Trim();
             if (Gateway.Paused) { ui.ShowMenuStatus("The RTX 5080 is paused for a measurement (its lock's pause file is set). Try again when it is lifted."); yield break; }
+            Gateway.WarmUp(model); // a model already loaded answers at once; this one may have chosen another in New game
             ruleLock = new CardLock(model, $"rule game{(rules?.Turn == TurnStyle.Writs ? " on the writs turn" : "")}, {model} x4 with personas, seed {gameSeed}");
             BeginRule(country, model, gameSeed, (m, w) => Gateway.Provider(m), ruleLock, arm, map, rules);
         }
@@ -251,16 +284,16 @@ namespace GreyBoxStrategy.Realm
         {
             if (started) return;
             started = true;
-            rules = WithYourWrits(rules, country, yourWritsUnlimited);
-            yourWritsUnlimited = false;
-            bool advise = advisorNext && model != "scripted";
-            advisorNext = false;
-            string path = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs", "Rule", $"seed-{gameSeed:D4}-{country}-{DateTime.Now:yyyyMMdd-HHmmss}.jsonl"));
-            rule = new RuleSession(country, model, arm ?? "default", gameSeed, path, providerFor, cardLock, map, rules) { AdvisorOn = advise };
+            // Begun early behind the loading card (a generated world): the same session, taken over here.
+            if (earlyRule != null && earlyRule.You == country) rule = earlyRule;
+            else
+            {
+                earlyRule?.Stop();
+                rule = CreateRule(country, model, gameSeed, providerFor, cardLock, arm, map, rules);
+            }
+            earlyRule = null;
             ui.Deciding = () => rule?.RulersStillDeciding ?? (IReadOnlyCollection<string>)Array.Empty<string>();
             ui.AdviceWhy = ShowAdvice;
-            Debug.Log($"Painted Realm: rule game, you rule {country}, seed {gameSeed}, {model} x4 with personas; decisions into {path}");
-            RunRule();
 
             ui.Players = rule.Players;
             game = rule.BuildReplay();
@@ -282,11 +315,28 @@ namespace GreyBoxStrategy.Realm
             StartCoroutine(Play());
         }
 
-        private async void RunRule()
+        // The session and its start, apart from the screen: the menu's settings for the next rule game are taken here, once.
+        private RuleSession CreateRule(string country, string model, int gameSeed, Func<string, World, ILLMProvider> providerFor, RuleSession.ICardLock cardLock, string arm,
+            MapDefinition map, GameRules rules)
         {
-            await rule.RunAsync();
-            if (rule.Error != null) Debug.LogWarning("Painted Realm: rule game stopped: " + rule.Error);
-            else if (rule.Result != null) Debug.Log($"Painted Realm: rule game over: {rule.Result.Winner} won on turn {rule.Result.Turns}");
+            rules = WithYourWrits(rules, country, yourWritsUnlimited);
+            yourWritsUnlimited = false;
+            bool advise = advisorNext && model != "scripted";
+            advisorNext = false;
+            string path = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs", "Rule", $"seed-{gameSeed:D4}-{country}-{DateTime.Now:yyyyMMdd-HHmmss}.jsonl"));
+            var session = new RuleSession(country, model, arm ?? "default", gameSeed, path, providerFor, cardLock, map, rules) { AdvisorOn = advise };
+            Debug.Log($"Painted Realm: rule game, you rule {country}, seed {gameSeed}, {model} x4 with personas; decisions into {path}");
+            ruleBegan = DateTime.UtcNow;
+            headStartLogged = false;
+            RunRule(session);
+            return session;
+        }
+
+        private static async void RunRule(RuleSession session)
+        {
+            await session.RunAsync();
+            if (session.Error != null) Debug.LogWarning("Painted Realm: rule game stopped: " + session.Error);
+            else if (session.Result != null) Debug.Log($"Painted Realm: rule game over: {session.Result.Winner} won on turn {session.Result.Turns}");
         }
 
         /// <summary>For the Unity CLI: choose an order, as a click on it would ("attack harrow", "recruit", "none").</summary>
@@ -398,6 +448,11 @@ namespace GreyBoxStrategy.Realm
                     lastOrdersStatus = null;
                     // A first rule game: the help opens once the council is drawn, and never again by itself.
                     if (PlayerPrefs.GetInt(HelpSeenKey, 0) == 0 && !ui.HelpOpen) ui.Root.schedule.Execute(ShowHelp).StartingIn(400);
+                    if (!headStartLogged && rule.Orders.Turn == 1)
+                    {
+                        headStartLogged = true;
+                        Debug.Log($"Painted Realm: your first council shown {(DateTime.UtcNow - ruleBegan).TotalSeconds:0.00} s after the rulers began; {rule.RulersDeciding} of them still deciding");
+                    }
                     Show(ReplayBuilder.StateOf(rule.Orders.World, game.ProvinceIds, shown), null);
                     ui.SetPlaying(false, speed);
                     RefreshSide();
@@ -480,6 +535,7 @@ namespace GreyBoxStrategy.Realm
         public void LeaveToMenu()
         {
             rule?.Stop();
+            earlyRule?.Stop();
             ruleLock?.ReleaseNow();
             if (live != null) live.Stop();
             Gateway.ReleaseHeldNow();
@@ -522,6 +578,7 @@ namespace GreyBoxStrategy.Realm
         private void OnDestroy()
         {
             rule?.Stop();
+            earlyRule?.Stop();
             ruleLock?.ReleaseNow();
         }
     }
