@@ -78,12 +78,12 @@ namespace Agenerela
             }
             else
             {
-                ValidatePairs(fields, pairs);
+                ValidatePairs(fields, pairs, schema.StatementName);
                 Line(json, 1, "\"anyOf\": [");
                 for (var p = 0; p < pairs.Count; p++)
                 {
                     Line(json, 2, "{");
-                    Members(json, 3, Branch(fields, pairs[p]));
+                    Members(json, 3, Branch(fields, pairs[p], schema.StatementName));
                     Line(json, 2, "}" + (p < pairs.Count - 1 ? "," : ""));
                 }
                 Line(json, 1, "]");
@@ -142,13 +142,13 @@ namespace Agenerela
 
         // The flat fields with the action and target enums narrowed to one pair's, and the pair's
         // parameters before the statement, or last when the schema asks for none (DR-023).
-        static List<SchemaField> Branch(IReadOnlyList<SchemaField> fields, ActionTargets pair)
+        static List<SchemaField> Branch(IReadOnlyList<SchemaField> fields, ActionTargets pair, string statementName)
         {
             var branch = new List<SchemaField>(fields.Count + pair.Parameters.Count);
             bool placed = false;
             foreach (var field in fields)
             {
-                if (field.Name == DecisionSchema.StatementFieldName && !placed)
+                if (field.Name == statementName && !placed)
                 {
                     branch.AddRange(pair.Parameters);
                     placed = true;
@@ -178,7 +178,7 @@ namespace Agenerela
         // Pairs a grammar can be built from: each offered action in exactly one pair, and each pair's
         // values drawn from the flat enums, with no empty list, no "" and no repeat, as Validate
         // asks of a field.
-        static void ValidatePairs(IReadOnlyList<SchemaField> fields, IReadOnlyList<ActionTargets> pairs)
+        static void ValidatePairs(IReadOnlyList<SchemaField> fields, IReadOnlyList<ActionTargets> pairs, string statementName)
         {
             SchemaField action = null, target = null;
             foreach (var field in fields)
@@ -227,7 +227,7 @@ namespace Agenerela
                         }
                     }
 
-                    Validate(Branch(fields, pairs[p]));
+                    Validate(Branch(fields, pairs[p], statementName));
                 }
 
                 foreach (string id in pairs[p].Actions)

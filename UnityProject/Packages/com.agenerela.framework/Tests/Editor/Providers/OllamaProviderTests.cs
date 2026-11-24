@@ -114,6 +114,40 @@ namespace Agenerela.Tests
             Assert.That(provider.TokenAlternatives, Is.EqualTo(alternatives));
         }
 
+        // ---- Asked without token probabilities (#107) -------------------------------------------
+
+        [Test]
+        public async Task AskedWithoutProbabilitiesTheBodyHasNoLogprobsAndTheProviderSaysSo()
+        {
+            var handler = ScriptedHandler.Replying(Envelope(GoToTheTower));
+            var provider = Provider(handler, new OllamaSettings { TokenProbabilities = false });
+
+            Assert.That(new OllamaSettings().TokenProbabilities, Is.True, "On unless set.");
+            Assert.That(provider.Capabilities.ReportsTokenProbabilities, Is.False);
+            Assert.That(provider.TokenProbabilities, Is.False);
+
+            await NotCancelled(provider.RequestAsync(Request(), CancellationToken.None));
+
+            var body = Parse(handler.Requests[0].Body);
+            Assert.That(body.Properties().Select(p => p.Name), Has.None.EqualTo("logprobs").And.None.EqualTo("top_logprobs"));
+        }
+
+        [Test]
+        public async Task WithoutProbabilitiesTheTargetRuleIsSentAndTheGuardReadsNothing()
+        {
+            var on = ScriptedHandler.Replying(Envelope(GoToTheTower));
+            var off = ScriptedHandler.Replying(Envelope(GoToTheTower));
+
+            var asked = await Fixtures.NotCancelled(Fixtures.VillageGuard(Provider(on)).DecideAsync("Go to the tower."));
+            var notAsked = await Fixtures.NotCancelled(
+                Fixtures.VillageGuard(Provider(off, new OllamaSettings { TokenProbabilities = false })).DecideAsync("Go to the tower."));
+
+            Assert.That(asked.Request.SystemPrompt, Does.Not.Contain("Only these things are here:"), "The default prompt, the golden's.");
+            Assert.That(notAsked.Request.SystemPrompt, Does.Contain("Only these things are here: tower, training_dummy."));
+            Assert.That(notAsked.Telemetry.TargetGroundingStatus, Is.EqualTo(GroundingStatus.NoProbabilities));
+            Assert.That(notAsked.Decision.ActionId, Is.EqualTo("move_to"), "Passed, as a reply without probabilities always is.");
+        }
+
         // ---- Sampling and a reply cap per call (#266 item 7, #244 item 11) ------------------------
 
         [Test]

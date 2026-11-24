@@ -164,6 +164,29 @@ namespace Agenerela.Evaluation
                    + $"| {Guard(arm)} | {arm.WarmUpRequests} | {Cell(resident)} |");
             }
 
+            // Only when an arm renamed the free-text field (DR-008), so a default report reads as before.
+            foreach (var arm in c.Arms)
+            {
+                if (arm.StatementFieldName != null && arm.StatementFieldName != DecisionSchema.StatementFieldName)
+                {
+                    Line();
+                    Line($"Arm {Cell(arm.Name)} named the free-text field `{arm.StatementFieldName}`.");
+                }
+
+                // Likewise only when an arm ignored the prompts' history or added examples (#151).
+                if (arm.IgnoreHistory)
+                {
+                    Line();
+                    Line($"Arm {Cell(arm.Name)} ignored each prompt's history: every prompt was asked alone.");
+                }
+
+                if (arm.AddedExamples != null && arm.AddedExamples.Count > 0)
+                {
+                    Line();
+                    Line($"Arm {Cell(arm.Name)} added {arm.AddedExamples.Count} few-shot example(s): {Cell(string.Join("; ", arm.AddedExamples))}.");
+                }
+            }
+
             Line();
             Line("## Outcomes");
             Line();
@@ -336,6 +359,12 @@ namespace Agenerela.Evaluation
             if (arm.TargetGroundingThreshold.HasValue && arm.TargetGroundingThreshold.Value != TargetGroundingGuard.DefaultThreshold)
             {
                 changed.Add("threshold " + arm.TargetGroundingThreshold.Value.ToString("0.###", CultureInfo.InvariantCulture));
+            }
+
+            if (arm.TokenProbabilities == false)
+            {
+                // The guard has nothing to read; the target rule was sent instead (#107).
+                changed.Add("no probabilities");
             }
 
             if (arm.TokenAlternatives.HasValue && arm.TokenAlternatives.Value != Providers.OllamaSettings.DefaultTokenAlternatives)

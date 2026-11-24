@@ -215,7 +215,10 @@ namespace Agenerela
 
             string stimulus = request.Stimulus ?? "";
             string decision = Write(result.Decision, request.Schema);
-            exchanges.AddLast(new Exchange(stimulus, decision, result.Decision, null));
+            exchanges.AddLast(new Exchange(stimulus, decision, result.Decision, null)
+            {
+                StatementName = request.Schema?.StatementName ?? DecisionSchema.StatementFieldName,
+            });
 
             if (exchanges.Count > Turns)
             {
@@ -432,10 +435,10 @@ namespace Agenerela
 
                 if (schema == null)
                 {
-                    Field(json, DecisionSchema.ActionFieldName, decision);
-                    Field(json, DecisionSchema.TargetFieldName, decision);
+                    Field(json, DecisionSchema.ActionFieldName, decision, DecisionSchema.StatementFieldName);
+                    Field(json, DecisionSchema.TargetFieldName, decision, DecisionSchema.StatementFieldName);
                     Arguments(json, decision);
-                    Field(json, DecisionSchema.StatementFieldName, decision);
+                    Field(json, DecisionSchema.StatementFieldName, decision, DecisionSchema.StatementFieldName);
                 }
                 else
                 {
@@ -444,13 +447,14 @@ namespace Agenerela
                     bool written = false;
                     foreach (var field in schema.Fields)
                     {
-                        if (field.Name == DecisionSchema.StatementFieldName && !written)
+                        // Under the name the schema gave the statement (DR-008), as the reply had it.
+                        if (field.Name == schema.StatementName && !written)
                         {
                             Arguments(json, decision);
                             written = true;
                         }
 
-                        Field(json, field.Name, decision);
+                        Field(json, field.Name, decision, schema.StatementName);
                     }
 
                     if (!written)
@@ -474,23 +478,25 @@ namespace Agenerela
             }
         }
 
-        private static void Field(JsonTextWriter json, string name, AgentDecision decision)
+        private static void Field(JsonTextWriter json, string name, AgentDecision decision, string statementName)
         {
             string value;
-            switch (name)
+            if (name == statementName)
             {
-                case DecisionSchema.ActionFieldName:
-                    value = decision.ActionId;
-                    break;
-                case DecisionSchema.TargetFieldName:
-                    value = decision.TargetId;
-                    break;
-                case DecisionSchema.StatementFieldName:
-                    value = decision.Statement;
-                    break;
-                default:
-                    // A field a later schema adds before this knows how to fill it.
-                    return;
+                value = decision.Statement;
+            }
+            else if (name == DecisionSchema.ActionFieldName)
+            {
+                value = decision.ActionId;
+            }
+            else if (name == DecisionSchema.TargetFieldName)
+            {
+                value = decision.TargetId;
+            }
+            else
+            {
+                // A field a later schema adds before this knows how to fill it.
+                return;
             }
 
             json.WritePropertyName(name);
@@ -504,9 +510,9 @@ namespace Agenerela
             switch (remembers)
             {
                 case RememberedDecision.Move:
-                    return Rewrite(exchange.Decision, null);
+                    return Rewrite(exchange.Decision, null, exchange.StatementName);
                 case RememberedDecision.MoveAndOutcome:
-                    return Rewrite(exchange.Decision, exchange.Outcome);
+                    return Rewrite(exchange.Decision, exchange.Outcome, exchange.StatementName);
                 default:
                     return exchange.Decision;
             }
@@ -514,8 +520,9 @@ namespace Agenerela
 
         // The decision's JSON with its statement left out and, given one, the outcome after the rest,
         // the other fields in the order they were written. A decision that is not a JSON object, which
-        // only an import can bring, is sent as it is.
-        internal static string Rewrite(string decision, string outcome)
+        // only an import can bring, is sent as it is. The statement is the field named statementName,
+        // as the decision's schema named it (DR-008); an imported decision's is taken to be the default.
+        internal static string Rewrite(string decision, string outcome, string statementName = DecisionSchema.StatementFieldName)
         {
             JObject json;
             try
@@ -530,7 +537,7 @@ namespace Agenerela
                 return decision;
             }
 
-            json.Remove(DecisionSchema.StatementFieldName);
+            json.Remove(string.IsNullOrWhiteSpace(statementName) ? DecisionSchema.StatementFieldName : statementName);
             json.Remove(OutcomeFieldName);
             if (!string.IsNullOrWhiteSpace(outcome))
             {
@@ -556,6 +563,10 @@ namespace Agenerela
             public string Decision { get; }
             public AgentDecision Source { get; }
             public string Outcome { get; set; }
+
+            // What the decision's schema called its statement (DR-008); the default for an import,
+            // whose snapshot does not say.
+            public string StatementName { get; set; } = DecisionSchema.StatementFieldName;
         }
     }
 }

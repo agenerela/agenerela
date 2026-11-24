@@ -420,7 +420,7 @@ Player: "Fine day for it." -> action: none, target: no_target, statement: "Aye, 
   out of a call.
 - **Keep them apart from the evaluation set** (hard rule 4). A statement is shown in the prompt
   like a stimulus, so `PromptSetChecks` flags a prompt that matches one, and `EvalRunner` refuses
-  an arm whose own idle statement matches one.
+  an arm whose own idle statement, or added example's, matches one.
 
 The other way out of G14 is an idle stimulus nobody would say back. A statement is the one built
 here. Whether either helps, and whether a statement makes a model copy *it* instead, is the A/B.
@@ -444,6 +444,65 @@ For a call whose move is all the game needs, such as GreyBoxStrategy's marshal o
 a turn, where each army asked to speak made the rulers repeat themselves (35 to 44% of lines word for
 word, findings, 13 November). It changes what the model reads, so it is unmeasured as a default
 and owed an A/B run (#151); on by default, every request is byte-identical to one sent before.
+
+## Examples a call adds
+
+`DecideOptions.AddedExamples` adds few-shot examples to one call's block, beside the ones its
+actions and profile give (#151). Each is a `FewShotExample`: a stimulus, the action it answers
+with, a target (`no_target` when null) and an optional statement.
+
+```csharp
+options.AddedExamples = new List<FewShotExample>
+{
+    new FewShotExample("Use your own judgement.", "move_to", "tower", "I'll watch from the tower."),
+};
+```
+
+It is rendered as every example is, under the call's stimulus label and with the statement under
+the call's field name, after the actions' own examples and counter-examples and before the idle
+example:
+
+```
+Player: "Use your own judgement." -> action: move_to, target: tower, statement: "I'll watch from the tower."
+```
+
+An example never shows an answer the call could not give, so it is left out of a call that does
+not offer its action, or its target, or where its action cannot take that target now (its target
+categories, its availability per target); `no_target` is left out for an action that requires a
+target, and `none` shows only with `no_target`. The statement is shown only when
+`ExampleStatements` is on and the call asks for one. Its text is sent as written: a `{0}` is not
+filled. Null or an empty list, the default, leaves the block byte-identical.
+
+For an A/B run of one example in one arm, such as a free choice answered with an action, for a
+model that answers `none` when the choice is left to it. Unmeasured, so never a default. The evaluation runner
+refuses a run in which an arm's added example, or its statement, matches a prompt's stimulus
+(hard rule 4).
+
+## The free-text field's name
+
+`DecideOptions.StatementFieldName` names the free-text field for one call: `statement`
+(`DecisionSchema.StatementFieldName`) unless set, and null means the same. Set
+`DecisionSchema.DialogueFieldName`, `dialogue`, to ask under the prototype's name, for the A/B
+run of the rename (DR-008, #151). Only the name changes. The field still comes last, after
+`action`, `target` and any parameters, so the reply is `{"action": ..., "target": ...,
+"dialogue": ...}`, and the decision's `Statement` holds what the model wrote there.
+
+The schema carries the name (`DecisionSchema.StatementName`), so everything that reads the field
+reads it under the name that was sent: the parser, the field-order check
+(`DecisionTelemetry.OrderLost`, #180), the JSON schema, the examples (`..., dialogue: "On my
+way."`), the identity's statement rules line ("Your dialogue: "), memory, a multi-turn prompt's
+staged history in the evaluation runner, and a refusal line's request (#109). A reply that writes
+the other name has no statement: under `dialogue`, a `statement` key is ignored, as any key the
+schema did not ask for is. Telemetry, the decision log and the evaluation report keep their own
+key, `statement`, whatever the call named the field.
+
+The name must be lowercase snake_case and none of `action`, `target`, `also_targets` and `outcome`
+(the key a remembered outcome takes), or the call throws `ArgumentException`; an offered action
+with a parameter of the same name fails the call as a `RequestPreparation` error before anything
+is sent. A memory snapshot does not record the name, so a decision imported from one is read as if
+its statement were `statement`. With the default name every request is byte-identical to one sent
+before the option. The rename is unmeasured, so it is a choice per call, never a default, until the
+run says otherwise.
 
 ## A choice among options given with the call
 

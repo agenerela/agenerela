@@ -57,8 +57,17 @@ namespace Agenerela
         /// <summary>Name of the field holding the chosen target id.</summary>
         public const string TargetFieldName = "target";
 
-        /// <summary>Name of the free-text field. The prototype called it <c>dialogue</c> (DR-008).</summary>
+        /// <summary>
+        /// Name of the free-text field unless a call names it otherwise
+        /// (<see cref="DecideOptions.StatementFieldName"/>). The prototype called it <c>dialogue</c> (DR-008).
+        /// </summary>
         public const string StatementFieldName = "statement";
+
+        /// <summary>
+        /// What the prototype called the free-text field (DR-008), for an A/B run of the rename
+        /// (#151) through <see cref="DecideOptions.StatementFieldName"/>. Never the default.
+        /// </summary>
+        public const string DialogueFieldName = "dialogue";
 
         // The three descriptions below are sent with every request and are exactly the strings in
         // #9's golden output. They name no player and no character: the agent may be a country
@@ -108,7 +117,22 @@ namespace Agenerela
         /// <exception cref="ArgumentNullException"><paramref name="fields"/> is null.</exception>
         /// <exception cref="ArgumentException">One of <paramref name="fields"/> or <paramref name="pairs"/> is null.</exception>
         public DecisionSchema(IEnumerable<SchemaField> fields, IEnumerable<ActionTargets> pairs)
+            : this(fields, pairs, StatementFieldName)
         {
+        }
+
+        /// <summary>
+        /// A schema as the other constructors make it, whose free-text field is the one named
+        /// <paramref name="statementName"/> (<see cref="DecideOptions.StatementFieldName"/>, DR-008).
+        /// A field of that name among <paramref name="fields"/> is the statement; with none, the
+        /// schema asks for no statement. Null or blank is <see cref="StatementFieldName"/>.
+        /// </summary>
+        /// <exception cref="ArgumentNullException"><paramref name="fields"/> is null.</exception>
+        /// <exception cref="ArgumentException">One of <paramref name="fields"/> or <paramref name="pairs"/> is null.</exception>
+        public DecisionSchema(IEnumerable<SchemaField> fields, IEnumerable<ActionTargets> pairs, string statementName)
+        {
+            StatementName = string.IsNullOrWhiteSpace(statementName) ? StatementFieldName : statementName;
+
             if (fields == null)
             {
                 throw new ArgumentNullException(nameof(fields));
@@ -140,6 +164,14 @@ namespace Agenerela
                 Pairs = new ReadOnlyCollection<ActionTargets>(branches);
             }
         }
+
+        /// <summary>
+        /// The name this schema gives its free-text field: <see cref="StatementFieldName"/> unless
+        /// the call named it otherwise (<see cref="DecideOptions.StatementFieldName"/>, DR-008). What
+        /// the parser, the serializer, the examples and the history read, so none of them can
+        /// disagree with the schema that was sent. Set even when the schema asks for no statement.
+        /// </summary>
+        public string StatementName { get; }
 
         /// <summary>Fields in generation order. THE ORDER IS LOAD-BEARING: see the remarks on this type.</summary>
         public IReadOnlyList<SchemaField> Fields { get; }
@@ -180,7 +212,7 @@ namespace Agenerela
             {
                 foreach (var field in Fields)
                 {
-                    if (field.Name == StatementFieldName)
+                    if (field.Name == StatementName)
                     {
                         return true;
                     }
@@ -263,6 +295,23 @@ namespace Agenerela
             return Build(ctx, pair || DeclaresParameters(available) ? takeable : available, pair, answer, askForStatement);
         }
 
+        // Why this cannot name the free-text field (DecideOptions.StatementFieldName, DR-008), or null:
+        // lowercase snake_case, as a parameter's name is, and none the reply or memory already uses.
+        internal static string StatementNameProblem(string name)
+        {
+            if (string.IsNullOrEmpty(name) || !System.Text.RegularExpressions.Regex.IsMatch(name, "^[a-z][a-z0-9_]*$"))
+            {
+                return $"'{name}' is not a lowercase snake_case name, such as {StatementFieldName} or {DialogueFieldName}.";
+            }
+
+            if (name == ActionFieldName || name == TargetFieldName || name == "also_targets" || name == RollingHistory.OutcomeFieldName)
+            {
+                return $"'{name}' is already a field of the reply or of a remembered decision.";
+            }
+
+            return null;
+        }
+
         // Whether any of these actions declares a parameter, which makes their schema paired (DR-023).
         internal static bool DeclaresParameters(IReadOnlyList<ActionDefinition> available)
         {
@@ -309,7 +358,7 @@ namespace Agenerela
         // The answer, when given, is the one available came from: the paired schema leaves out each
         // pair a per-target check rejected in it (#190 LV #19).
         internal static DecisionSchema Build(AgentContext ctx, IReadOnlyList<ActionDefinition> available, bool pairTargets = false,
-            AvailabilityAnswer answer = null, bool askForStatement = true)
+            AvailabilityAnswer answer = null, bool askForStatement = true, string statementName = StatementFieldName)
         {
             if (ctx == null)
             {
@@ -330,7 +379,7 @@ namespace Agenerela
 
             if (askForStatement)
             {
-                fields.Add(StatementField());
+                fields.Add(StatementField(statementName));
             }
 
             // Paired when the caller says so and there is a target to pair, or an action that declares
@@ -345,7 +394,7 @@ namespace Agenerela
             }
 
             bool paired = pairTargets && (ctx.Targets.Count > 0 || declares);
-            return new DecisionSchema(fields, paired ? PairsFor(available, ctx.Targets, answer) : null);
+            return new DecisionSchema(fields, paired ? PairsFor(available, ctx.Targets, answer) : null, statementName);
         }
 
         // The actions a paired schema can offer: without an action that requires a target and takes
@@ -527,9 +576,10 @@ namespace Agenerela
 
         // The shape of a refusal line's reply (#109): the one free-text field, so it serializes as
         // any other schema does. Not a decision: it offers no action and no target.
-        internal static DecisionSchema StatementOnly()
+        // Named as the decision's was (DR-008), so the line is asked for under the same field.
+        internal static DecisionSchema StatementOnly(string statementName = StatementFieldName)
         {
-            return new DecisionSchema(new[] { StatementField() });
+            return new DecisionSchema(new[] { StatementField(statementName) }, null, statementName);
         }
 
         // The available actions in registry order, then none. ActionRegistry.Register rejects
@@ -571,11 +621,11 @@ namespace Agenerela
 
         // Required but free-form, and may be empty: an agent with nothing to say still answers
         // in the measured three-field shape.
-        private static SchemaField StatementField()
+        private static SchemaField StatementField(string name)
         {
             return new SchemaField
             {
-                Name = StatementFieldName,
+                Name = string.IsNullOrWhiteSpace(name) ? StatementFieldName : name,
                 Description = StatementDescription,
                 AllowedValues = null,
                 Required = true,
