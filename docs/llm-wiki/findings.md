@@ -4966,3 +4966,25 @@ order kept on every reply, no warnings, no pipeline errors; framework at test `6
   numbers. A 2 or 3 point swing in a control is inside the floor, but it is why a single run within a few points is
   never read as a result.
 - **No default changes.**
+
+### The grounding threshold at 0.76: on the 2B it frees the four right answers 0.8 stopped and lets nothing wrong through; on the 4B it changes nothing (23 November 2026)
+
+The threshold the 0.8-against-0.6 run above pointed at (every freed answer above 0.77, every wrong one let through
+below 0.75), tried as its own A/B at the tech lead's request: `ground-0.8` (the default) against `ground-0.76`
+(`DecideOptions.TargetGroundingThreshold`), the 209 set at `1a940f4`, guards on, interleaved, temperature 0, test
+`60e435c`, the home server (gate `5728506a6d6b`) under clean leases #21942 (2B, 18:25 to 18:29 local) and #22369
+(4B, 18:29 to 18:33), every model unloaded inside each lease first, field order kept, no warnings, no pipeline
+errors. Reports: `runs/2026-11-23-phase4/grounding-076/` and `grounding-076-4b/`.
+
+| Model | 0.8 | 0.76 | Difference | Floor | Same answer | Guard verdicts that differ |
+|---|---:|---:|---:|---:|---:|---|
+| `qwen3.5:2b` | 138 (66.0%) | 142 (67.9%) | +1.9 | 4.9 | 209 | 4: right answers at 0.778 to 0.796, rejected at 0.8, passed at 0.76 |
+| `qwen3.5:4b` | 173 (82.8%) | 173 (82.8%) | 0.0 | 4.9 | 209 | none |
+
+- **Within noise on both.** The model chose the same on every prompt, so only the guard's verdicts can differ: on
+  the 2B, 0.76 passes the same four right answers 0.6 did (`situation_021`, `situation_032`, `situation_051`,
+  `event_032`) and keeps all five containments and every other rejection; on the 4B no grounding fell between 0.76
+  and 0.8.
+- **What it suggests:** 0.76 costs nothing measured here and frees four right answers on the 2B. The 0.6 the
+  GreyBoxStrategy demo uses lets five wrong answers through on the same set. This is one set and one run per model,
+  inside the floor, so it is a candidate for the lead, not a calibrated threshold; DR-016's 0.8 stays the default.

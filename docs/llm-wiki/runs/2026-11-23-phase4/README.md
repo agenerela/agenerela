@@ -17,6 +17,7 @@ the rest `qwen3.5:2b`. The first five rows ran at test `1f12636`; every run belo
 | [`rename/`](rename/report.md), [`rename-4b/`](rename-4b/report.md) | The free-text field's name, #151, DR-008 | #18526, #21088 | `statement` (defaults) against `dialogue` (`StatementFieldName`) |
 | [`targetrule/`](targetrule/report.md), [`targetrule-4b/`](targetrule-4b/report.md) | The one-line target rule, #151, #107 | #18953, #20661 | `probabilities` (defaults) against `target-rule` (`TokenProbabilities = false` on the config) |
 | [`history/`](history/report.md), [`history-4b/`](history-4b/report.md) | History on against off, #151 | #19380, #21515 | `history` (defaults) against `no-history` (`EvalArm.IgnoreHistory`) |
+| [`grounding-076/`](grounding-076/report.md), [`grounding-076-4b/`](grounding-076-4b/report.md) | Grounding threshold 0.8 against 0.76 (tech lead) | #21942, #22369 | `ground-0.8` (defaults) against `ground-0.76` |
 | [`idle-4b/`](idle-4b/report.md), [`list-4b/`](list-4b/report.md) | The idle example and `ListActionsAndTargets` again, on `qwen3.5:4b` | #19807, #20234 | as `idle/` and `list/` |
 
 `Phase4Run.cs.txt` is the entry point that ran them: one test, the run picked by
