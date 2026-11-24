@@ -1,0 +1,19 @@
+{
+    "name": "GreyBoxStrategy.Demo.Editor",
+    "rootNamespace": "GreyBoxStrategy.Realm.Demo.Editor",
+    "references": [
+        "GreyBoxStrategy.Screen",
+        "GreyBoxStrategy.Replay"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
