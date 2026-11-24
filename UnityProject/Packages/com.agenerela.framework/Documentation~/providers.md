@@ -652,6 +652,12 @@ guard.Backlog = new DecisionBacklog(0, BacklogOverflow.RefuseNewest); // none wh
 
 - **Token-based rate limits**, above. Phase 6.
 
+## Images
+
+An image backend is not an `ILLMProvider`: it has its own interface, `IImageProvider`, with a
+cache, a prompt builder and a ComfyUI provider in its own assembly. See [images.md](images.md)
+(DR-024, DR-025).
+
 ## Extension points — where the next things go
 
 Each of these is a new method, a new field on a supporting type, or a new class. None of
