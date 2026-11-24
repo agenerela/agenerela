@@ -568,6 +568,14 @@ gives after reading the results, in as many phases as it likes, each decision re
 memory, drops the whole round on cancellation with nothing remembered, and groups a round's
 decisions in the log as one `DecisionChain`. `Documentation~/decision-rounds.md`.
 
+**Images** are a provider kind of their own (#359; DR-024, DR-025): `IImageProvider` takes an
+`ImageRequest` (prompt, size, seed, open parameters) and returns an `ImageResult`, a PNG or a
+failure with its `ProviderErrorKind`, never an exception for the backend's failure.
+`ImagePromptBuilder` puts the game's style first and cleans a model's words;
+`CachedImageProvider` keeps pictures by the request's key, in `ImageFileCache` or the developer's
+own store. `ComfyUIProvider` is in its own assembly, `Agenerela.ComfyUI`. Nothing in a decision
+changes. `Documentation~/images.md`.
+
 An action may declare **parameters** (#266 item 2; DR-023, first step): closed choices beside its
 target, a set of words or a number list, in `ActionDefinition.Parameters`,
 `[AgentParameter]` and `[Argument]`. A call that offers one sends the paired schema with the
@@ -2727,6 +2735,82 @@ Images or audio as input to the language model. Music. Any default voice or art 
 this shape cannot carry (streaming audio for long stories, or pictures that need the previous
 picture as input). A measured finding that speech or pictures on the same card slow decisions
 enough to need arbitration in the framework.
+
+### DR-025 — The image provider: a result that carries its failure, a cache in front, ComfyUI in its own assembly
+
+**Status:** Decided by the framework tech lead, 24 November 2026, under DR-024 (#359). The lead
+asked for Painted Realm's rulers to get generated portraits and flags when a world is made, in
+the final presentation's demo in the week of 7 December, so the framework part comes first and
+the game uses it, rather than the other way round as DR-024 expected.
+
+**Context.** DR-024 settled that images are their own provider kind, with its interface and plain
+value types in the core and every real backend isolated. It left the shape open. Three things
+shape it now: the first backend is the team's ComfyUI server, which takes 10 to 26 s an image and
+fails in several ways a game must survive (the card is busy, the gate is down, a model is
+missing); a game asks for images at a loading screen and must start anyway; and a picture must
+come back the same for the same world, which generation alone does not promise.
+
+**Options considered**
+
+| Question | Option | Verdict |
+|---|---|---|
+| How a failure reaches the caller | Throw `ProviderException`, as `ILLMProvider` does | Rejected: every caller of an image wants a fallback picture, not an exception, and there is no `Agent` in between to catch it |
+| | **Return an `ImageResult` whose `Error` names a `ProviderErrorKind`** | **Chosen.** The same kinds as a decision's, so one vocabulary; only the caller's own cancellation throws |
+| Where the cache sits | Inside each provider | Rejected: every backend would write it again |
+| | **A wrapper, `CachedImageProvider`, that is itself an `IImageProvider`** | **Chosen.** A cached picture needs no backend at all, and a game swaps either half |
+| How ComfyUI is isolated | A version define in the core assembly | Rejected: it needs no package, so there is no define to key on |
+| | **Its own assembly, `Agenerela.ComfyUI`, in the package, referencing only the core and Newtonsoft** | **Chosen.** A game that never references it never compiles it into its code paths; CI's dependency check applies to it as to the core |
+| What ComfyUI is told to run | A graph built in C# | Rejected: tied to one model's nodes |
+| | **The developer's workflow, in the format `tools/comfyui/` already uses (an API export with named `params`)** | **Chosen.** The same file runs from `comfy.py` and from a game |
+
+**Decision.**
+
+- **`IImageProvider`** (core, `Runtime/Providers/`): `Name`, `Capabilities` (`ImageCapabilities`:
+  the size step, the largest side, whether a seed is honoured) and
+  `Awaitable<ImageResult> GenerateAsync(ImageRequest, CancellationToken)`.
+- **`ImageRequest`**: the prompt, a width and height, an optional seed, and optional
+  backend parameters as open `name → value` strings (DR-008: no enum of backends' settings).
+  `Key(provider)` is a SHA-256 of all of it and the provider's name, so a cache never hands one
+  backend's picture to another.
+- **`ImageResult`**: PNG bytes, the seed used, the seconds it took end to end and, where the
+  backend reports it, on the card; whether it came from a cache; or an `Error`, a
+  `ProviderErrorKind` and a message with no key in it. `GenerateAsync` throws only
+  `OperationCanceledException` for the caller's cancellation and `ArgumentException` for a request
+  that cannot be sent.
+- **`ImagePromptBuilder`**: the developer's style line first, trusted details next, then untrusted
+  text (a model's words, a generated backstory) capped and cleaned of prompt syntax and of
+  sentences that try to change the style, then exclusions. The cleaning is a floor, not a filter
+  that makes any text safe; the style always comes first so it cannot be displaced.
+- **`IImageCache`** and **`CachedImageProvider`**: a hit returns the stored bytes and never calls
+  the backend; only a success is stored. `ImageFileCache`, in `Runtime/Unity/`, keeps one PNG a
+  key in a folder the developer names, and `ImageTextures` turns bytes into a `Texture2D` there.
+  `ScriptedImageProvider` answers tests.
+- **`ComfyUIProvider`** (`Runtime/Providers/ComfyUI/`, assembly `Agenerela.ComfyUI`): posts the
+  workflow to `/prompt` with the request written into its `prompt`, `seed`, `width` and `height`
+  params and any `node.input` parameter, polls `/history`, downloads the first image from `/view`,
+  checks it is a PNG, and asks `/free` afterwards unless told not to. Settings come from code or a
+  `ComfyUIProviderConfig` asset, which stores the *names* of the environment variables
+  (`COMFY_URL`, `COMFY_API_TOKEN` by default), never the key. The key travels only in the
+  `Authorization` header and is redacted from every message.
+- **Swapping the backend** is writing another `IImageProvider`: one call, returning a failed
+  result instead of throwing. Nothing else in the framework or a game changes, and the cache key
+  changes with the provider's name, so old pictures are not mistaken for the new backend's.
+
+**Not in this decision**, left to #359: the image slot on the provider settings page (DR-013), a
+queue of its own (a game asks one at a time at a loading screen today), the decision log's image
+line, and an action-handler example. Images during play: on a card shared with the decision model,
+each image unloads the model, so a game asks only where no decision waits.
+
+**Consequences.**
+
+- The core gains five public types and a builder; nothing a decision sends changes.
+- A second assembly in the package. A game that uses ComfyUI references `Agenerela.ComfyUI`.
+- Painted Realm generates a portrait and a flag for each ruler behind its loading card, cached per
+  world seed and country, and falls back to its art pack on any failure.
+
+**What would change this.** A backend whose failures a game must tell apart beyond
+`ProviderErrorKind`'s kinds (a content refusal, say), which would add a kind at the end; or a
+second game that needs images during play, which would bring the queue forward.
 
 ## Appendix A — carried measurements (source: test-ai-framework prototype, Aug 2026, RTX 4060 Laptop 8GB, qwen3.5 family via Ollama)
 
