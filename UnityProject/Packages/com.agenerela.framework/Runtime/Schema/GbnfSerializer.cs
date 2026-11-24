@@ -5,9 +5,9 @@ using System.Text;
 namespace Agenerela
 {
     /// <summary>
-    /// Translates a provider-natural into a GBNF grammar (json --convert--> GBNF grammar) for the llama.cpp
+    /// Translates a provider-neutral decision schema into a GBNF grammar for llama.cpp.
     /// </summary>
- public sealed class GbnfSerializer
+    public sealed class GbnfSerializer
     {
         
         /// <summary>
@@ -19,35 +19,31 @@ namespace Agenerela
         /// A field is null, unnamed or duplicated, or its allowed values are empty,
         /// null, empty strings or duplicated.
         /// </exception>
-        public String Serialize(DecisionSchema schema)
+        public string Serialize(DecisionSchema schema)
         {
             if (schema == null)
             {
                 throw new ArgumentNullException(nameof(schema));
             }
 
-            // fileds stores the 3 fields: (1) action (2) target (3) statement
-            // Then, fileds are being validated: checks that the lists are safe for serializer to use
-            var fields = schema.Fileds;
+            var fields = schema.Fields;
             Validate(fields);
 
-            var grammar = new StringBuilder(); // used as grammar.Append("abc")
-
-            if (fields.Count == 0)
+            if (schema.Pairs != null)
             {
-                AppendRule(grammar, "root", GbnfTerminal("{") + " ws " + GbnfTerminal("}") + " ws"); // Every GBNF grammar need "root"
-            }
-            else
-            {
-                AppendRule(grammar, "root", GbnfTerminal("{") + "ws fields-0" + GbnfTerminal("}") + " ws");
+                return SerializePairs(fields, schema.Pairs);
             }
 
-            grammar.Append("\n");
+            var grammar = new StringBuilder();
+            AppendRule(grammar, "root", "ws flat-object ws");
+            AppendRule(grammar, "flat-object",
+                GbnfTerminal("{") + " ws fields-0 ws " + GbnfTerminal("}"));
 
             for (int i = 0; i < fields.Count; i++)
             {
                 var field = fields[i];
-                AppendRule(grammar, "field-" + i, GbnfTerminal(JsonQuote(field.Name)) + " ws " + GbnfTerminal(":") + " ws value-" + i + " ws");
+                AppendRule(grammar, "field-" + i,
+                    GbnfTerminal(JsonQuote(field.Name)) + " ws " + GbnfTerminal(":") + " ws value-" + i);
 
                 if (field.AllowedValues == null)
                 {
@@ -55,26 +51,19 @@ namespace Agenerela
                 }
                 else
                 {
-                    var alternatives = new List<string> (field.AllowedValues.Count);
+                    var alternatives = new List<string>(field.AllowedValues.Count);
                     foreach (var value in field.AllowedValues)
                     {
-                        alternatives.Add(GbnfTermina(JsonQuote(value)));
+                        alternatives.Add(GbnfTerminal(JsonQuote(value)));
                     }
 
-                    AppendRule(grammar, "value-" + i, string.Join(" | ", alternatives));
+                    AppendRule(grammar, "value-" + i, "(" + string.Join(" | ", alternatives) + ")");
                 }
             }
 
-            if (fields.Count > 0)
-            {
-                grammar.Append('\n');
-                AppendRule(grammar, "json-string", GbnfTerminal("\"") + " json-char " + GbnfTerminal("\n"));
-            }
-
-            grammar.Append( @"json-char ::= [^""\\\x7F\x00-\x1F] | 
-            [\\] ([""\\bfnrt] | ""u"" [0-9a-fA-F]{4})").Append('\n');
-
-            grammar.Append(@"ws ::= | "" "" | ""\n"" [ \t]{0,20}").Append('\n');
+            AppendFieldSequenceRules(grammar, fields, string.Empty);
+            AppendJsonStringRules(grammar);
+            AppendRule(grammar, "ws", "[ \\t\\n]{0,20}");
 
             return grammar.ToString();
         }
@@ -102,6 +91,57 @@ namespace Agenerela
             AppendJsonStringRules(grammar);
             AppendRule(grammar, "ws", "[ \\t\\n]{0,20}");
             return grammar.ToString();
+        }
+
+        private static void AppendPairObjectRules(StringBuilder grammar,
+            IReadOnlyList<SchemaField> fields, ActionTargets pair, int pairIndex)
+        {
+            var prefix = "pair-" + pairIndex + "-";
+            AppendRule(grammar, prefix + "object",
+                GbnfTerminal("{") + " ws " + prefix + "fields-0 ws " + GbnfTerminal("}"));
+
+            for (var i = 0; i < fields.Count; i++)
+            {
+                var field = fields[i];
+                var values = field.AllowedValues;
+                if (field.Name == DecisionSchema.ActionFieldName)
+                {
+                    values = pair.Actions;
+                }
+                else if (field.Name == DecisionSchema.TargetFieldName)
+                {
+                    values = pair.Targets;
+                }
+
+                AppendRule(grammar, prefix + "field-" + i,
+                    GbnfTerminal(JsonQuote(field.Name)) + " ws " + GbnfTerminal(":") + " ws " + prefix + "value-" + i);
+
+                if (values == null)
+                {
+                    AppendRule(grammar, prefix + "value-" + i, "json-string");
+                }
+                else
+                {
+                    var alternatives = new List<string>(values.Count);
+                    foreach (var value in values)
+                    {
+                        alternatives.Add(GbnfTerminal(JsonQuote(value)));
+                    }
+
+                    AppendRule(grammar, prefix + "value-" + i,
+                        "(" + string.Join(" | ", alternatives) + ")");
+                }
+            }
+
+            AppendFieldSequenceRules(grammar, fields, prefix);
+        }
+
+        private static void AppendJsonStringRules(StringBuilder grammar)
+        {
+            AppendRule(grammar, "json-string",
+                GbnfTerminal("\"") + " json-char* " + GbnfTerminal("\""));
+            AppendRule(grammar, "json-char",
+                @"[^""\\\x7F\x00-\x1F] | ""\\"" ([""\\/bfnrt] | ""u"" [0-9a-fA-F]{4})");
         }
 
         private static void ValidatePairs(IReadOnlyList<SchemaField> fields,
@@ -154,88 +194,87 @@ namespace Agenerela
             }
         }
 
-        private static void AppendPairObjectRules(StringBuilder grammar,
-            IReadOnlyList<SchemaField> fields, ActionTargets pair, int pairIndex)
+        private static void ValidatePairValues(IReadOnlyList<string> values,
+            IReadOnlyList<string> allowed, string description)
         {
-            var prefix = "pair-" + pairIndex + "-";
-            AppendRule(grammar, prefix + "object",
-                GbnfTerminal("{") + " ws " + prefix + "fields-0 ws " + GbnfTerminal("}"));
-
-            for (var i = 0; i < fields.Count; i++)
+            if (values.Count == 0)
             {
-                var field = fields[i];
-                var values = field.AllowedValues;
-                if (field.Name == DecisionSchema.ActionFieldName)
-                {
-                    values = pair.Actions;
-                }
-                else if (field.Name == DecisionSchema.TargetFieldName)
-                {
-                    values = pair.Targets;
-                }
-
-                AppendRule(grammar, prefix + "field-" + i,
-                    GbnfTerminal(JsonQuote(field.Name)) + " ws " + GbnfTerminal(":") + " ws " + prefix + "value-" + i);
-
-                if (values == null)
-                {
-                    AppendRule(grammar, prefix + "value-" + i, "json-string");
-                }
-                else
-                {
-                    var alternatives = new List<string>(values.Count);
-                    foreach (var value in values)
-                    {
-                        alternatives.Add(GbnfTerminal(JsonQuote(value)));
-                    }
-
-                    AppendRule(grammar, prefix + "value-" + i,
-                        "(" + string.Join(" | ", alternatives) + ")");
-                }
+                throw new ArgumentException($"{description} are empty, which no answer can satisfy.", "schema");
             }
 
-            AppendFieldSequenceRules(grammar, fields, prefix);
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var value in values)
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    throw new ArgumentException(
+                        $"{description} include a null or empty value. Gemini rejects \"\" in an enum with HTTP 400.",
+                        "schema");
+                }
+
+                if (!seen.Add(value))
+                {
+                    throw new ArgumentException($"{description} include '{value}' twice.", "schema");
+                }
+
+                var isAllowed = false;
+                foreach (var candidate in allowed)
+                {
+                    isAllowed |= string.Equals(candidate, value, StringComparison.Ordinal);
+                }
+
+                if (!isAllowed)
+                {
+                    throw new ArgumentException(
+                        $"{description} include '{value}', which the flat field does not offer.", "schema");
+                }
+            }
         }
 
-
-        // Builds grammar rules that control how field appear in the JSON object.
-        // Keeps fields in thier original order.
-        private static void AppendFieldSequenceRules(StringBuilder grammar, IReadOnlyList<SchemaField> fields)
+        // Builds grammar rules that control how fields appear in the JSON object, in their
+        // original order.
+        private static void AppendFieldSequenceRules(StringBuilder grammar, IReadOnlyList<SchemaField> fields,
+            string prefix)
         {
-            var hasRequiredFieldAtOrAfter = new bool[fields.Count];
-            var requriedSeen = false;
+            var hasRequiredFieldAtOrAfter = new bool[fields.Count + 1];
+            var requiredSeen = false;
 
             for (var i = fields.Count - 1; i >= 0; i--)
             {
-                requriedSeen |= fields[i].Required;
+                requiredSeen |= fields[i].Required;
                 hasRequiredFieldAtOrAfter[i] = requiredSeen;
             }
 
-            // "nonempty-i" means at leat one field form i onward is present.
-            // "fields-i" also permits nothing when every remaining field is optional.
-            for (var i = 0; i < fields.Count; i++)
+            AppendRule(grammar, prefix + "fields-" + fields.Count, GbnfTerminal(string.Empty));
+
+            // "nonempty-i" requires at least one field from i onward. "fields-i" also permits
+            // the empty sequence when every remaining field is optional.
+            for (var i = fields.Count - 1; i >= 0; i--)
             {
-                var alternatives = new List<string>();
+                var field = prefix + "field-" + i;
+                var nonempty = prefix + "nonempty-" + i;
+                string expression;
 
                 if (i == fields.Count - 1)
                 {
-                    alternatives.Add("field-" + i);
+                    expression = field;
                 }
                 else
                 {
-                    alternatives.Add("field-" + i +" (" + GbnfTerminal(",") + " ws nonempty-" + (i + 1) + ")?");
+                    var suffix = prefix + "nonempty-" + (i + 1);
+                    expression = field + " (ws " + GbnfTerminal(",") + " ws " + suffix + ")?";
                     if (!fields[i].Required)
                     {
-                        alternatives.Add("nonempty-" + (i + 1));
+                        expression += " | " + suffix;
                     }
                 }
-                AppendRule(grammar, "nonempty-" + i, string.Join(" | ", alternatives));
+                AppendRule(grammar, nonempty, "(" + expression + ")");
 
                 var fieldsExpression = hasRequiredFieldAtOrAfter[i]
-                    ? "nonempty-" + i
-                    : "| nonempty-" + i;
+                    ? nonempty
+                    : "(" + nonempty + " | " + GbnfTerminal(string.Empty) + ")";
 
-                AppendRule(grammar, "fields-" + i, fieldsExpression);
+                AppendRule(grammar, prefix + "fields-" + i, fieldsExpression);
             }
         }
         
@@ -313,7 +352,7 @@ namespace Agenerela
         // Encodes a string as JSON text, then as a GBNF terminal that mathces that text.
         private static string JsonQuote(string value)
         {
-             var json = new StringBuilder();
+            var json = new StringBuilder(value.Length + 2);
             json.Append('"');
 
             for (var i = 0; i < value.Length; i++)
@@ -346,7 +385,7 @@ namespace Agenerela
                     default:
                         if (c < 0x20 || c == 0x7f)
                         {
-                            AppendJasonUnicodeEscape(json, c);
+                            AppendJsonUnicodeEscape(json, c);
                         }
                         else if (char.IsHighSurrogate(c))
                         {
@@ -359,7 +398,7 @@ namespace Agenerela
                                 AppendJsonUnicodeEscape(json, c);
                             }
                         }
-                        else if (char.IsHighSurrogate(c))
+                        else if (char.IsSurrogate(c))
                         {
                             AppendJsonUnicodeEscape(json, c);
                         }
@@ -367,18 +406,22 @@ namespace Agenerela
                         {
                             json.Append(c);
                         }
+                        break;
                 }
             }
+
+            json.Append('"');
+            return json.ToString();
         }
 
         private static void AppendJsonUnicodeEscape(StringBuilder output, char value)
         {
             output.Append("\\u");
+            AppendHex4(output, value);
         }
 
-        // GBNF terminals are quoted strings.
-        // Escape grammar meta-characters and write non-ASCII
-        // as exploit Unicode escapes.
+        // GBNF terminals are quoted strings. Escape grammar metacharacters and non-ASCII
+        // characters so ids containing quotes, backslashes or Unicode remain valid literals.
         private static string GbnfTerminal(string value)
         {
             var terminal = new StringBuilder();
@@ -442,4 +485,4 @@ namespace Agenerela
             output.Append(Hex[value & 0xf]);
         }
     }    
-}   
+}
