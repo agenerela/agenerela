@@ -89,6 +89,45 @@ namespace Agenerela.Tests.Evaluation
         }
 
         [Test]
+        public void AnEchoSaysWhetherItRepeatsAStimulusOrAWrittenStatement()
+        {
+            // #151's example-statement run (#190 G14, #218) tells an echo of the request's kind of
+            // line from a parrot of what an example says.
+            var profile = Fixtures.VillageGuardProfile();
+            profile.Actions.First(a => a.Action.Id == "follow_player").Action.ExampleStatement = "Lead the way.";
+            profile.IdleExampleStatement = "All is calm.";
+
+            var stimulus = Check("Proceed to the docks.", profile).Single();
+            var statement = Check("Lead the way!", profile).Single();
+            var idle = Check("All is calm.", profile).Single();
+
+            Assert.That((stimulus.EchoesStimulus, stimulus.EchoesStatement), Is.EqualTo((true, false)));
+            Assert.That((statement.EchoesStimulus, statement.EchoesStatement), Is.EqualTo((false, true)));
+            Assert.That((idle.EchoesStimulus, idle.EchoesStatement), Is.EqualTo((false, true)));
+            Assert.That(Check("Proceed to the docks.", profile).Single().Detail, Does.Contain("move_to's example"), "The detail is as it was.");
+        }
+
+        [Test]
+        public async Task EachArmCountsEchoesOfAStimulusAndOfAStatementApart()
+        {
+            var profile = Fixtures.VillageGuardProfile();
+            profile.Actions.First(a => a.Action.Id == "follow_player").Action.ExampleStatement = "Lead the way.";
+            var provider = Scripted("Proceed to the bridge.", "Lead the way.", "You seem well rested today.");
+            var runner = new EvalRunner(fixtures.Set(new[] { Bridge, Escort }, new[] { Quiet }), profile,
+                Arm(null, provider, "A"), Arm(null, provider, "B"));
+
+            var report = await Fixtures.NotCancelled(runner.RunAsync());
+
+            var replies = report.Arms[0].Replies;
+            Assert.That((replies.Echo, replies.EchoStimulus, replies.EchoStatement), Is.EqualTo((3, 2, 1)));
+            string md = report.ToMarkdown();
+            Assert.That(md, Does.Contain("| Echo | 3 | 3 |\n| of a stimulus | 2 | 2 |\n| of a statement | 1 | 1 |"));
+            var back = EvalReport.FromJson(report.ToJson());
+            Assert.That((back.Arms[0].Replies.EchoStimulus, back.Arms[0].Replies.EchoStatement), Is.EqualTo((2, 1)));
+            Assert.That(back.Answers.Single(x => x.Arm == "A" && x.PromptId == "target_002").ReplyFlags.Single().EchoesStatement, Is.True);
+        }
+
+        [Test]
         public void AStatementThatOnlySharesWordsWithAnExampleIsNoEcho()
         {
             Assert.That(Check("I will not engage anyone today."), Is.Empty);

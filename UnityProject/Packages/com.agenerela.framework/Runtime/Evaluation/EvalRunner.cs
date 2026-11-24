@@ -50,6 +50,14 @@ namespace Agenerela.Evaluation
     /// what the agent chose, not what it said.
     /// </para>
     /// <para>
+    /// <b>The field order</b> of each reply is counted per arm, from
+    /// <see cref="DecisionTelemetry.OrderLost"/>: in the schema's order, out of it, or not checked
+    /// when no reply was read (<see cref="EvalArmResult.OrderKept"/> and the two beside it). An arm
+    /// with any reply out of order is warned about, since its accuracy then measures the order as
+    /// well as the model. A warm-up reply out of order refuses the run before its first prompt,
+    /// unless <see cref="AllowOrderLost"/> is on (#180).
+    /// </para>
+    /// <para>
     /// <b>What it said</b> is a second score: <see cref="ReplyChecks"/> flags each answer's statement
     /// that repeats a few-shot line, is empty, is longer than the arm's
     /// <see cref="EvalArm.MaxStatementLength"/>, or leaks the machinery, into
@@ -108,6 +116,20 @@ namespace Agenerela.Evaluation
         /// §4, item 6: two or three). They are never counted or reported, only how many there were.
         /// </summary>
         public int WarmUpRequests = 3;
+
+        /// <summary>
+        /// Lets the run start when a warm-up reply's fields came out of the schema's order; false by
+        /// default, which refuses it, naming the arm and the model (#180). On for a run that
+        /// measures the order on purpose. The report records it
+        /// (<see cref="EvalConditions.AllowOrderLost"/>), and still counts and warns about every
+        /// answer out of order.
+        /// </summary>
+        /// <remarks>
+        /// The settled field-order rule (action, then target, then statement) is the measured one:
+        /// a model whose replies come in another order, as Ollama's native template path writes
+        /// them, is compared under two changes at once (findings, 5 November 2026).
+        /// </remarks>
+        public bool AllowOrderLost;
 
         /// <summary>
         /// How a prompt's <c>preconditionState</c> is told to the model, one observation per line:
@@ -188,7 +210,8 @@ namespace Agenerela.Evaluation
         /// <exception cref="InvalidOperationException">
         /// The run cannot start or go on: the set breaks a rule or disagrees with the profile, has no
         /// prompts, another model is resident, interleaved arms are on two models, no warm-up decision
-        /// was a decision, or the model could not be unloaded between sequential arms. The message
+        /// was a decision, a warm-up reply's fields came out of the schema's order (unless
+        /// <see cref="AllowOrderLost"/>), or the model could not be unloaded between sequential arms. The message
         /// says which.
         /// </exception>
         /// <exception cref="ProviderException">An Ollama server could not be read.</exception>
@@ -296,6 +319,7 @@ namespace Agenerela.Evaluation
             foreach (var run in new[] { a, b })
             {
                 Warn(report.Conditions, run);
+                WarnOrder(report.Conditions, run);
             }
 
             // A cancelled run compares only where both arms were asked the same prompts: in an
@@ -336,6 +360,8 @@ namespace Agenerela.Evaluation
                 .Concat(PromptSetChecks.CompareWithProfile(Set, Profile))
                 .Concat(IdleExampleProblems(ArmA, prompts))
                 .Concat(IdleExampleProblems(ArmB, prompts))
+                .Concat(AddedExampleProblems(ArmA, prompts))
+                .Concat(AddedExampleProblems(ArmB, prompts))
                 .Concat(BareExampleProblems(ArmA, prompts))
                 .Concat(BareExampleProblems(ArmB, prompts))
                 .Concat(LegalityProblems(ArmA, prompts))
@@ -423,7 +449,7 @@ namespace Agenerela.Evaluation
                         yield return $"{prompt.Id}: arm '{arm.Name}' registers its expected target '{id}' as an extra target.";
                     }
                     else if (categories != null && id != TargetRegistry.NoTarget &&
-                             !rule.AcceptsCategory(legality.TargetCategories.TryGetValue(id, out var category) ? category : null))
+                             !rule.AcceptsCategory(CategoryOf(arm, Set.Targets.FirstOrDefault(t => t.Id == id) ?? new DeclaredTarget { Id = id })))
                     {
                         yield return $"{prompt.Id}: arm '{arm.Name}' makes its expected answer {prompt.ExpectedAction}/{id} illegal.";
                     }
@@ -479,6 +505,40 @@ namespace Agenerela.Evaluation
             }
         }
 
+        // An arm's added examples (DecideOptions.AddedExamples, #151) are the arm's own, which
+        // PromptSetChecks never sees, so they are checked here as its idle example is (hard rule 4).
+        private IEnumerable<string> AddedExampleProblems(EvalArm arm, List<(string Category, EvalPrompt Prompt)> prompts)
+        {
+            if (arm.Options.AddedExamples == null)
+            {
+                yield break;
+            }
+
+            foreach (var example in arm.Options.AddedExamples)
+            {
+                if (example == null)
+                {
+                    continue;
+                }
+
+                foreach (var (text, what) in new[] { (example.Stimulus, "added example"), (example.Statement, "added example's statement") })
+                {
+                    if (string.IsNullOrWhiteSpace(text))
+                    {
+                        continue;
+                    }
+
+                    foreach (var (_, prompt) in prompts)
+                    {
+                        if (PromptSetChecks.MatchesExample(prompt.Stimulus, text))
+                        {
+                            yield return $"{prompt.Id}: the stimulus is arm '{arm.Name}''s {what} \"{text}\": never score on a few-shot example (hard rule 4)";
+                        }
+                    }
+                }
+            }
+        }
+
         private static ILLMProvider ProviderOf(EvalArm arm)
         {
             // Read once per run, on the main thread, as ProviderConfig asks.
@@ -512,6 +572,7 @@ namespace Agenerela.Evaluation
                 SetAgent = Set.Agent,
                 Prompts = prompts,
                 SetCommit = commit,
+                AllowOrderLost = AllowOrderLost,
                 SetUncommitted = uncommitted,
                 Profile = Profile.name,
                 GraphicsDevice = SystemInfo.graphicsDeviceName,
@@ -604,6 +665,19 @@ namespace Agenerela.Evaluation
                 var agent = Build(run, new JObject(), Standing(run, new List<string>()), new List<string>(), options);
                 last = await agent.DecideAsync(stimuli[i % stimuli.Count], options, ct);
                 decided |= last.Decision != null;
+                if (OrderOf(last) == true)
+                {
+                    run.Conditions.WarmUpOrderLost++;
+                }
+            }
+
+            if (run.Conditions.WarmUpOrderLost > 0 && !AllowOrderLost)
+            {
+                throw new InvalidOperationException(
+                    $"Arm '{run.Arm.Name}': {run.Conditions.WarmUpOrderLost} of {WarmUpRequests} warm-up replies from {ModelOf(run, last)} came with "
+                  + "their fields out of the schema's order (action, target, statement), so every answer would measure the order as well as "
+                  + "the model. Ollama's native template path sorts the schema's keys (findings, 5 November 2026). Set AllowOrderLost to "
+                  + "run it anyway, for a run that measures the order on purpose.");
             }
 
             if (WarmUpRequests > 0 && !decided)
@@ -611,6 +685,34 @@ namespace Agenerela.Evaluation
                 throw new InvalidOperationException(
                     $"Arm '{run.Arm.Name}': no warm-up request produced a decision, so every prompt would fail the same way. "
                   + $"{last.Telemetry.ErrorKind}: {last.Telemetry.ErrorMessage}");
+            }
+        }
+
+        // Whether the reply's fields came out of the schema's order; null when no reply was read,
+        // so the order was not checked. OrderLost is false then, which is not "kept".
+        private static bool? OrderOf(DecisionResult result)
+        {
+            return result?.ModelDecision == null ? (bool?)null : result.Telemetry.OrderLost;
+        }
+
+        // The model as the arm asks for it, otherwise as the provider reported it, otherwise the provider.
+        private static string ModelOf(ArmRun run, DecisionResult last)
+        {
+            if (!string.IsNullOrEmpty(run.Ollama?.Model)) return run.Ollama.Model;
+            if (!string.IsNullOrEmpty(last?.Telemetry.Model)) return last.Telemetry.Model;
+            return $"the {run.Provider.Name} provider's model";
+        }
+
+        // An arm with any answer out of order, for the report's warnings (#180).
+        private static void WarnOrder(EvalConditions conditions, ArmRun run)
+        {
+            var result = run.Result;
+            if (result.OrderFlagged)
+            {
+                int read = result.OrderKept + result.OrderLost;
+                conditions.Warnings.Add(
+                    $"Arm '{run.Arm.Name}': {result.OrderLost} of {read} replies from {ModelOf(run, null)} came with their fields out of the "
+                  + "schema's order, so its accuracy measures the order as well as the model.");
             }
         }
 
@@ -695,12 +797,18 @@ namespace Agenerela.Evaluation
             options.StimulusLabel = prompt.Label;
             options.CheckTarget = run.Arm.Options.CheckTarget && prompt.ChecksTarget;
             var agent = Build(run, state, Standing(run, stateLines), prompt.Observations ?? new List<string>(), options);
+            if (!run.Arm.IgnoreHistory)
+            {
+                StageHistory(agent, prompt, options);
+            }
 
             var result = await agent.DecideAsync(prompt.Stimulus, options, ct);
             var outcome = Classify(prompt, result);
             result.Telemetry.Outcome = outcome;
             run.Result.Add(category, outcome);
             run.Answered(result.Telemetry.Model);
+            bool? orderLost = OrderOf(result);
+            run.Result.AddOrder(orderLost);
 
             // The reply checks, a second score: they read the statement and change nothing above.
             var replyFlags = new List<ReplyFinding>();
@@ -739,10 +847,60 @@ namespace Agenerela.Evaluation
                 ErrorMessage = t.ErrorMessage,
                 Model = t.Model,
                 LatencySeconds = t.LatencySeconds,
+                OrderLost = orderLost,
                 ReplyChecked = replyChecked,
                 ReplyFlags = replyFlags,
                 Result = result,
             };
+        }
+
+        // A multi-turn prompt's history (#147), put in the agent's memory before the stimulus is
+        // asked: each turn as RollingHistory remembers a real one, the stimulus as the request
+        // sent it ("Player: \"Follow me.\"") and the answer as the JSON object the model gives,
+        // in DR-004's order, with the statement only when the arm asks for one. The memory holds
+        // every turn and sends them all, so a long history is never cut. A prompt with none keeps
+        // the agent Build made, with no memory, exactly as before.
+        private static void StageHistory(Agent agent, EvalPrompt prompt, DecideOptions options)
+        {
+            if (!prompt.HasHistory)
+            {
+                return;
+            }
+
+            var snapshot = new MemorySnapshot { Format = RollingHistory.SnapshotFormat, Version = RollingHistory.SnapshotVersion };
+            int characters = 0;
+            foreach (var turn in prompt.History)
+            {
+                string statement = options.AskForStatement && !string.IsNullOrWhiteSpace(turn.Statement) ? turn.Statement : null;
+                string stimulus = $"{turn.LabelOrDefault}: \"{turn.Stimulus}\"";
+                string decision = HistoryDecision(turn.Action, turn.Target, statement, options.StatementFieldName);
+                snapshot.Exchanges.Add(new MemoryExchange(stimulus, decision));
+                characters += stimulus.Length + decision.Length;
+            }
+
+            int tokens = Math.Max(RollingHistory.DefaultMaxTokens, RollingHistory.EstimateTokens(characters) + prompt.History.Count);
+            var memory = new RollingHistory(Math.Max(RollingHistory.DefaultTurns, prompt.History.Count), tokens);
+            memory.Import(snapshot);
+            agent.Memory = memory;
+        }
+
+        // One remembered answer on one line: action, target, then the statement when there is one,
+        // under the name the arm's schema gives it (DR-008), so a remembered answer has the shape the
+        // model must give now.
+        internal static string HistoryDecision(string action, string target, string statement,
+                                               string statementName = DecisionSchema.StatementFieldName)
+        {
+            var json = new JObject
+            {
+                [DecisionSchema.ActionFieldName] = action,
+                [DecisionSchema.TargetFieldName] = target,
+            };
+            if (statement != null)
+            {
+                json[string.IsNullOrWhiteSpace(statementName) ? DecisionSchema.StatementFieldName : statementName] = statement;
+            }
+
+            return json.ToString(Formatting.None);
         }
 
         // Whether the request's schema had a statement field; a decision's always has, so a result
@@ -758,8 +916,19 @@ namespace Agenerela.Evaluation
         {
             var observations = new List<string>(run.Arm.Options.Observations ?? new List<string>());
             observations.AddRange(stateLines);
+            var extras = run.Arm.Legality?.ExtraTargets ?? new List<EvalExtraTarget>();
+            if (run.Arm.SummariseTargets)
+            {
+                // One line per category in place of one per target (§2.8, #151), in the order the
+                // agent registers them.
+                observations.AddRange(new TargetSummarySource().Summarise(
+                    Set.Targets.Select(t => (t.Id, t.Description, CategoryOf(run.Arm, t)))
+                        .Concat(extras.Select(e => (e.Id, e.Description, e.Category)))));
+                return observations;
+            }
+
             observations.AddRange(Set.Targets.Select(TargetLine));
-            foreach (var extra in run.Arm.Legality?.ExtraTargets ?? new List<EvalExtraTarget>())
+            foreach (var extra in extras)
             {
                 observations.Add(TargetLine(new DeclaredTarget { Id = extra.Id, Description = extra.Description }));
             }
@@ -821,12 +990,9 @@ namespace Agenerela.Evaluation
             }
 
             var targets = new ExplicitTargetSource();
-            var targetCategories = run.Arm.Legality?.TargetCategories;
             foreach (var target in Set.Targets)
             {
-                string category = null;
-                targetCategories?.TryGetValue(target.Id, out category);
-                targets.Add(target.Id, target, category);
+                targets.Add(target.Id, target, CategoryOf(run.Arm, target));
             }
 
             foreach (var extra in run.Arm.Legality?.ExtraTargets ?? new List<EvalExtraTarget>())
@@ -841,6 +1007,14 @@ namespace Agenerela.Evaluation
             }
 
             return agent;
+        }
+
+        // A set target's category in an arm: the arm's own legality's, where it names the target, or
+        // else the set's (#151).
+        private static string CategoryOf(EvalArm arm, DeclaredTarget target)
+        {
+            var own = arm.Legality?.TargetCategories;
+            return own != null && own.TryGetValue(target.Id, out string category) ? category : target.Category;
         }
 
         // The profile's definition with an arm's own target categories (#151): every field copied, so
@@ -1022,7 +1196,9 @@ namespace Agenerela.Evaluation
                     Model = Ollama?.Model,
                     CheckTarget = arm.Options.CheckTarget,
                     TargetGroundingThreshold = arm.Options.TargetGroundingThreshold,
-                    TokenAlternatives = Ollama?.TokenAlternatives,
+                    // None asked for when the arm's Ollama asks without probabilities (#107).
+                    TokenAlternatives = Ollama != null && Ollama.TokenProbabilities ? Ollama.TokenAlternatives : (int?)null,
+                    TokenProbabilities = Ollama?.TokenProbabilities,
                     AskForRefusalLine = arm.Options.AskForRefusalLine,
                     IdleExampleStimulus = arm.Options.IdleExampleStimulus,
                     ListActionsAndTargets = arm.Options.ListActionsAndTargets,
@@ -1035,10 +1211,14 @@ namespace Agenerela.Evaluation
                     PairTargetsWithActions = arm.Options.PairTargetsWithActions,
                     LegalTargets = arm.Options.LegalTargets.ToString(),
                     StatementRulesWording = arm.Options.StatementRulesWording.ToString(),
+                    StatementFieldName = arm.Options.StatementFieldName ?? DecisionSchema.StatementFieldName,
                     StatementRules = arm.StatementRules,
                     Legality = arm.Legality?.Copy(),
                     ObservationPlacement = arm.Options.ObservationPlacement.ToString(),
                     StandingLinesAsCallObservations = arm.StandingLinesAsCallObservations,
+                    SummariseTargets = arm.SummariseTargets,
+                    IgnoreHistory = arm.IgnoreHistory,
+                    AddedExamples = (arm.Options.AddedExamples ?? new List<FewShotExample>()).Where(e => e != null).Select(e => e.ToString()).ToList(),
                     Priority = arm.Options.Priority.ToString(),
                     Observations = new List<string>(arm.Options.Observations ?? new List<string>()),
                     Knowledge = new List<string>(arm.Knowledge),

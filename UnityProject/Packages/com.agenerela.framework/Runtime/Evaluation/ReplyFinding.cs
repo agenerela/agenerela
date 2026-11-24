@@ -15,6 +15,19 @@ namespace Agenerela.Evaluation
         /// </summary>
         [JsonProperty("detail")] public string Detail;
 
+        /// <summary>
+        /// For <see cref="ReplyFlag.Echo"/>: the statement repeats an example's stimulus, the line the
+        /// example answers (an action's, a counter-example's or the idle example's) (#151, #218).
+        /// </summary>
+        [JsonProperty("echoesStimulus", DefaultValueHandling = DefaultValueHandling.Ignore)] public bool EchoesStimulus;
+
+        /// <summary>
+        /// For <see cref="ReplyFlag.Echo"/>: the statement repeats an example's statement, the line the
+        /// example says (<see cref="ActionDefinition.ExampleStatement"/> and the like): a parrot rather
+        /// than an echo of the request (#151, #218). Both can be true, when one line is both.
+        /// </summary>
+        [JsonProperty("echoesStatement", DefaultValueHandling = DefaultValueHandling.Ignore)] public bool EchoesStatement;
+
         public override string ToString() => string.IsNullOrEmpty(Detail) ? Flag.ToString() : $"{Flag}: {Detail}";
     }
 }

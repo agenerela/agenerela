@@ -94,6 +94,15 @@
         <!-- Shown over Label and Agreement while Write has unsaved edits -->
         <ui:VisualElement name="save-first" class="ps-pad" />
 
+        <!-- Above Label only: whose prompts it asks, when an agreement cohort sits beside the set (#148) -->
+        <ui:VisualElement name="cohort" class="ps-cohort">
+            <ui:VisualElement name="cohort-error" />
+            <ui:VisualElement name="cohort-row" class="ps-row">
+                <ui:Label name="cohort-line" class="ag-muted ps-wrap ps-grow" />
+                <ui:Toggle name="whole-set" text="Whole set" tooltip="Label every prompt of the set instead of only the cohort's." />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
         <!-- B, C, D · The three views, each from its own UXML (PromptSetWriteView.uxml and so on) -->
         <ui:VisualElement name="write-host" class="ps-host" />
         <ui:VisualElement name="label-host" class="ps-host" />

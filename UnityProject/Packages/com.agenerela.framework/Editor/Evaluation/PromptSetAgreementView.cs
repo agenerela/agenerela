@@ -19,7 +19,7 @@ namespace Agenerela.Editor.Evaluation
 
         // Names a test reaches. The rest are in the UXML.
         internal const string CategoriesName = "categories", SplitsName = "splits", HeadlineName = "agreement-headline",
-            PercentName = "agreement-percent";
+            PercentName = "agreement-percent", PairwiseName = "agreement-pairwise", RecordAgreedName = "record-agreed";
 
         /// <summary>The table's columns, by name, in order.</summary>
         internal static readonly string[] Columns = { "category", "prompts", "twice", "agreed", "split", "agreement" };
@@ -73,13 +73,12 @@ namespace Agenerela.Editor.Evaluation
         {
             root = PromptSetUi.Load(LayoutPath);
 
-            int twice = report.AnsweredByTwoOrMore;
             root.Q<Label>(PercentName).text = report.PercentAgreement is double percent ? $"{percent:0}%" : "–";
-            root.Q<Label>(HeadlineName).text = twice == 0
-                ? "No prompt has two answers yet."
-                : $"{report.Unanimous} of {twice} prompts answered by two or more people got the same answer from all.";
+            root.Q<Label>(HeadlineName).text = EvaluationReportView.AgreementHeadline(report);
+            root.Q<Label>(PairwiseName).text = EvaluationReportView.PairwiseAgreement(report);
 
             BuildTable();
+            BuildRecordAgreed();
             BuildSplits();
             BuildEveryPrompt();
             return root;
@@ -181,6 +180,48 @@ namespace Agenerela.Editor.Evaluation
             var next = sorted.ToList();
             rows.Clear();
             rows.AddRange(next);
+        }
+
+        // ---- Agreed answers -------------------------------------------------------------------------
+
+        private void BuildRecordAgreed()
+        {
+            var button = root.Q<Button>(RecordAgreedName);
+            int count = UnrecordedAgreements(set, report).Count();
+            PromptSetUi.Display(button, count > 0);
+            button.text = $"Record agreed answers ({count})";
+            button.clicked += () =>
+            {
+                if (EditorUtility.DisplayDialog(
+                        "Record agreed answers?",
+                        $"Keep each person's own answer in labels for these {count} unanimous prompts. Expected answers stay as they are; splits still need discussion.",
+                        "Record", "Cancel"))
+                {
+                    RecordAgreedAnswers(set, report);
+                    afterSettle();
+                }
+            };
+        }
+
+        // Unanimous prompts need both original answers in labels too (#148), without making a
+        // person settle a disagreement that never existed or replacing the expected answer.
+        internal static int RecordAgreedAnswers(PromptSet set, AgreementReport report)
+        {
+            var agreed = UnrecordedAgreements(set, report).ToList();
+            foreach (var agreement in agreed)
+            {
+                set.TryFind(agreement.PromptId, out var prompt, out _);
+                set.Settle(agreement, prompt.ExpectedAction, prompt.ExpectedTarget);
+            }
+
+            return agreed.Count;
+        }
+
+        private static IEnumerable<PromptAgreement> UnrecordedAgreements(PromptSet set, AgreementReport report)
+        {
+            return report.Prompts.Where(p => p.Answered >= 2 && !p.IsSplit
+                && set.TryFind(p.PromptId, out var prompt, out _)
+                && p.Answers.Keys.Any(name => prompt.Labels == null || !prompt.Labels.ContainsKey(name)));
         }
 
         // ---- Splits --------------------------------------------------------------------------------

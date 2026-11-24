@@ -71,6 +71,31 @@ namespace Agenerela.Providers
         /// </remarks>
         public int TokenAlternatives = DefaultTokenAlternatives;
 
+        /// <summary>
+        /// Whether each request asks for token probabilities (<c>logprobs</c> and
+        /// <c>top_logprobs</c>): true unless set. False asks without them, for the A/B run of the
+        /// target rule's wording against the probe's form (#107, #151).
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Off, the provider's <see cref="ProviderCapabilities.ReportsTokenProbabilities"/> is false,
+        /// so what turns off with it is everything the probabilities feed:
+        /// <see cref="TargetGroundingGuard"/>, the confidence check on the target, has nothing to read
+        /// and passes every decision, recorded as <see cref="GroundingStatus.NoProbabilities"/>, never
+        /// as checked; <see cref="ProviderResult.TokenProbabilities"/> is null, so no token
+        /// alternatives reach telemetry or a guard of your own; and <see cref="TokenAlternatives"/>
+        /// is not sent. In their place the prompt carries the one-line target rule
+        /// (<see cref="PromptOptions.TargetRule"/>), which a call with
+        /// <see cref="DecideOptions.CheckTarget"/> on sends whenever its provider reports no
+        /// probabilities. Every other guard runs as before.
+        /// </para>
+        /// <para>
+        /// It removes the one guard that catches a target swapped for a legal one ("Attack the
+        /// dragon" attacking the training dummy), so it is for that run, never a default.
+        /// </para>
+        /// </remarks>
+        public bool TokenProbabilities = true;
+
         /// <summary><see cref="TokenAlternatives"/>' default, 20 (#244); DR-016 measured with 5.</summary>
         public const int DefaultTokenAlternatives = 20;
 

@@ -511,3 +511,29 @@
 .ps-host > * {
     flex-grow: 1;
 }
+
+/* Label: a multi-turn prompt's earlier turns (#147) */
+
+.ps-label__turn-answer {
+    margin-left: var(--ag-space-l);
+    margin-bottom: var(--ag-space-xs);
+    font-size: var(--ag-font-size-small);
+}
+
+/* Label: the agreement cohort's line and its Whole set toggle (#148) */
+
+.ps-cohort {
+    flex-shrink: 0;
+    padding: var(--ag-space-s) var(--ag-space-l) 0 var(--ag-space-l);
+}
+
+.ps-cohort Toggle {
+    flex-shrink: 0;
+    margin-left: var(--ag-space-m);
+}
+
+/* Write: a multi-turn prompt's earlier turns (#147) */
+
+.ps-turn {
+    margin-bottom: var(--ag-space-s);
+}

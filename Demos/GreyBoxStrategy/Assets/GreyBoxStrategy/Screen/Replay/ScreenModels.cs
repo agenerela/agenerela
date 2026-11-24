@@ -20,8 +20,9 @@ namespace GreyBoxStrategy.Replay
         }
 
         /// <param name="writs">This turn's writs and how many the plan spends, or null outside your council.</param>
+        /// <param name="rules">The game's rules, for the economy's tax factors; null reads the standard ones.</param>
         public static List<Stat> TopBar(ReplayState s, string me, int incomePerProvince, bool conquest, int winAt, (int all, int used)? writs,
-            Func<string, string> nameOf, Func<string, string> provinceName)
+            Func<string, string> nameOf, Func<string, string> provinceName, GameRules rules = null)
         {
             var c = s.Countries[me];
             int n = s.ProvinceCount(me), net = c.Income - c.Upkeep;
@@ -31,7 +32,9 @@ namespace GreyBoxStrategy.Replay
                 new Stat
                 {
                     Key = "gold", Value = c.Gold.ToString(), Sub = $"{net:+0;-0;0} a turn", Tone = Math.Sign(net),
-                    Tip = $"Treasury: {c.Gold} gold.\nIncome +{c.Income}: {n} {(n == 1 ? "province" : "provinces")} at {incomePerProvince} each.\n" +
+                    Tip = $"Treasury: {c.Gold} gold.\n" + (HasEconomy(s)
+                              ? $"Income +{c.Income}: what your {n} {(n == 1 ? "province yields" : "provinces yield")} by land and buildings, at {TaxName(c.Taxes)} taxes (x{TaxFactor(rules, c.Taxes):0.0#}).\n"
+                              : $"Income +{c.Income}: {n} {(n == 1 ? "province" : "provinces")} at {incomePerProvince} each.\n") +
                           $"Upkeep -{c.Upkeep}: {c.Army} soldiers, 1 gold for every 2.\nNet {net:+0;-0;0} a turn. Below zero, 15% of the army deserts.",
                 },
                 new Stat
@@ -47,13 +50,21 @@ namespace GreyBoxStrategy.Replay
                 Key = "land", Value = n.ToString(), Sub = $"of {(conquest ? s.Owners.Length : winAt)}",
                 Tip = $"Provinces: {n}. " + (conquest ? "Conquest: the last realm standing wins." : $"{winAt} wins; {Math.Max(0, winAt - n)} to go."),
             });
+            // The economy: manpower beside the army it raises, and the tax level.
+            if (HasEconomy(s))
+            {
+                list.Add(Manpower(c));
+                list.Add(Taxes(c, rules));
+            }
             if (writs is (int all, int used))
                 list.Add(new Stat
                 {
                     Key = "writ", Value = Math.Max(0, all - used).ToString(), Sub = $"of {all} writs", Tone = all - used <= 0 ? -1 : 0,
                     Tip = $"Writs this turn: {all}, {Math.Max(0, all - used)} left. The court's order takes one; each army you order, or that awaits orders, takes one, keeping one for the court. Unused writs are lost.",
                 });
-            list.Add(new Stat { Key = "stab", Value = c.Stability.ToString(), Sub = "of 5", Tone = c.Stability <= 1 ? -1 : 0, Tip = "Stability: rises 1 a turn without a tax rise. At 1, a province may revolt." });
+            list.Add(new Stat { Key = "stab", Value = c.Stability.ToString(), Sub = "of 5", Tone = c.Stability <= 1 ? -1 : 0, Tip = HasEconomy(s)
+                ? $"Stability: {TaxStability(c.Taxes)} at {TaxName(c.Taxes)} taxes. At 1, a province may revolt."
+                : "Stability: rises 1 a turn without a tax rise. At 1, a province may revolt." });
             var wars = s.Relations.Where(r => r.Kind == "war" && (r.A == me || r.B == me)).Select(r => r.A == me ? r.B : r.A).ToList();
             list.Add(new Stat
             {
@@ -68,6 +79,72 @@ namespace GreyBoxStrategy.Replay
             });
             return list;
         }
+
+        // --- The economy (GameRules.EconomyOn; #372, #374): manpower, tax levels, yields and buildings -------------------
+
+        /// <summary>Whether the state is of a game with the economy: only then does it carry buildings (null without).</summary>
+        public static bool HasEconomy(ReplayState s) => s?.Buildings != null;
+
+        /// <summary>The three buildings, in the order the screen lists them.</summary>
+        public static readonly Building[] AllBuildings = { Building.Market, Building.Barracks, Building.Farm };
+
+        /// <summary>A building's name as the screen says it: "market".</summary>
+        public static string BuildingName(Building b) => b.ToString().ToLowerInvariant();
+
+        /// <summary>The buildings of a province at a moment, from the state's "market,farm"; none without the economy.</summary>
+        public static List<Building> BuildingsAt(ReplayState s, int province)
+        {
+            var list = new List<Building>();
+            string at = s?.Buildings != null && province >= 0 && province < s.Buildings.Length ? s.Buildings[province] : null;
+            if (string.IsNullOrEmpty(at)) return list;
+            var names = at.Split(',');
+            foreach (var b in AllBuildings) if (names.Contains(BuildingName(b))) list.Add(b);
+            return list;
+        }
+
+        /// <summary>A province's buildings with one more, in the state's form: "market,farm", in the rules' order.</summary>
+        public static string WithBuilding(string at, string building)
+        {
+            var names = (at ?? "").Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+            if (!names.Contains(building)) names.Add(building);
+            return string.Join(",", AllBuildings.Select(BuildingName).Where(names.Contains));
+        }
+
+        public static string TaxName(TaxLevel level) => level.ToString().ToLowerInvariant();
+
+        /// <summary>A tax level's income factor, as <c>World.TaxFactor</c> reads it from the rules.</summary>
+        public static double TaxFactor(GameRules rules, TaxLevel level)
+        {
+            var r = rules ?? GameRules.Standard;
+            return level == TaxLevel.Low ? r.LowTaxIncome : level == TaxLevel.High ? r.HighTaxIncome : 1.0;
+        }
+
+        /// <summary>What a tax level does, in a few words: "income x1.3; stability falls 1 a turn", as a model court reads it.</summary>
+        public static string TaxEffect(GameRules rules, TaxLevel level) =>
+            $"income x{TaxFactor(rules, level):0.0#}; {TaxStability(level)}";
+
+        /// <summary>What a tax level does to stability, in the words a model court reads (<c>WritFacts</c>).</summary>
+        public static string TaxStability(TaxLevel level) =>
+            level == TaxLevel.High ? "stability falls 1 a turn" : level == TaxLevel.Low ? "stability recovers faster" : "stability recovers 1 a turn";
+
+        /// <summary>The top bar's manpower: "25 / 30", "+6 a turn" under it (or "full"), and what it does.</summary>
+        public static Stat Manpower(CountryState c) => new Stat
+        {
+            Key = "men", Value = c.Manpower >= c.ManpowerCap ? $"{c.Manpower} / {c.ManpowerCap}" : $"{c.Manpower} / {c.ManpowerCap} (+{c.ManpowerGrowth})", Sub = c.Manpower >= c.ManpowerCap ? "full" : $"+{c.ManpowerGrowth} a turn",
+            Tone = c.Manpower < 5 ? -1 : 0,
+            Tip = $"Manpower: {c.Manpower} of {c.ManpowerCap} men who can still be raised.\nEach soldier recruited takes 1; a levy is cut to the men left.\n" +
+                  $"+{c.ManpowerGrowth} a turn, up to the cap: each province you hold raises men, and each barracks more.",
+        };
+
+        /// <summary>The top bar's tax level: "Normal", its income factor under it, and what each level does.</summary>
+        public static Stat Taxes(CountryState c, GameRules rules) => new Stat
+        {
+            Key = "tax", Value = Cap(TaxName(c.Taxes)), Sub = $"x{TaxFactor(rules, c.Taxes):0.0#} income", Tone = c.Taxes == TaxLevel.High ? -1 : 0,
+            Tip = $"Taxes: {TaxName(c.Taxes)}, a standing level your court sets with an order.\n" +
+                  string.Join("\n", new[] { TaxLevel.Low, TaxLevel.Normal, TaxLevel.High }.Select(l => $"{Cap(TaxName(l))}: {TaxEffect(rules, l)}.")),
+        };
+
+        private static string Cap(string s) => string.IsNullOrEmpty(s) ? s : char.ToUpperInvariant(s[0]) + s.Substring(1);
 
         /// <summary>One army in the outliner: its name, soldiers, stores as loaves, and what it is doing in a few words.</summary>
         public sealed class ArmyRow
@@ -207,16 +284,47 @@ namespace GreyBoxStrategy.Replay
                 Pips = known ? Math.Max(fortCap, s.Forts[p]) : 0, Amount = known ? s.Forts[p] : 0, Tip = known ? $"Each fort adds {q.Rules.FortBonus} to its defence." : "Beyond your borders: your court does not know its forts.",
             });
             if (q.IsCapital(p)) rows.Add(new Row { Key = "capital", Label = "Capital", Value = $"+{q.Rules.CapitalBonus}", Tip = "A capital defends harder." });
-            rows.Add(new Row { Key = "income", Label = "Income", Value = owner == null ? "none" : $"+{q.Rules.IncomePerProvince} a turn" });
+            if (HasEconomy(s) && q.Economy)
+            {
+                // The economy: what its land and buildings yield (before taxes), and its buildings.
+                var (basis, land, built) = q.YieldParts(s, p);
+                var (terrain, coastal) = q.Land(p);
+                string landWords = terrain.ToString().ToLowerInvariant() + (coastal ? ", on the coast" : "");
+                int y = q.Yield(s, p);
+                string tip = $"Yields {y} gold a turn before taxes: {basis} for the province, +{land} for its land ({landWords})"
+                             + string.Concat(built.Select(b => $", +{b.gold} for its {BuildingName(b.building)}")) + "."
+                             + (owner != null && holder != owner ? $" Occupied: its owner gets nothing, {nameOf(holder)} half of {basis}." : "");
+                rows.Add(new Row
+                {
+                    Key = "income", Label = "Yield", Tip = tip,
+                    Value = owner == null ? $"{y} if held" : holder != owner ? $"+{basis / 2} to {nameOf(holder)}" : $"+{y} a turn",
+                });
+                var here = BuildingsAt(s, p);
+                rows.Add(new Row
+                {
+                    Key = "buildings", Label = "Buildings", Value = here.Count == 0 ? "none" : string.Join(", ", here.Select(BuildingName)),
+                    Tip = BuildingsTip(s, p, q, here),
+                });
+            }
+            else rows.Add(new Row { Key = "income", Label = "Income", Value = owner == null ? "none" : $"+{q.Rules.IncomePerProvince} a turn" });
             if (s.SiegedBy?[p] != null) rows.Add(new Row { Key = "siege", Label = "Besieged by", Value = $"{nameOf(s.SiegedBy[p])} · {ArmyLook.SiegeTag(s, p)}", Tone = -1 });
             return rows;
         }
+
+        /// <summary>What each building does here, built or not: the province panel's buildings tooltip.</summary>
+        public static string BuildingsTip(ReplayState s, int p, RealmQueries q, IReadOnlyCollection<Building> here) =>
+            string.Join("\n", AllBuildings.Select(b => $"{Cap(BuildingName(b))}{(here.Contains(b) ? " (built)" : "")}: {BuildingGainWords(q.Rules, b, q.BuildingGain(s, p, b))}"))
+            + "\nA court buys one at once, one of each to a province; it stays with the province when it changes hands.";
+
+        /// <summary>What a building adds, in words: "+8 gold a turn", or for a barracks "+3 men a turn, +10 to the manpower cap".</summary>
+        public static string BuildingGainWords(GameRules rules, Building b, int gain) =>
+            b == Building.Barracks ? $"+{gain} men a turn, +{(rules ?? GameRules.Standard).BarracksCap} to the manpower cap" : $"+{gain} gold a turn";
 
         /// <summary>
         /// A realm's rows: land, soldiers and, only if your court knows them, its treasury, income, upkeep and
         /// stability; its relation to you, and the war score from your side when at war.
         /// </summary>
-        public static List<Row> RealmRows(ReplayState s, string id, string you, bool knowsTreasury, Func<string, string> nameOf)
+        public static List<Row> RealmRows(ReplayState s, string id, string you, bool knowsTreasury, Func<string, string> nameOf, GameRules rules = null)
         {
             var c = s.Countries[id];
             var rows = new List<Row>
@@ -229,6 +337,12 @@ namespace GreyBoxStrategy.Replay
                 int net = c.Income - c.Upkeep;
                 rows.Add(new Row { Key = "gold", Label = "Treasury", Value = $"{c.Gold} ({net:+0;-0;0} a turn)", Tone = Math.Sign(net), Tip = $"Income +{c.Income}, upkeep -{c.Upkeep}." });
                 rows.Add(new Row { Key = "stab", Label = "Stability", Value = $"{c.Stability} of 5", Pips = 5, Amount = c.Stability });
+                if (HasEconomy(s))
+                {
+                    var men = Manpower(c);
+                    rows.Add(new Row { Key = "men", Label = "Manpower", Value = men.Value, Amount = c.Manpower, Max = Math.Max(1, c.ManpowerCap), Tip = men.Tip });
+                    rows.Add(new Row { Key = "tax", Label = "Taxes", Value = $"{TaxName(c.Taxes)} · x{TaxFactor(rules, c.Taxes):0.0#}", Tone = c.Taxes == TaxLevel.High ? -1 : 0, Tip = Taxes(c, rules).Tip });
+                }
             }
             else rows.Add(new Row { Key = "gold", Label = "Treasury", Value = "not known", Tip = "Its treasury, income and stability are not known to your court." });
             if (you != null && id != you)

@@ -10,12 +10,46 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **A prompt-size budget** (#151, #392). `PromptBudget` and `PromptTrim` set a budget per agent
+  (`Agent.PromptBudget`) or per call (`DecideOptions.PromptBudget`). It is estimated before sending
+  from characters (3 a token by default) and judged on the provider's count after. Optional trims
+  run in the developer's order, and only while over: `DecideOptions.OptionalObservations` (new),
+  target lines no offered action may take, then the oldest history. `DecisionTelemetry` gains
+  `PromptCharacters`, `PromptTokensEstimated`, `PromptBudget`, `OverBudget` and `PromptTrims`;
+  Decision Log version 3. With no budget, every request is byte for byte what it was.
+
+- **`TargetSummarySource`** (#151, #384), a deterministic observation source that summarises the agent's
+  targets as one line per category, ids verbatim, with no model call; `EvalArm.SummariseTargets` tells an
+  arm's targets that way (§2.8). `DeclaredTarget.Category` gives a prompt set's targets categories, and
+  `CompareWithProfile` refuses a label they make illegal. `ReplyFinding.EchoesStimulus`/`EchoesStatement`
+  and `ReplyCounts.EchoStimulus`/`EchoStatement` tell an echoed stimulus from a parroted example
+  statement (#218).
+- **Label mode asks only the agreement cohort** (#148, with #147). With an `agreement-subset.json`
+  beside the set, `BlindPrompt.Queue` (its new `cohort` argument) and the progress count hold only
+  the cohort's prompts, a line says so, and a **Whole set** toggle asks every prompt instead.
+  `AgreementCohort` reads the file's prompt ids, and nothing else.
+- **Multi-turn prompts** (#147). A prompt's optional `history` (`EvalPrompt.History`, a list of
+  `HistoryTurn`: `label`, `stimulus`, `action`, `target`, optional `statement`) holds the turns it
+  is asked after, oldest first. `EvalRunner` stages them in a `RollingHistory` of the prompt's own
+  before the stimulus, written as a real turn is remembered, the statement only for an arm that
+  asks for one; a prompt without one is asked with no memory, as before. `PromptSetChecks` holds
+  each turn to the rules for an answer, the Prompt Set window edits the turns in Write and shows
+  them in Label (`BlindPrompt.History`), and a file without `history` round-trips unchanged (DR-017).
+
 - **A reply out of the schema's field order is flagged** (#266 item 2, DR-023).
   `DecisionTelemetry.OrderLost`, and `orderLost` in the decision log, are true when the reply's
   fields came in another order than the schema's: `statement` before `target`, or a parameter
   after the statement, as Ollama's native chat path produces by sorting the schema's keys
   (findings, 5 November 2026). Flagged, never refused: the decision is read and judged as any
   other, and the log line has no such key when the order held. Nothing sent to a model changes.
+- **The evaluation runner checks the field order** (#180). Each arm's replies are counted in the
+  schema's order, out of it, and not checked when no reply was read (`EvalArmResult.OrderKept`,
+  `OrderLost`, `OrderNotChecked`, `OrderFlagged`; each answer's `EvalAnswer.OrderLost`, null when
+  not checked), shown in the report's new "Field order" table beside the noise check, with a
+  warning for an arm with any out of order. A run whose warm-up replies come back out of order
+  refuses to start, naming the arm and the model, unless `EvalRunner.AllowOrderLost` is set; the
+  report records it (`EvalConditions.AllowOrderLost`) and each arm's `WarmUpOrderLost`. Nothing
+  is rescored. A report written before reads back with every count 0.
 - **`ProviderCapabilities.SupportsPairedSchema`** (#266 item 2, DR-023), true by default and for
   Ollama. On a provider that says false, an agent refuses an action that declares a parameter at
   setup, with an `InvalidOperationException` naming the action and the provider: at construction,
@@ -83,7 +117,9 @@ While the version stays `0.x`, the public API may change in any release.
   progress bar and takes keys (1 to 9 pick an action, T the next target, Enter saves, S skips);
   Agreement shows its categories in a table with a bar for each, sortable by any column. Drafts
   kept through a recompile, unsaved-changes handling, the remembered set, profile and name, and
-  the blind-labelling guarantee are as before. EditMode tests now build the window's trees and
+  the blind-labelling guarantee are as before, and so are the features added to the old window
+  meanwhile: #147's earlier turns, shown in Label and edited in Write, and #148's agreement
+  cohort line with its **Whole set** toggle, pairwise agreement and **Record agreed answers**. EditMode tests now build the window's trees and
   check the gate, the tabs, the progress bar, the keys, that the Label view shows no word of an
   answer, and that nothing in the toolbar clips at 640 px.
 
@@ -147,6 +183,14 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **Pairwise Cohen's kappa for prompt labels** (#148). `AgreementReport.Pairwise` gives each
+  named pair's overlap, raw agreement, chance agreement and `CohensKappa`, using original
+  complete `action/target` answers. Missing answers are excluded; constant identical answers
+  leave kappa undefined. The Prompt Set and Evaluation Report windows show the same per-pair
+  numbers, and the findings summary includes them with the current-label-files caveat.
+  **Record agreed answers** preserves both original answers on unanimous prompts too,
+  without changing the expected answer. Human blind labels and discussion of disagreements
+  are still required for #148.
 - **Examples that carry their situation** (#216 item 1). `ActionDefinition.ExampleObservations`
   (the asset front door) and `[Example(..., Observations = ...)]` (the code front door) hold one or
   two observation lines, rendered by `FewShotBuilder` above the example under the observations'

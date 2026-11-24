@@ -31,6 +31,20 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: free orders' prompt arms and the live-run reports** (#20, #380). Two A/B arms, both off:
+  `CourtTurnFacts` (a court's later request reads what its earlier orders settled) and `CourtNoneWording` (it is asked for
+  "the next order, or none"); a live-check harness; and `tools/live-runs/free-orders/report.py` and
+  `tools/live-runs/economy/report.py`.
+
+- **Painted Realm: the economy on screen** (#20, #379). When `GameRules.Economy` is on: manpower and the tax level on the
+  top bar, a province's yield and buildings, tax levels and buildings as council orders with their cost, gain and the
+  rules' reason when shut (a building picks its province from a list), and buildings and tax changes in the turn strip
+  and chronicle. Off, the screen is unchanged.
+
+- **Painted Realm: the economy's rules after its first game** (#20, #378). With `GameRules.Economy`, a tax change locks the
+  tax orders for `TaxLockTurns` (5) turns, and the court's moves line names each building with its price, places and gain:
+  run request 002's courts toggled taxes 79 times and built twice in 40 turns.
+
 - **Painted Realm: the economy, part 2** (#20). Under `GameRules.Economy`: a market (+5 gold, +8 on a coast), a
   barracks (+3 manpower a turn, +10 to the cap) and a farm (+3 gold, +5 on plains; three farms steady the realm),
   each bought at once with gold by a court order on one of our held provinces, one of each a province and one building
@@ -103,6 +117,8 @@ phase table and the open issues, not here.
 
 ### Changed
 
+- **The evaluation set's guard has no example statements or counter-examples again** (#151). #384 wrote them on `VillageGuard.asset`; on `qwen3.5:4b` the counter-examples cost 10 answers and with the statements 68 of 209 replies copied one, so the default prompt on the set is the one from before #384. The targets' categories stay.
+- **The evaluation set's targets carry categories** (`place`, `creature`), and `VillageGuard.asset`'s `move_to` and `attack_target` take them. Its actions and idle example have example statements, and its actions counter-examples, so the default prompt on the set now shows them (#151, #384).
 - **Painted Realm: the chronicle keeps the fog, and the strip and the watch bar read** (#20). A rival's army order beyond
   your sight is no longer printed in the chronicle or spoken on the map (it was a leak); the strip counts it. The watch
   mode's top bar no longer overlaps: its chips keep their width and measured steps drop the lesser stats, then the

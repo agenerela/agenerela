@@ -173,5 +173,52 @@ namespace GreyBoxStrategy.Tests
             Assert.That(record.Decisions.Where(d => !d.Offered), Is.Empty, "every building order was offered");
             Assert.That(record.Record.Reports.SelectMany(r => r.Outcomes).Count(o => Actions.BuildsWhat(o.Choice.Action) != null && !o.Refused), Is.GreaterThan(0), "and landed");
         }
+
+        [Test]
+        public void TheCourtsMovesLine_NamesEachBuilding_ItsPrice_WhereAndWhatItGainsThere()
+        {
+            var g = new Game(1, MapDefinition.Standard(), Rules());
+            var me = g.World.Country("valen");
+            me.Gold = 1000;
+            var legal = WritLegality.CourtMoves(g.World, "valen");
+            string line = WritFacts.CourtMovesLine(legal, g.World);
+            foreach (string action in Actions.Builds)
+            {
+                var what = Actions.BuildsWhat(action).Value;
+                var at = legal.Where(m => m.Action == action).Select(m => g.World.Province(m.Target)).ToList();
+                Assume.That(at, Is.Not.Empty);
+                string name = what.ToString().ToLowerInvariant();
+                Assert.That(line, Does.Contain($"build a {name} ({WritLegality.BuildingCost(g.Rules, what)} gold): +"), line);
+                int best = at.Max(p => WritLegality.BuildingGain(g.World, p, what));
+                Assert.That(line, Does.Contain($"build a {name} ({WritLegality.BuildingCost(g.Rules, what)} gold): +{best} {(what == Building.Barracks ? "manpower" : "gold")} a turn at "), "the most it gains first");
+                foreach (var p in at) Assert.That(line, Does.Contain(p.Id), $"{name} at {p.Id}");
+            }
+            Assert.That(WritFacts.CourtMovesLine(legal.Where(m => Actions.BuildsWhat(m.Action) == null).ToList(), g.World), Does.Not.Contain("build a"),
+                "nothing offered, nothing named");
+        }
+
+        [Test]
+        public async Task AModelCourt_ReadsTheBuildingsInItsMovesLine()
+        {
+            var lines = new List<string>();
+            var provider = new ScriptedProvider
+            {
+                Callback = req =>
+                {
+                    if (req.OfferedActions.Contains(Actions.BuildMarket)) lines.Add(req.Request.Observations);
+                    return ScriptedReply.Decide(req.OfferedActions.Contains(Actions.RefusePeace) ? Actions.RefusePeace : ActionRegistry.None);
+                },
+            };
+            var rules = GameRules.Standard;
+            rules.FreeOrders = true;
+            rules.Economy = true;
+            var setup = GameSetup.Writs(1);
+            setup.TurnCap = 1;
+            setup.Numbers = rules;
+            await Await.NotCancelled(WritModelRunner.PlayAsync(setup, Enumerable.Repeat(ModelGameRunner.Model, 5).ToList(),
+                (w, id) => new WritRuler(w, id, provider), "fake"));
+            Assert.That(lines, Is.Not.Empty);
+            Assert.That(lines.All(o => o.Contains($"build a market ({rules.MarketCost} gold): +")), Is.True, lines[0]);
+        }
     }
 }

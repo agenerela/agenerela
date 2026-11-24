@@ -386,6 +386,27 @@ namespace GreyBoxStrategy.Replay
                     break;
                 }
                 case Actions.RaiseTaxes: e.Kind = ReplayEventKind.Taxes; break;
+                // Economy: a tax level set, and a building bought (the screen's hook, #20's economy screen).
+                case Actions.TaxesLow:
+                case Actions.TaxesNormal:
+                case Actions.TaxesHigh:
+                {
+                    e.Kind = ReplayEventKind.Taxes;
+                    var level = Actions.SetsTaxes(choice.Action).Value;
+                    e.TaxLevel = level.ToString().ToLowerInvariant();
+                    if (s.Countries.TryGetValue(me, out var cs)) cs.Taxes = level;
+                    break;
+                }
+                case Actions.BuildMarket:
+                case Actions.BuildBarracks:
+                case Actions.BuildFarm:
+                    e.Kind = ReplayEventKind.Build;
+                    e.Building = Actions.BuildsWhat(choice.Action).Value.ToString().ToLowerInvariant();
+                    e.Province = choice.Target;
+                    e.ProvinceIndex = replay.IndexOf(choice.Target);
+                    if (e.ProvinceIndex >= 0 && s.Buildings != null)
+                        s.Buildings[e.ProvinceIndex] = ScreenModels.WithBuilding(s.Buildings[e.ProvinceIndex], e.Building);
+                    break;
                 case Actions.Fortify:
                     e.Kind = ReplayEventKind.Fort;
                     e.Province = choice.Target;

@@ -201,6 +201,7 @@ namespace Agenerela.Editor.Evaluation
             newStateKey = root.Q<TextField>("new-state-key");
             newStateKey.RegisterValueChangedCallback(_ => ShowAddState());
             root.Q<Button>("add-state").clicked += AddState;
+            root.Q<Button>("add-turn").clicked += AddTurn;
 
             action = root.Q<DropdownField>("expected-action");
             action.RegisterValueChangedCallback(e =>
@@ -461,6 +462,7 @@ namespace Agenerela.Editor.Evaluation
 
             ShowState();
             ShowAddState();
+            ShowHistory();
             ShowLabelledWarning();
             ShowTargets();
             ShowChecks();
@@ -526,6 +528,83 @@ namespace Agenerela.Editor.Evaluation
             newStateKey.SetValueWithoutNotify("");
             ShowState();
             ShowAddState();
+        }
+
+        // The earlier turns a multi-turn prompt is asked after (#147), oldest first. The list is
+        // null, and left out of the file, until a turn is added, and again once the last is
+        // removed, so a prompt without history saves exactly as it was read.
+        private void ShowHistory()
+        {
+            var rows = root.Q("history-rows");
+            rows.Clear();
+            var turns = selected.History ?? new List<HistoryTurn>();
+            var targets = new List<string> { TargetRegistry.NoTarget };
+            targets.AddRange(set.Targets.Select(t => t.Id));
+
+            for (int i = 0; i < turns.Count; i++)
+            {
+                int index = i;
+                var turn = turns[i] ?? new HistoryTurn();
+                var card = new VisualElement { name = "turn-" + (i + 1) };
+                card.AddToClassList("ag-card");
+                card.AddToClassList("ps-turn");
+
+                var head = new VisualElement();
+                head.AddToClassList("ps-row");
+                head.Add(Classed(new Label($"Turn {i + 1}"), "ps-bold"));
+                head.Add(Classed(new VisualElement(), "ps-grow"));
+                var remove = new Button(() =>
+                {
+                    Edit(p =>
+                    {
+                        p.History.RemoveAt(index);
+                        if (p.History.Count == 0) p.History = null;
+                    });
+                    ShowHistory();
+                })
+                { text = "−", tooltip = "Remove this turn." };
+                remove.AddToClassList("ps-editor__small");
+                head.Add(remove);
+                card.Add(head);
+
+                var label = new TextField("Label") { value = turn.LabelOrDefault };
+                label.RegisterValueChangedCallback(e => Edit(p => Turn(p, index).Label = e.newValue));
+                card.Add(label);
+
+                var stimulusField = new TextField("Stimulus") { value = turn.Stimulus ?? "" };
+                stimulusField.RegisterValueChangedCallback(e => Edit(p => Turn(p, index).Stimulus = e.newValue));
+                card.Add(stimulusField);
+
+                var actions = ActionChoices(turn.Action);
+                var answered = new DropdownField("Answered", actions, string.IsNullOrEmpty(turn.Action) ? actions[0] : turn.Action);
+                answered.RegisterValueChangedCallback(e => Edit(p => Turn(p, index).Action = e.newValue));
+                card.Add(answered);
+
+                var choices = new List<string>(targets);
+                if (!string.IsNullOrEmpty(turn.Target) && !choices.Contains(turn.Target)) choices.Add(turn.Target);
+                var target = new DropdownField("Target", choices, string.IsNullOrEmpty(turn.Target) ? choices[0] : turn.Target);
+                target.RegisterValueChangedCallback(e => Edit(p => Turn(p, index).Target = e.newValue));
+                card.Add(target);
+
+                var said = new TextField("Said") { value = turn.Statement ?? "", tooltip = "What the agent said, if anything." };
+                said.RegisterValueChangedCallback(e => Edit(p => Turn(p, index).Statement = string.IsNullOrWhiteSpace(e.newValue) ? null : e.newValue));
+                card.Add(said);
+
+                rows.Add(card);
+            }
+        }
+
+        // The turn at index, made when the file had null there.
+        private static HistoryTurn Turn(EvalPrompt prompt, int index) => prompt.History[index] ?? (prompt.History[index] = new HistoryTurn());
+
+        private void AddTurn()
+        {
+            Edit(p =>
+            {
+                p.History = p.History ?? new List<HistoryTurn>();
+                p.History.Add(new HistoryTurn { Action = ActionRegistry.None, Target = TargetRegistry.NoTarget });
+            });
+            ShowHistory();
         }
 
         private List<string> TargetIds() => (selected.ExpectedTarget ?? ExpectedTarget.NoTarget).Ids.ToList();

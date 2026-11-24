@@ -154,6 +154,415 @@
       "labelledBy": [
         "Yevhen"
       ]
+    },
+    {
+      "id": "target_012",
+      "label": "Player",
+      "stimulus": "Could you keep an eye on the well?",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "well",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "A polite, indirect command: keeping an eye on the well means going to it.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "target_013",
+      "label": "Player",
+      "stimulus": "Would you mind heading over to the docks?",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "docks",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "target_014",
+      "label": "Player",
+      "stimulus": "Meet me at the south tower.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "A look-alike: the village has a north tower and no south tower. move_to north_tower is the trap.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "target_015",
+      "label": "Player",
+      "stimulus": "Don't go to the gate, go to the market instead.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "market",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "A negation and a correction in one line: the gate is named, but the market is where to go.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "target_016",
+      "label": "Player",
+      "stimulus": "Go to the bridge, then check on the docks.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "bridge",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Two commands in one line: the guard can make one move now, and the first is the one to make.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "target_017",
+      "label": "Player",
+      "stimulus": "Kill that wolf.",
+      "observations": [
+        "A wolf is snarling by the sheep pens"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "target_018",
+      "label": "Player",
+      "stimulus": "Get rid of that thing by the pens.",
+      "observations": [
+        "A wolf is prowling around the sheep pens",
+        "Two villagers are hiding behind a cart"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The target is named only in the observations.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "target_019",
+      "label": "Player",
+      "stimulus": "Go where the smoke is.",
+      "observations": [
+        "Smoke is rising from the campfire in the guards' camp",
+        "The market is clear"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "campfire",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The target is named only in the observations.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "target_020",
+      "label": "Player",
+      "stimulus": "Head down toward the water.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": [
+        "bridge",
+        "docks"
+      ],
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "An open choice: the bridge and the docks are both by the water.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "target_021",
+      "label": "Player",
+      "stimulus": "Go and cover whichever way in nobody is watching.",
+      "observations": [
+        "Two guards are standing at the village gate",
+        "Nobody is on the eastern road"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "eastern_road",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The gate is a distractor: it is already guarded, and the observations say which way in is not.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "target_022",
+      "label": "Player",
+      "stimulus": "Get up on the tower and watch the fields.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "north_tower",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The village has one tower, so \"the tower\" is the north tower.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "target_023",
+      "label": "Player",
+      "stimulus": "Wait for me at the stream crossing.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "bridge",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "checkTarget": false,
+      "note": "The bridge is the stream crossing (its description says so), but the words do not name it. Run with the grounding guard off (DR-016), so the decision is judged rather than the guard's matching.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "target_024",
+      "label": "Player",
+      "stimulus": "Go to the gate. No, wait, stay with me.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Two commands where the second takes back the first: the answer is the correction, follow_player, not the first command.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "target_025",
+      "label": "Player",
+      "stimulus": "Hurry to the shelter!",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "shelter",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "target_026",
+      "label": "Player",
+      "stimulus": "Let's stay clear of the cave; head for the eastern road instead.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "eastern_road",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The cave is named only to be avoided.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "target_027",
+      "label": "Player",
+      "stimulus": "Attack the bandit.",
+      "observations": [
+        "A bandit is hiding behind the market stalls"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The bandit is in the observations but is not a registered target, so the guard cannot attack it. attack_target wolf or move_to market would be guesses.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "target_028",
+      "label": "Player",
+      "stimulus": "Not there - the well.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "well",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "history": [
+        {
+          "stimulus": "Head over to the market.",
+          "action": "move_to",
+          "target": "market",
+          "statement": "On my way to the market."
+        }
+      ],
+      "note": "Multi-turn: a correction of last turn's destination. The words name only the new place.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "target_029",
+      "label": "Player",
+      "stimulus": "Forget the wolf, get back up the tower.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "north_tower",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "history": [
+        {
+          "stimulus": "Go up the north tower.",
+          "action": "move_to",
+          "target": "north_tower",
+          "statement": "Heading up."
+        },
+        {
+          "label": "Event",
+          "stimulus": "A wolf has been seen near the docks.",
+          "action": "move_to",
+          "target": "docks",
+          "statement": "I'll check the docks."
+        }
+      ],
+      "note": "Multi-turn: the player overrides the event the guard answered last turn.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "target_030",
+      "label": "Player",
+      "stimulus": "The well, please. Quickly.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "well",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "target_031",
+      "label": "Player",
+      "stimulus": "Right, back to the first place I said.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "campfire",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "history": [
+        {
+          "stimulus": "Walk over to the campfire.",
+          "action": "move_to",
+          "target": "campfire",
+          "statement": "Going to the fire."
+        },
+        {
+          "stimulus": "Actually, go to the docks.",
+          "action": "move_to",
+          "target": "docks",
+          "statement": "Docks it is."
+        }
+      ],
+      "note": "Multi-turn: \"the first place\" is two turns back, the campfire. The docks, the most recent, is the trap.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "target_032",
+      "label": "Player",
+      "stimulus": "If you're not busy, the market could use a guard.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "market",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "An indirect command phrased as a remark.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "target_033",
+      "label": "Player",
+      "stimulus": "Run to the gate and shut it before the wolves get here.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "village_gate",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Shutting the gate is not an action, but going to it is, and that is the part the guard can do.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "target_034",
+      "label": "Player",
+      "stimulus": "Please stand watch at the market tonight.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "market",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "target_035",
+      "label": "Player",
+      "stimulus": "Could you go and check the shelter is ready?",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "shelter",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "A polite question that is a request to go.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
     }
   ]
 }

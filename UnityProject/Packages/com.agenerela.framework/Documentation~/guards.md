@@ -33,7 +33,9 @@ Inside `Agent.DecideAsync`, after the reply has been parsed:
    "Attack the scarecrow." with no scarecrow listed is refused rather than turned into an
    attack on the training dummy. An action whose target is optional is scored but never
    rewritten. A provider that reports no probabilities
-   cannot be checked, and the guard records that and passes. `DecideOptions.CheckTarget =
+   cannot be checked, and the guard records that and passes; an Ollama asked without them
+   (`OllamaSettings.TokenProbabilities` off, #107) is one, and its calls send the target rule
+   instead ([providers.md](providers.md)). `DecideOptions.CheckTarget =
    false` turns it off for one call. DR-016 has the measurements.
 
    **When several targets are right at once** (#244). The share counts every listed target, so a

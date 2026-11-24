@@ -41,6 +41,16 @@ namespace Agenerela.Evaluation
         [JsonProperty("preconditionState")] public JObject PreconditionState = new JObject();
 
         /// <summary>
+        /// Optional. The earlier exchanges a multi-turn prompt stages before its stimulus, oldest
+        /// first (#147). Null, and left out of the file, for a prompt asked with no history, as every
+        /// prompt was before. <see cref="PreconditionState"/> is the state after the last turn.
+        /// </summary>
+        [JsonProperty("history", NullValueHandling = NullValueHandling.Ignore)] public List<HistoryTurn> History;
+
+        /// <summary>True when <see cref="History"/> has at least one turn.</summary>
+        public bool HasHistory => History != null && History.Count > 0;
+
+        /// <summary>
         /// Null when the file leaves it out, which means true. False only for a case that tests a
         /// decision with the grounding guard off (DR-016).
         /// </summary>

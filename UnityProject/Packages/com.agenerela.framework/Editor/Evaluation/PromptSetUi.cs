@@ -45,7 +45,8 @@ namespace Agenerela.Editor.Evaluation
             NamesName = "names", ReloadName = "reload", ModeLineName = "mode-line", DraftsName = "drafts", ProfileProblemsName = "profile-problems",
             StartName = "start", LoadErrorName = "load-error", OpenProjectSetName = "open-project-set", FoundSetsName = "found-sets",
             NewSetName = "new-set", SaveFirstName = "save-first", WriteHostName = "write-host", LabelHostName = "label-host",
-            AgreementHostName = "agreement-host";
+            AgreementHostName = "agreement-host", CohortName = "cohort", CohortLineName = "cohort-line", WholeSetName = "whole-set",
+            CohortErrorName = "cohort-error";
 
         internal static readonly string[] TabNames = { "tab-write", "tab-label", "tab-agreement" };
 
@@ -103,6 +104,18 @@ namespace Agenerela.Editor.Evaluation
 
             internal IReadOnlyList<WaitingDraft> Drafts = Array.Empty<WaitingDraft>();
 
+            /// <summary>
+            /// The line above Label about the agreement cohort beside the set (#148), or null when
+            /// there is none. <see cref="WholeSet"/> is its toggle.
+            /// </summary>
+            internal string CohortLine;
+
+            /// <summary>Label asks the whole set rather than only the cohort's prompts.</summary>
+            internal bool WholeSet;
+
+            /// <summary>Why the cohort file could not be read, so Label asks the whole set; null when it could.</summary>
+            internal string CohortError;
+
             /// <summary>The tabs open once a set has loaded and a profile is chosen.</summary>
             internal bool Ready => SetLoaded && Profile != null;
         }
@@ -125,6 +138,7 @@ namespace Agenerela.Editor.Evaluation
         internal event Action<VisualElement> OpenProjectSet;
 
         internal event Action<int> KeepDraft, DiscardDraft;
+        internal event Action<bool> WholeSetChanged;
 
         /// <param name="root">The tree built from <see cref="LayoutPath"/>; see <see cref="Load"/>.</param>
         internal PromptSetUi(VisualElement root)
@@ -169,6 +183,7 @@ namespace Agenerela.Editor.Evaluation
             open.clicked += () => OpenProjectSet?.Invoke(open);
             AgenerelaButtons.MakePrimary(open);
             root.Q<Button>(NewSetName).clicked += () => NewSet?.Invoke();
+            root.Q<Toggle>(WholeSetName).RegisterValueChangedCallback(e => WholeSetChanged?.Invoke(e.newValue));
 
             Show(state);
         }
@@ -381,10 +396,29 @@ namespace Agenerela.Editor.Evaluation
             }
 
             Display(saveFirst, gated);
+            ShowCohort(state.Ready && !gated && state.Mode == PromptSetMode.Label);
             for (int i = 0; i < hosts.Length; i++)
             {
                 Display(hosts[i], state.Ready && !gated && i == (int)state.Mode);
             }
+        }
+
+        private void ShowCohort(bool labelShown)
+        {
+            var cohort = root.Q(CohortName);
+            bool any = state.CohortLine != null || state.CohortError != null;
+            Display(cohort, labelShown && any);
+
+            var error = root.Q(CohortErrorName);
+            error.Clear();
+            if (state.CohortError != null)
+            {
+                error.Add(new ProblemBox(state.CohortError, ProblemSeverity.Warning));
+            }
+
+            Display(root.Q("cohort-row"), state.CohortLine != null);
+            root.Q<Label>(CohortLineName).text = state.CohortLine ?? "";
+            root.Q<Toggle>(WholeSetName).SetValueWithoutNotify(state.WholeSet);
         }
 
         internal static void Display(VisualElement element, bool shown)

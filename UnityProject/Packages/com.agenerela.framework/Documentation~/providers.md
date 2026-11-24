@@ -101,6 +101,11 @@ schema yes.
 
 On Ollama's native chat path a schema's keys come back sorted (findings, 5 November 2026). The
 framework detects that from the reply, whatever the provider: `DecisionTelemetry.OrderLost`.
+Why it matters: writing the statement before the target breaks the settled field order, measured
+as costing accuracy, so a game reads the flag and a model comparison must not run under it. The
+evaluation runner counts it per arm and refuses a run whose warm-ups come back out of order
+([evaluation.md](evaluation.md#running-an-ab), #180). It is false both when the order held and
+when the reply could not be read; the runner tells those apart by whether a reply was read.
 
 **What was built (#88).** `new Agent(profile, new OllamaProvider(new OllamaSettings()))`
 decides against `qwen3.5:4b` at `http://127.0.0.1:11434`. `OllamaSettings` is a plain class
@@ -130,7 +135,7 @@ measurement in Appendix A depends on it:
 | `format` | `JsonSchemaSerializer`'s output (#9), embedded as a JSON object exactly as written |
 | `stream`, `think` | `false`, `false` |
 | `options` | `temperature` from the call's `DecideOptions.Temperature` when set, else from the settings; `num_ctx` from the settings; then `seed` and `num_predict`, each only when the call set `DecideOptions.Seed` or `DecideOptions.MaxReplyTokens` |
-| `logprobs`, `top_logprobs` | `true`, `OllamaSettings.TokenAlternatives` (20 unless set) |
+| `logprobs`, `top_logprobs` | `true`, `OllamaSettings.TokenAlternatives` (20 unless set); neither is sent when `OllamaSettings.TokenProbabilities` is off |
 
 **Sampling and a cap per call** (#266 item 7, #244 item 11). `DecideOptions.Temperature`, `Seed` and
 `MaxReplyTokens` are null by default, and a call that sets none sends exactly the request sent
@@ -176,6 +181,19 @@ are unchanged. Call `RequestAsync` from the main thread: nothing on the way back
 **WebGL is not supported.** `HttpClient` has no sockets in a WebGL player, so the provider
 fails there. Ollama is the development backend and cannot ship in a game anyway; in the Editor
 it works whatever the build target.
+
+**Asking without them** (#107). `OllamaSettings.TokenProbabilities`, and the config asset's
+**Token Probabilities** box, is on unless set. Off, the provider sends neither field, and its
+`Capabilities.ReportsTokenProbabilities` is false, so the rest of the pipeline treats it as a
+provider that reports none. What turns off with it: the grounding guard, the confidence check on
+the target, has nothing to read and passes every decision, recorded as
+`GroundingStatus.NoProbabilities`, never as checked; `ProviderResult.TokenProbabilities` is null, so
+no token alternatives reach telemetry or a guard of your own. What the pipeline does instead: a call
+with `CheckTarget` on sends the one-line target rule in the system prompt ("Only these things are
+here: ..."), as it does for any provider without probabilities ([prompt.md](prompt.md)); every
+other guard runs as before. It removes the one guard that catches a target swapped for a legal
+one, so it exists for the A/B run of the rule's wording against the probe's form (#151), never as
+a game's default.
 
 **Token probabilities.** Send `"logprobs": true` and `"top_logprobs"` on every request, 20
 unless `OllamaSettings.TokenAlternatives` says otherwise (from 1 to 20; Ollama refuses more than

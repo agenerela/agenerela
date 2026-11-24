@@ -225,7 +225,7 @@ namespace GreyBoxStrategy.Realm
         }
     }
 
-    public enum IconKind { Province, Army, Gold, War, Truce, Fort, Play, Pause, Step, Scroll, Peace, Eye, Swords, Quill, Seal, Hammer, Scales, Shield, Refused, Hourglass, Loaf }
+    public enum IconKind { Province, Army, Gold, War, Truce, Fort, Play, Pause, Step, Scroll, Peace, Eye, Swords, Quill, Seal, Hammer, Scales, Shield, Refused, Hourglass, Loaf, Market, Barracks, Farm, Taxes, Men }
 
     public sealed class Icon : VisualElement
     {
@@ -291,6 +291,23 @@ namespace GreyBoxStrategy.Realm
                     break;
                 case IconKind.Loaf:
                     p.BeginPath(); p.MoveTo(P(1.5f, 12)); p.BezierCurveTo(P(1.5f, 4), P(14.5f, 4), P(14.5f, 12)); p.LineTo(P(14.5f, 13.5f)); p.LineTo(P(1.5f, 13.5f)); p.ClosePath(); p.Fill();
+                    break;
+                // The economy (#372, #374): the three buildings, the tax level as a stack of coins, manpower as a figure.
+                case IconKind.Market: Poly(1, 6.5f, 3, 2, 13, 2, 15, 6.5f); Poly(3, 8, 4.5f, 8, 4.5f, 15, 3, 15); Poly(11.5f, 8, 13, 8, 13, 15, 11.5f, 15); Poly(2, 10, 14, 10, 14, 11.6f, 2, 11.6f); break;
+                case IconKind.Barracks:
+                    Poly(8, 3.5f, 15, 14.5f, 10, 14.5f, 8, 10, 6, 14.5f, 1, 14.5f); Poly(8, 0.5f, 11.5f, 1.6f, 8, 2.7f);
+                    p.BeginPath(); p.MoveTo(P(8, 0.5f)); p.LineTo(P(8, 4)); p.Stroke();
+                    break;
+                case IconKind.Farm:
+                    p.BeginPath(); p.MoveTo(P(8, 15)); p.LineTo(P(8, 4)); p.Stroke();
+                    Poly(8, 0.8f, 9.4f, 3.2f, 8, 5.6f, 6.6f, 3.2f);
+                    Poly(8.4f, 7.2f, 12, 5, 11.6f, 7.4f, 8.4f, 9.4f); Poly(7.6f, 7.2f, 4, 5, 4.4f, 7.4f, 7.6f, 9.4f);
+                    Poly(8.4f, 11, 12, 8.8f, 11.6f, 11.2f, 8.4f, 13.2f); Poly(7.6f, 11, 4, 8.8f, 4.4f, 11.2f, 7.6f, 13.2f);
+                    break;
+                case IconKind.Taxes: Poly(2, 3.5f, 11, 3.5f, 11, 6.5f, 2, 6.5f); Poly(4.5f, 7.8f, 14, 7.8f, 14, 10.8f, 4.5f, 10.8f); Poly(2.5f, 12, 12, 12, 12, 15, 2.5f, 15); break;
+                case IconKind.Men:
+                    p.BeginPath(); p.Arc(P(8, 4.2f), 2.8f * s, Angle.Degrees(0), Angle.Degrees(360)); p.Fill();
+                    Poly(2.5f, 15, 3.5f, 10, 6, 8, 10, 8, 12.5f, 10, 13.5f, 15);
                     break;
                 case IconKind.Hourglass: Poly(3, 1.5f, 13, 1.5f, 13, 3, 9, 8, 13, 13, 13, 14.5f, 3, 14.5f, 3, 13, 7, 8, 3, 3); break;
                 case IconKind.Eye: p.BeginPath(); p.Arc(P(8, 8), 2.4f * s, Angle.Degrees(0), Angle.Degrees(360)); p.Fill(); p.BeginPath(); p.MoveTo(P(1, 8)); p.BezierCurveTo(P(5, 2), P(11, 2), P(15, 8)); p.BezierCurveTo(P(11, 14), P(5, 14), P(1, 8)); p.Stroke(); break;

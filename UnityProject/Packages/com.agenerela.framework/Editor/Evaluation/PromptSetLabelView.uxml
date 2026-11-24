@@ -12,6 +12,7 @@
         <ui:Label name="label-done" class="ps-wrap ps-label__done" />
         <ui:VisualElement name="label-prompt">
             <ui:VisualElement class="ag-card ps-label__card">
+                <ui:VisualElement name="label-history" />
                 <ui:Label name="label-speaker" class="ps-label__speaker" />
                 <ui:Label name="label-stimulus" class="ps-wrap ps-label__stimulus" />
                 <Agenerela.Editor.UI.SectionTitle text="Observations" />

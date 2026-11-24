@@ -126,6 +126,133 @@
       "labelledBy": [
         "Maxim"
       ]
+    },
+    {
+      "id": "conversation_010",
+      "label": "Player",
+      "stimulus": "I used to follow the river all the way to the sea as a boy.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Sounds like a command (follow), but is a memory.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "conversation_011",
+      "label": "Player",
+      "stimulus": "The bridge looked lovely in the morning light.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Names a registered target without asking for anything.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "conversation_012",
+      "label": "Player",
+      "stimulus": "I'm heading home through the woods, and I'd hate to go alone.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Conversation that carries an indirect request to come along.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "conversation_013",
+      "label": "Player",
+      "stimulus": "Someone ought to check on the well, it's been making odd noises.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "well",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Said to the guard, whose job it is: an indirect request to go to the well.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "conversation_014",
+      "label": "Player",
+      "stimulus": "You've walked with me long enough, friend. Go and rest.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "note": "A farewell that releases the guard. Resting is not an action, but no longer following is.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "conversation_015",
+      "label": "Player",
+      "stimulus": "I could use a hand down at the docks, if you're not busy.",
+      "observations": [],
+      "expectedAction": "move_to",
+      "expectedTarget": "docks",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "conversation_016",
+      "label": "Player",
+      "stimulus": "So, you came all the way from the bridge? Tell me about it.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "history": [
+        {
+          "stimulus": "Meet me in the market.",
+          "action": "move_to",
+          "target": "market",
+          "statement": "I'll be there."
+        }
+      ],
+      "note": "Multi-turn conversation: the earlier turn was a move, this one is only talk.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
+    },
+    {
+      "id": "conversation_017",
+      "label": "Player",
+      "stimulus": "It's getting late and the road home is dark. Walk me back?",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Talk that ends in a request to come along.",
+      "labelledBy": [
+        "claude (tech lead session)"
+      ]
     }
   ]
 }

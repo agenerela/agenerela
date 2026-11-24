@@ -55,6 +55,11 @@ namespace Agenerela.Providers
                  "sent before 11 November 2026.")]
         public int TokenAlternatives = Defaults.TokenAlternatives;
 
+        [Tooltip("Whether each request asks for token probabilities (logprobs). On unless unticked. Off, the " +
+                 "grounding guard has nothing to read and passes every decision, and the prompt carries the " +
+                 "one-line target rule instead: for the A/B run of that rule (#107), never a game's default.")]
+        public bool TokenProbabilities = Defaults.TokenProbabilities;
+
         [Tooltip("For a server that wants a key: the name of the environment variable holding it, " +
                  "such as AGENERELA_OLLAMA_API_KEY. Empty for a local Ollama. The key itself is never " +
                  "stored in the asset. Restart Unity, and Unity Hub, after setting the variable.")]
@@ -79,6 +84,7 @@ namespace Agenerela.Providers
                 // Clamped, so an asset edited by hand or by code to a value Ollama refuses still
                 // builds a provider, rather than failing at the first decision (#244).
                 TokenAlternatives = Mathf.Clamp(TokenAlternatives, 1, OllamaSettings.MaxTokenAlternatives),
+                TokenProbabilities = TokenProbabilities,
                 ApiKey = ReadKey(),
             };
         }

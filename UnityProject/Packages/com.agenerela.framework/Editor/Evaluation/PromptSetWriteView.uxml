@@ -38,6 +38,15 @@
                         <ui:Button name="add-state" text="+" class="ps-editor__small" />
                     </ui:VisualElement>
 
+                    <ui:VisualElement class="ps-row ps-editor__state-head">
+                        <ui:Label text="History" class="unity-base-field__label ps-editor__state-label" tooltip="Earlier turns of a multi-turn prompt, oldest first, staged in the agent's memory before the stimulus." />
+                        <ui:Label text="Earlier turns, oldest first. The state above is the one after them." class="ag-muted ps-wrap ps-grow" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="history-rows" />
+                    <ui:VisualElement class="ps-row ps-end">
+                        <ui:Button name="add-turn" text="+ Turn" tooltip="An earlier exchange, staged in the agent's memory before the stimulus." />
+                    </ui:VisualElement>
+
                     <Agenerela.Editor.UI.SectionTitle text="Expected answer" />
                     <ui:VisualElement name="labelled-warning" />
                     <ui:DropdownField name="expected-action" label="Action" />

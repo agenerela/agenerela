@@ -224,6 +224,7 @@ namespace Agenerela.Editor.Evaluation
             }
 
             var prompt = queue[current];
+            ShowHistory(prompt);
             root.Q<Label>("label-speaker").text = prompt.Label ?? "";
             root.Q<Label>("label-stimulus").text = prompt.Stimulus ?? "";
 
@@ -273,6 +274,31 @@ namespace Agenerela.Editor.Evaluation
             {
                 target = targets[0];
             }
+        }
+
+        // Earlier turns of a multi-turn prompt (#147), which the agent has already answered:
+        // context, not the question, so they show above it with "Now" between.
+        private void ShowHistory(BlindPrompt prompt)
+        {
+            var history = root.Q("label-history");
+            history.Clear();
+            PromptSetUi.Display(history, prompt.History.Count > 0);
+            if (prompt.History.Count == 0)
+            {
+                return;
+            }
+
+            history.Add(new SectionTitle("Earlier turns"));
+            foreach (var turn in prompt.History)
+            {
+                history.Add(Line($"{turn.LabelOrDefault}: {turn.Stimulus}", false));
+                string said = string.IsNullOrWhiteSpace(turn.Statement) ? "" : $" — \"{turn.Statement}\"";
+                var answered = Line($"→ {turn.Action}/{turn.Target}{said}", true);
+                answered.AddToClassList("ps-label__turn-answer");
+                history.Add(answered);
+            }
+
+            history.Add(new SectionTitle("Now"));
         }
 
         private void ShowAnswer()

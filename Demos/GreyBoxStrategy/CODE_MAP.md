@@ -18,7 +18,7 @@ is for. A line per file or group, no more.
 | `GreyBoxStrategy.Chart` | `Screen/Chart/` | Sim | Drawing a generated world's chart (CPU and the data the GPU pass reads) |
 | `GreyBoxStrategy.Screen` | `Screen/` (the rest) | all of the above, Input System | The running game: director, map, UI, sound, live sessions |
 | `GreyBoxStrategy.Editor` | `Editor/` | Sim, Agents | Menu items for headless runs |
-| `GreyBoxStrategy.Screen.Editor` | `Screen/Editor/` | Screen | Builds the `Watch` scene, art import settings |
+| `GreyBoxStrategy.Screen.Editor` | `Screen/Editor/` | Screen, Replay, Sim, Agents | Builds the `Watch` scene, art import settings; `FreeOrdersLiveCheck`, rule mode played headless against model rulers |
 | `GreyBoxStrategy.Tests.Editor` | `Tests/Editor/` | Sim, Agents | Rules, map, model seats, storyteller |
 | `GreyBoxStrategy.Screen.Tests.Editor` | `Screen/Tests/Editor/` | everything | The screen's models, sessions, layout |
 
@@ -77,9 +77,9 @@ A rule belongs in `Sim/`; a number the screen shows belongs in `Screen/Replay/` 
 |---|---|
 | `ReplayBuilder.cs`, `ReplayBuilder.Writs.cs` | A recorded game played again into the ordered events the screen plays |
 | `ReplayModel.cs` | Event kinds and the per-turn `CountryState` the screen reads |
-| `ScreenModels.cs`, `RealmQueries.cs` | Top bar stats, panel lists, attack odds, what may be attacked and why not |
+| `ScreenModels.cs`, `RealmQueries.cs` | Top bar stats, panel lists, attack odds, what may be attacked and why not; the economy's manpower, taxes, yields and buildings |
 | `Chronicle.cs`, `TurnSummary.cs`, `DecisionCard.cs`, `Recording.cs` | The chronicle, the turn strip's deeds, the inspector's card, guard verdicts |
-| `CourtList.cs` | The free-orders council list and the gold it holds back |
+| `CourtList.cs` | The free-orders council list, the gold and men it holds back, and where a building order may go |
 | `StoryCards.cs`, `StoryArms.cs`, `EndSummary.cs`, `HelpCallouts.cs` | Event windows, the storyteller's arm, the end screen, first-turn help |
 | `StartMenuModel.cs`, `GameSettings.cs`, `ReplayLibrary.cs` | Start menu text, settings, saved replays |
 | `Fog.cs`, `ArmyLook.cs`, `DevCommands.cs`, `DevEdits.cs`, `ScriptedWorldGame.cs` | Fog of war, army words, dev commands, a whole scripted game on any map |
@@ -98,7 +98,7 @@ kit), `.Inspector`, `.Rule` and `.WritsRule` (orders panels), `.FreeCouncil`, `.
 ## Tests
 
 `Tests/Editor/` tests the rules and agents, one file a slice (`WritTests` R1a, `FreeOrderTests`,
-`EconomyTests`, `StorytellerTests`, ...); `TestGames.cs` sets up a game in a known state.
+`EconomyTests`, `EconomyTaxLockTests`, `StorytellerTests`, ...); `TestGames.cs` sets up a game in a known state.
 `Screen/Tests/Editor/` tests the screen's data and sessions, mostly one file per `Screen/Replay`
 model. Run one class with `-testFilter "GreyBoxStrategy.Tests.EconomyTests"` (the README's
 "Run it" has the full command).

@@ -208,7 +208,18 @@ namespace Agenerela
             }
             else if (options.ListActionsAndTargets)
             {
-                choices = ChoicesBlock(ctx, schema, options.MaxListedTargets, unlisted);
+                HashSet<string> takeable = null;
+                if (options.ListTakeableTargetsOnly)
+                {
+                    var fields = Fields(schema, out var actionField, out var targetField);
+                    if (fields && targetField != null)
+                    {
+                        LegalPairs(ctx, schema, answer ?? ActionAvailability.Evaluate(ctx), actionField, targetField, int.MaxValue, null, out var listed);
+                        takeable = new HashSet<string>(listed, StringComparer.Ordinal);
+                    }
+                }
+
+                choices = ChoicesBlock(ctx, schema, options.MaxListedTargets, unlisted, takeable);
             }
 
             if (options.LegalTargets == LegalTargetListing.ObservationLine)
@@ -229,7 +240,7 @@ namespace Agenerela
             {
                 // With no statement field, the rules for one are not sent either (#266).
                 SystemPrompt = SystemPrompt(ctx.Identity, schema.AsksForStatement ? options.StatementRulesWording : (StatementRulesWording?)null,
-                    choices, options.TargetRule ? TargetRuleLine(schema) : null),
+                    choices, options.TargetRule ? TargetRuleLine(schema) : null, schema.StatementName),
                 FewShotBlock = fewShotBlock,
                 Observations = ObservationsBlock(block),
                 // Copied, so a memory strategy changing its list afterwards does not change a
@@ -253,7 +264,7 @@ namespace Agenerela
             {
                 SystemPrompt = decided.SystemPrompt,
                 Stimulus = string.Format(RefusalLineTemplate, ctx.Stimulus, EndSentence(verdict.ModelReason.Trim())),
-                Schema = DecisionSchema.StatementOnly(),
+                Schema = DecisionSchema.StatementOnly(decided.Schema?.StatementName ?? DecisionSchema.StatementFieldName),
                 AgentName = decided.AgentName,
                 StimulusText = decided.StimulusText,
                 StimulusLabel = decided.StimulusLabel,
@@ -303,7 +314,25 @@ namespace Agenerela
         // each with its own line when it has one (#190). Built from the schema rather than from
         // the registries, so the list and the enum cannot disagree. Every action is listed; the
         // targets stop at maxTargets.
-        private static string ChoicesBlock(AgentContext ctx, DecisionSchema schema, int maxTargets, List<string> unlisted)
+        // The schema's action and target fields, either null when it has none; false with no action field.
+        private static bool Fields(DecisionSchema schema, out SchemaField actionField, out SchemaField targetField)
+        {
+            actionField = null;
+            targetField = null;
+            foreach (var field in schema.Fields)
+            {
+                if (field.AllowedValues == null) continue;
+                if (field.Name == DecisionSchema.ActionFieldName) actionField = field;
+                else if (field.Name == DecisionSchema.TargetFieldName) targetField = field;
+            }
+
+            return actionField != null;
+        }
+
+        // With takeable, only the targets in it are listed, the rest going into unlisted before the
+        // cap is counted (PromptTrim.UntakeableTargets, #151).
+        private static string ChoicesBlock(AgentContext ctx, DecisionSchema schema, int maxTargets, List<string> unlisted,
+                                           HashSet<string> takeable = null)
         {
             var lines = new List<string>();
 
@@ -326,6 +355,12 @@ namespace Agenerela
                     foreach (string id in field.AllowedValues)
                     {
                         if (id == TargetRegistry.NoTarget) continue;
+                        if (takeable != null && !takeable.Contains(id))
+                        {
+                            unlisted?.Add(id);
+                            continue;
+                        }
+
                         if (targets.Count == maxTargets)
                         {
                             // Still offered by the schema; only its line is left out (#151).
@@ -560,7 +595,8 @@ namespace Agenerela
         // rule, each when there is one. With no knowledge and no rules the prompt is exactly what
         // it was before them (#190, Living Vale #14). A null wording sends no rules line: the
         // schema asks for no statement (#266).
-        private static string SystemPrompt(AgentIdentity identity, StatementRulesWording? wording, string choices, string targetRule)
+        private static string SystemPrompt(AgentIdentity identity, StatementRulesWording? wording, string choices, string targetRule,
+                                           string statementName = DecisionSchema.StatementFieldName)
         {
             var lines = new List<string>(7);
 
@@ -585,7 +621,7 @@ namespace Agenerela
             string rules = OneLine(identity.StatementRules);
             if (rules.Length > 0 && wording.HasValue)
             {
-                lines.Add(RulesPrefix(wording.Value) + EndSentence(rules));
+                lines.Add(RulesPrefix(wording.Value, statementName) + EndSentence(rules));
             }
 
             lines.Add(InstructionLine);
@@ -603,15 +639,25 @@ namespace Agenerela
             return string.Join("\n", lines);
         }
 
-        // The words before the statement rules (#244 item 8).
-        private static string RulesPrefix(StatementRulesWording wording)
+        // The words before the statement rules (#244 item 8), named for the field as the schema
+        // names it (DR-008): "Your dialogue: " when the call named it dialogue. With the default
+        // name, each is its constant, byte for byte.
+        private static string RulesPrefix(StatementRulesWording wording, string statementName)
         {
+            string prefix;
             switch (wording)
             {
-                case StatementRulesWording.HowItShouldRead: return StatementRulesHowItReads;
-                case StatementRulesWording.InYourOwnWords: return StatementRulesOwnWords;
-                default: return StatementRulesPrefix;
+                case StatementRulesWording.HowItShouldRead: prefix = StatementRulesHowItReads; break;
+                case StatementRulesWording.InYourOwnWords: prefix = StatementRulesOwnWords; break;
+                default: prefix = StatementRulesPrefix; break;
             }
+
+            if (string.IsNullOrWhiteSpace(statementName) || statementName == DecisionSchema.StatementFieldName)
+            {
+                return prefix;
+            }
+
+            return prefix.Replace(DecisionSchema.StatementFieldName, statementName.Replace('_', ' '));
         }
 
         // "You are <name>, <role>. <personality>", leaving out whichever parts are empty. A

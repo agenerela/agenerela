@@ -65,7 +65,12 @@ Targets:
 
   Any other target is listed by its id. A scene target is registered as its `Transform`, so it is
   listed by id, and its `Targetable.Description` reaches the model as an observation through
-  `ProximityObservationSource` instead (build plan §2.8).
+  `ProximityObservationSource` instead (build plan §2.8). To tell the model the targets as
+  observations without the list, add a `TargetSummarySource` to `Agent.ObservationSources`: one
+  line per target category, each target by its id, its `IDescribedTarget` description in
+  brackets, as in `place: bridge (the wooden bridge) and well (the stone well).` It calls no model
+  and gives the same lines for the same targets; `Headings` words a category's line. Whether a
+  small model reads it better than a line per target is #151's A/B (`EvalArm.SummariseTargets`).
 - **The budget.** `MaxListedTargets`, 12 by default, caps the target lines. The first targets in
   schema order are kept, so a source that offers the nearest first, as `ProximityTargetSource`
   does, loses the far ones. **The cut is silent**: the prompt says nothing about targets left out,
@@ -420,7 +425,7 @@ Player: "Fine day for it." -> action: none, target: no_target, statement: "Aye, 
   out of a call.
 - **Keep them apart from the evaluation set** (hard rule 4). A statement is shown in the prompt
   like a stimulus, so `PromptSetChecks` flags a prompt that matches one, and `EvalRunner` refuses
-  an arm whose own idle statement matches one.
+  an arm whose own idle statement, or added example's, matches one.
 
 The other way out of G14 is an idle stimulus nobody would say back. A statement is the one built
 here. Whether either helps, and whether a statement makes a model copy *it* instead, is the A/B.
@@ -444,6 +449,65 @@ For a call whose move is all the game needs, such as GreyBoxStrategy's marshal o
 a turn, where each army asked to speak made the rulers repeat themselves (35 to 44% of lines word for
 word, findings, 13 November). It changes what the model reads, so it is unmeasured as a default
 and owed an A/B run (#151); on by default, every request is byte-identical to one sent before.
+
+## Examples a call adds
+
+`DecideOptions.AddedExamples` adds few-shot examples to one call's block, beside the ones its
+actions and profile give (#151). Each is a `FewShotExample`: a stimulus, the action it answers
+with, a target (`no_target` when null) and an optional statement.
+
+```csharp
+options.AddedExamples = new List<FewShotExample>
+{
+    new FewShotExample("Use your own judgement.", "move_to", "tower", "I'll watch from the tower."),
+};
+```
+
+It is rendered as every example is, under the call's stimulus label and with the statement under
+the call's field name, after the actions' own examples and counter-examples and before the idle
+example:
+
+```
+Player: "Use your own judgement." -> action: move_to, target: tower, statement: "I'll watch from the tower."
+```
+
+An example never shows an answer the call could not give, so it is left out of a call that does
+not offer its action, or its target, or where its action cannot take that target now (its target
+categories, its availability per target); `no_target` is left out for an action that requires a
+target, and `none` shows only with `no_target`. The statement is shown only when
+`ExampleStatements` is on and the call asks for one. Its text is sent as written: a `{0}` is not
+filled. Null or an empty list, the default, leaves the block byte-identical.
+
+For an A/B run of one example in one arm, such as a free choice answered with an action, for a
+model that answers `none` when the choice is left to it. Unmeasured, so never a default. The evaluation runner
+refuses a run in which an arm's added example, or its statement, matches a prompt's stimulus
+(hard rule 4).
+
+## The free-text field's name
+
+`DecideOptions.StatementFieldName` names the free-text field for one call: `statement`
+(`DecisionSchema.StatementFieldName`) unless set, and null means the same. Set
+`DecisionSchema.DialogueFieldName`, `dialogue`, to ask under the prototype's name, for the A/B
+run of the rename (DR-008, #151). Only the name changes. The field still comes last, after
+`action`, `target` and any parameters, so the reply is `{"action": ..., "target": ...,
+"dialogue": ...}`, and the decision's `Statement` holds what the model wrote there.
+
+The schema carries the name (`DecisionSchema.StatementName`), so everything that reads the field
+reads it under the name that was sent: the parser, the field-order check
+(`DecisionTelemetry.OrderLost`, #180), the JSON schema, the examples (`..., dialogue: "On my
+way."`), the identity's statement rules line ("Your dialogue: "), memory, a multi-turn prompt's
+staged history in the evaluation runner, and a refusal line's request (#109). A reply that writes
+the other name has no statement: under `dialogue`, a `statement` key is ignored, as any key the
+schema did not ask for is. Telemetry, the decision log and the evaluation report keep their own
+key, `statement`, whatever the call named the field.
+
+The name must be lowercase snake_case and none of `action`, `target`, `also_targets` and `outcome`
+(the key a remembered outcome takes), or the call throws `ArgumentException`; an offered action
+with a parameter of the same name fails the call as a `RequestPreparation` error before anything
+is sent. A memory snapshot does not record the name, so a decision imported from one is read as if
+its statement were `statement`. With the default name every request is byte-identical to one sent
+before the option. The rename is unmeasured, so it is a choice per call, never a default, until the
+run says otherwise.
 
 ## A choice among options given with the call
 
@@ -541,6 +605,73 @@ sealed class StockEntry : IDescribedTarget, INamedTarget
 `INamedTarget` is separate from `IDescribedTarget`: the description is a sentence for the list
 ("One loaf of bread, 3 gold."), and would not fit inside "How much for the {0}?". No target has a
 name until a game writes one, which is the opt-in.
+
+## A budget for the prompt's size
+
+A game's prompt grows with every feature it adds, and nothing says so. In Painted Realm the court's
+prompt grew by 136 tokens a request when the economy went on, and 35% of its requests passed 1,600
+tokens (findings, 23 November 2026). Nothing was cut: Ollama's context window
+(`OllamaSettings.ContextSize`, `num_ctx`) is 4,096. The costs of a long prompt are latency and, on
+a small model, perhaps worse choices. A **prompt budget** makes the size something the developer
+sets and the telemetry sees (#151). There is none by default, and with none every request is what it
+was before budgets existed, byte for byte.
+
+```csharp
+// Every call of this agent: measure against 1,600 tokens, and warn once if over.
+court.PromptBudget = new PromptBudget(1600);
+
+// Or allow it to leave things out, in this order, only while it is over.
+court.PromptBudget = new PromptBudget(1600,
+    PromptTrim.OptionalObservations, PromptTrim.UntakeableTargets, PromptTrim.History);
+
+// One call: its own budget, or PromptBudget.None to turn the agent's off.
+await court.DecideAsync(stimulus, new DecideOptions
+{
+    Observations = mustKnow,
+    OptionalObservations = new List<string> { "Rival armies we see: ...", "Pikes beat riders, ..." }, // most worth keeping first
+    PromptBudget = new PromptBudget(2048),
+});
+```
+
+**How it is measured.** Before sending, with no model call, the request's text (system prompt,
+examples, observations, every history entry and the stimulus turn, never the schema, which a local
+model does not read) is counted in characters and divided by `CharsPerToken`, 3 unless the budget
+says otherwise. On 6,304 of Painted Realm's requests to `qwen3.5:4b`, Ollama's own count,
+`prompt_eval_count`, chat template included, came to 3.10 characters a token, and between 2.94 and
+3.30 for every one (findings, 24 November 2026). The default errs long by 3.6% on average (53 of the
+6,304 came out short, by 2% at most), so a trim fires a little early rather than late. After the reply,
+the provider's own count decides whether the decision went over, when it reports one. For another
+model or language, divide `PromptCharacters` by `PromptTokens` over a few decisions and pass your own
+ratio: `new PromptBudget(1600, 3.4f)`. `RollingHistory`'s own token cap still divides by 4, which on
+this model undercounts by about a fifth.
+
+**What it records.** Every decision, budget or not: `DecisionTelemetry.PromptCharacters` and
+`PromptTokensEstimated`. With a budget: `PromptBudget`, `OverBudget` (after every trim; on the
+provider's count when it gave one) and `PromptTrims`, one entry for each trim that left something
+out, such as `"History: 1 exchange"`. The decision feed and the Decision Log carry all five
+([logging-decisions.md](logging-decisions.md)). The first decision of an agent that goes over its
+budget logs one warning; later ones are only recorded.
+
+**What it may leave out, and only that.** With no trims a budget only measures and warns. Each trim
+listed is tried in the order given, one step at a time, and only while the estimate is over:
+
+| Trim | One step | Recorded in |
+|---|---|---|
+| `OptionalObservations` | The last of the call's `DecideOptions.OptionalObservations` | `ObservationsDropped` |
+| `UntakeableTargets` | Every target line of the action and target list that no offered action may take now, by its categories and per-target checks, at once. Only with `ListActionsAndTargets` on; with `LegalTargets` the list holds only those already | `TargetsUnlisted` |
+| `History` | The oldest remembered exchange; memory keeps it | `HistoryTurnsDropped` |
+
+`OptionalObservations` are sent as the call's own lines after its `Observations`, wherever
+`ObservationPlacement` puts those, and count against `MaxObservations` the same way. A line the
+trim leaves out is out of the context the guards and handlers read too. No trim ever removes an
+action, a must-send observation or a target from the schema, and the field order is untouched:
+the guards judge the same agent with a budget as without. When every listed trim is spent and the
+prompt is still over, it is sent as it is, and recorded as over.
+
+**Choosing one.** A budget with trims changes what the model reads when it fires, so it is a choice a
+game measures before keeping (hard rule 2). Painted Realm's court is the first measured: see
+findings for the run. A budget without trims costs nothing and changes nothing; it is the way to find
+out how often a game's prompts run long.
 
 ## Measuring them
 

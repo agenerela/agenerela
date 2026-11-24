@@ -79,9 +79,11 @@ namespace Agenerela.Tests.Evaluation
         }
 
         /// <summary>A provider config for an <see cref="OllamaProvider"/> on <paramref name="model"/> that talks to <paramref name="server"/>.</summary>
-        public ProviderConfig Ollama(FakeOllama server, string model, string name, string endpoint = "http://127.0.0.1:11434")
+        public ProviderConfig Ollama(FakeOllama server, string model, string name, string endpoint = "http://127.0.0.1:11434",
+                                     bool tokenProbabilities = true)
         {
-            var provider = new OllamaProvider(new OllamaSettings { Endpoint = endpoint, Model = model }, server);
+            var provider = new OllamaProvider(
+                new OllamaSettings { Endpoint = endpoint, Model = model, TokenProbabilities = tokenProbabilities }, server);
             return Config(provider, name);
         }
 
@@ -137,6 +139,9 @@ namespace Agenerela.Tests.Evaluation
 
         public IEnumerable<string> Chats => Log.Where(l => l.StartsWith("POST /api/chat", StringComparison.Ordinal));
 
+        /// <summary>Every /api/chat body as it was sent, oldest first.</summary>
+        public readonly List<JObject> ChatBodies = new List<JObject>();
+
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
             string path = request.RequestUri.AbsolutePath;
@@ -171,6 +176,7 @@ namespace Agenerela.Tests.Evaluation
                     break;
                 case "/api/chat":
                     Log.Add($"POST /api/chat {model}");
+                    ChatBodies.Add(body);
                     if (!Loaded.Contains(model))
                     {
                         Loaded.Add(model);

@@ -50,6 +50,11 @@ namespace Agenerela{
         public string ChainId; // DecideOptions.Chain's id: the chain of relayed decisions this one is in; null for none (#190, G4)
         public int ChainHop; // That chain's hop: relays from its start, 0 for its first decision; 0 with no chain (#190, G4)
         public bool StatementAsked = true; // DecideOptions.AskForStatement: whether the request's schema had a statement field; false for a call that asked for the move alone, whose decision's statement is empty (#266)
+        public int PromptCharacters; // The characters of the request's text as sent, after any trim: system prompt, examples, observations, history and stimulus turn, never the schema (PromptBudget.Characters); 0 when no request was prepared (#151)
+        public int PromptTokensEstimated; // Those characters over the budget's CharsPerToken, or PromptBudget.DefaultCharsPerToken with no budget, rounded up: made before sending, with no model call (#151)
+        public int PromptBudget; // The budget's tokens this call was measured against, from DecideOptions.PromptBudget or Agent.PromptBudget; 0 with none (#151)
+        public bool OverBudget; // Whether the prompt went over PromptBudget after every trim: on PromptTokens once the provider reported them, else on PromptTokensEstimated; false with no budget (#151)
+        public List<string> PromptTrims = new List<string>(); // Each trim step taken to fit the budget, in order, as "<PromptTrim>: <what>", such as "History: 1 exchange"; empty when none was (#151)
         public string ChainSource; // The Agent.Id of the agent whose decision was relayed to this one; null at a chain's start, with no chain, or when that agent has no id (#190, G4)
 
         public DecisionTelemetry()
@@ -99,6 +104,11 @@ namespace Agenerela{
             ChainHop = 0;
             ChainSource = null;
             StatementAsked = true;
+            PromptCharacters = 0;
+            PromptTokensEstimated = 0;
+            PromptBudget = 0;
+            OverBudget = false;
+            PromptTrims = new List<string>();
         }
     }
 

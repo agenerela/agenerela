@@ -169,6 +169,35 @@ namespace Agenerela.Tests.Evaluation
             Assert.That(boxes.Select(b => b.Query<Button>().ToList().Last().text), Is.All.EqualTo("Discard it"));
         }
 
+        [Test]
+        public void TheCohortLineShowsOnlyAboveLabelAndItsToggleAsksForTheWholeSet()
+        {
+            var state = Ready(PromptSetMode.Label);
+            state.CohortLine = "Labelling the 3 prompts of the agreement cohort (#148), from agreement-cohort.json.";
+            ui.Show(state);
+            bool? whole = null;
+            ui.WholeSetChanged += w => whole = w;
+
+            Assert.That(Shown(PromptSetUi.CohortName), Is.True);
+            Assert.That(ui.Root.Find<Label>(PromptSetUi.CohortLineName).text, Is.EqualTo(state.CohortLine));
+
+            using (EditorUiFixtures.Host(ui.Root))
+            {
+                ui.Root.Find<Toggle>(PromptSetUi.WholeSetName).value = true;
+            }
+
+            Assert.That(whole, Is.True);
+
+            state.Mode = PromptSetMode.Write;
+            ui.Show(state);
+            Assert.That(Shown(PromptSetUi.CohortName), Is.False, "Only Label asks the cohort.");
+
+            state.Mode = PromptSetMode.Label;
+            state.CohortLine = null;
+            ui.Show(state);
+            Assert.That(Shown(PromptSetUi.CohortName), Is.False, "No cohort beside the set, no line.");
+        }
+
         // ---- Label: progress, keys and the blind guarantee -------------------------------------------
 
         [Test]
@@ -256,6 +285,36 @@ namespace Agenerela.Tests.Evaluation
             Assert.That(shown, Is.EqualTo(5), "Every prompt Bo is asked was read.");
         }
 
+        [Test]
+        public void AMultiTurnPromptShowsItsEarlierTurnsAboveNow()
+        {
+            var set = fixture.Load();
+            foreach (var prompt in set.Prompts)
+            {
+                prompt.History = new List<HistoryTurn>
+                {
+                    new HistoryTurn { Stimulus = "Follow me.", Action = "follow_player", Target = TargetRegistry.NoTarget, Statement = "Right behind you." },
+                };
+            }
+
+            var view = LabelView(set, "Bo", new List<LabelAnswer>());
+            var history = view.Root.Find<VisualElement>("label-history");
+            string shown = Everything(history);
+
+            Assert.That(Shown(history), Is.True);
+            Assert.That(shown, Does.Contain("EARLIER TURNS").And.Contain("Player: Follow me.").And.Contain("→ follow_player/no_target — \"Right behind you.\"").And.Contain("NOW"));
+            Assert.That(shown.IndexOf("NOW"), Is.GreaterThan(shown.IndexOf("Follow me.")), "Now comes after the earlier turns.");
+        }
+
+        [Test]
+        public void ASinglePromptShowsNoEarlierTurns()
+        {
+            var set = fixture.Load();
+            var view = LabelView(set, "Bo", new List<LabelAnswer>());
+
+            Assert.That(Shown(view.Root, "label-history"), Is.False);
+        }
+
         // ---- Agreement -------------------------------------------------------------------------------
 
         [Test]
@@ -280,6 +339,22 @@ namespace Agenerela.Tests.Evaluation
             view.Sort(null);
 
             Assert.That(view.Rows.Select(r => r.Id), Is.EqualTo(new[] { "command_with_target", "situation" }));
+        }
+
+        [Test]
+        public void RecordAgreedAnswersShowsOnlyWhenAUnanimousPromptIsUnrecorded()
+        {
+            var set = fixture.Load();
+            var none = new PromptSetAgreementView(set, set.LoadLabels(), () => { });
+            Assert.That(Shown(none.Root, PromptSetAgreementView.RecordAgreedName), Is.False);
+
+            fixture.WriteLabels("Ana", "command_with_target", "{ \"target_001\": \"move_to/bridge\" }");
+            var view = new PromptSetAgreementView(set, set.LoadLabels(), () => { });
+            var button = view.Root.Find<Button>(PromptSetAgreementView.RecordAgreedName);
+
+            Assert.That(Shown(button), Is.True);
+            Assert.That(button.text, Is.EqualTo("Record agreed answers (1)"));
+            Assert.That(view.Root.Find<Label>(PromptSetAgreementView.PairwiseName).text, Is.Not.Empty);
         }
 
         [Test]

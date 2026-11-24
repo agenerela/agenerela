@@ -166,12 +166,53 @@ namespace Agenerela
         public bool AskForStatement = true;
 
         /// <summary>
+        /// What this call's free-text field is named: <see cref="DecisionSchema.StatementFieldName"/>,
+        /// <c>statement</c>, by default, and null means the same. Set
+        /// <see cref="DecisionSchema.DialogueFieldName"/> to ask under the prototype's name (DR-008),
+        /// for the A/B run of the rename (#151). Only the name changes: the field still comes after
+        /// <c>action</c>, <c>target</c> and any parameters, and the decision's
+        /// <see cref="AgentDecision.Statement"/> holds what the model wrote in it.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The schema carries the name (<see cref="DecisionSchema.StatementName"/>), so everything
+        /// that reads the field reads it under the name that was sent: the parser, the order check
+        /// (<see cref="DecisionTelemetry.OrderLost"/>), the serializer, the examples
+        /// (<c>dialogue: "…"</c>), the identity's statement rules line ("Your dialogue: "), memory,
+        /// and a refusal line's request (#109). Telemetry, the Decision Log and the evaluation report
+        /// keep their own key, <c>statement</c>, whatever the call named the field.
+        /// </para>
+        /// <para>
+        /// Any lowercase snake_case name other than <c>action</c>, <c>target</c>, <c>also_targets</c>
+        /// and <c>outcome</c>, and none of the offered actions' parameter names; another fails the call
+        /// before anything is sent. The rename is unmeasured (DR-008), so this is a choice per call,
+        /// never a default, until the run says otherwise. A memory snapshot does not record the name:
+        /// a remembered decision imported from one is read as if its statement were
+        /// <c>statement</c>.
+        /// </para>
+        /// </remarks>
+        public string StatementFieldName = DecisionSchema.StatementFieldName;
+
+        /// <summary>
         /// Whether this call's examples show each action's
         /// <see cref="ActionDefinition.CounterExampleStimulus"/>, answered with <c>none</c> (#190). On
         /// by default, which shows only what a developer wrote. False leaves them out of this call, as
         /// the control arm of an A/B run does.
         /// </summary>
         public bool CounterExamples = true;
+
+        /// <summary>
+        /// Few-shot examples this call adds to the ones its actions and profile give (#151); null or
+        /// empty, the default, adds none and leaves the block exactly as it was.
+        /// </summary>
+        /// <remarks>
+        /// Each comes after the actions' own examples and counter-examples, before the idle example,
+        /// and is left out of a call that could not give its answer (<see cref="FewShotExample"/> says
+        /// when). Its statement is shown only when <see cref="ExampleStatements"/> is on and the call
+        /// asks for one. Unmeasured: for an A/B run of one example in one arm, such as a free choice
+        /// answered with an action, never a default until that run says otherwise.
+        /// </remarks>
+        public List<FewShotExample> AddedExamples;
 
         /// <summary>
         /// Whether this call's schema pairs each action with the targets it takes, so the grammar
@@ -204,6 +245,33 @@ namespace Agenerela
         /// not: it stays with the developer's handlers and never reaches the prompt.
         /// </remarks>
         public IList<string> Observations = new List<string>();
+
+        /// <summary>
+        /// Lines the agent may be told, most worth keeping first: sent after <see cref="Observations"/>
+        /// as more of the call's own, unless this call's <see cref="PromptBudget"/> lists
+        /// <see cref="PromptTrim.OptionalObservations"/> and the prompt is over it, when they are left
+        /// out from the last, one at a time, until it fits or none is left (#151). Null or empty by
+        /// default. Copied when the call starts.
+        /// </summary>
+        /// <remarks>
+        /// Sent, they are the call's lines like any other: they go where
+        /// <see cref="ObservationPlacement"/> puts the call's own, count against
+        /// <see cref="Agent.MaxObservations"/> the same way, and the context every guard, source and
+        /// handler reads holds them. One left out is left out of that context too, and recorded in
+        /// <see cref="DecisionTelemetry.ObservationsDropped"/>.
+        /// </remarks>
+        public IList<string> OptionalObservations;
+
+        /// <summary>
+        /// This call's prompt budget (#151): null, the default, uses <see cref="Agent.PromptBudget"/>,
+        /// and <see cref="Agenerela.PromptBudget.None"/> turns the agent's off for this call.
+        /// </summary>
+        /// <remarks>
+        /// With no budget either way the request is byte-identical to one sent before budgets existed,
+        /// and the telemetry still records its estimate. <see cref="Agenerela.PromptBudget"/> says how
+        /// it is measured and what each trim leaves out.
+        /// </remarks>
+        public PromptBudget PromptBudget;
 
         /// <summary>
         /// Options to choose among on this call, instead of the agent's registered actions (DR-022,
@@ -396,7 +464,9 @@ namespace Agenerela
         {
             var copy = (DecideOptions)MemberwiseClone();
             copy.Observations = Observations == null ? null : new List<string>(Observations);
+            copy.OptionalObservations = OptionalObservations == null ? null : new List<string>(OptionalObservations);
             copy.Choices = Choices == null ? null : new List<Choice>(Choices);
+            copy.AddedExamples = AddedExamples == null ? null : new List<FewShotExample>(AddedExamples);
             return copy;
         }
     }

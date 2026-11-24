@@ -65,7 +65,7 @@ file, and a merge never has to choose between their answers.
     { "id": "none", "needsTarget": false }
   ],
   "targets": [
-    { "id": "bridge", "description": "The wooden bridge over the stream" }
+    { "id": "bridge", "description": "The wooden bridge over the stream", "category": "place" }
   ],
   "categories": [
     { "id": "command_with_target", "file": "prompts/commands_with_target.json", "idPrefix": "target" },
@@ -80,6 +80,7 @@ file, and a merge never has to choose between their answers.
 | `actions[].needsTarget` | `true` if the action takes a registered target, `false` if it always takes `no_target` |
 | `actions[].onlyWhen` | Optional. The state in which the action is available, in the shape of a prompt's `preconditionState` |
 | `targets` | Every target the agent has registered, the only values besides `no_target` an expected target may hold |
+| `targets[].category` | Optional. The category the target is registered in, matched against each profile action's `TargetCategories` (DR-020). With both written, the paired schema (`PairTargetsWithActions`) gives each action only its own targets and `TargetCategoryGuard` refuses another pair, in every arm. The window refuses a label they make illegal (#151) |
 | `categories[].id` | Lower-case letters, digits and `_`, starting with a letter or digit. It names each annotator's label file, so it can never hold a path |
 | `categories[].file` | The category's prompts: a `.json` path relative to the set file, inside its folder, and neither the set file, under `labels/`, nor another category's file. Created on the first prompt you add |
 | `categories[].idPrefix` | Optional. What its prompt ids start with; the category id when left out |
@@ -121,7 +122,8 @@ when its `category` is not the id `agent.json` gives that file. Each prompt in i
 | `stimulus` | What the agent is told or shown |
 | `observations` | Short facts about the world given alongside it |
 | `expectedAction`, `expectedTarget` | The right answer. `expectedTarget` can be a list where either target is right: `["bridge", "docks"]` |
-| `preconditionState` | The agent's state the prompt assumes, set as `Agent.State` before it is asked |
+| `preconditionState` | The agent's state the prompt assumes, set as `Agent.State` before it is asked. With a `history`, the state after its last turn |
+| `history` | Optional. Earlier turns the prompt is asked after, oldest first; see below |
 | `checkTarget` | Optional, `true` when left out. `false` tests a decision with the grounding guard off |
 | `note` | Optional. Why the answer is what it is |
 | `labelledBy` | Who wrote the prompt; everyone who answered it, once it has been settled |
@@ -129,6 +131,31 @@ when its `category` is not the id `agent.json` gives that file. Each prompt in i
 
 A field the format does not know is kept and written back, so nothing is lost when an older
 version of the window saves a newer file.
+
+**A multi-turn prompt** carries a `history`: the exchanges the agent has already had, each what it
+was told and what it answered. The runner puts them in the agent's memory before it asks the
+stimulus, so "You can go." can be scored on an agent that was asked to follow two turns ago:
+
+```json
+"preconditionState": { "isFollowing": true },
+"history": [
+  { "stimulus": "Walk with me to the market.", "action": "follow_player", "target": "no_target", "statement": "Lead the way." },
+  { "label": "Event", "stimulus": "Church bells ring.", "action": "none", "target": "no_target" }
+]
+```
+
+| Turn field | Meaning |
+|---|---|
+| `label` | Optional, `Player` when left out. The label the turn's stimulus arrived with |
+| `stimulus` | What the agent was told then |
+| `action`, `target` | What it answered: an action the set declares, and a registered target or `no_target` |
+| `statement` | Optional. What it said, staged only for an arm that asks for a statement |
+
+A turn is history, not a question: it is never scored, and its answer is what the agent did, right
+or not, so a set can stage a mistake and ask what comes after. The checks hold each turn to the
+rules for an answer (registered targets, `none` with `no_target`, a target where the action needs
+one), but not to a state, since the prompt's `preconditionState` is the state after the turns. A
+turn's fields the format does not know are kept, as a prompt's are.
 
 ## Writing prompts
 
@@ -170,13 +197,22 @@ applied over it: the window offers to keep it or discard it. Each category you c
 
 A label from someone who has seen the expected answer is not a second opinion. Switch to
 **Label** with your own name in the toolbar. The window asks you every prompt you neither wrote
-nor answered, one at a time, and shows only its label, stimulus, observations and state. The
+nor answered, one at a time, and shows only its label, stimulus, observations and state, after
+the earlier turns of a multi-turn prompt, which are what the agent did, not the answer asked for. The
 actions offered are the ones the state allows, as the agent would be offered them. No expected
 answer, note or other person's label is shown, and the view is given none of them
 (`BlindPrompt`, `LabelChoices`). Nor does it show the prompt's category, which `BlindPrompt`
 carries only so the answer can be filed: a prompt among the impossible requests is half
 answered by that. The prompts come in an order of your own
 rather than the set's, which groups them by category.
+
+**An agreement cohort.** When an `agreement-subset.json` sits beside the set file, Label mode
+asks only the prompts it names, and says so above the prompt ("Labelling the 76 prompts of the
+agreement cohort"); the progress count is the cohort's. The **Whole set** toggle beside that line
+asks every prompt instead. The file is a fixed subset frozen for a second annotator before the set
+grows (`AgreementCohort`; only its `categories[].promptIds` are read, and it holds no answers), so
+the person checking agreement is not asked prompts added later. A file that cannot be read is
+shown as a warning, and the whole set is asked.
 
 **Save answer** writes your answer to your own file under `labels/<you>/` and moves on. An answer once
 saved is never replaced, even if you change your mind: agreement is measured on first answers.
@@ -197,6 +233,19 @@ The keyboard does all of it, while the Label view has focus:
 **Agreement** compares everyone's answers: overall, how many prompts answered by two or more
 people got the same answer from all; by category, in a table with a bar for each that sorts by
 any column you click; and the list of prompts where they split.
+
+It also reports raw agreement and **Cohen's kappa for each named pair of annotators**, using
+only prompts both answered. Each complete `action/target` is one answer category: agreeing on
+the action but choosing different targets is a disagreement. With observed agreement `p_o`
+and chance agreement `p_e` (the sum of the products of the two people's answer proportions),
+`kappa = (p_o - p_e) / (1 - p_e)`. Missing answers enter neither proportion. A pair with no
+shared prompts is not reported. If both people always gave the same single answer, raw
+agreement is 100% and kappa is undefined, which the window explains. Negative kappa is kept.
+There is no single pooled Cohen's kappa when more than two people labelled the set.
+
+**Record agreed answers** keeps each person's original answer in `labels` for unanimous
+prompts too, without changing their expected answer. It leaves splits for discussion and
+never changes a person's label file.
 
 A prompt's answers are its writer's expected answer (until it is settled, when the writer is the
 only name in `labelledBy` and the target is not an open choice), the `labels` written when it
@@ -297,6 +346,14 @@ much of the model is in GPU memory. A model not fully on the GPU, or not residen
 warning at the top of the report. For any provider other than Ollama, the version and the
 residency say "not checked".
 
+**A warm-up out of field order refuses the run** (#180). If any warm-up reply's fields came in an
+order other than the schema's (`DecisionTelemetry.OrderLost`), the run stops before the arm's
+first prompt, naming the arm and the model: every answer would measure that order as well as the
+model, and the settled order (action, then target, then statement) is the measured one. Ollama's
+native template path does this, sorting the schema's keys (findings, 5 November 2026). Set
+`AllowOrderLost` on the runner for a run that measures the order on purpose; the report records
+it. In a `Sequential` run, arm B's warm-up comes after all of arm A.
+
 **Two orders.** `Interleaved`, the default, asks each prompt in A and then in B, so drift over
 the session hits both alike; both arms must be on one model. `Sequential` runs all of A,
 unloads its model (`keep_alive: 0`) and waits until it has left memory, then runs all of B: for
@@ -304,6 +361,12 @@ arms on two models, a 2B against a 4B. Drift is then not shared, and the report 
 ran one after the other; repeat a close result.
 
 **Each prompt** gets a fresh agent per arm, with no memory, so no prompt sees another:
+
+- A prompt with a `history` gets a `RollingHistory` holding its turns and nothing else, oldest
+  first, each as the agent would have remembered a real one: the stimulus as it was sent,
+  `Player: "Walk with me to the market."`, and the answer as the one-line JSON object a model
+  gives, `action`, `target`, then `statement` when the arm asks for one. The memory is sized to
+  send every turn, so a long history is never cut. A prompt without one is asked with no memory.
 
 - Every action of the profile is bound to a handler that does nothing and is available exactly
   when the prompt's `preconditionState` holds the action's `onlyWhen`. An action with no
@@ -313,9 +376,14 @@ ran one after the other; repeat a close result.
   state is also told to it, by `DescribeState`: one `isFollowing: true.` line per value by
   default (`PlainStateLines`). Give it your game's own wording, such as "You are following the
   player.", or null to tell the model nothing.
-- The set's targets are offered through an `ExplicitTargetSource`, and each is told to the model
-  as a line, `bridge: The wooden bridge over the stream.`, because the prompt lists no targets
-  and Ollama never shows the model the schema.
+- The set's targets are offered through an `ExplicitTargetSource`, each in its `category` when it
+  has one, and each is told to the model as a line, `bridge: The wooden bridge over the stream.`,
+  because the prompt lists no targets and Ollama never shows the model the schema. An arm with
+  `SummariseTargets` tells them as `TargetSummarySource` summarises them instead, one line per
+  category, ids verbatim: `place: bridge (the wooden bridge over the stream), well (the stone well
+  in the village square) and docks (the docks where supply boats unload).` (build plan §2.8,
+  #151). It calls no model, so it is the same on every prompt and costs no latency; the report's
+  conditions record it (`summariseTargets`).
 - The observations are, in order: the arm's own `DecideOptions.Observations`, the state's
   lines, the targets', then the prompt's own. Only the prompt's own are the call's
   `DecideOptions.Observations`; the rest reach the agent through an observation source, so the
@@ -331,9 +399,29 @@ ran one after the other; repeat a close result.
   changed. So two arms can give a set whose profile has no rules the same rules, and compare how
   they are introduced (`DecideOptions.StatementRulesWording`, #244). The report's conditions name
   each arm's rules and wording.
+- Two of #151's runs change what an arm asks under rather than what it says. The free-text
+  field's name (DR-008): an arm with `DecideOptions.StatementFieldName = "dialogue"` asks, reads,
+  orders and stages its multi-turn history under `dialogue`, and the report's conditions carry it
+  (`statementFieldName`), with a line under the arms table naming any arm that renamed it. The
+  target rule against the grounding guard (#107): an arm whose `OllamaProviderConfig` has
+  **Token Probabilities** off asks Ollama without `logprobs`, so its calls send the target rule
+  and its guard reads nothing; the conditions record `tokenProbabilities: false`, no
+  `tokenAlternatives`, and the arms table's checkTarget cell reads "on, no probabilities"
+  ([providers.md](providers.md)).
+- Two more change what an arm shows. History on against off: an arm with `IgnoreHistory` asks
+  every prompt alone, its `history` left out of memory, and scores it against the same label, so
+  the run measures what the earlier turns add; the conditions record `ignoreHistory`, and a line
+  under the arms table names the arm. One extra example: an arm's `DecideOptions.AddedExamples`
+  (`FewShotExample`: a stimulus, an action, a target, a statement) adds examples to that arm's
+  few-shot block, after the actions' own and before the idle example, such as a free choice
+  answered with an action for a model that answers `none` to most open choices. An example whose
+  action or target a prompt does not offer is left out of that prompt
+  ([prompt.md](prompt.md#examples-a-call-adds)). The conditions list them (`addedExamples`), with a
+  line under the arms table, and the run is refused when one's stimulus or statement matches a
+  prompt's stimulus (hard rule 4).
 - An arm's `Legality` (`EvalLegality`) gives its own copies of the profile's actions categories
-  or **parameters** (`ActionParameters`, DR-023), and its targets categories, without changing the
-  set, its labels or the profile. An arm that gives an action a parameter sends the paired schema
+  or **parameters** (`ActionParameters`, DR-023), and its targets categories, in place of the
+  set's own, without changing the set, its labels or the profile. An arm that gives an action a parameter sends the paired schema
   and the action list, as any agent with a parameter does ([parameters.md](parameters.md)). The
   labels are scored on action and target alone, so the parameter's value is never judged. The
   report's conditions carry the arm's legality.
@@ -361,7 +449,9 @@ reports, how targets and state reached the model, and per arm its config, provid
 version, `checkTarget`, warm-up and what was in VRAM); the five outcomes per arm, with accuracy
 as correct out of every prompt asked, pipeline errors included; the noise check; the outcomes
 per category; every answer that was not correct, with what the model said and the guard's
-reason; and the reply checks. `report.json` holds all of that and every answer, correct ones too, and reads back with
+reason; and the reply checks. Beside the noise check, **Field order** counts each arm's replies
+in the schema's order, out of it, and not checked, with the warm-ups out of order, and marks an arm
+with any out of order "order lost"; such an arm is also a warning at the top. `report.json` holds all of that and every answer, correct ones too, and reads back with
 `EvalReport.FromJson`.
 
 **The noise check.** A difference between the arms smaller than the noise floor is marked
@@ -369,6 +459,15 @@ reason; and the reply checks. `report.json` holds all of that and every answer, 
 10 points at n ≈ 50, scaled as a proportion's standard error scales: `10 × √(50 / n)`, about 16
 points at n = 20 and 5 at n = 200. It is checked over the whole set and per category, each with
 its own n, so a category of six prompts needs a very large difference before it says anything.
+
+**The field order.** Each answer's `OrderLost` is true when its reply's fields came in an order
+other than the schema's, false when they kept it, and null when no reply was read, a pipeline
+error, so the order was not checked: that is never counted as kept. The arm's `OrderKept`,
+`OrderLost` and `OrderNotChecked` count them, and `OrderFlagged` is true when any came out of
+order. Nothing is rescored: an answer out of order keeps its outcome. A difference between two
+arms of which one is flagged is not a model result, whatever the noise check says. The check
+reads the reply's raw text, so it holds for any provider whose text is the model's own; a provider
+that rewrote the model's JSON before returning it would always look in order.
 
 ### Reply checks: what the agent said
 
@@ -382,6 +481,13 @@ mechanical rules that need no judgement (`ReplyChecks`, `ReplyFlag`):
 | `Empty` | The schema asked for a statement, as a decision's always does, and it is empty or only whitespace |
 | `TooLong` | Longer, once trimmed, than the arm's `MaxStatementLength`: 200 characters unless set (`EvalArm.DefaultMaxStatementLength`) |
 | `Leak` | The statement shows the machinery: an action or target id as written (`move_to`, `no_target`, `north_tower`), a schema field used as a label (`action:`, `"target":`), a `{` or `}`, or one of `ReplyChecks.AssistantPhrases` |
+
+An `Echo` also says which kind of line it repeats (`ReplyFinding.EchoesStimulus`,
+`EchoesStatement`), and each arm counts them apart (`ReplyCounts.EchoStimulus`, `EchoStatement`;
+the report's rows **of a stimulus** and **of a statement**): an echo of the request's kind of line,
+or a parrot of what an example says. One line can be both. So a run that writes example
+statements can see whether stimulus echoes fall without statement parrots taking their place
+(#190 G14, #218).
 
 They apply to every prompt of a set; nothing in the set's format turns one on or off. What is
 checked is the model's own statement, before any guard, so a guard that stopped a decision does
@@ -432,8 +538,10 @@ next step and is not in the runner.
    asked and the state told to the model, the expected answer, what the model said and its
    statement, what the guards made of it, and any error.
 6. **Labelling and export**: the labellers' agreement on the set's label files as they are now,
-   in the Prompt Set window's own counts; **Review disagreements** opens that window, whose
-   Agreement tab settles them. **Copy summary for findings.md** copies the arms, the five
+   in the Prompt Set window's own counts, with each named pair's raw agreement and Cohen's
+   kappa; **Review disagreements** opens that window, whose Agreement tab settles them.
+   **Copy summary for findings.md** includes current agreement, each pair's raw agreement and
+   kappa, and the note that these labels may have changed since the run, as well as the arms, the five
    outcomes, the noise check and any warning as Markdown; **Show files** and **Save a copy…**
    reach `report.json` and `report.md`.
 
@@ -454,12 +562,12 @@ you compare with.
 | `PromptSetChecks` | The writing rules: `Check`, `CheckPrompt`, `CompareWithProfile`, `MatchesExample` |
 | `BlindPrompt`, `LabelChoices` | Everything Label mode is given |
 | `AnnotatorLabels`, `LabelAnswer` | One person's label file, and one `action/target` answer |
-| `AgreementReport`, `PromptAgreement` | Agreement overall and per prompt |
-| `EvalRunner`, `EvalArm`, `EvalArmOrder` | An A/B run: `RunAsync`, `Classify`, `DescribeState`, `PlainStateLines`, `WarmUpRequests`, `Order`, `Progress` |
+| `AgreementReport`, `PromptAgreement`, `AnnotatorAgreement` | Agreement overall, per prompt, and per named pair (`Pairwise`), including raw agreement and `CohensKappa` |
+| `EvalRunner`, `EvalArm`, `EvalArmOrder` | An A/B run: `RunAsync`, `Classify`, `DescribeState`, `PlainStateLines`, `WarmUpRequests`, `AllowOrderLost`, `Order`, `Progress` |
 | `EvalProgress`, `EvalPhase`, `EvalCancelledException` | How far a run has come, and a cancelled run's `Partial` report |
 | `EvalReport` | What a run found: `Conditions`, `Arms`, `Noise`, `Answers`, `NotCorrect`, `Cancelled`; `Save`, `ToJson`, `FromJson`, `ToMarkdown` |
 | `EvalConditions`, `EvalArmConditions`, `ResidencyReading`, `ResidentModel` | What it ran under |
-| `EvalArmResult`, `OutcomeCounts`, `NoiseCheck`, `EvalAnswer` | Its counts, noise check and answers |
+| `EvalArmResult`, `OutcomeCounts`, `NoiseCheck`, `EvalAnswer` | Its counts, noise check and answers; an arm's `OrderKept`, `OrderLost`, `OrderNotChecked` and `OrderFlagged`, an answer's `OrderLost` |
 | `ReplyChecks`, `ReplyFlag`, `ReplyFinding`, `ReplyCounts` | The checks on each statement: `Check`, `AssistantPhrases`; an answer's `ReplyFlags`, an arm's `Replies`, `EvalArm.MaxStatementLength`, `EvalReport.FlaggedReplies` |
 
 All of it is in the `Agenerela.Evaluation` namespace, under `Runtime/Evaluation/`, and reads and

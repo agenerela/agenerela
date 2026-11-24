@@ -152,6 +152,19 @@ namespace GreyBoxStrategy.Realm
             return reasons.Count == 1 ? reasons[0] : string.Join("; ", reasons.Take(2)) + (reasons.Count > 2 ? "; …" : "");
         }
 
+        private static string Explain(string action, GameRules rules)
+        {
+            // The economy (#372, #374): a tax level, a building.
+            if (Actions.SetsTaxes(action) is TaxLevel level)
+                return $"Set taxes {ScreenModels.TaxName(level)} from now on: {ScreenModels.TaxEffect(rules, level)}. One tax order a turn.";
+            if (Actions.BuildsWhat(action) is Building b)
+                return $"Buy a {ScreenModels.BuildingName(b)} at once in a province of yours, for {WritLegality.BuildingCost(rules, b)} gold: "
+                       + (b == Building.Barracks ? $"+{rules.BarracksManpower} men a turn and +{rules.BarracksCap} to your manpower cap" : b == Building.Market
+                           ? $"+{rules.MarketYield} gold a turn there, +{rules.MarketCoastYield} on a coast"
+                           : $"+{rules.FarmYield} gold a turn there, +{rules.FarmPlainsYield} on plains; {rules.FarmsForStability} farms steady your stability") + ". One of each a province.";
+            return Explain(action);
+        }
+
         private static string Explain(string action)
         {
             switch (action)
@@ -174,6 +187,12 @@ namespace GreyBoxStrategy.Realm
                 case Actions.RecruitRiders: return "Recruit riders";
                 case Actions.RecruitBows: return "Recruit bows";
                 case Actions.RaiseTaxes: return "Raise taxes";
+                case Actions.TaxesLow: return "Set taxes low";
+                case Actions.TaxesNormal: return "Set taxes normal";
+                case Actions.TaxesHigh: return "Set taxes high";
+                case Actions.BuildMarket: return "Build a market in " + Cap(m.Target);
+                case Actions.BuildBarracks: return "Build barracks in " + Cap(m.Target);
+                case Actions.BuildFarm: return "Build a farm in " + Cap(m.Target);
                 case Actions.Attack: return "Attack " + Cap(m.Target);
                 case Actions.Fortify: return "Fortify " + Cap(m.Target);
                 case Actions.DeclareWar: return "Declare war on " + CountryLook.NameOf(m.Target);

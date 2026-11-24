@@ -69,6 +69,12 @@ namespace Agenerela.Editor.Evaluation
         private PromptSetAgreementView agreementView;
         private PromptSetUi ui;
 
+        // The agreement cohort beside the set (#148), null when there is none; why it could not be
+        // read, when it could not; and whether Label mode asks the whole set instead.
+        private AgreementCohort cohort;
+        private string cohortError;
+        private bool labelWholeSet;
+
         [MenuItem("Window/Agenerela/Prompt Set")]
         public static void Open()
         {
@@ -313,6 +319,12 @@ namespace Agenerela.Editor.Evaluation
             ui.OpenProjectSet += anchor => OpenProjectSet(PromptSetStart.FindSets(), anchor);
             ui.NewSet += CreateSet;
             ui.KeepDraft += KeepDraft;
+            ui.WholeSetChanged += whole =>
+            {
+                labelWholeSet = whole;
+                labelView = null;
+                Refresh();
+            };
             ui.DiscardDraft += DiscardDraft;
 
             Refresh();
@@ -348,6 +360,11 @@ namespace Agenerela.Editor.Evaluation
                 WriteUnsaved = writeView != null && writeView.HasUnsavedChanges,
                 ProfileDifferences = set != null && profile != null ? PromptSetChecks.CompareWithProfile(set, profile) : Array.Empty<string>(),
                 Drafts = WaitingDrafts(),
+                CohortLine = CohortLine(),
+                WholeSet = labelWholeSet,
+                CohortError = cohortError != null
+                    ? $"{AgreementCohort.FileName} could not be read, so Label mode asks the whole set: {cohortError}"
+                    : null,
             };
 
             ui.Show(state);
@@ -465,11 +482,37 @@ namespace Agenerela.Editor.Evaluation
             if (labelView == null || labelView.Annotator != you)
             {
                 // Everything Label mode is given: prompts with no answer in them, and the choices.
-                labelView = new PromptSetLabelView(you, BlindPrompt.Queue(set, labels, you), LabelChoices.From(set), Record,
-                    LabelProgress.TotalFor(set, you));
+                var asked = Asked();
+                labelView = new PromptSetLabelView(you, BlindPrompt.Queue(set, labels, you, cohort: asked), LabelChoices.From(set), Record,
+                    LabelProgress.TotalFor(set, you, asked));
             }
 
             return labelView.Root;
+        }
+
+        // Whose prompts Label mode asks: the agreement cohort's when one sits beside the set (#148),
+        // so a second annotator is not asked the whole grown set, unless Whole set is chosen.
+        // Null for the whole set. The cohort holds ids only, no answers.
+        private AgreementCohort Asked() => labelWholeSet || cohortError != null ? null : cohort;
+
+        // The line above Label saying which prompts it asks; null with no cohort beside the set.
+        private string CohortLine()
+        {
+            if (cohort == null || set == null)
+            {
+                return null;
+            }
+
+            int inSet = set.Prompts.Count(p => cohort.Contains(p.Id));
+            string line = labelWholeSet
+                ? $"Labelling the whole set, {set.Prompts.Count()} prompts, not only the {inSet} of the agreement cohort."
+                : $"Labelling the {inSet} prompts of the agreement cohort{(cohort.Issue != null ? $" (#{cohort.Issue})" : "")}, from {AgreementCohort.FileName}.";
+            if (inSet < cohort.Count)
+            {
+                line += $" {cohort.Count - inSet} of its ids are not in the set.";
+            }
+
+            return line;
         }
 
         private bool Record(BlindPrompt prompt, LabelAnswer answer)
@@ -512,8 +555,19 @@ namespace Agenerela.Editor.Evaluation
                 }
             }
 
+            cohort = null;
+            cohortError = null;
             if (set != null)
             {
+                try
+                {
+                    cohort = AgreementCohort.FindBeside(set);
+                }
+                catch (Exception e) when (e is IOException || e is InvalidDataException || e is UnauthorizedAccessException)
+                {
+                    cohortError = e.Message;
+                }
+
                 writeView = new PromptSetWriteView(set, () => profile, () => you, OnFilesWritten, OnEdited);
                 RefreshLabels();
             }

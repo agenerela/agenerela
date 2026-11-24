@@ -180,3 +180,13 @@ and the control took 7 minutes. The result of 12 November 2026 is in `docs/llm-w
 - Is n large enough? At n≈50 the observed noise floor was about 10 points.
 
 The full checklist is in `docs/FRAMEWORK_BUILD_PLAN.md` §4.
+
+## `prompt_set_balance.py`
+
+Not a probe: it reads the evaluation prompt set and prints the *Category balance* section of
+[`UnityProject/Assets/Evaluation/README.md`](../../UnityProject/Assets/Evaluation/README.md)
+(#147), so that section is counted by script. No model, no Unity.
+
+```bash
+python tools/benchmarks/prompt_set_balance.py
+```

@@ -3850,6 +3850,39 @@ titles fixed and re-run; the 2B; a storyteller persona, or a storyteller on its 
 higher temperature (gap 7). Raw data: `.scratch/storyteller-s1/runs/ab/` in the lead's laptop
 checkout (the smoke games, the title probe, the labels and the scripts beside it).
 
+### Second-annotator cohort selected; human agreement still pending (12 November 2026, #148)
+
+This is a preregistration and implementation note, **not an agreement measurement**.
+[`agreement-subset.json`](../../UnityProject/Assets/Evaluation/agreement-subset.json) fixes the
+76 curated prompts present at `c6dce4d8c75ba3d3900047e9f2a3638db21c5397`, before any second
+person labels them. Every populated category is represented: 9 simple commands, 11 commands
+with targets, 9 impossible requests, 9 conversations, 19 situations and 19 events. This is
+the whole current population, held fixed as #147 grows the set, with per-category prompt ids
+and source hashes. No second-person answer was used to choose it. The AI-labelled Interim
+set is separate and is not evidence of two people's agreement on this cohort.
+
+**Current state:** 0 prompts have two people's own answers; raw agreement and Cohen's kappa
+are unavailable. No split has been discussed or settled for #148. Relabelled prompt ids in
+this change: none. The 73 single-answer originals can meet the minimum of 60; the three open
+choices (`situation_016`, `situation_018`, `event_015`) need two people's independent single
+answers, rather than turning the first target in a list into the writer's answer.
+
+`AgreementReport.Pairwise` now computes raw agreement and Cohen's kappa for each named pair
+on just their shared prompts, from original complete `action/target` answers. The two
+windows display the same figures, and the Evaluation Report's findings summary includes
+them, marked as the labels as they are now rather than at run time. Because Maxim and
+Yevhen wrote different parts of the set, their overlaps with a new annotator are separate
+pairs, not one pooled Cohen's kappa. A pair with constant identical answers has 100% raw
+agreement and undefined kappa. Settlement preserves the original answers and the statistics.
+
+**To finish the human part:** someone other than either writer labels the frozen cohort in
+Label mode, under their own name. Both people discuss each split using the 8 October
+procedure above. Record unanimous answers with **Record agreed answers**, settle splits
+with reasons, and commit the label files and prompts with both original answers in
+`labels`. Then record the completed overlap and unanimous counts, raw agreement and kappa
+for each named pair, every relabelled id with its old and settled answer and discussion
+reason (or an explicit none), and any rewritten/retired ids. Until those records exist,
+#148 and the second-annotator part of the Phase 4 gate remain open.
 ### Non-generative deciders against `qwen3.5:4b`: the best embedding engine scores 15 and 9 points lower, a cascade to the 4B keeps its score while answering 28% itself, and no reranker runs on Ollama (12 November 2026)
 
 **The question.** Can a model built for choosing, or a game engine with no model, pick the action
@@ -4714,3 +4747,323 @@ economy's live check (E3) should wait for a change to both, and compare against 
 
 **Would change it.** The same toggling and neglect on more seeds after a tax change costs
 something or locks for some turns would point at the prompt rather than the rules.
+
+### Painted Realm free orders, the court's prompt A/B on the home server: both new prompts stay legal and make a court stop sooner (23 November 2026)
+
+**What.** Request 003: under free orders (#20), a court's later request told what its earlier orders settled
+(`CourtTurnFacts`) or asked for "another order, or none" (`CourtNoneWording`), against neither. The `personas` table,
+five `qwen3.5:4b` rulers, writs turn, Classic, 40 turns, seeds 1 to 3, one game a block, interleaved by seed, test
+`c544c13`. The home server's RTX 4070 SUPER behind its gate (`5728506a6d6b`), one clean lease a block, the model
+warmed first. n = three games an arm, 8,614 decisions. A third machine: not comparable with the RTX 5080's runs.
+Details: [`docs/run-requests/003-free-orders-prompt-ab/results.md`](../run-requests/003-free-orders-prompt-ab/results.md).
+
+**Seen.**
+- No illegal and no not-offered answer in any arm.
+- Court orders a realm a turn: control 1.31, `CourtTurnFacts` 0.98, `CourtNoneWording` 0.95, lower than the control
+  on the same seed in all six pairs; seed 1 alone barely differs.
+- Hence fewer calls and seconds a turn: 21.2 model seconds a turn, against 19.2 and 18.2 on the same seed and turn.
+  Seconds a call and prompt length are unchanged.
+
+**What it means.** Not an accuracy result: legal answers are 100% in every arm, so the prompts cannot be told apart
+on them. Both prompts change behaviour the same way, toward fewer orders a turn, and the seconds follow from that, not
+from faster calls. Whether a court that stops sooner plays a better game is the lead's call.
+
+**Would change it.** More seeds where the control gives as few orders as the arms (as seed 1 did) would say the fall
+is the games' paths, not the prompts.
+
+### Painted Realm free orders, the 12 s played check on the home server: End turn waits 0.8 s after turn 1, 2 s on average (23 November 2026)
+
+**What.** Request 004: `FreeOrdersLiveCheck`, rule mode with free orders, a stand-in player who plans for 12 s a turn
+then presses End turn, four `qwen3.5:4b` rulers, six turns, seeds 1 to 3. Same session, machine and leases as the
+entry above. n = 18 turns, no failed call. Details:
+[`docs/run-requests/004-free-orders-played-12s/results.md`](../run-requests/004-free-orders-played-12s/results.md).
+
+**Seen.** End turn waited 1.99 s on average and 18.49 s at most. Turns 2 to 6 waited 0.76 s on average, 2.50 s at
+most, mostly treaty terms. Turn 1 waited 18.5, 2.0 and 3.9 s, with three or four rulers still deciding.
+
+**What it means.** With a 12 s playback the rulers' deciding hides behind it from turn 2 on. Turn 1, which has no
+playback before it, is where a player waits.
+
+**Would change it.** A slower turn-1 start on longer games or other maps, or treaty terms that grow with the number of
+wars, would move the figure.
+
+### The Phase 4 gate's live A/B: on the 209 set the guards change no score beyond noise on `qwen3.5:2b`, and the answers they stop are mostly wrong ones (23 November 2026)
+
+**What.** #150's live A/B: the guards on (the defaults) against `CheckTarget = false`, which turns
+off the grounding guard; `EvalRunner` adds no developer guards, so that is the whole difference.
+The schema legality check runs in both arms. All 209 prompts of the evaluation set (#147, set
+commit `1a940f4`), `VillageGuard`, `qwen3.5:2b`, interleaved prompt by prompt, temperature 0,
+framework 0.4.0-preview.2 at `1f12636`, the 9 November state wording ("You are following the
+player."), the set's targets as observation lines.
+
+**Conditions.** The home server: RTX 4070 SUPER 12 GB, Docker Ollama 0.40.14 behind the gate
+(commit `5728506a6d6b`), over the home network, under clean lease #10061 (23 November,
+15:48 to 15:52 local), every model unloaded inside the lease before Unity started, `qwen3.5:2b`
+alone resident (2254 of 2254 MB in VRAM), 3 warm-ups an arm, field order kept on all 418 replies,
+no warnings, no pipeline errors. Unity batch mode on the lead's laptop, on mains, from a detached
+copy. A third machine: never compared with the RTX 5080 or the laptop's Ollama. Report and every
+answer: [`runs/2026-11-23-phase4/gate/`](runs/2026-11-23-phase4/README.md).
+
+| Outcome | guards on | guards off |
+|---|---:|---:|
+| Correct | 138 | 142 |
+| Wrong but legal | 52 | 66 |
+| Contained by a guard | 5 | 0 |
+| Rejected when an action was expected | 14 | 1 |
+| Pipeline error | 0 | 0 |
+| **Accuracy** | **66.0%** | **67.9%** |
+
+Noise check: +1.9 points, floor 4.9 at n = 209, **within noise**; every category within its floor.
+
+- **The model gave the same answer to every prompt in both arms** (209 of 209), so the arms
+  differ only in what the guard did with it. The grounding guard stopped 18 answers: 5 where the
+  label was `none` (contained: "Attack the bandit.", "attack the dragon!", the unattended
+  watchtower and two more), 9 wrong answers where an action was wanted (an attack on the wolf for
+  "go to the bridge"), and 4 right ones whose grounding sat just under 0.8 (0.778 to 0.796). The
+  one rejection in both arms is the legality check: an attack with no target.
+- **So the guard costs 4 correct answers and turns 14 wrong-but-legal ones into `none`**
+  (66 → 52 wrong but legal). Those counts are the same answers sorted twice, not two samples; the
+  accuracy difference is what hard rule 2 lets us claim, and it is within noise.
+- **Latency:** median 0.50 s with the guard, 0.48 s without.
+- **Repeat check.** The guards-on arm's settings are the defaults, and four more runs the same
+  hour had a defaults arm (the next entry): the model's 209 answers were identical in all five,
+  and only one guard verdict changed once (`situation_021`, grounding 0.778, scored correct in one
+  run). Run to run, this setup moves by about one answer.
+- **Would change it.** A larger set of impossible requests (15 here) is where the guard earns its
+  keep; the 4B, which the next entry shows answering differently, may also differ. No default
+  changes.
+
+### #151's first runs on the 209 set: without the idle example the 2B gains 5.3 points, just beyond noise; the 4B beats it by 16.7 (23 November 2026)
+
+Four of #151's runs, straight after the gate A/B above and in the same conditions: the 209 set,
+`VillageGuard`, guards on in both arms, the home server under one clean lease a run, gate
+`5728506a6d6b`, every model unloaded inside each lease first, field order kept on every reply, no
+warnings, no pipeline errors. Arm A is the defaults in each, and its answers matched the gate's
+guards-on arm on all 209 prompts each time. Reports: [`runs/2026-11-23-phase4/`](runs/2026-11-23-phase4/README.md).
+
+| Run | Lease | A | B | B − A | Floor | | Same answer |
+|---|---|---:|---:|---:|---:|---|---:|
+| Idle example: profile's against `IdleExampleStimulus = ""` | #10488 | 138 (66.0%) | 149 (71.3%) | +5.3 | 4.9 | beyond noise | 185 |
+| `ListActionsAndTargets` off against on | #10915 | 139 (66.5%) | 149 (71.3%) | +4.8 | 4.9 | within noise | 168 |
+| Grounding threshold 0.8 against 0.6 | #11342 | 138 (66.0%) | 142 (67.9%) | +1.9 | 4.9 | within noise | 209 |
+| `qwen3.5:2b` against `qwen3.5:4b`, sequential arms | #11769 | 138 (66.0%) | 173 (82.8%) | +16.7 | 4.9 | beyond noise | 137 |
+
+**Idle example.** Without it the 2B answers `none` 43 times against 60, and `stop_following`
+23 times against 13: 10 prompts like "Wait here.", "Hold position." and "The player has sat down
+by the fire" go from `none` to a correct `stop_following`, and 3 more from `none` to a correct move. simple_command +16.7 (floor 14.4) is the only category
+beyond its floor. Unasked actions barely move (9 wrong but legal and 5 contained, against 10 and
+8). This is the 9 November finding on the curated 76 and the interim 389 again (the 2B loses
+`stop_following` to the idle example), now beyond the floor on the 209 set, by 0.4 points. Two
+echoed example lines against four. **What it suggests:** the idle example costs the 2B more than
+it saves on this set. Whether to drop it for small models is the lead's call; the other models of
+the 9 November sweep gained from it.
+
+**`ListActionsAndTargets`.** +4.8 against a floor of 4.9: within noise. 41 answers changed, both
+ways (16 wrong to right, 9 right to wrong); it fixed names ("the first place I said", the
+docks) and cost a few `stop_following`. Echoed example lines rose 5 → 11. The curated-76 run on
+9 November was also within noise (58 against 56).
+
+**Grounding threshold.** The model's answers are the same in both arms, so this is the guard
+alone: 0.6 frees the 4 correct answers that sat between 0.778 and 0.796, and lets through 5 wrong
+ones 0.8 stopped: 3 where the label was `none` ("attack the dragon!" at 0.653, the unattended
+watchtower at 0.683, an event at 0.741) and 2 wrong actions where one was wanted (0.609, 0.687).
+Within noise; 10 stops hold at both thresholds (grounding 0.51 and below, and the legality check).
+**What it suggests:** every freed answer sat above 0.77 and every wrong one let through below
+0.75, so a threshold near 0.76 would have kept all 5 stops and freed all 4. That is read off one
+run's numbers on one model, not measured, and 0.8 stays the default.
+
+**Models.** `qwen3.5:4b` 173 against the 2B's 138, beyond noise overall and in conversation
+(+23.5), situations (+15.5), events (+23.3) and simple commands (+16.7). It ran the 2B's arm
+first, unloaded it, then the 4B's (`EvalArmOrder.Sequential`), so drift over the run is not
+shared; the 2B's arm matched the four interleaved runs exactly. The 4B attacks half as often
+(18 against 39), says nothing it was not asked less often (5 against 9 wrong but legal), and is
+slower: median 0.62 s against 0.50 s (2995 MB against 2254 MB in VRAM).
+
+**Not run, and why** (in the run queue): counter-examples (the evaluation profile's actions have
+none, so both arms would send one prompt), a free-choice example (no place in the profile for an
+example whose answer is a free choice, and one profile serves both arms), history on against off
+(`EvalRunner` always stages a prompt's history; no per-arm switch).
+
+### The economy's live check (E3) on the home server: legal, built by persona, and 35% of court prompts over the limit (23 November 2026)
+
+**What.** Request 005: Painted Realm's writs turn with free orders, the `personas` table, five `qwen3.5:4b` courts,
+Classic, 40-turn cap, one game a block, without the economy (`x`) and with it (`e`, #372, #374 and the tax lock of
+#378), seeds 1 to 3, interleaved x1 e1 x2 e2 x3 e3, at test `9ab0e1b`.
+
+**Conditions.** The home server, RTX 4070 SUPER 12 GB, Docker Ollama 0.40.14 behind the gate (commit `5728506a6d6b`),
+over the home network, one clean lease a block (#12196, #13098, #14045, #15219, #16328, #17479) and the laptop lock,
+the model warmed first, Unity batch mode on the lead's laptop on mains. Nothing voided. Details and the per-persona
+table: [`run-requests/005-economy-e3/results.md`](../run-requests/005-economy-e3/results.md).
+
+| | x | e |
+|---|---:|---:|
+| Illegal answers | 2 of 3,215 | 0 of 3,091 |
+| Court prompt tokens, mean (max) | 1,403 (1,769) | 1,539 (2,021) |
+| Court requests over 1,600 tokens | 8% | 35% |
+| Calls a turn; model seconds a turn | 26.8; 23.8 | 25.8; 20.9 |
+| Battles a game (mean of 3) | 85 | 103 |
+
+- **Legal and played.** No illegal answer with the economy. 59 buildings in three games, chosen by persona: the
+  merchant 12 of the 13 markets from turns 1 to 4, the warmonger and the opportunist barracks early, the proud late.
+  The builder bought least and latest, nothing in one game.
+- **Taxes:** high at turn 1 almost everywhere, then about three changes a seat in 40 turns, never low; nothing flips
+  turn by turn now that #378 locks a change.
+- **Cost:** 136 more prompt tokens a court request, and 35% of court requests over the 1,600-token limit. Calls and
+  model time a turn did not rise; the x arm's figure includes two 90 s requests in one turn of x1, worth about 1.5 s a
+  turn of the 2.85 s difference.
+- **No claim beyond the pattern.** Three games an arm, one map and model, capped games none finished: an anecdote
+  under hard rule 2. Never compared with request 002 (RTX 5080).
+- **Would change it.** Six seeds, or the prompt brought under its limit, before the economy is judged; the battle
+  count (+18 a game) needs more seeds to separate from how seeds play. No default changes.
+
+### #151's switch runs on the 209 set, and five of them again on the 4B: the action list helps the 4B, the idle example helps the 4B where it costs the 2B (23 November 2026)
+
+Three runs the switches of #385 made possible, on `qwen3.5:2b`, then the five prompt-side runs again on `qwen3.5:4b`
+(both arms that model), straight after E3. Same conditions as "#151's first runs on the 209 set" above: the 209 set
+at `1a940f4`, `VillageGuard`, guards on, interleaved, temperature 0, the home server under one clean lease a run
+(gate `5728506a6d6b`), every model unloaded inside each lease first, 2254 MB (2B) or 2995 MB (4B) all in VRAM, field
+order kept on every reply, no warnings, no pipeline errors; framework at test `60e435c` (#385). Reports:
+[`runs/2026-11-23-phase4/`](runs/2026-11-23-phase4/README.md), the 4B's in the `-4b` folders.
+
+| Run | Model | Lease | A | B | B − A | Floor 4.9 | Same answer |
+|---|---|---|---:|---:|---:|---|---:|
+| `statement` against `dialogue` (`StatementFieldName`, DR-008) | 2B | #18526 | 138 | 139 | +0.5 | within | 208 |
+| | 4B | #21088 | 173 | 171 | −1.0 | within | 208 |
+| Probabilities and the grounding guard against `TokenProbabilities = false`, which sends the one-line target rule (#107) | 2B | #18953 | 139 | 147 | +3.8 | within | 169 |
+| | 4B | #20661 | 171 | 169 | −1.0 | within; events −10.0 beyond 9.1 | 183 |
+| History against `IgnoreHistory` | 2B | #19380 | 138 | 134 | −1.9 | within | 202 |
+| | 4B | #21515 | 173 | 172 | −0.5 | within | 204 |
+| Idle example against `IdleExampleStimulus = ""` | 4B | #19807 | 173 | 170 | −1.4 | within; conversation −17.6 beyond 17.1 | 177 |
+| `ListActionsAndTargets` off against on | 4B | #20234 | 170 | 184 | **+6.7** | **beyond**; situations +15.5 beyond 9.3 | 185 |
+
+- **The field's name.** No change in what the model chose on either model (208 of 209 the same). On the 2B the
+  `dialogue` arm repeated an example line in its text 15 times against 4 ("Strike the wolf!" 11 times, the idle line
+  twice); on the 4B neither arm echoed. No reply wrote `dialogue:` or `statement:` into its text (checked by hand:
+  `ReplyChecks` knows only `statement:`). **What it suggests:** keep `statement`; on the 2B the old name invites echoes.
+- **The one-line target rule.** Without probabilities there is no grounding guard, so wrong answers are not stopped
+  (2B 62 wrong but legal against 52, 4B 40 against 33). The rule also changes what the model picks (40 and 26 answers
+  differ): on the 2B more `none` (70 against 59) and all 15 impossible requests right without a guard; on the 4B
+  `none` 75 against 56 and events −10.0, beyond their floor. It is faster: median 0.45 s against 0.52 s (2B),
+  0.65 s against 0.73 s (4B), with no probabilities to send. One echo leak flagged on the 4B. Both within noise
+  overall. **What it suggests:** for a provider without probabilities the rule is a fair stand-in on the 2B; on the
+  4B it makes events passive.
+- **History.** Only the 22 multi-turn prompts can differ. With their history the 2B got 15 of 22 right, without it
+  11; the 4B 19 and 18. The 2B's +18.2 on the 22 is above the floor the runner's formula gives at n = 22 (15.1), but it
+  is a hand count on a subset the runner does not score as a category, from one run: it suggests history helps the 2B
+  on these cases, not a result. Overall both within noise.
+- **The idle example on the 4B.** Without it the 4B answers `none` 31 times against 57 and acts unasked far more
+  (19 wrong-but-legal answers where `none` was the label, against 5), losing conversation by 17.6 points, beyond that
+  category's floor; it wins the `stop_following` and situation prompts the 2B also wins. Overall within noise. On the
+  2B the same switch was +5.3 (above). **What it suggests:** the idle example earns its place on the 4B; dropping it
+  helps only the 2B, so any change would be per model. The 9 November sweep found the same split.
+- **`ListActionsAndTargets` on the 4B** is +6.7, beyond noise, almost all from situations (+15.5) and `none` answers
+  turned into moves (`none` 44 against 58); unasked actions 8 against 4. On the 2B it was +4.8, within. **What it
+  suggests:** a case to turn it on for 4B-class models, for the lead to weigh against the longer prompt.
+- **The control is not perfectly repeatable on the 4B.** Its defaults arm scored 173, 173, 173, 170 and 171 in the
+  six runs here. Its answers matched the model comparison's 4B arm on every prompt in four runs, and differed on 9 in
+  the list run and 5 in the target-rule run (also 5 on the 2B's target-rule run). A guess, not checked: the arm
+  beside it sends a different prompt, and the server's prompt cache then hands the control slightly different
+  numbers. A 2 or 3 point swing in a control is inside the floor, but it is why a single run within a few points is
+  never read as a result.
+- **No default changes.**
+
+### The grounding threshold at 0.76: on the 2B it frees the four right answers 0.8 stopped and lets nothing wrong through; on the 4B it changes nothing (23 November 2026)
+
+The threshold the 0.8-against-0.6 run above pointed at (every freed answer above 0.77, every wrong one let through
+below 0.75), tried as its own A/B at the tech lead's request: `ground-0.8` (the default) against `ground-0.76`
+(`DecideOptions.TargetGroundingThreshold`), the 209 set at `1a940f4`, guards on, interleaved, temperature 0, test
+`60e435c`, the home server (gate `5728506a6d6b`) under clean leases #21942 (2B, 18:25 to 18:29 local) and #22369
+(4B, 18:29 to 18:33), every model unloaded inside each lease first, field order kept, no warnings, no pipeline
+errors. Reports: `runs/2026-11-23-phase4/grounding-076/` and `grounding-076-4b/`.
+
+| Model | 0.8 | 0.76 | Difference | Floor | Same answer | Guard verdicts that differ |
+|---|---:|---:|---:|---:|---:|---|
+| `qwen3.5:2b` | 138 (66.0%) | 142 (67.9%) | +1.9 | 4.9 | 209 | 4: right answers at 0.778 to 0.796, rejected at 0.8, passed at 0.76 |
+| `qwen3.5:4b` | 173 (82.8%) | 173 (82.8%) | 0.0 | 4.9 | 209 | none |
+
+- **Within noise on both.** The model chose the same on every prompt, so only the guard's verdicts can differ: on
+  the 2B, 0.76 passes the same four right answers 0.6 did (`situation_021`, `situation_032`, `situation_051`,
+  `event_032`) and keeps all five containments and every other rejection; on the 4B no grounding fell between 0.76
+  and 0.8.
+- **What it suggests:** 0.76 costs nothing measured here and frees four right answers on the 2B. The 0.6 the
+  GreyBoxStrategy demo uses lets five wrong answers through on the same set. This is one set and one run per model,
+  inside the floor, so it is a candidate for the lead, not a calibrated threshold; DR-016's 0.8 stays the default.
+
+### #151 after #384, the action list again on the 4B, and a free-choice example: counter-examples make the 4B answer "none", example statements are what it echoes, the paired schema changes nothing (23 November 2026)
+
+Eleven `EvalRunner` A/B runs on the 209 set, guards on, interleaved, temperature 0, the home server (gate
+`5728506a6d6b`), each under its own clean lease with every model unloaded inside it first, field order kept on every
+answer, no warnings, no pipeline errors. Reports: `runs/2026-11-23-phase4/`, one folder a row. Floor 4.9 at n=209.
+
+**Read the two halves apart.** The list repeat and the free-choice runs ran at test `60e435c` on set `1a940f4`, like
+every run above. The eight #384 runs ran at test `4485e83` on set `ab2d30b`: #384 changed the default prompt (example
+statements and counter-examples shown, cross-category pairs rejected) and the set's targets (categories), so their
+controls (2B 141 to 142, 4B 164) are **not comparable** with 138 and 173, and no number below crosses that line.
+
+| Run | Model | Lease | Arm A | Arm B | Difference | Same answer |
+|---|---|---|---:|---:|---:|---:|
+| `ListActionsAndTargets` off / on, again (`list-4b-repeat/`) | 4B | #27545 | 170 | 184 | **+6.7** | 185 |
+| Plain / one free-choice example (`freechoice/`) | 2B | #27972 | 138 | 143 | +2.4 | 173 |
+| Plain / one free-choice example (`freechoice-4b/`) | 4B | #28399 | 173 | 173 | 0.0 | 185 |
+| Templated / summarised targets (`summarise/`) | 2B | #31165 | 142 | 145 | +1.4 | 186 |
+| Flat / paired schema (`pair/`) | 2B | #31592 | 142 | 142 | 0.0 | 207 |
+| No example statements / defaults (`statements/`) | 2B | #32019 | 140 | 141 | +0.5 | 187 |
+| No counter-examples / defaults (`counters/`) | 2B | #32446 | 140 | 142 | +1.0 | 188 |
+| Templated / summarised targets (`summarise-4b/`) | 4B | #32873 | 164 | 162 | −1.0 | 195 |
+| Flat / paired schema (`pair-4b/`) | 4B | #33300 | 164 | 164 | 0.0 | 208 |
+| No example statements / defaults (`statements-4b/`) | 4B | #33727 | 157 | 167 | +4.8 | 195 |
+| No counter-examples / defaults (`counters-4b/`) | 4B | #34154 | 174 | 164 | −4.8 | 181 |
+
+- **The action list on the 4B repeats exactly.** All 418 answers match the first run's (#20234), so the +6.7 beyond
+  the floor is the same measurement twice at temperature 0, not a second sample of the model. Wrong `none` answers
+  fall from 14 to 3.
+- **The free-choice example** (the tech lead's wording; no evaluation prompt uses that stimulus or a close paraphrase,
+  hard rule 4) is within noise on both. It moves answers to `move_to` (2B 81 to 104, 4B 93 to 113) and away from
+  `none` (2B 60 to 49, 4B 57 to 41), and `north_tower`, the example's own target, is chosen more (2B 8 to 13, wrong
+  1 to 2; 4B 12 to 16, wrong 2 to 4).
+- **Counter-examples cost the 4B 10 answers, 0.1 below the floor.** 16 of the 17 prompts the 4B gets right without
+  them and wrong with them are an action turned into `none`, mostly `move_to` in situations and events; `none`
+  answers go from 54 to 77. On the 2B the two arms are within 1 point.
+- **The example statements are what the model echoes.** Without them, the 4B's reply check flags no echo at all
+  (0 of 209, 193 different statements); with them, 68 replies copy an example statement word for word (139 different;
+  "Understood, I'll hold here." 21 times). On the 2B, 86 replies copy an example statement with them (119 different; "Heading over there now." 50 times), and without them 11 echo the stimulus instead. By the request's own test (stimulus echoes fall, statement echoes
+  do not take their place, accuracy holds), the statements fail it on both models. Accuracy:
+  4B +4.8, 0.1 inside the floor, with events +10 against a floor of 9.1; 2B +0.5.
+- **The paired schema changes nothing measurable:** 207 and 208 of 209 answers identical. Ollama never shows the model
+  the schema (findings, 10 October), so pairing can act only on what sampling allows.
+- **Summarised targets** are within noise on both, with 23 (2B) and 14 (4B) answers changed.
+
+**What it suggests, for the lead to decide:** counter-examples are the largest cost to the 4B among #384's switches (174
+without them, 164 with, at `4485e83`), and are worth a repeat on the 4B before they stay on by default; example
+statements buy the 4B a little accuracy at the price of about a third of its replies being copies, a trade the
+lead decides; `PairTargetsWithActions` has nothing to show on this set; the action list's 4B gain is solid at
+temperature 0. One set, one run per row, all within or at the floor but the list: candidates, not results.
+
+### Characters a token on `qwen3.5:4b`: 3.10, steady enough to budget a prompt without a tokenizer; the 1,600 "limit" was only a yardstick (24 November 2026)
+
+**Question.** Request 005 reported 35% of the economy's court prompts "over the 1,600 limit". Is anything cut there,
+and can the framework know a prompt's size before sending it, with no model call (#151)?
+
+**What is enforced.** Nothing at 1,600: it is `tools/live-runs/economy/report.py`'s `--limit` default, a yardstick the
+request measured against. `OllamaSettings.ContextSize` (`num_ctx`) is 4,096 and GreyBoxStrategy does not change it,
+so no court prompt (max 2,021) was truncated. The costs of a long prompt are latency and possibly a small model's
+choices; the second is what request 006 measures.
+
+**Method.** No model was run. Request 005's six blocks logged every request with its prompt (`decisions.jsonl`):
+6,304 decisions (2,394 court, 3,591 army, 319 treaty), each with Ollama's own `prompt_eval_count`. A request's
+characters are its system prompt, examples, observations, history entries and stimulus turn, the text the framework
+sends (the schema is not read by an Ollama model). Script: `.scratch/prompt-budget/calib.py` in the main checkout.
+
+| Characters a token | Mean error of the estimate | Range | Estimates short |
+|---|---:|---|---:|
+| 3.10 (the mean ratio; sd 0.05, from 2.94 to 3.30) | +0.2% | −5.2% to +6.3% | 2,971 of 6,304 |
+| 3.0 (`PromptBudget.DefaultCharsPerToken`) | +3.6% | −2.1% to +9.9% | 53 |
+| 4 (`RollingHistory`'s rule) | −22.3% | −26.5% to −17.6% | all |
+
+- **Steady.** Court, army and treaty requests agree (3.12, 3.10, 3.09), chat template included, so one ratio serves a
+  game on one model. At 3.0, no request over 1,600 tokens had an estimate under 1,600; 905 under it had one over,
+  so a budget's trim at 3.0 fires a little early, never late.
+- **`RollingHistory` undercounts.** Its token cap divides by 4, a fifth short on this model; its `MaxTokens` 256 is
+  about 330 real tokens. Not changed: that changes what history is sent, and needs its own A/B.
+- **Would change it.** Another model's tokenizer, another language, or prompts heavy in ids and numbers. The framework
+  records `PromptCharacters` beside `PromptTokens` on every decision, so a game can check its own ratio.

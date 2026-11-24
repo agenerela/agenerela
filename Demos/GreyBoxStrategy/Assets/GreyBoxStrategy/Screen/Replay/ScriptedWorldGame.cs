@@ -38,6 +38,7 @@ namespace GreyBoxStrategy.Replay
             Move Decide(CountryRequest r)
             {
                 var move = seats[r.CountryId].Decide(r);
+                if (game.Rules.EconomyOn) move = EconomyHand(r, move);
                 rec.Decisions.Add(new RecordedDecision
                 {
                     AgentId = r.CountryId,
@@ -78,6 +79,31 @@ namespace GreyBoxStrategy.Replay
             }
             if (edits != null) rec.DevEdits.AddRange(edits);
             return rec;
+        }
+
+        /// <summary>Gold a scripted court keeps after buying a building.</summary>
+        public const int BuildReserve = 20;
+
+        /// <summary>
+        /// The economy (#372, #374): the Sim's scripted rulers know no buildings or tax levels, so a watched scripted game
+        /// would show none. Where a court would stop giving orders, this hand sets a tax level by its stability (high when
+        /// steady, back to normal or low when shaky), or buys the building that adds most where the rules offer it while
+        /// <see cref="BuildReserve"/> gold stays. It only picks among the orders offered; its other choices are the ruler's.
+        /// </summary>
+        public static Move EconomyHand(CountryRequest r, Move chosen)
+        {
+            if (r.Moment != Moment.Council || chosen == null || chosen.Action != Actions.None) return chosen;
+            var me = r.World.Country(r.CountryId);
+            if (me == null) return chosen;
+            Move Offered(string action) => r.Legal.FirstOrDefault(m => m.Action == action);
+            if (me.Stability >= 4 && me.Taxes == TaxLevel.Normal && Offered(Actions.TaxesHigh) is Move high) return high;
+            if (me.Stability <= 2 && me.Taxes == TaxLevel.High && Offered(Actions.TaxesNormal) is Move normal) return normal;
+            if (me.Stability <= 1 && me.Taxes == TaxLevel.Normal && Offered(Actions.TaxesLow) is Move low) return low;
+            var best = r.Legal.Where(m => Actions.BuildsWhat(m.Action) != null && r.World.Province(m.Target) != null)
+                .Where(m => me.Spendable - WritLegality.BuildingCost(r.World.Rules, Actions.BuildsWhat(m.Action).Value) >= BuildReserve)
+                .OrderByDescending(m => WritLegality.BuildingGain(r.World, r.World.Province(m.Target), Actions.BuildsWhat(m.Action).Value))
+                .ThenBy(m => m.Action, StringComparer.Ordinal).ThenBy(m => m.Target, StringComparer.Ordinal).FirstOrDefault();
+            return best ?? chosen;
         }
     }
 }

@@ -54,6 +54,8 @@ namespace Agenerela.Evaluation
                 CheckAnswer(set, prompt, Add);
             }
 
+            CheckHistory(set, prompt, Add);
+
             if (profile != null)
             {
                 CheckExamples(prompt, profile, Add);
@@ -65,7 +67,9 @@ namespace Agenerela.Evaluation
         /// <summary>
         /// Where <paramref name="profile"/> and the actions <paramref name="set"/> declares disagree:
         /// an action only one of them has, or one whose target differs: required, optional or never taken. <c>none</c> is in
-        /// every set and no profile. The window shows these and never fixes them.
+        /// every set and no profile. Also a label whose action the profile restricts to
+        /// <see cref="ActionDefinition.TargetCategories"/> that its target's <see cref="DeclaredTarget.Category"/>
+        /// is not among (#151). The window shows these and never fixes them.
         /// </summary>
         public static IReadOnlyList<string> CompareWithProfile(PromptSet set, AgentProfile profile)
         {
@@ -98,6 +102,30 @@ namespace Agenerela.Evaluation
                 if (declared.Id != ActionRegistry.None && profileActions.All(a => a.Id != declared.Id))
                 {
                     differences.Add($"The set declares '{declared.Id}', which the profile does not have");
+                }
+            }
+
+            // Categories (DR-020, #151): a label must stay a pair the agent may give, or a run would
+            // score the model against an answer the schema and the category guard forbid.
+            foreach (var prompt in set.Prompts)
+            {
+                var action = profileActions.FirstOrDefault(a => a.Id == prompt.ExpectedAction);
+                if (action == null || !action.DeclaresTargetCategories || prompt.ExpectedTarget == null)
+                {
+                    continue;
+                }
+
+                foreach (string id in prompt.ExpectedTarget.Ids)
+                {
+                    var target = set.Targets.FirstOrDefault(t => t != null && t.Id == id);
+                    if (id == TargetRegistry.NoTarget || target == null || action.AcceptsCategory(target.Category))
+                    {
+                        continue;
+                    }
+
+                    differences.Add($"{prompt.Id} expects {action.Id}/{id}, but the profile's '{action.Id}' takes "
+                                  + $"{string.Join(" or ", action.TargetCategories.Where(c => !string.IsNullOrWhiteSpace(c)))} "
+                                  + $"and the set puts '{id}' in {(string.IsNullOrWhiteSpace(target.Category) ? "no category" : target.Category)}");
                 }
             }
 
@@ -140,8 +168,52 @@ namespace Agenerela.Evaluation
 
         private static void CheckAnswer(PromptSet set, EvalPrompt prompt, System.Action<PromptRule, string> add)
         {
-            string action = prompt.ExpectedAction;
-            var targets = prompt.ExpectedTarget.Ids;
+            CheckAnswer(set, prompt.ExpectedAction, prompt.ExpectedTarget.Ids, prompt.PreconditionState, add);
+        }
+
+        // Each history turn (#147) is checked as an answer is, but for the state, which a turn does
+        // not declare: the prompt's is the state after the last turn, and an earlier one may differ.
+        // Its messages say which turn, counted from 1, oldest first.
+        private static void CheckHistory(PromptSet set, EvalPrompt prompt, System.Action<PromptRule, string> add)
+        {
+            if (prompt.History == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < prompt.History.Count; i++)
+            {
+                string turn = $"History turn {i + 1}: ";
+                void Add(PromptRule rule, string message) => add(rule, turn + message);
+
+                var t = prompt.History[i];
+                if (t == null)
+                {
+                    Add(PromptRule.Incomplete, "the turn is empty");
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(t.Stimulus)) Add(PromptRule.Incomplete, "the stimulus is empty");
+
+                if (string.IsNullOrWhiteSpace(t.Action))
+                {
+                    Add(PromptRule.Incomplete, "no action");
+                }
+                else if (string.IsNullOrWhiteSpace(t.Target))
+                {
+                    Add(PromptRule.Incomplete, "no target: use no_target for none");
+                }
+                else
+                {
+                    CheckAnswer(set, t.Action, new[] { t.Target }, null, Add);
+                }
+            }
+        }
+
+        // state null: the answer is not checked against a state.
+        private static void CheckAnswer(PromptSet set, string action, IReadOnlyList<string> targets, Newtonsoft.Json.Linq.JObject state,
+            System.Action<PromptRule, string> add)
+        {
             bool noTarget = targets.Contains(TargetRegistry.NoTarget);
 
             foreach (string target in targets)
@@ -180,7 +252,7 @@ namespace Agenerela.Evaluation
                 add(PromptRule.ActionTakesNoTarget, $"{action} takes no target: use no_target");
             }
 
-            if (!declared.IsAvailableIn(prompt.PreconditionState))
+            if (state != null && !declared.IsAvailableIn(state))
             {
                 add(PromptRule.PreconditionMismatch,
                     $"{action} is only available when {declared.OnlyWhen.ToString(Newtonsoft.Json.Formatting.None)}; set the state to match");
