@@ -18,6 +18,7 @@ is for. A line per file or group, no more.
 | `GreyBoxStrategy.Chart` | `Screen/Chart/` | Sim | Drawing a generated world's chart (CPU and the data the GPU pass reads) |
 | `GreyBoxStrategy.Screen` | `Screen/` (the rest) | all of the above, Input System | The running game: director, map, UI, sound, live sessions |
 | `GreyBoxStrategy.Editor` | `Editor/` | Sim, Agents | Menu items for headless runs |
+| `GreyBoxStrategy.Demo.Editor` | `Screen/Demo/Editor/` | Screen, Replay | `DemoCapture`: records a demo timeline to an MP4 with Unity's `MediaEncoder`, from an editor in the background. Demo only |
 | `GreyBoxStrategy.Screen.Editor` | `Screen/Editor/` | Screen, Replay, Sim, Agents | Builds the `Watch` scene, art import settings; `FreeOrdersLiveCheck`, rule mode played headless against model rulers |
 | `GreyBoxStrategy.Tests.Editor` | `Tests/Editor/` | Sim, Agents | Rules, map, model seats, storyteller |
 | `GreyBoxStrategy.Screen.Tests.Editor` | `Screen/Tests/Editor/` | everything | The screen's models, sessions, layout |
@@ -62,8 +63,9 @@ A rule belongs in `Sim/`; a number the screen shows belongs in `Screen/Replay/` 
 
 | File | Owns |
 |---|---|
-| `ReplayDirector.cs` and its partials | The scene's driver. `.cs` watch mode; `.Rule` rule mode; `.Writs` the writs turn on the map; `.Chart` generated worlds; `.Story` the storyteller; `.Menu` and `.StartMenu` menus and settings; `.Dev` the F1 dev menu; `.Armies` R3 settings; `.Detail` zoomed detail |
+| `ReplayDirector.cs` and its partials | The scene's driver. `.cs` watch mode; `.Rule` rule mode; `.Writs` the writs turn on the map; `.Chart` generated worlds; `.Story` the storyteller; `.Menu` and `.StartMenu` menus and settings; `.Dev` the F1 dev menu; `.Demo` what the demo director asks of it; `.Armies` R3 settings; `.Detail` zoomed detail |
 | `RuleSession.cs`, `LiveSession.cs`, `LiveWritsSession.cs`, `LiveGame.cs` | Games without a scene, played by models; `RuleSession` is the person against four rulers |
+| `Demo/DemoDirector.cs`, `DemoOverlay.cs`, `DemoTree.cs` | The demo video: plays a timeline over a replay (off unless the dev menu's `demo` or `-demo <timeline>` starts it), draws the cursor, callouts, dim and titles, finds elements by selector. Timelines in `Demo/Timelines/` |
 | `Gateway.cs` | The server address, the key from the environment, and the RTX 5080's lock |
 | `WritsRecorder.cs`, `ScriptedStory.cs`, `DevTools.cs` | Recording decisions, a no-model storyteller, pretended faults |
 | `Map/MapView.cs`, `Map/ChartGpu.cs`, `Map/*.shader` | The map quad and its shader data; the GPU chart pass |
@@ -82,6 +84,7 @@ A rule belongs in `Sim/`; a number the screen shows belongs in `Screen/Replay/` 
 | `CourtList.cs` | The free-orders council list, the gold and men it holds back, and where a building order may go |
 | `StoryCards.cs`, `StoryArms.cs`, `EndSummary.cs`, `HelpCallouts.cs` | Event windows, the storyteller's arm, the end screen, first-turn help |
 | `StartMenuModel.cs`, `GameSettings.cs`, `ReplayLibrary.cs` | Start menu text, settings, saved replays |
+| `DemoScript.cs`, `DemoSelector.cs`, `DemoLayout.cs` | A demo timeline's format, the selector that names a UI element, where a callout goes |
 | `Fog.cs`, `ArmyLook.cs`, `DevCommands.cs`, `DevEdits.cs`, `ScriptedWorldGame.cs` | Fog of war, army words, dev commands, a whole scripted game on any map |
 
 ### Screen/UI: drawing, UI Toolkit

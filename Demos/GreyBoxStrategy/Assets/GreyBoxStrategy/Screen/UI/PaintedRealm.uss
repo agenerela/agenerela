@@ -857,3 +857,21 @@
 .build-choice > .build-choice-name { flex-grow: 1; flex-shrink: 1; }
 .build-choice > .build-choice-land { color: rgb(170, 158, 130); font-size: 11px; margin-right: 8px; }
 .build-choice-gain { color: rgb(150, 200, 120); -unity-font-style: bold; }
+
+/* The demo director's overlay (Screen/Demo/): only drawn while a demo video is being played. Sized for 1080p
+   layout units, so a 4K capture doubles it with the rest of the screen. */
+.demo-overlay { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+.demo-fill { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+.demo-callout { position: absolute; padding: 12px 16px 13px 16px; background-color: rgba(24, 19, 14, 0.97); border-width: 1px; border-color: rgba(210, 173, 98, 0.85); border-left-width: 4px; border-left-color: rgb(210, 173, 98); border-radius: 3px; }
+.demo-callout-title { font-size: 21px; -unity-font-style: bold; color: rgb(250, 232, 170); white-space: normal; letter-spacing: 0.4px; }
+.demo-callout-line { font-size: 16.5px; color: rgb(234, 223, 198); white-space: normal; margin-top: 5px; }
+.demo-chapter-row { position: absolute; right: 28px; bottom: 30px; flex-direction: row; justify-content: flex-end; }
+.demo-chapter { padding: 10px 18px 11px 16px; background-color: rgba(18, 15, 12, 0.92); border-width: 1px; border-color: rgba(201, 164, 90, 0.55); border-left-width: 4px; border-left-color: rgb(210, 173, 98); border-radius: 3px; }
+.demo-chapter-title { font-size: 13px; -unity-font-style: bold; letter-spacing: 3px; color: rgb(210, 173, 98); }
+.demo-chapter-line { font-size: 22px; -unity-font-style: bold; color: rgb(250, 244, 230); margin-top: 2px; }
+.demo-title-veil { position: absolute; left: 0; top: 0; right: 0; bottom: 0; align-items: center; justify-content: center; background-color: rgba(8, 6, 4, 0.72); }
+.demo-title-card { align-items: center; padding: 30px 64px 34px 64px; background-color: rgba(20, 16, 12, 0.96); border-width: 1px; border-color: rgba(210, 173, 98, 0.7); border-radius: 3px; }
+.demo-title { font-size: 46px; -unity-font-style: bold; letter-spacing: 3px; color: rgb(250, 232, 170); -unity-text-align: middle-center; }
+.demo-title-rule { width: 160px; height: 2px; margin-top: 14px; margin-bottom: 16px; background-color: rgb(210, 173, 98); }
+.demo-title-line { font-size: 22px; color: rgb(234, 223, 198); -unity-text-align: middle-center; max-width: 900px; white-space: normal; }
+.demo-fade { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: rgb(0, 0, 0); }

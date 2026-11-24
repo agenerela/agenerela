@@ -166,6 +166,27 @@ namespace GreyBoxStrategy.Realm
                 ScreenCapture.CaptureScreenshot(path);
                 return path;
             });
+            // ---- the demo video (Screen/Demo/): a timeline played over a replay ----
+            c.Add("demo", "demo <timeline>", "play a demo video's timeline over its replay: sample, or a path; start it from the start menu", a =>
+            {
+                Need(a.Length >= 1, "Name a timeline, such as sample.");
+                return DemoDirector.Begin(this, string.Join(" ", a));
+            });
+            c.Add("demo-status", "demo-status", "where the demo is", _ => DemoDirector.Active == null ? "no demo" : DemoDirector.Active.Status);
+            c.Add("demo-stop", "demo-stop", "stop the demo and take its overlay away", _ =>
+            {
+                if (DemoDirector.Active == null) return "no demo";
+                Destroy(DemoDirector.Active);
+                return "stopped";
+            });
+            c.Add("demo-find", "demo-find <selector>", "what a demo selector finds on screen, and where", a =>
+            {
+                Need(a.Length >= 1, "Give a selector.");
+                var found = DemoSelector.Parse(string.Join(" ", a)).All(document.rootVisualElement, DemoTree.Shown);
+                if (found.Count == 0) return "nothing";
+                return string.Join("\n", found.Take(12).Select(e => $"{e.GetType().Name} #{e.name} .{string.Join(".", e.GetClasses())} {DemoTree.OnPanel(e)} \"{(e as UnityEngine.UIElements.TextElement)?.text}\""))
+                    + (found.Count > 12 ? $"\nand {found.Count - 12} more" : "");
+            });
             c.Add("save-recording", "save-recording [name]", "save the game as a recording the replay can load", a =>
             {
                 var rec = CurrentRecording();
