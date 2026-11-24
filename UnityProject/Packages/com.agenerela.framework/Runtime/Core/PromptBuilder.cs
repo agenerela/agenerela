@@ -208,7 +208,18 @@ namespace Agenerela
             }
             else if (options.ListActionsAndTargets)
             {
-                choices = ChoicesBlock(ctx, schema, options.MaxListedTargets, unlisted);
+                HashSet<string> takeable = null;
+                if (options.ListTakeableTargetsOnly)
+                {
+                    var fields = Fields(schema, out var actionField, out var targetField);
+                    if (fields && targetField != null)
+                    {
+                        LegalPairs(ctx, schema, answer ?? ActionAvailability.Evaluate(ctx), actionField, targetField, int.MaxValue, null, out var listed);
+                        takeable = new HashSet<string>(listed, StringComparer.Ordinal);
+                    }
+                }
+
+                choices = ChoicesBlock(ctx, schema, options.MaxListedTargets, unlisted, takeable);
             }
 
             if (options.LegalTargets == LegalTargetListing.ObservationLine)
@@ -303,7 +314,25 @@ namespace Agenerela
         // each with its own line when it has one (#190). Built from the schema rather than from
         // the registries, so the list and the enum cannot disagree. Every action is listed; the
         // targets stop at maxTargets.
-        private static string ChoicesBlock(AgentContext ctx, DecisionSchema schema, int maxTargets, List<string> unlisted)
+        // The schema's action and target fields, either null when it has none; false with no action field.
+        private static bool Fields(DecisionSchema schema, out SchemaField actionField, out SchemaField targetField)
+        {
+            actionField = null;
+            targetField = null;
+            foreach (var field in schema.Fields)
+            {
+                if (field.AllowedValues == null) continue;
+                if (field.Name == DecisionSchema.ActionFieldName) actionField = field;
+                else if (field.Name == DecisionSchema.TargetFieldName) targetField = field;
+            }
+
+            return actionField != null;
+        }
+
+        // With takeable, only the targets in it are listed, the rest going into unlisted before the
+        // cap is counted (PromptTrim.UntakeableTargets, #151).
+        private static string ChoicesBlock(AgentContext ctx, DecisionSchema schema, int maxTargets, List<string> unlisted,
+                                           HashSet<string> takeable = null)
         {
             var lines = new List<string>();
 
@@ -326,6 +355,12 @@ namespace Agenerela
                     foreach (string id in field.AllowedValues)
                     {
                         if (id == TargetRegistry.NoTarget) continue;
+                        if (takeable != null && !takeable.Contains(id))
+                        {
+                            unlisted?.Add(id);
+                            continue;
+                        }
+
                         if (targets.Count == maxTargets)
                         {
                             // Still offered by the schema; only its line is left out (#151).
