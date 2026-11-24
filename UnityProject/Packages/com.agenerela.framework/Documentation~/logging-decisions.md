@@ -27,9 +27,10 @@ foreach (var line in DecisionLogReader.Read(path))
 
 ## What a line holds
 
-Each line is one JSON object, `DecisionLogLine`, with `"version": 2`. A later version only adds
+Each line is one JSON object, `DecisionLogLine`, with `"version": 3`. A later version only adds
 fields, and the reader ignores fields it does not know, so version 1 lines, written before the
-chain fields, still read, with no chain. A field that is null is left out.
+chain fields, still read, with no chain, and version 2 lines, written before the prompt budget, with
+no budget. A field that is null is left out.
 
 | Field | What it is |
 |---|---|
@@ -46,6 +47,8 @@ chain fields, still read, with no chain. A field that is null is left out.
 | `provider`, `providerConfig`, `modelName`, `frameworkVersion` | Who answered |
 | `latencySeconds`, `queueWaitSeconds`, `backlogWaitSeconds`, `queuedAhead` | How long it took, and how long it waited |
 | `promptTokens`, `completionTokens` | As the provider reported them |
+| `promptCharacters`, `promptTokensEstimated` | The request's text in characters, and its tokens estimated from them before sending, on every line ([prompt.md](prompt.md#a-budget-for-the-prompts-size)) |
+| `promptBudget`, `overBudget`, `promptTrims` | The prompt budget the call was measured against, whether the prompt went over it after every trim, and each trim that left something out; the line has no such keys with no budget, and no `promptTrims` when none fired |
 | `targetGrounding`, `targetGroundingStatus`, `historyTurnsSent`, `historyTurnsDropped`, `targetsDropped`, `observationsDropped` | From the telemetry; `observationsDropped` is a count |
 | `targetsUnavailable` | Each action and target pair a per-target check rejected, as `action`, `target` and `reason` (left out when the check gave none); the line has no such key when none was rejected ([targets.md](targets.md#conditions-per-target)) |
 | `choicesOffered`, `choicesUnavailable` | For a call that chose among `DecideOptions.Choices` (DR-022): the ids offered, and each one given as unavailable with its reason; the line has no such keys for an ordinary call ([prompt.md](prompt.md#a-choice-among-options-given-with-the-call)) |

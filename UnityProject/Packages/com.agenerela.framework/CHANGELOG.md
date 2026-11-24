@@ -10,6 +10,14 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **A prompt-size budget** (#151, #392). `PromptBudget` and `PromptTrim` set a budget per agent
+  (`Agent.PromptBudget`) or per call (`DecideOptions.PromptBudget`). It is estimated before sending
+  from characters (3 a token by default) and judged on the provider's count after. Optional trims
+  run in the developer's order, and only while over: `DecideOptions.OptionalObservations` (new),
+  target lines no offered action may take, then the oldest history. `DecisionTelemetry` gains
+  `PromptCharacters`, `PromptTokensEstimated`, `PromptBudget`, `OverBudget` and `PromptTrims`;
+  Decision Log version 3. With no budget, every request is byte for byte what it was.
+
 - **`TargetSummarySource`** (#151, #384), a deterministic observation source that summarises the agent's
   targets as one line per category, ids verbatim, with no model call; `EvalArm.SummariseTargets` tells an
   arm's targets that way (§2.8). `DeclaredTarget.Category` gives a prompt set's targets categories, and
@@ -97,6 +105,23 @@ While the version stays `0.x`, the public API may change in any release.
   - `Documentation~/parameters.md` is the page. `DecisionSchema`'s remark that a later field goes
     after `statement` is corrected. The serializer's error for pairs that name targets in a schema
     with no target field has new wording.
+
+### Changed
+
+- **The Prompt Set window is built in UI Toolkit on the #167 kit** (#160): a tree from
+  `PromptSetWindow.uxml` and one UXML for each mode, which UI Builder opens, laid out by
+  `PromptSetWindow.uss` on the kit's variables, so it reads in both editor skins. No IMGUI is
+  left. The toolbar wraps instead of clipping at the window's 640 px minimum, where #159 found
+  Reload cut off. **Open the project's evaluation set** is the start page's one primary button.
+  Write gains a search box and a **⚠** beside each prompt that breaks a rule; Label shows a
+  progress bar and takes keys (1 to 9 pick an action, T the next target, Enter saves, S skips);
+  Agreement shows its categories in a table with a bar for each, sortable by any column. Drafts
+  kept through a recompile, unsaved-changes handling, the remembered set, profile and name, and
+  the blind-labelling guarantee are as before, and so are the features added to the old window
+  meanwhile: #147's earlier turns, shown in Label and edited in Write, and #148's agreement
+  cohort line with its **Whole set** toggle, pairwise agreement and **Record agreed answers**. EditMode tests now build the window's trees and
+  check the gate, the tabs, the progress bar, the keys, that the Label view shows no word of an
+  answer, and that nothing in the toolbar clips at 640 px.
 
 ## [0.4.0-preview.2] - 2026-11-16
 

@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Agenerela.Editor.UI;
 using Agenerela.Evaluation;
 using Newtonsoft.Json.Linq;
 using UnityEditor;
-using UnityEngine;
+using UnityEditor.UIElements;
+using UnityEngine.UIElements;
 
 namespace Agenerela.Editor.Evaluation
 {
@@ -13,14 +15,28 @@ namespace Agenerela.Editor.Evaluation
     /// The expected answer is picked from dropdowns, and the rules a prompt breaks show under it as
     /// you type. Changes stay in memory until saved, one category file at a time.
     /// </summary>
+    /// <remarks>
+    /// Its tree is a fresh copy of <c>PromptSetWriteView.uxml</c>, made for this view alone, so a
+    /// view made after a reload never shares a callback with the one before it. Every field is
+    /// written back only when a person edits it, so selecting a prompt never tidies it: what is
+    /// not touched saves exactly as it was read.
+    /// </remarks>
     internal sealed class PromptSetWriteView
     {
-        private const float ListWidth = 260;
+        internal const string LayoutPath = PromptSetUi.Folder + "PromptSetWriteView.uxml";
+
+        // Names a test reaches. The rest are in the UXML.
+        internal const string PromptListName = "prompt-list", EditorName = "editor", NothingSelectedName = "nothing-selected",
+            SearchName = "search", ChecksName = "checks", SaveName = "save", SaveStateName = "save-state";
+
+        /// <summary>A prompt row in the list; the selected one also carries <see cref="SelectedClass"/>.</summary>
+        internal const string PromptClass = "ps-prompt", SelectedClass = "ps-prompt--selected", BadgeClass = "ps-prompt__badge";
 
         private readonly PromptSet set;
         private readonly Func<AgentProfile> profile;
         private readonly Func<string> you;
         private readonly Action onFilesWritten;
+        private readonly Action onEdited;
         private readonly HashSet<PromptCategory> changed = new HashSet<PromptCategory>();
 
         // Each category file's fingerprint as this view last read or wrote it, so a draft kept
@@ -33,17 +49,24 @@ namespace Agenerela.Editor.Evaluation
         private IReadOnlyList<AnnotatorLabels> labels = Array.Empty<AnnotatorLabels>();
         private EvalPrompt selected;
         private PromptCategory selectedCategory;
-        private Vector2 listScroll;
-        private Vector2 editorScroll;
-        private string newCategory = "";
-        private string newStateKey = "";
 
-        internal PromptSetWriteView(PromptSet set, Func<AgentProfile> profile, Func<string> you, Action onFilesWritten)
+        private VisualElement root;
+        private ScrollView list;
+        private ToolbarSearchField search;
+        private TextField newCategory, idField, labelField, stimulus, observations, newStateKey, note, labelledBy;
+        private ToolbarMenu knownLabels;
+        private DropdownField action;
+        private Toggle checkTarget;
+        private Button addCategory, openChoice, save;
+        private IVisualElementScheduledItem listRefresh;
+
+        internal PromptSetWriteView(PromptSet set, Func<AgentProfile> profile, Func<string> you, Action onFilesWritten, Action onEdited = null)
         {
             this.set = set;
             this.profile = profile;
             this.you = you;
             this.onFilesWritten = onFilesWritten;
+            this.onEdited = onEdited ?? (() => { });
             foreach (var category in set.Categories)
             {
                 baselines[category] = PromptSetWindow.Fingerprint(set, category);
@@ -54,6 +77,9 @@ namespace Agenerela.Editor.Evaluation
 
         /// <summary>The categories edited since they were last saved.</summary>
         internal IEnumerable<PromptCategory> Changed => changed;
+
+        /// <summary>The prompt open in the editor, or null.</summary>
+        internal EvalPrompt Selected => selected;
 
         /// <summary>The fingerprint of <paramref name="category"/>'s file from before its unsaved edits.</summary>
         internal string BaselineOf(PromptCategory category) =>
@@ -75,9 +101,22 @@ namespace Agenerela.Editor.Evaluation
                 // A category added in this view: its file does not exist yet.
                 baselines[category] = PromptSetWindow.Fingerprint(set, category);
             }
+
+            if (root != null)
+            {
+                ShowSaveBar();
+                ScheduleList();
+            }
         }
 
-        internal void SetLabels(IReadOnlyList<AnnotatorLabels> files) => labels = files;
+        internal void SetLabels(IReadOnlyList<AnnotatorLabels> files)
+        {
+            labels = files;
+            if (root != null && selected != null)
+            {
+                ShowLabelledWarning();
+            }
+        }
 
         internal void SaveAll()
         {
@@ -88,387 +127,256 @@ namespace Agenerela.Editor.Evaluation
             }
 
             changed.Clear();
+            if (root != null)
+            {
+                ShowSaveBar();
+                ShowList();
+            }
+
             onFilesWritten();
         }
 
-        internal void Draw(Rect window)
+        /// <summary>The view's tree, made the first time it is asked for.</summary>
+        internal VisualElement Root => root ?? Build();
+
+        /// <summary>Shows everything again: after the profile or your name changes, say.</summary>
+        internal void Refresh()
         {
-            using (new EditorGUILayout.HorizontalScope())
+            if (root == null)
             {
-                using (new EditorGUILayout.VerticalScope(GUILayout.Width(ListWidth)))
-                {
-                    DrawList();
-                }
+                return;
+            }
 
-                using (new EditorGUILayout.VerticalScope())
-                {
-                    editorScroll = EditorGUILayout.BeginScrollView(editorScroll);
-                    if (selected != null)
-                    {
-                        DrawEditor();
-                    }
-                    else
-                    {
-                        EditorGUILayout.HelpBox("Pick a prompt on the left, or add one to a category.", MessageType.Info);
-                    }
+            ShowList();
+            ShowEditor();
+            ShowSaveBar();
+        }
 
-                    EditorGUILayout.EndScrollView();
-                    DrawSaveBar();
-                }
+        /// <summary>Opens <paramref name="prompt"/> in the editor, as a click on its row does.</summary>
+        internal void Select(EvalPrompt prompt, PromptCategory category)
+        {
+            selected = prompt;
+            selectedCategory = category;
+            if (category != null)
+            {
+                open.Add(category.Id);
+            }
+
+            if (root != null)
+            {
+                newStateKey.SetValueWithoutNotify("");
+                ShowList();
+                ShowEditor();
             }
         }
 
-        private void DrawList()
+        private VisualElement Build()
         {
-            listScroll = EditorGUILayout.BeginScrollView(listScroll);
-            var problemIds = new HashSet<string>(PromptSetChecks.Check(set, profile()).Select(p => p.PromptId));
+            root = PromptSetUi.Load(LayoutPath);
+            list = root.Q<ScrollView>(PromptListName);
+
+            search = root.Q<ToolbarSearchField>(SearchName);
+            search.RegisterValueChangedCallback(_ => ShowList());
+
+            newCategory = root.Q<TextField>("new-category");
+            newCategory.RegisterValueChangedCallback(_ => ShowNewCategory());
+            addCategory = root.Q<Button>("add-category");
+            addCategory.clicked += AddCategory;
+
+            idField = root.Q<TextField>("prompt-id");
+            idField.isDelayed = true;
+            idField.RegisterValueChangedCallback(e => Edit(p => p.Id = e.newValue, true));
+
+            labelField = root.Q<TextField>("prompt-label");
+            labelField.RegisterValueChangedCallback(e => Edit(p => p.Label = e.newValue));
+            knownLabels = root.Q<ToolbarMenu>("known-labels");
+
+            stimulus = root.Q<TextField>("stimulus");
+            stimulus.RegisterValueChangedCallback(e => Edit(p => p.Stimulus = e.newValue, true));
+
+            observations = root.Q<TextField>("observations");
+            observations.RegisterValueChangedCallback(e =>
+                Edit(p => p.Observations = e.newValue.Split('\n').Select(o => o.Trim()).Where(o => o.Length > 0).ToList()));
+
+            newStateKey = root.Q<TextField>("new-state-key");
+            newStateKey.RegisterValueChangedCallback(_ => ShowAddState());
+            root.Q<Button>("add-state").clicked += AddState;
+            root.Q<Button>("add-turn").clicked += AddTurn;
+
+            action = root.Q<DropdownField>("expected-action");
+            action.RegisterValueChangedCallback(e =>
+            {
+                Edit(p => p.ExpectedAction = e.newValue);
+                ShowTargets();
+            });
+
+            openChoice = root.Q<Button>("open-choice");
+            openChoice.clicked += () =>
+            {
+                var ids = TargetIds();
+                ids.Add(set.Targets.Select(t => t.Id).FirstOrDefault(t => !ids.Contains(t)) ?? TargetRegistry.NoTarget);
+                Edit(p => p.ExpectedTarget = new ExpectedTarget(ids.ToArray()));
+                ShowTargets();
+            };
+
+            checkTarget = root.Q<Toggle>("check-target");
+            checkTarget.RegisterValueChangedCallback(e => Edit(p => p.CheckTarget = e.newValue ? (bool?)null : false));
+
+            note = root.Q<TextField>("note");
+            note.RegisterValueChangedCallback(e => Edit(p => p.Note = string.IsNullOrWhiteSpace(e.newValue) ? null : e.newValue));
+
+            labelledBy = root.Q<TextField>("labelled-by");
+            labelledBy.RegisterValueChangedCallback(e =>
+                Edit(p => p.LabelledBy = e.newValue.Split(',').Select(n => n.Trim()).Where(n => n.Length > 0).ToList()));
+
+            root.Q<Button>("remove-prompt").clicked += RemoveSelected;
+            save = root.Q<ToolbarButton>(SaveName);
+            save.clicked += SaveAll;
+
+            ShowList();
+            ShowEditor();
+            ShowSaveBar();
+            return root;
+        }
+
+        // ---- The list ----------------------------------------------------------------------------
+
+        // Typing in the editor redraws the list at most a few times a second: checking every
+        // prompt on each keystroke would lag in a set of hundreds.
+        private void ScheduleList()
+        {
+            if (listRefresh == null)
+            {
+                listRefresh = root.schedule.Execute(ShowList);
+            }
+
+            listRefresh.ExecuteLater(250);
+        }
+
+        private void ShowList()
+        {
+            if (root == null)
+            {
+                return;
+            }
+
+            list.Clear();
+            var problems = PromptSetChecks.Check(set, profile())
+                .Where(p => p.PromptId != null)
+                .GroupBy(p => p.PromptId)
+                .ToDictionary(g => g.Key, g => g.Count());
+            string find = (search.value ?? "").Trim();
+            bool finding = find.Length > 0;
+            bool named = PromptSet.ValidateAnnotator(you(), out _);
 
             foreach (var category in set.Categories)
             {
-                bool isOpen = open.Contains(category.Id);
-                string title = $"{category.Id} ({category.Prompts.Count})" + (changed.Contains(category) ? " *" : "");
-                bool nowOpen = EditorGUILayout.Foldout(isOpen, title, true, EditorStyles.foldoutHeader);
-                if (nowOpen != isOpen)
-                {
-                    if (nowOpen) open.Add(category.Id); else open.Remove(category.Id);
-                }
-
-                if (!nowOpen)
+                var prompts = finding ? category.Prompts.Where(p => Matches(p, find)).ToList() : category.Prompts;
+                if (finding && prompts.Count == 0)
                 {
                     continue;
                 }
 
-                foreach (var prompt in category.Prompts)
+                bool isOpen = finding || open.Contains(category.Id);
+                list.Add(CategoryRow(category, isOpen, finding ? $"{prompts.Count} of {category.Prompts.Count}" : category.Prompts.Count.ToString()));
+                if (!isOpen)
                 {
-                    string mark = problemIds.Contains(prompt.Id) ? " ⚠" : "";
-                    var style = prompt == selected ? EditorStyles.selectionRect : EditorStyles.label;
-                    if (GUILayout.Button($"  {prompt.Id}{mark}   {prompt.Stimulus}", style, GUILayout.Width(ListWidth - 20)))
-                    {
-                        Select(prompt, category);
-                    }
+                    continue;
                 }
 
-                using (new EditorGUILayout.HorizontalScope())
+                foreach (var prompt in prompts)
                 {
-                    GUILayout.FlexibleSpace();
-                    using (new EditorGUI.DisabledScope(!PromptSet.ValidateAnnotator(you(), out _)))
-                    {
-                        if (GUILayout.Button(new GUIContent("+ Add prompt", "Your name goes on it as its writer."), GUILayout.Width(110)))
-                        {
-                            Add(category);
-                        }
-                    }
+                    problems.TryGetValue(prompt.Id ?? "", out int count);
+                    list.Add(PromptRow(prompt, category, count));
+                }
+
+                if (!finding)
+                {
+                    var add = new Button(() => Add(category)) { text = "+ Add prompt", tooltip = "Your name goes on it as its writer." };
+                    add.AddToClassList("ps-add-prompt");
+                    add.SetEnabled(named);
+                    list.Add(add);
                 }
             }
 
-            EditorGUILayout.Space();
-            using (new EditorGUILayout.HorizontalScope())
+            if (finding && list.childCount == 0)
             {
-                newCategory = EditorGUILayout.TextField(newCategory);
-                var candidate = new PromptCategory { Id = newCategory, File = $"prompts/{newCategory}.json" };
-                bool valid = PromptSet.ValidateCategoryId(newCategory, out _) && set.FindCategory(newCategory) == null
-                             && set.ValidateCategory(candidate, out _);
-                using (new EditorGUI.DisabledScope(!valid))
-                {
-                    if (GUILayout.Button("+ Category", GUILayout.Width(90)))
-                    {
-                        set.Categories.Add(candidate);
-                        set.Save();
-                        open.Add(newCategory);
-                        newCategory = "";
-                        onFilesWritten();
-                    }
-                }
+                var none = new Label($"No prompt matches '{find}'.");
+                none.AddToClassList("ag-muted");
+                none.AddToClassList("ps-pad-s");
+                list.Add(none);
             }
 
-            if (!PromptSet.ValidateAnnotator(you(), out _))
-            {
-                EditorGUILayout.HelpBox("Type your name into Your name in the toolbar to add prompts.", MessageType.None);
-            }
-
-            EditorGUILayout.EndScrollView();
+            PromptSetUi.Display(root.Q("write-name-hint"), !named);
+            ShowNewCategory();
         }
 
-        private void DrawEditor()
+        private static bool Matches(EvalPrompt prompt, string find)
         {
-            var prompt = selected;
-            EditorGUILayout.LabelField($"{prompt.Id} · {selectedCategory.Id}", EditorStyles.boldLabel);
-            EditorGUI.BeginChangeCheck();
-
-            prompt.Id = EditorGUILayout.DelayedTextField("Id", prompt.Id);
-            prompt.Label = TextWithChoices("Label", prompt.Label, KnownLabels());
-            prompt.Stimulus = EditorGUILayout.TextField("Stimulus", prompt.Stimulus);
-
-            EditorGUILayout.LabelField("Observations", "One per line. Empty for most player commands.", EditorStyles.miniLabel);
-            // Each field is written back only when it is edited, so selecting a prompt never
-            // tidies it: what is not touched saves exactly as it was read.
-            EditorGUI.BeginChangeCheck();
-            string observations = EditorGUILayout.TextArea(string.Join("\n", prompt.Observations ?? new List<string>()), GUILayout.MinHeight(48));
-            if (EditorGUI.EndChangeCheck())
-            {
-                prompt.Observations = observations.Split('\n').Select(o => o.Trim()).Where(o => o.Length > 0).ToList();
-            }
-
-            DrawState(prompt);
-            DrawHistory(prompt);
-
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Expected answer", EditorStyles.miniBoldLabel);
-            WarnIfLabelled(prompt);
-            DrawExpected(prompt);
-
-            bool check = EditorGUILayout.Toggle(new GUIContent("Check target", "Off only for a case that tests a decision with the grounding guard off (DR-016)."), prompt.ChecksTarget);
-            if (check != prompt.ChecksTarget)
-            {
-                prompt.CheckTarget = check ? (bool?)null : false;
-            }
-
-            EditorGUILayout.LabelField("Note", "Why the answer is what it is.", EditorStyles.miniLabel);
-            EditorGUI.BeginChangeCheck();
-            string note = EditorGUILayout.TextArea(prompt.Note ?? "", GUILayout.MinHeight(36));
-            if (EditorGUI.EndChangeCheck())
-            {
-                prompt.Note = string.IsNullOrWhiteSpace(note) ? null : note;
-            }
-
-            EditorGUI.BeginChangeCheck();
-            string labelledBy = EditorGUILayout.TextField(new GUIContent("Labelled by", "Comma-separated."), string.Join(", ", prompt.LabelledBy ?? new List<string>()));
-            if (EditorGUI.EndChangeCheck())
-            {
-                prompt.LabelledBy = labelledBy.Split(',').Select(n => n.Trim()).Where(n => n.Length > 0).ToList();
-            }
-
-            if (prompt.Labels != null)
-            {
-                EditorGUILayout.LabelField("Settled from", string.Join(", ", prompt.Labels.Select(l => $"{l.Key}: {l.Value}")), EditorStyles.wordWrappedMiniLabel);
-            }
-
-            if (EditorGUI.EndChangeCheck())
-            {
-                MarkChanged(selectedCategory);
-            }
-
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Checks", EditorStyles.miniBoldLabel);
-            var problems = PromptSetChecks.CheckPrompt(set, selectedCategory, prompt, profile());
-            if (problems.Count == 0)
-            {
-                EditorGUILayout.LabelField("✓ No rule broken" + (profile() == null ? " (choose a profile to check its few-shot examples too)" : ""), EditorStyles.wordWrappedMiniLabel);
-            }
-
-            foreach (var problem in problems)
-            {
-                EditorGUILayout.HelpBox(problem.Message, MessageType.Warning);
-            }
-
-            EditorGUILayout.Space();
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                GUILayout.FlexibleSpace();
-                if (GUILayout.Button("Remove", GUILayout.Width(80))
-                    && EditorUtility.DisplayDialog($"Remove {prompt.Id}?",
-                        "A prompt that has been labelled or scored is better rewritten as a new id than removed. Remove it anyway?", "Remove", "Cancel"))
-                {
-                    selectedCategory.Prompts.Remove(prompt);
-                    MarkChanged(selectedCategory);
-                    selected = null;
-                    GUIUtility.ExitGUI();
-                }
-            }
+            return Contains(prompt.Id, find) || Contains(prompt.Label, find) || Contains(prompt.Stimulus, find);
         }
 
-        private void DrawState(EvalPrompt prompt)
+        private static bool Contains(string text, string find) =>
+            text != null && text.IndexOf(find, StringComparison.OrdinalIgnoreCase) >= 0;
+
+        private VisualElement CategoryRow(PromptCategory category, bool isOpen, string count)
         {
-            prompt.PreconditionState = prompt.PreconditionState ?? new JObject();
-            EditorGUILayout.LabelField("State", "The agent's state the prompt assumes.", EditorStyles.miniLabel);
-            foreach (var property in prompt.PreconditionState.Properties().ToList())
+            var row = new VisualElement { name = "category-" + category.Id };
+            row.AddToClassList("ps-category");
+            row.Add(Classed(new Label(isOpen ? "▾" : "▸"), "ps-category__arrow"));
+            row.Add(new Label(category.Id));
+            row.Add(Classed(new Label(count), "ps-category__count"));
+            if (changed.Contains(category))
             {
-                using (new EditorGUILayout.HorizontalScope())
-                {
-                    EditorGUILayout.LabelField("    " + property.Name, GUILayout.Width(EditorGUIUtility.labelWidth));
-                    EditorGUI.BeginChangeCheck();
-                    if (property.Value.Type == JTokenType.Boolean)
-                    {
-                        bool flag = EditorGUILayout.Toggle((bool)property.Value);
-                        if (EditorGUI.EndChangeCheck()) property.Value = flag;
-                    }
-                    else
-                    {
-                        string text = EditorGUILayout.DelayedTextField(property.Value.ToString(Newtonsoft.Json.Formatting.None));
-                        if (EditorGUI.EndChangeCheck()) property.Value = ParseValue(text);
-                    }
-
-                    if (GUILayout.Button("−", GUILayout.Width(22)))
-                    {
-                        property.Remove();
-                    }
-                }
+                row.Add(Classed(new Label("●") { tooltip = "Changed, not saved yet." }, "ps-category__changed"));
             }
 
-            using (new EditorGUILayout.HorizontalScope())
+            row.RegisterCallback<ClickEvent>(_ =>
             {
-                EditorGUILayout.LabelField("    add", GUILayout.Width(EditorGUIUtility.labelWidth));
-                newStateKey = EditorGUILayout.TextField(newStateKey);
-                using (new EditorGUI.DisabledScope(string.IsNullOrWhiteSpace(newStateKey) || prompt.PreconditionState.ContainsKey(newStateKey)))
+                if (!open.Remove(category.Id))
                 {
-                    if (GUILayout.Button("+", GUILayout.Width(22)))
-                    {
-                        prompt.PreconditionState[newStateKey.Trim()] = false;
-                        newStateKey = "";
-                    }
+                    open.Add(category.Id);
                 }
-            }
+
+                ShowList();
+            });
+            return row;
         }
 
-        // The earlier turns a multi-turn prompt is asked after (#147), oldest first. The list is
-        // null, and left out of the file, until a turn is added, and again once the last is removed,
-        // so a prompt without history saves exactly as it was read.
-        private void DrawHistory(EvalPrompt prompt)
+        private VisualElement PromptRow(EvalPrompt prompt, PromptCategory category, int problems)
         {
-            EditorGUILayout.LabelField("History", "Earlier turns, oldest first. The state above is the one after them.", EditorStyles.miniLabel);
-            var turns = prompt.History ?? new List<HistoryTurn>();
-            var targets = new List<string> { TargetRegistry.NoTarget };
-            targets.AddRange(set.Targets.Select(t => t.Id));
-
-            int remove = -1;
-            for (int i = 0; i < turns.Count; i++)
+            var row = new VisualElement { name = "prompt-" + prompt.Id };
+            row.AddToClassList(PromptClass);
+            row.EnableInClassList(SelectedClass, prompt == selected);
+            row.Add(Classed(new Label(prompt.Id), "ps-prompt__id"));
+            var badge = Classed(new Label(problems > 0 ? "⚠" : ""), BadgeClass);
+            if (problems > 0)
             {
-                var turn = turns[i] ?? (turns[i] = new HistoryTurn());
-                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-                {
-                    using (new EditorGUILayout.HorizontalScope())
-                    {
-                        EditorGUILayout.LabelField($"Turn {i + 1}", EditorStyles.miniBoldLabel);
-                        if (GUILayout.Button("−", GUILayout.Width(22)))
-                        {
-                            remove = i;
-                        }
-                    }
-
-                    EditorGUI.BeginChangeCheck();
-                    string label = TextWithChoices("Label", turn.LabelOrDefault, KnownLabels());
-                    if (EditorGUI.EndChangeCheck()) turn.Label = label;
-
-                    turn.Stimulus = EditorGUILayout.TextField("Stimulus", turn.Stimulus);
-
-                    var actions = ActionChoices(turn.Action);
-                    EditorGUI.BeginChangeCheck();
-                    int action = EditorGUILayout.Popup("Answered", Math.Max(0, actions.IndexOf(turn.Action)), actions.ToArray());
-                    if (EditorGUI.EndChangeCheck() || string.IsNullOrEmpty(turn.Action)) turn.Action = actions[action];
-
-                    var choices = new List<string>(targets);
-                    if (!string.IsNullOrEmpty(turn.Target) && !choices.Contains(turn.Target)) choices.Add(turn.Target);
-                    EditorGUI.BeginChangeCheck();
-                    int target = EditorGUILayout.Popup("Target", Math.Max(0, choices.IndexOf(turn.Target)), choices.ToArray());
-                    if (EditorGUI.EndChangeCheck() || string.IsNullOrEmpty(turn.Target)) turn.Target = choices[target];
-
-                    EditorGUI.BeginChangeCheck();
-                    string statement = EditorGUILayout.TextField("Said", turn.Statement ?? "");
-                    if (EditorGUI.EndChangeCheck()) turn.Statement = string.IsNullOrWhiteSpace(statement) ? null : statement;
-                }
+                badge.tooltip = problems == 1 ? "Breaks a rule: open it to see which." : $"Breaks {problems} rules: open it to see which.";
             }
 
-            if (remove >= 0)
-            {
-                // After the loop, so the layout of this frame stays whole; GUI.changed is set by the
-                // button, so the prompt's file is marked changed.
-                turns.RemoveAt(remove);
-                prompt.History = turns.Count == 0 ? null : turns;
-                GUI.changed = true;
-            }
-
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                GUILayout.FlexibleSpace();
-                if (GUILayout.Button(new GUIContent("+ Turn", "An earlier exchange, staged in the agent's memory before the stimulus."), GUILayout.Width(70)))
-                {
-                    turns.Add(new HistoryTurn { Action = ActionRegistry.None, Target = TargetRegistry.NoTarget });
-                    prompt.History = turns;
-                    GUI.changed = true;
-                }
-            }
+            row.Add(badge);
+            row.Add(Classed(new Label(prompt.Stimulus ?? ""), "ps-prompt__stimulus"));
+            row.RegisterCallback<ClickEvent>(_ => Select(prompt, category));
+            return row;
         }
 
-        private void DrawExpected(EvalPrompt prompt)
+        private void ShowNewCategory()
         {
-            var actions = ActionChoices(prompt.ExpectedAction);
-            EditorGUI.BeginChangeCheck();
-            int index = EditorGUILayout.Popup("Action", actions.IndexOf(prompt.ExpectedAction), actions.ToArray());
-            if (EditorGUI.EndChangeCheck())
-            {
-                prompt.ExpectedAction = actions[index];
-            }
-
-            var declared = set.FindAction(prompt.ExpectedAction);
-            bool needsTarget = declared != null && declared.NeedsTarget;
-            var targets = new List<string> { TargetRegistry.NoTarget };
-            targets.AddRange(set.Targets.Select(t => t.Id));
-
-            EditorGUI.BeginChangeCheck();
-            var ids = (prompt.ExpectedTarget ?? ExpectedTarget.NoTarget).Ids.ToList();
-            for (int i = 0; i < ids.Count; i++)
-            {
-                if (!targets.Contains(ids[i]))
-                {
-                    targets.Add(ids[i]);
-                }
-
-                using (new EditorGUILayout.HorizontalScope())
-                {
-                    ids[i] = targets[EditorGUILayout.Popup(i == 0 ? "Target" : " ", targets.IndexOf(ids[i]), targets.ToArray())];
-                    if (ids.Count > 1 && GUILayout.Button("−", GUILayout.Width(22)))
-                    {
-                        ids.RemoveAt(i);
-                        break;
-                    }
-                }
-            }
-
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                GUILayout.FlexibleSpace();
-                using (new EditorGUI.DisabledScope(!needsTarget))
-                {
-                    if (GUILayout.Button(new GUIContent("+ open choice", "Either target is right."), GUILayout.Width(110)))
-                    {
-                        ids.Add(set.Targets.Select(t => t.Id).FirstOrDefault(t => !ids.Contains(t)) ?? TargetRegistry.NoTarget);
-                    }
-                }
-            }
-
-            if (EditorGUI.EndChangeCheck())
-            {
-                prompt.ExpectedTarget = new ExpectedTarget(ids.ToArray());
-            }
+            string id = newCategory.value ?? "";
+            var candidate = new PromptCategory { Id = id, File = $"prompts/{id}.json" };
+            addCategory.SetEnabled(PromptSet.ValidateCategoryId(id, out _) && set.FindCategory(id) == null && set.ValidateCategory(candidate, out _));
         }
 
-        // Changing the answer of a prompt others have labelled hides the split they made.
-        private void WarnIfLabelled(EvalPrompt prompt)
+        private void AddCategory()
         {
-            int others = AgreementReport.AnnotatorsOf(prompt, labels).Count(a => prompt.LabelledBy == null || !prompt.LabelledBy.Contains(a));
-            if (others > 0)
-            {
-                EditorGUILayout.HelpBox(
-                    $"{others} other {(others == 1 ? "person has" : "people have")} answered this prompt blind. " +
-                    "Change its answer by settling it in Agreement, so both answers are kept.",
-                    MessageType.Info);
-            }
-        }
-
-        private void DrawSaveBar()
-        {
-            using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
-            {
-                GUILayout.Label(HasUnsavedChanges ? $"{changed.Count} file(s) changed" : "Saved", EditorStyles.miniLabel);
-                GUILayout.FlexibleSpace();
-                using (new EditorGUI.DisabledScope(!HasUnsavedChanges))
-                {
-                    if (GUILayout.Button("Save", EditorStyles.toolbarButton, GUILayout.Width(60)))
-                    {
-                        SaveAll();
-                    }
-                }
-            }
+            string id = newCategory.value ?? "";
+            set.Categories.Add(new PromptCategory { Id = id, File = $"prompts/{id}.json" });
+            set.Save();
+            open.Add(id);
+            newCategory.SetValueWithoutNotify("");
+            ShowList();
+            onFilesWritten();
         }
 
         private void Add(PromptCategory category)
@@ -487,17 +395,328 @@ namespace Agenerela.Editor.Evaluation
                 LabelledBy = new List<string> { you() },
             };
 
-            MarkChanged(category);
             category.Prompts.Add(prompt);
+            MarkChanged(category);
+            onEdited();
             Select(prompt, category);
+            stimulus.Focus();
         }
 
-        private void Select(EvalPrompt prompt, PromptCategory category)
+        // ---- The editor --------------------------------------------------------------------------
+
+        // One edit to the prompt open: the field's new value goes into it, and the rest follows.
+        private void Edit(Action<EvalPrompt> apply, bool listShowsIt = false)
         {
-            selected = prompt;
-            selectedCategory = category;
-            newStateKey = "";
-            GUI.FocusControl(null);
+            if (selected == null)
+            {
+                return;
+            }
+
+            apply(selected);
+            MarkChanged(selectedCategory);
+            onEdited();
+            ShowChecks();
+            if (listShowsIt)
+            {
+                root.Q<Label>("editor-title").text = $"{selected.Id} · {selectedCategory.Id}";
+            }
+        }
+
+        private void ShowEditor()
+        {
+            bool any = selected != null;
+            PromptSetUi.Display(root.Q(EditorName), any);
+            PromptSetUi.Display(root.Q(NothingSelectedName), !any);
+            if (!any)
+            {
+                return;
+            }
+
+            var prompt = selected;
+            root.Q<Label>("editor-title").text = $"{prompt.Id} · {selectedCategory.Id}";
+            idField.SetValueWithoutNotify(prompt.Id ?? "");
+            labelField.SetValueWithoutNotify(prompt.Label ?? "");
+            stimulus.SetValueWithoutNotify(prompt.Stimulus ?? "");
+            observations.SetValueWithoutNotify(string.Join("\n", prompt.Observations ?? new List<string>()));
+            checkTarget.SetValueWithoutNotify(prompt.ChecksTarget);
+            note.SetValueWithoutNotify(prompt.Note ?? "");
+            labelledBy.SetValueWithoutNotify(string.Join(", ", prompt.LabelledBy ?? new List<string>()));
+
+            var settled = root.Q<Label>("settled-from");
+            settled.text = prompt.Labels != null ? "Settled from " + string.Join(", ", prompt.Labels.Select(l => $"{l.Key}: {l.Value}")) : "";
+            PromptSetUi.Display(settled, prompt.Labels != null);
+
+            knownLabels.menu.ClearItems();
+            foreach (string known in KnownLabels())
+            {
+                string picked = known;
+                knownLabels.menu.AppendAction(known, _ =>
+                {
+                    labelField.value = picked;
+                });
+            }
+
+            var actions = ActionChoices(prompt.ExpectedAction);
+            action.choices = actions;
+            action.SetValueWithoutNotify(prompt.ExpectedAction ?? ActionRegistry.None);
+
+            ShowState();
+            ShowAddState();
+            ShowHistory();
+            ShowLabelledWarning();
+            ShowTargets();
+            ShowChecks();
+        }
+
+        private void ShowState()
+        {
+            var rows = root.Q("state-rows");
+            rows.Clear();
+            var prompt = selected;
+            if (prompt.PreconditionState == null)
+            {
+                // Shown as empty; written back only if a key is added.
+                return;
+            }
+
+            foreach (var property in prompt.PreconditionState.Properties().ToList())
+            {
+                var row = new VisualElement();
+                row.AddToClassList("ps-state-row");
+                row.Add(new Label(property.Name) { tooltip = property.Name });
+                if (property.Value.Type == JTokenType.Boolean)
+                {
+                    var flag = new Toggle { value = (bool)property.Value };
+                    flag.RegisterValueChangedCallback(e => Edit(_ => property.Value = e.newValue));
+                    row.Add(flag);
+                }
+                else
+                {
+                    var text = new TextField { isDelayed = true, value = property.Value.ToString(Newtonsoft.Json.Formatting.None) };
+                    text.RegisterValueChangedCallback(e => Edit(_ => property.Value = ParseValue(e.newValue)));
+                    row.Add(text);
+                }
+
+                var remove = new Button(() =>
+                {
+                    Edit(_ => property.Remove());
+                    ShowState();
+                    ShowAddState();
+                })
+                { text = "−", tooltip = "Remove " + property.Name + "." };
+                remove.AddToClassList("ps-editor__small");
+                row.Add(remove);
+                rows.Add(row);
+            }
+        }
+
+        private void ShowAddState()
+        {
+            string key = (newStateKey.value ?? "").Trim();
+            bool taken = selected?.PreconditionState != null && selected.PreconditionState.ContainsKey(key);
+            root.Q<Button>("add-state").SetEnabled(selected != null && key.Length > 0 && !taken);
+        }
+
+        private void AddState()
+        {
+            string key = (newStateKey.value ?? "").Trim();
+            Edit(p =>
+            {
+                p.PreconditionState = p.PreconditionState ?? new JObject();
+                p.PreconditionState[key] = false;
+            });
+            newStateKey.SetValueWithoutNotify("");
+            ShowState();
+            ShowAddState();
+        }
+
+        // The earlier turns a multi-turn prompt is asked after (#147), oldest first. The list is
+        // null, and left out of the file, until a turn is added, and again once the last is
+        // removed, so a prompt without history saves exactly as it was read.
+        private void ShowHistory()
+        {
+            var rows = root.Q("history-rows");
+            rows.Clear();
+            var turns = selected.History ?? new List<HistoryTurn>();
+            var targets = new List<string> { TargetRegistry.NoTarget };
+            targets.AddRange(set.Targets.Select(t => t.Id));
+
+            for (int i = 0; i < turns.Count; i++)
+            {
+                int index = i;
+                var turn = turns[i] ?? new HistoryTurn();
+                var card = new VisualElement { name = "turn-" + (i + 1) };
+                card.AddToClassList("ag-card");
+                card.AddToClassList("ps-turn");
+
+                var head = new VisualElement();
+                head.AddToClassList("ps-row");
+                head.Add(Classed(new Label($"Turn {i + 1}"), "ps-bold"));
+                head.Add(Classed(new VisualElement(), "ps-grow"));
+                var remove = new Button(() =>
+                {
+                    Edit(p =>
+                    {
+                        p.History.RemoveAt(index);
+                        if (p.History.Count == 0) p.History = null;
+                    });
+                    ShowHistory();
+                })
+                { text = "−", tooltip = "Remove this turn." };
+                remove.AddToClassList("ps-editor__small");
+                head.Add(remove);
+                card.Add(head);
+
+                var label = new TextField("Label") { value = turn.LabelOrDefault };
+                label.RegisterValueChangedCallback(e => Edit(p => Turn(p, index).Label = e.newValue));
+                card.Add(label);
+
+                var stimulusField = new TextField("Stimulus") { value = turn.Stimulus ?? "" };
+                stimulusField.RegisterValueChangedCallback(e => Edit(p => Turn(p, index).Stimulus = e.newValue));
+                card.Add(stimulusField);
+
+                var actions = ActionChoices(turn.Action);
+                var answered = new DropdownField("Answered", actions, string.IsNullOrEmpty(turn.Action) ? actions[0] : turn.Action);
+                answered.RegisterValueChangedCallback(e => Edit(p => Turn(p, index).Action = e.newValue));
+                card.Add(answered);
+
+                var choices = new List<string>(targets);
+                if (!string.IsNullOrEmpty(turn.Target) && !choices.Contains(turn.Target)) choices.Add(turn.Target);
+                var target = new DropdownField("Target", choices, string.IsNullOrEmpty(turn.Target) ? choices[0] : turn.Target);
+                target.RegisterValueChangedCallback(e => Edit(p => Turn(p, index).Target = e.newValue));
+                card.Add(target);
+
+                var said = new TextField("Said") { value = turn.Statement ?? "", tooltip = "What the agent said, if anything." };
+                said.RegisterValueChangedCallback(e => Edit(p => Turn(p, index).Statement = string.IsNullOrWhiteSpace(e.newValue) ? null : e.newValue));
+                card.Add(said);
+
+                rows.Add(card);
+            }
+        }
+
+        // The turn at index, made when the file had null there.
+        private static HistoryTurn Turn(EvalPrompt prompt, int index) => prompt.History[index] ?? (prompt.History[index] = new HistoryTurn());
+
+        private void AddTurn()
+        {
+            Edit(p =>
+            {
+                p.History = p.History ?? new List<HistoryTurn>();
+                p.History.Add(new HistoryTurn { Action = ActionRegistry.None, Target = TargetRegistry.NoTarget });
+            });
+            ShowHistory();
+        }
+
+        private List<string> TargetIds() => (selected.ExpectedTarget ?? ExpectedTarget.NoTarget).Ids.ToList();
+
+        private void ShowTargets()
+        {
+            var rows = root.Q("target-rows");
+            rows.Clear();
+            var declared = set.FindAction(selected.ExpectedAction);
+            bool needsTarget = declared != null && declared.NeedsTarget;
+            var choices = new List<string> { TargetRegistry.NoTarget };
+            choices.AddRange(set.Targets.Select(t => t.Id));
+
+            var ids = TargetIds();
+            for (int i = 0; i < ids.Count; i++)
+            {
+                if (!choices.Contains(ids[i]))
+                {
+                    // A target the set does not declare stays shown as it is, and a check names it.
+                    choices.Add(ids[i]);
+                }
+            }
+
+            for (int i = 0; i < ids.Count; i++)
+            {
+                int index = i;
+                var row = new VisualElement();
+                row.AddToClassList("ps-target-row");
+                var target = new DropdownField(i == 0 ? "Target" : " ", choices, ids[i]);
+                target.RegisterValueChangedCallback(e =>
+                {
+                    var now = TargetIds();
+                    now[index] = e.newValue;
+                    Edit(p => p.ExpectedTarget = new ExpectedTarget(now.ToArray()));
+                });
+                row.Add(target);
+                if (ids.Count > 1)
+                {
+                    var remove = new Button(() =>
+                    {
+                        var now = TargetIds();
+                        now.RemoveAt(index);
+                        Edit(p => p.ExpectedTarget = new ExpectedTarget(now.ToArray()));
+                        ShowTargets();
+                    })
+                    { text = "−", tooltip = "Remove this choice." };
+                    remove.AddToClassList("ps-editor__small");
+                    row.Add(remove);
+                }
+
+                rows.Add(row);
+            }
+
+            openChoice.SetEnabled(needsTarget);
+        }
+
+        // Changing the answer of a prompt others have labelled hides the split they made.
+        private void ShowLabelledWarning()
+        {
+            var host = root.Q("labelled-warning");
+            host.Clear();
+            var prompt = selected;
+            int others = AgreementReport.AnnotatorsOf(prompt, labels).Count(a => prompt.LabelledBy == null || !prompt.LabelledBy.Contains(a));
+            if (others > 0)
+            {
+                host.Add(new ProblemBox(
+                    $"{others} other {(others == 1 ? "person has" : "people have")} answered this prompt blind. " +
+                    "Change its answer by settling it in Agreement, so both answers are kept."));
+            }
+        }
+
+        private void ShowChecks()
+        {
+            var host = root.Q(ChecksName);
+            host.Clear();
+            var problems = PromptSetChecks.CheckPrompt(set, selectedCategory, selected, profile());
+            if (problems.Count == 0)
+            {
+                var ok = new VisualElement();
+                ok.AddToClassList("ps-check");
+                ok.Add(Classed(new Label("✓"), "ps-check__mark"));
+                ok.Add(Classed(new Label("No rule broken" + (profile() == null ? " (choose a profile to check its few-shot examples too)" : "")), "ag-muted"));
+                host.Add(ok);
+            }
+
+            foreach (var problem in problems)
+            {
+                host.Add(new ProblemBox(problem.Message));
+            }
+        }
+
+        private void ShowSaveBar()
+        {
+            root.Q<Label>(SaveStateName).text = HasUnsavedChanges ? $"{changed.Count} file(s) changed" : "Saved";
+            save.SetEnabled(HasUnsavedChanges);
+        }
+
+        private void RemoveSelected()
+        {
+            if (selected == null
+                || !EditorUtility.DisplayDialog($"Remove {selected.Id}?",
+                    "A prompt that has been labelled or scored is better rewritten as a new id than removed. Remove it anyway?", "Remove", "Cancel"))
+            {
+                return;
+            }
+
+            selectedCategory.Prompts.Remove(selected);
+            MarkChanged(selectedCategory);
+            onEdited();
+            selected = null;
+            ShowList();
+            ShowEditor();
         }
 
         // The profile's actions when one is chosen, since actions come from it; the set's otherwise.
@@ -531,20 +750,10 @@ namespace Agenerela.Editor.Evaluation
             return known;
         }
 
-        private static string TextWithChoices(string label, string value, List<string> choices)
+        private static T Classed<T>(T element, string className) where T : VisualElement
         {
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                value = EditorGUILayout.TextField(label, value);
-                int picked = EditorGUILayout.Popup(-1, choices.ToArray(), GUILayout.Width(18));
-                if (picked >= 0)
-                {
-                    GUI.FocusControl(null);
-                    return choices[picked];
-                }
-            }
-
-            return value;
+            element.AddToClassList(className);
+            return element;
         }
 
         // A state value is JSON: true, 3, "night". Anything that does not parse is kept as text.

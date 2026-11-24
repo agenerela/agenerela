@@ -30,9 +30,11 @@ namespace Agenerela
     {
         /// <summary>
         /// The format version this package writes. Raised only when a field is added: 2 added
-        /// <see cref="ChainId"/>, <see cref="ChainHop"/> and <see cref="ChainSource"/> (#190, G4).
+        /// <see cref="ChainId"/>, <see cref="ChainHop"/> and <see cref="ChainSource"/> (#190, G4); 3 added
+        /// <see cref="PromptCharacters"/>, <see cref="PromptTokensEstimated"/>, <see cref="PromptBudget"/>,
+        /// <see cref="OverBudget"/> and <see cref="PromptTrims"/> (#151).
         /// </summary>
-        public const int CurrentVersion = 2;
+        public const int CurrentVersion = 3;
 
         /// <summary>
         /// The format version of this line, <see cref="CurrentVersion"/> when this package wrote it. Every
@@ -150,6 +152,21 @@ namespace Agenerela
 
         /// <summary>Prompt tokens, as the provider reported them; 0 when it did not.</summary>
         [JsonProperty("promptTokens")] public int PromptTokens;
+
+        /// <summary>The characters of the request's text (<see cref="DecisionTelemetry.PromptCharacters"/>, #151).</summary>
+        [JsonProperty("promptCharacters")] public int PromptCharacters;
+
+        /// <summary>The prompt's tokens, estimated before sending (<see cref="DecisionTelemetry.PromptTokensEstimated"/>, #151).</summary>
+        [JsonProperty("promptTokensEstimated")] public int PromptTokensEstimated;
+
+        /// <summary>The prompt budget the call was measured against (<see cref="DecisionTelemetry.PromptBudget"/>, #151); left out with none.</summary>
+        [JsonProperty("promptBudget")] public int? PromptBudget;
+
+        /// <summary>Whether the prompt went over its budget (<see cref="DecisionTelemetry.OverBudget"/>, #151); left out with no budget.</summary>
+        [JsonProperty("overBudget")] public bool? OverBudget;
+
+        /// <summary>Each trim taken to fit the budget (<see cref="DecisionTelemetry.PromptTrims"/>, #151); left out when none was.</summary>
+        [JsonProperty("promptTrims")] public List<string> PromptTrims;
 
         /// <summary>Completion tokens, as the provider reported them; 0 when it did not.</summary>
         [JsonProperty("completionTokens")] public int CompletionTokens;
@@ -288,6 +305,10 @@ namespace Agenerela
                 QueuedAhead = telemetry.QueuedAhead,
                 PromptTokens = telemetry.PromptTokens,
                 CompletionTokens = telemetry.CompletionTokens,
+                PromptCharacters = telemetry.PromptCharacters,
+                PromptTokensEstimated = telemetry.PromptTokensEstimated,
+                PromptBudget = telemetry.PromptBudget > 0 ? telemetry.PromptBudget : (int?)null,
+                OverBudget = telemetry.PromptBudget > 0 ? telemetry.OverBudget : (bool?)null,
                 TargetGrounding = telemetry.TargetGrounding,
                 TargetGroundingStatus = telemetry.TargetGroundingStatus,
                 HistoryTurnsSent = telemetry.HistoryTurnsSent,
@@ -330,6 +351,11 @@ namespace Agenerela
             if (telemetry.TargetsUnlisted != null && telemetry.TargetsUnlisted.Count > 0)
             {
                 line.TargetsUnlisted = new List<string>(telemetry.TargetsUnlisted);
+            }
+
+            if (telemetry.PromptTrims != null && telemetry.PromptTrims.Count > 0)
+            {
+                line.PromptTrims = new List<string>(telemetry.PromptTrims);
             }
 
             line.TargetIgnored = telemetry.TargetIgnored;

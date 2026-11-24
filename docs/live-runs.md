@@ -37,6 +37,7 @@ in, the machine, and the live checks that aren't A/B runs.
 
 | Run | Kind | Machine | What it checks | From |
 |---|---|---|---|---|
+| Painted Realm's court prompt budget (#151, #20): `default+budget-1600+trim` against `default+budget-2048`, economy on, `personas`, `qwen3.5:4b`, seeds 1 to 6 interleaved | A/B, interleaved, a clean lease a block | Home server | Does trimming the court's prompt under 1,600 (untakeable target lines, then the oldest remembered exchange, only while over) change illegal answers, buildings by persona, battles or provinces, and what does it save in tokens and seconds a turn? | [request 006](run-requests/006-court-prompt-budget/request.md) |
 | The 12 and 16 GB tiers | A/B, sequential arms | 5080 box | A "high-end GPU" option, such as Granite 4.1 8B, Qwen3.5-9B or Gemma 4 12B, against the 2B | `model-candidates.md`. Not run with request 001: the lead judged it not needed (9 November) |
 
 ## Waiting for something first

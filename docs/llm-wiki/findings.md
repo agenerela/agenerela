@@ -5038,3 +5038,32 @@ without them, 164 with, at `4485e83`), and are worth a repeat on the 4B before t
 statements buy the 4B a little accuracy at the price of about a third of its replies being copies, a trade the
 lead decides; `PairTargetsWithActions` has nothing to show on this set; the action list's 4B gain is solid at
 temperature 0. One set, one run per row, all within or at the floor but the list: candidates, not results.
+
+### Characters a token on `qwen3.5:4b`: 3.10, steady enough to budget a prompt without a tokenizer; the 1,600 "limit" was only a yardstick (24 November 2026)
+
+**Question.** Request 005 reported 35% of the economy's court prompts "over the 1,600 limit". Is anything cut there,
+and can the framework know a prompt's size before sending it, with no model call (#151)?
+
+**What is enforced.** Nothing at 1,600: it is `tools/live-runs/economy/report.py`'s `--limit` default, a yardstick the
+request measured against. `OllamaSettings.ContextSize` (`num_ctx`) is 4,096 and GreyBoxStrategy does not change it,
+so no court prompt (max 2,021) was truncated. The costs of a long prompt are latency and possibly a small model's
+choices; the second is what request 006 measures.
+
+**Method.** No model was run. Request 005's six blocks logged every request with its prompt (`decisions.jsonl`):
+6,304 decisions (2,394 court, 3,591 army, 319 treaty), each with Ollama's own `prompt_eval_count`. A request's
+characters are its system prompt, examples, observations, history entries and stimulus turn, the text the framework
+sends (the schema is not read by an Ollama model). Script: `.scratch/prompt-budget/calib.py` in the main checkout.
+
+| Characters a token | Mean error of the estimate | Range | Estimates short |
+|---|---:|---|---:|
+| 3.10 (the mean ratio; sd 0.05, from 2.94 to 3.30) | +0.2% | −5.2% to +6.3% | 2,971 of 6,304 |
+| 3.0 (`PromptBudget.DefaultCharsPerToken`) | +3.6% | −2.1% to +9.9% | 53 |
+| 4 (`RollingHistory`'s rule) | −22.3% | −26.5% to −17.6% | all |
+
+- **Steady.** Court, army and treaty requests agree (3.12, 3.10, 3.09), chat template included, so one ratio serves a
+  game on one model. At 3.0, no request over 1,600 tokens had an estimate under 1,600; 905 under it had one over,
+  so a budget's trim at 3.0 fires a little early, never late.
+- **`RollingHistory` undercounts.** Its token cap divides by 4, a fifth short on this model; its `MaxTokens` 256 is
+  about 330 real tokens. Not changed: that changes what history is sent, and needs its own A/B.
+- **Would change it.** Another model's tokenizer, another language, or prompts heavy in ids and numbers. The framework
+  records `PromptCharacters` beside `PromptTokens` on every decision, so a game can check its own ratio.
