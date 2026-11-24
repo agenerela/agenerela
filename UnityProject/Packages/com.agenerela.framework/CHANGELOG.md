@@ -10,6 +10,14 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **A prompt-size budget** (#151, #392). `PromptBudget` and `PromptTrim` set a budget per agent
+  (`Agent.PromptBudget`) or per call (`DecideOptions.PromptBudget`). It is estimated before sending
+  from characters (3 a token by default) and judged on the provider's count after. Optional trims
+  run in the developer's order, and only while over: `DecideOptions.OptionalObservations` (new),
+  target lines no offered action may take, then the oldest history. `DecisionTelemetry` gains
+  `PromptCharacters`, `PromptTokensEstimated`, `PromptBudget`, `OverBudget` and `PromptTrims`;
+  Decision Log version 3. With no budget, every request is byte for byte what it was.
+
 - **`TargetSummarySource`** (#151, #384), a deterministic observation source that summarises the agent's
   targets as one line per category, ids verbatim, with no model call; `EvalArm.SummariseTargets` tells an
   arm's targets that way (§2.8). `DeclaredTarget.Category` gives a prompt set's targets categories, and
