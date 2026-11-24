@@ -15,6 +15,7 @@ what the class asked of us and what we said.
 | 2026-10-15 | [`2026-10-15-design-presentation/`](2026-10-15-design-presentation/README.md) | Project design presentation: the 20-slide deck (a .pptx for Google Slides and a PDF preview), its figures with their HTML sources, the script that builds it, and who presents what |
 | 2026-10-20 | [`2026-10-20-github-roadmap/`](2026-10-20-github-roadmap/README.md) | GitHub Project roadmap and Insights: the submitted PDF of six figures, the roadmap's data as a CSV, and how the board's dates and priorities were filled in |
 | 2026-10-29 | [`2026-10-29-risk-management/`](2026-10-29-risk-management/README.md) | Risk management plan: the Excel register of 14 risks, two per member, with a risk matrix and a sprint review log, the discussion reply, and the script that builds it |
+| 2026-12-07 | [`2026-12-07-final-presentation/`](2026-12-07-final-presentation/README.md) | Final presentation, 7 to 11 December: the assignment and its 50-point rubric, and our notes on the 5-minute recorded demo; the deck goes here |
 
 Open any of them by double-clicking the file; they are self-contained pages that need no
 server. The lab kit and the system-design page load their figures from
