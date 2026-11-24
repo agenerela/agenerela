@@ -10,6 +10,16 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **Providers wait out a busy server** (DR-026, #395). `RetryPolicy` on `OllamaSettings` and
+  `OllamaProviderConfig`: HTTP 429 and 503 are sent again after `Retry-After` or a jittered
+  back-off, within attempts, a total pause and a deadline. `ProviderErrorKind.RateLimited` and
+  `PipelineErrorKind.ProviderRateLimited` when it runs out. `Retries` and `RetryWaitSeconds` on
+  `ProviderResult`, `ProviderException`, `DecisionTelemetry` and the decision log, kept out of
+  `LatencySeconds`.
+- **Settings profiles** (DR-026, #395). `AgenerelaProfile`, `AgenerelaSettings.Development`,
+  `Production` and `EditorProfile`, `AGENERELA_PROFILE`, `ActiveProfile` and `ActiveProvider`, and
+  `OllamaProviderConfig.EndpointVariable`. The Editor and development builds use Development, a
+  release build Production; a project with no profiles behaves as before.
 - **Image providers** (#359, DR-025, #394). `IImageProvider`, `ImageRequest` (with a stable `Key`),
   `ImageResult` (a PNG, or a `ProviderErrorKind`; a backend's failure never throws),
   `ImageCapabilities`, `CachedImageProvider` with `IImageCache`, `ImagePromptBuilder` and
@@ -115,6 +125,9 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Changed
 
+- An HTTP 429 (was `Rejected`) and 503 (was `ServerError`) are `RateLimited` once the retries run
+  out, and `ProviderConfig.Resolve` reads the active profile's config before the Default Provider
+  (DR-026, #395).
 - **The Prompt Set window is built in UI Toolkit on the #167 kit** (#160): a tree from
   `PromptSetWindow.uxml` and one UXML for each mode, which UI Builder opens, laid out by
   `PromptSetWindow.uss` on the kit's variables, so it reads in both editor skins. No IMGUI is
