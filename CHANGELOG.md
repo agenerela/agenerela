@@ -117,6 +117,7 @@ phase table and the open issues, not here.
 
 ### Changed
 
+- **The evaluation set's targets carry categories** (`place`, `creature`), and `VillageGuard.asset`'s `move_to` and `attack_target` take them. Its actions and idle example have example statements, and its actions counter-examples, so the default prompt on the set now shows them (#151, #384).
 - **Painted Realm: the chronicle keeps the fog, and the strip and the watch bar read** (#20). A rival's army order beyond
   your sight is no longer printed in the chronicle or spoken on the map (it was a leak); the strip counts it. The watch
   mode's top bar no longer overlaps: its chips keep their width and measured steps drop the lesser stats, then the

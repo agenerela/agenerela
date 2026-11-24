@@ -10,6 +10,12 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **`TargetSummarySource`** (#151, #384), a deterministic observation source that summarises the agent's
+  targets as one line per category, ids verbatim, with no model call; `EvalArm.SummariseTargets` tells an
+  arm's targets that way (§2.8). `DeclaredTarget.Category` gives a prompt set's targets categories, and
+  `CompareWithProfile` refuses a label they make illegal. `ReplyFinding.EchoesStimulus`/`EchoesStatement`
+  and `ReplyCounts.EchoStimulus`/`EchoStatement` tell an echoed stimulus from a parroted example
+  statement (#218).
 - **Label mode asks only the agreement cohort** (#148, with #147). With an `agreement-subset.json`
   beside the set, `BlindPrompt.Queue` (its new `cohort` argument) and the progress count hold only
   the cohort's prompts, a line says so, and a **Whole set** toggle asks every prompt instead.
