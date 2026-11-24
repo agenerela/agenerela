@@ -372,6 +372,22 @@ namespace Agenerela
         private int maxObservations = 8;
 
         /// <summary>
+        /// How long this agent's prompts may grow, and what may be left out to keep them under it
+        /// (#151, <see cref="Agenerela.PromptBudget"/>). Null by default: no budget, and every request
+        /// is what it was before budgets existed. A call's own <see cref="DecideOptions.PromptBudget"/>
+        /// replaces it for that call; <see cref="Agenerela.PromptBudget.None"/> there turns it off.
+        /// </summary>
+        /// <remarks>
+        /// Read once per decision, when its request is prepared. The first decision that goes over
+        /// logs a warning; every one records it in <see cref="DecisionTelemetry.OverBudget"/>.
+        /// </remarks>
+        public PromptBudget PromptBudget { get; set; }
+
+        // Whether this agent has warned of a prompt over its budget: once, so a game whose prompts
+        // run long is told without its console filling (#151).
+        private bool warnedOverBudget;
+
+        /// <summary>
         /// The game's own facts about this agent, such as <c>State["isFollowing"] = true</c>. Copied
         /// into <see cref="AgentContext.State"/> for each decision, where the handlers' availability
         /// checks read it. It never reaches the model, which reads the observations instead:
@@ -774,7 +790,11 @@ namespace Agenerela
 
             // A list of the context's own, apart from the options' copy a guard may read. Blank
             // lines are not something the agent knows, so they take no place under the cap.
-            observations = new ReadOnlyCollection<string>(NotBlank(options.Observations));
+            // The optional lines after the rest, as more of the call's own, so a budget's trim takes
+            // them from the end (#151).
+            var lines = NotBlank(options.Observations);
+            lines.AddRange(NotBlank(options.OptionalObservations));
+            observations = new ReadOnlyCollection<string>(lines);
             idleExample = options.IdleExampleStimulus ?? IdleExampleStimulus ?? (profile != null ? profile.IdleExampleStimulus : null);
 
             // Its statement is looked up the same way, but never from further down than the stimulus
@@ -1412,6 +1432,7 @@ namespace Agenerela
             telemetry.Model = reply.Model ?? "";
             telemetry.PromptTokens = reply.PromptTokens;
             telemetry.CompletionTokens = reply.CompletionTokens;
+            JudgeBudget(telemetry);
 
             if (!DecisionParser.TryParse(reply.Text, request.Schema, out var decision, out string problem, out bool orderLost))
             {
@@ -1594,7 +1615,14 @@ namespace Agenerela
                 seen.HistoryTurnsForgotten = telemetry.HistoryTurnsForgotten;
             }
 
-            var request = PromptBuilder.Build(ctx, schema, fewShot, history, options, availability, telemetry.TargetsUnlisted);
+            var request = Fit(BudgetFor(call), call, ctx, schema, fewShot, history, options, availability, telemetry, out ctx, out history);
+            if (seen != null && telemetry.PromptTrims.Count > 0)
+            {
+                seen.Context = ctx;
+                seen.History = history == null ? null : new ReadOnlyCollection<string>(new List<string>(history));
+                seen.HistoryTurnsDropped = telemetry.HistoryTurnsDropped;
+            }
+
             seen?.SetUnlisted(telemetry.TargetsUnlisted);
             request.AgentId = Id;
             request.Temperature = call.Temperature;
@@ -1602,6 +1630,133 @@ namespace Agenerela
             request.MaxReplyTokens = call.MaxReplyTokens;
             telemetry.TargetRuleSent = PromptBuilder.SendsTargetRule(schema, options);
             return request;
+        }
+
+        // The budget a call is measured against: its own, else the agent's; null for none, None included.
+        private PromptBudget BudgetFor(DecideOptions call)
+        {
+            var budget = call.PromptBudget ?? PromptBudget;
+            return budget != null && budget.IsSet ? budget : null;
+        }
+
+        // The request, built, then trimmed to the budget as its trims allow, in their order, one step
+        // at a time while the estimate is over (#151). Each trim that left something out is recorded,
+        // with what it left out, in the fields that already say so. Without a budget, or under it, the
+        // request is built once, as it always was. The context and history come back as the request
+        // has them, so the guards, memory and a preview see what was sent.
+        private static DecisionRequest Fit(
+            PromptBudget budget, DecideOptions call, AgentContext ctx, DecisionSchema schema, string fewShot,
+            IReadOnlyList<string> history, PromptOptions options, AvailabilityAnswer availability, DecisionTelemetry telemetry,
+            out AgentContext sentCtx, out IReadOnlyList<string> sentHistory)
+        {
+            DecisionRequest Build(AgentContext c, IReadOnlyList<string> h)
+            {
+                // Each build lists afresh, so what was unlisted is this request's alone.
+                telemetry.TargetsUnlisted.Clear();
+                return PromptBuilder.Build(c, schema, fewShot, h, options, availability, telemetry.TargetsUnlisted);
+            }
+
+            var request = Build(ctx, history);
+            float perToken = budget?.CharsPerToken ?? PromptBudget.DefaultCharsPerToken;
+            telemetry.PromptBudget = budget?.Tokens ?? 0;
+
+            if (budget != null)
+            {
+                bool Over() => PromptBudget.Estimate(request, perToken) > budget.Tokens;
+
+                foreach (var trim in budget.Trims)
+                {
+                    if (!Over()) break;
+
+                    int left = 0;
+                    switch (trim)
+                    {
+                        case PromptTrim.OptionalObservations:
+                        {
+                            // The call's optional lines are the last of its own, so the last of the context's.
+                            int optional = Math.Min(NotBlank(call.OptionalObservations).Count,
+                                Math.Min(options.CallObservationCount, ctx.Observations.Count));
+                            while (optional > 0 && Over())
+                            {
+                                var lines = new List<string>(ctx.Observations);
+                                telemetry.ObservationsDropped.Add(lines[lines.Count - 1]);
+                                lines.RemoveAt(lines.Count - 1);
+                                ctx = new AgentContext(ctx.Identity, ctx.Stimulus, new ReadOnlyCollection<string>(lines),
+                                    ctx.State, ctx.Targets, ctx.Actions, ctx.Correlation);
+                                options.CallObservationCount--;
+                                optional--;
+                                left++;
+                                request = Build(ctx, history);
+                            }
+
+                            if (left > 0) telemetry.PromptTrims.Add($"{trim}: {left} {(left == 1 ? "line" : "lines")}");
+                            break;
+                        }
+
+                        case PromptTrim.UntakeableTargets:
+                        {
+                            // Only the flat list names untakeable targets; the legal pairs never do.
+                            if (!options.ListActionsAndTargets || options.LegalTargets == LegalTargetListing.PerTarget) break;
+
+                            int before = telemetry.TargetsUnlisted.Count;
+                            options.ListTakeableTargetsOnly = true;
+                            request = Build(ctx, history);
+                            left = telemetry.TargetsUnlisted.Count - before;
+                            if (left > 0) telemetry.PromptTrims.Add($"{trim}: {left} {(left == 1 ? "target" : "targets")}");
+                            break;
+                        }
+
+                        case PromptTrim.History:
+                        {
+                            while (history != null && history.Count >= 2 && Over())
+                            {
+                                var kept = new List<string>(history);
+                                kept.RemoveRange(0, 2);
+                                history = kept;
+                                telemetry.HistoryTurnsSent--;
+                                telemetry.HistoryTurnsDropped++;
+                                left++;
+                                request = Build(ctx, history);
+                            }
+
+                            if (left > 0) telemetry.PromptTrims.Add($"{trim}: {left} {(left == 1 ? "exchange" : "exchanges")}");
+                            break;
+                        }
+                    }
+                }
+            }
+
+            telemetry.PromptCharacters = PromptBudget.Characters(request);
+            telemetry.PromptTokensEstimated = PromptBudget.Estimate(request, perToken);
+            telemetry.OverBudget = budget != null && telemetry.PromptTokensEstimated > budget.Tokens;
+            sentCtx = ctx;
+            sentHistory = history;
+            return request;
+        }
+
+        // Once the provider has counted the prompt, its count decides; else the estimate stands. The
+        // first decision over the budget warns (#151).
+        private void JudgeBudget(DecisionTelemetry telemetry)
+        {
+            if (telemetry.PromptBudget <= 0)
+            {
+                return;
+            }
+
+            if (telemetry.PromptTokens > 0)
+            {
+                telemetry.OverBudget = telemetry.PromptTokens > telemetry.PromptBudget;
+            }
+
+            if (telemetry.OverBudget && !warnedOverBudget)
+            {
+                warnedOverBudget = true;
+                int tokens = telemetry.PromptTokens > 0 ? telemetry.PromptTokens : telemetry.PromptTokensEstimated;
+                string how = telemetry.PromptTokens > 0 ? "as the provider counted it" : "estimated";
+                string trims = telemetry.PromptTrims.Count > 0 ? $" after trimming ({string.Join("; ", telemetry.PromptTrims)})" : "";
+                Debug.LogWarning($"{Who()}: its prompt was {tokens} tokens, {how}, over its budget of {telemetry.PromptBudget}{trims}. " +
+                                 "Later decisions over it are recorded in DecisionTelemetry.OverBudget, without a warning.");
+            }
         }
 
         private static string PreparationFailed(Exception e)

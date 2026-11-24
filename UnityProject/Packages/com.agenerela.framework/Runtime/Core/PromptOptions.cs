@@ -217,5 +217,10 @@ namespace Agenerela
         /// <c>Agent</c> sets it. Null mentions nothing.
         /// </summary>
         public string Stimulus;
+
+        // Whether the action and target list names only the targets some offered action may take
+        // now, the others going into the unlisted list: Agent sets it for PromptTrim.UntakeableTargets
+        // (#151). Off, the list is what it always was.
+        internal bool ListTakeableTargetsOnly;
     }
 }

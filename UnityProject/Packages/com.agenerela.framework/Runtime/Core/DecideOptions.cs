@@ -247,6 +247,33 @@ namespace Agenerela
         public IList<string> Observations = new List<string>();
 
         /// <summary>
+        /// Lines the agent may be told, most worth keeping first: sent after <see cref="Observations"/>
+        /// as more of the call's own, unless this call's <see cref="PromptBudget"/> lists
+        /// <see cref="PromptTrim.OptionalObservations"/> and the prompt is over it, when they are left
+        /// out from the last, one at a time, until it fits or none is left (#151). Null or empty by
+        /// default. Copied when the call starts.
+        /// </summary>
+        /// <remarks>
+        /// Sent, they are the call's lines like any other: they go where
+        /// <see cref="ObservationPlacement"/> puts the call's own, count against
+        /// <see cref="Agent.MaxObservations"/> the same way, and the context every guard, source and
+        /// handler reads holds them. One left out is left out of that context too, and recorded in
+        /// <see cref="DecisionTelemetry.ObservationsDropped"/>.
+        /// </remarks>
+        public IList<string> OptionalObservations;
+
+        /// <summary>
+        /// This call's prompt budget (#151): null, the default, uses <see cref="Agent.PromptBudget"/>,
+        /// and <see cref="Agenerela.PromptBudget.None"/> turns the agent's off for this call.
+        /// </summary>
+        /// <remarks>
+        /// With no budget either way the request is byte-identical to one sent before budgets existed,
+        /// and the telemetry still records its estimate. <see cref="Agenerela.PromptBudget"/> says how
+        /// it is measured and what each trim leaves out.
+        /// </remarks>
+        public PromptBudget PromptBudget;
+
+        /// <summary>
         /// Options to choose among on this call, instead of the agent's registered actions (DR-022,
         /// #266 item 2). Null by default: the call offers the agent's actions, as every call did before.
         /// </summary>
@@ -437,6 +464,7 @@ namespace Agenerela
         {
             var copy = (DecideOptions)MemberwiseClone();
             copy.Observations = Observations == null ? null : new List<string>(Observations);
+            copy.OptionalObservations = OptionalObservations == null ? null : new List<string>(OptionalObservations);
             copy.Choices = Choices == null ? null : new List<Choice>(Choices);
             copy.AddedExamples = AddedExamples == null ? null : new List<FewShotExample>(AddedExamples);
             return copy;

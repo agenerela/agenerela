@@ -1,0 +1,27 @@
+<!--
+    Agreement mode (#160, screen 8 ⑧⑨): the headline, a sortable table by category with a bar
+    for each, and the splits, each settled only by a person's click.
+    Layout is in PromptSetWindow.uss; colour and type come from Agenerela.uss (#167).
+-->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <!-- D · Agreement -->
+    <ui:ScrollView name="agreement" class="ps-scroll">
+        <ui:VisualElement class="ps-row ps-agreement__head">
+            <ui:Label name="agreement-percent" class="ps-agreement__big" />
+            <ui:VisualElement class="ps-grow">
+                <ui:Label name="agreement-headline" class="ps-wrap ps-bold" />
+                <ui:Label name="agreement-pairwise" class="ps-wrap" />
+                <ui:Label text="An unsettled prompt counts its expected answer as its one writer's. Settling a split writes everyone's answer into the prompt's labels." class="ag-muted ps-wrap" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <Agenerela.Editor.UI.SectionTitle text="By category" />
+        <ui:MultiColumnListView name="categories" class="ps-agreement__table" show-border="true" virtualization-method="FixedHeight" fixed-item-height="20" />
+        <ui:VisualElement class="ps-row ps-end">
+            <ui:Button name="record-agreed" text="Record agreed answers" tooltip="Keeps each person's own answer in labels for the unanimous prompts. Expected answers stay as they are; splits still need discussion." />
+        </ui:VisualElement>
+        <Agenerela.Editor.UI.SectionTitle name="splits-title" text="Splits" />
+        <ui:VisualElement name="splits" />
+        <ui:Label text="If neither side convinces the other, the prompt is ambiguous: rewrite it as a new prompt in Write mode, as findings.md describes." class="ag-muted ps-wrap ps-footnote" />
+        <ui:Foldout name="every-prompt" text="Every answered prompt" value="false" class="ps-agreement__every" />
+    </ui:ScrollView>
+</ui:UXML>
