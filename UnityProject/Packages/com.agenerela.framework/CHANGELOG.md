@@ -10,6 +10,13 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **Image providers** (#359, DR-025, #394). `IImageProvider`, `ImageRequest` (with a stable `Key`),
+  `ImageResult` (a PNG, or a `ProviderErrorKind`; a backend's failure never throws),
+  `ImageCapabilities`, `CachedImageProvider` with `IImageCache`, `ImagePromptBuilder` and
+  `ScriptedImageProvider`, plus `ImageFileCache` and `ImageTextures` in `Runtime/Unity/`. A
+  ComfyUI backend, `ComfyUIProvider` with `ComfyUISettings` and a `ComfyUIProviderConfig` asset,
+  in its own assembly, `Agenerela.ComfyUI`. See `Documentation~/images.md`.
+
 - **A prompt-size budget** (#151, #392). `PromptBudget` and `PromptTrim` set a budget per agent
   (`Agent.PromptBudget`) or per call (`DecideOptions.PromptBudget`). It is estimated before sending
   from characters (3 a token by default) and judged on the provider's count after. Optional trims
