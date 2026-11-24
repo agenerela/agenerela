@@ -174,6 +174,25 @@ namespace GreyBoxStrategy
         /// <summary>How many of the ruler's last lines <see cref="OwnLines"/> shows.</summary>
         public const int OwnLinesShown = 4;
 
+        /// <summary>
+        /// The court's prompt budget in tokens (the framework's <see cref="PromptBudget"/>, #151), or 0, the default,
+        /// for none, which sends every request as before. Set by the <c>+budget-&lt;n&gt;</c> modifier. Only the
+        /// court's own requests (<c>Moment.Council</c>) carry it.
+        /// </summary>
+        public int CourtBudget;
+
+        /// <summary>
+        /// Whether the court's budget may trim (<c>+trim</c>): the target lines no court order may take, then the
+        /// oldest remembered exchange, only while a request is over. Off, the budget only measures. An A/B arm,
+        /// never a default without the tech lead.
+        /// </summary>
+        public bool CourtTrims;
+
+        /// <summary>The court's budget as the framework takes it, or null for none.</summary>
+        public PromptBudget CourtPromptBudget() => CourtBudget <= 0 ? null
+            : CourtTrims ? new PromptBudget(CourtBudget, PromptTrim.UntakeableTargets, PromptTrim.History)
+            : new PromptBudget(CourtBudget);
+
         /// <summary>A short name for logs and tables: "control", "per-target", "no-moves-line", and so on.</summary>
         public string Arm = "control";
 
@@ -216,7 +235,8 @@ namespace GreyBoxStrategy
         /// line (<see cref="LegalTargetListing.ObservationLine"/>), and <c>+how-it-reads</c> and
         /// <c>+own-words</c> word the statement rules (<see cref="StatementRulesWording"/>)
         /// ("default+no-moves-line+moves-sentence", "default+how-it-reads"), <c>+one-voice</c>, <c>+own-lines</c> and
-        /// <c>+no-own-lines</c> and <c>+silent-armies</c> for the writs turn's statements, and <c>+memory-move</c>
+        /// <c>+no-own-lines</c> and <c>+silent-armies</c> for the writs turn's statements, <c>+budget-&lt;n&gt;</c> and
+        /// <c>+trim</c> for the court's prompt budget (<see cref="CourtBudget"/>, #151), and <c>+memory-move</c>
         /// and <c>+memory-outcome</c> what a remembered move holds (<see cref="Remembers"/>, #244 item 4).
         /// For the storyteller: <c>+storyteller</c> (<see cref="Storyteller"/>), <c>+no-inspiration</c> and
         /// <c>+inspiration-&lt;n&gt;</c> ("default+storyteller+inspiration-1"); stage S2's <c>+choices</c>,
@@ -274,6 +294,9 @@ namespace GreyBoxStrategy
                         options.Choices = options.Multi = options.History = options.Traits = options.TitleCall = true;
                         options.Preset = options.Preset ?? StorytellerSettings.EvenHand.Name;
                     }
+                    else if (modifier.StartsWith("budget-") && int.TryParse(modifier.Substring("budget-".Length), out int budget) && budget > 0)
+                        options.CourtBudget = budget;
+                    else if (modifier == "trim") options.CourtTrims = true;
                     else if (modifier == "no-inspiration") options.Inspiration = false;
                     else if (modifier == "history-in-game") options.HistoryGuard = false;
                     else if (modifier == "no-reply-cap") options.StorytellerMaxReplyTokens = null;

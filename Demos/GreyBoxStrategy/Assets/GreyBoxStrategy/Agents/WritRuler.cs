@@ -248,6 +248,8 @@ namespace GreyBoxStrategy
                 ExampleStatements = speaks && asked,
                 AskForStatement = asked,
                 Choices = r.Moment == Moment.Choice && Options.CallChoices ? CountryAgent.DilemmaChoices(r) : null,
+                // The court's own requests only; null, with no budget set, sends them as before (#151).
+                PromptBudget = r.Moment == Moment.Council ? Options.CourtPromptBudget() : null,
                 Correlation = r.Moment == Moment.Army ? new ArmyOrder(r.ArmyId)
                     : r.Moment == Moment.Envoy ? new TreatyOffer(r.OfferId, r.OfferedBy)
                     : r.Moment == Moment.Choice ? new ChoiceCall(r.OfferId, r.Legal.Select(m => m.Action).ToList())

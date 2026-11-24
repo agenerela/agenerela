@@ -606,6 +606,73 @@ sealed class StockEntry : IDescribedTarget, INamedTarget
 ("One loaf of bread, 3 gold."), and would not fit inside "How much for the {0}?". No target has a
 name until a game writes one, which is the opt-in.
 
+## A budget for the prompt's size
+
+A game's prompt grows with every feature it adds, and nothing says so. In Painted Realm the court's
+prompt grew by 136 tokens a request when the economy went on, and 35% of its requests passed 1,600
+tokens (findings, 23 November 2026). Nothing was cut: Ollama's context window
+(`OllamaSettings.ContextSize`, `num_ctx`) is 4,096. The costs of a long prompt are latency and, on
+a small model, perhaps worse choices. A **prompt budget** makes the size something the developer
+sets and the telemetry sees (#151). There is none by default, and with none every request is what it
+was before budgets existed, byte for byte.
+
+```csharp
+// Every call of this agent: measure against 1,600 tokens, and warn once if over.
+court.PromptBudget = new PromptBudget(1600);
+
+// Or allow it to leave things out, in this order, only while it is over.
+court.PromptBudget = new PromptBudget(1600,
+    PromptTrim.OptionalObservations, PromptTrim.UntakeableTargets, PromptTrim.History);
+
+// One call: its own budget, or PromptBudget.None to turn the agent's off.
+await court.DecideAsync(stimulus, new DecideOptions
+{
+    Observations = mustKnow,
+    OptionalObservations = new List<string> { "Rival armies we see: ...", "Pikes beat riders, ..." }, // most worth keeping first
+    PromptBudget = new PromptBudget(2048),
+});
+```
+
+**How it is measured.** Before sending, with no model call, the request's text (system prompt,
+examples, observations, every history entry and the stimulus turn, never the schema, which a local
+model does not read) is counted in characters and divided by `CharsPerToken`, 3 unless the budget
+says otherwise. On 6,304 of Painted Realm's requests to `qwen3.5:4b`, Ollama's own count,
+`prompt_eval_count`, chat template included, came to 3.10 characters a token, and between 2.94 and
+3.30 for every one (findings, 24 November 2026). The default errs long by 3.6% on average (53 of the
+6,304 came out short, by 2% at most), so a trim fires a little early rather than late. After the reply,
+the provider's own count decides whether the decision went over, when it reports one. For another
+model or language, divide `PromptCharacters` by `PromptTokens` over a few decisions and pass your own
+ratio: `new PromptBudget(1600, 3.4f)`. `RollingHistory`'s own token cap still divides by 4, which on
+this model undercounts by about a fifth.
+
+**What it records.** Every decision, budget or not: `DecisionTelemetry.PromptCharacters` and
+`PromptTokensEstimated`. With a budget: `PromptBudget`, `OverBudget` (after every trim; on the
+provider's count when it gave one) and `PromptTrims`, one entry for each trim that left something
+out, such as `"History: 1 exchange"`. The decision feed and the Decision Log carry all five
+([logging-decisions.md](logging-decisions.md)). The first decision of an agent that goes over its
+budget logs one warning; later ones are only recorded.
+
+**What it may leave out, and only that.** With no trims a budget only measures and warns. Each trim
+listed is tried in the order given, one step at a time, and only while the estimate is over:
+
+| Trim | One step | Recorded in |
+|---|---|---|
+| `OptionalObservations` | The last of the call's `DecideOptions.OptionalObservations` | `ObservationsDropped` |
+| `UntakeableTargets` | Every target line of the action and target list that no offered action may take now, by its categories and per-target checks, at once. Only with `ListActionsAndTargets` on; with `LegalTargets` the list holds only those already | `TargetsUnlisted` |
+| `History` | The oldest remembered exchange; memory keeps it | `HistoryTurnsDropped` |
+
+`OptionalObservations` are sent as the call's own lines after its `Observations`, wherever
+`ObservationPlacement` puts those, and count against `MaxObservations` the same way. A line the
+trim leaves out is out of the context the guards and handlers read too. No trim ever removes an
+action, a must-send observation or a target from the schema, and the field order is untouched:
+the guards judge the same agent with a budget as without. When every listed trim is spent and the
+prompt is still over, it is sent as it is, and recorded as over.
+
+**Choosing one.** A budget with trims changes what the model reads when it fires, so it is a choice a
+game measures before keeping (hard rule 2). Painted Realm's court is the first measured: see
+findings for the run. A budget without trims costs nothing and changes nothing; it is the way to find
+out how often a game's prompts run long.
+
 ## Measuring them
 
 Each switch is an option an `EvalArm` carries, so one run in one session compares an arm with it
