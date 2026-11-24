@@ -1,0 +1,102 @@
+<!--
+    The Prompt Set window's structure (#160, screen 8). Layout is in PromptSetWindow.uss; colour,
+    type and the kit's pieces come from Agenerela.uss (#167). Open it in UI Builder to change how
+    the window is laid out.
+
+    Elements with a name are filled or wired by PromptSetUi and the three views; what repeats
+    (prompt rows, state rows, checks, category rows, splits) is built there, from the kit. Rename
+    one here only together with its constant in the C#.
+-->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:VisualElement name="prompt-set" class="ps">
+
+        <!-- Toolbar: wraps onto a second line when narrow, never clips (#159) -->
+        <uie:Toolbar name="toolbar" class="ps-toolbar">
+            <ui:VisualElement class="ps-toolbar__group">
+                <ui:Label text="Set" class="ps-toolbar__label" tooltip="The set file: the agent.json beside a folder of prompts. Drag one in, or click Open the project's evaluation set while no set is open." />
+                <uie:ObjectField name="set-field" class="ps-toolbar__object" tooltip="The set file: the agent.json beside a folder of prompts. Drag one in, or click Open the project's evaluation set while no set is open." />
+            </ui:VisualElement>
+            <ui:VisualElement class="ps-toolbar__group">
+                <ui:Label text="Profile" class="ps-toolbar__label" tooltip="The AgentProfile the set is measured against. Write offers its actions, and every prompt is checked against its few-shot examples (hard rule 4)." />
+                <uie:ObjectField name="profile-field" class="ps-toolbar__object" tooltip="The AgentProfile the set is measured against. Write offers its actions, and every prompt is checked against its few-shot examples (hard rule 4)." />
+            </ui:VisualElement>
+            <ui:VisualElement class="ps-toolbar__group">
+                <ui:Label text="Your name" class="ps-toolbar__label" tooltip="Your name. It goes on the prompts you write, and your answers in Label are saved under it." />
+                <ui:TextField name="name-field" class="ps-toolbar__name" tooltip="Your name. It goes on the prompts you write, and your answers in Label are saved under it." />
+                <uie:ToolbarMenu name="names" text="" class="ps-toolbar__names" tooltip="Pick a name already in the set." />
+            </ui:VisualElement>
+            <ui:VisualElement class="ps-grow" />
+            <uie:ToolbarButton name="reload" text="Reload" class="ps-toolbar__reload" tooltip="Read the set and everyone's label files again, say after pulling a teammate's commit." />
+        </uie:Toolbar>
+
+        <!-- Tabs: greyed out until a set and a profile are chosen -->
+        <uie:Toolbar name="tabs" class="ps-tabs">
+            <uie:ToolbarToggle name="tab-write" text="Write" tooltip="Add prompts, each with the answer it should get." />
+            <uie:ToolbarToggle name="tab-label" text="Label" tooltip="Answer other people's prompts without seeing their answers." />
+            <uie:ToolbarToggle name="tab-agreement" text="Agreement" tooltip="Compare everyone's answers and settle the splits." />
+        </uie:Toolbar>
+        <ui:Label name="mode-line" class="ag-muted ps-wrap ps-mode-line" />
+
+        <!-- Messages above every view: drafts from before a reload, the profile and set disagreeing -->
+        <ui:VisualElement name="drafts" class="ps-messages" />
+        <ui:VisualElement name="profile-problems" class="ps-messages" />
+
+        <!-- A · Start: three steps, until a set and a profile are chosen -->
+        <ui:ScrollView name="start" class="ps-scroll">
+            <ui:VisualElement class="ag-card ps-start">
+                <ui:Label text="Start here" class="ps-start__title" />
+                <ui:Label text="Three steps, once: the window remembers all three on this machine." class="ag-muted ps-wrap" />
+                <ui:VisualElement name="load-error" />
+
+                <ui:VisualElement name="step-1" class="ps-step">
+                    <ui:Label name="step-1-mark" text="1" class="ps-step__mark" />
+                    <ui:VisualElement class="ps-grow">
+                        <ui:Label text="Choose the set" class="ps-step__title" />
+                        <ui:Label name="step-1-detail" class="ps-wrap ps-step__detail" />
+                        <ui:VisualElement class="ps-row ps-step__actions">
+                            <ui:Button name="open-project-set" text="Open the project's evaluation set" />
+                            <ui:Label name="found-sets" class="ag-muted ps-wrap ps-shrink" />
+                        </ui:VisualElement>
+                        <ui:Label text="Or drag a set file into Set above, or start a new one from the profile:" class="ag-muted ps-wrap" />
+                        <ui:VisualElement class="ps-row ps-step__actions">
+                            <ui:Button name="new-set" text="New set from this profile…" tooltip="Writes a set file with the profile's actions and none. Add targets by hand." />
+                            <ui:Label name="new-set-note" text="Choose the profile first (step 2)." class="ag-muted ps-wrap ps-shrink" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+                <ui:VisualElement name="step-2" class="ps-step">
+                    <ui:Label name="step-2-mark" text="2" class="ps-step__mark" />
+                    <ui:VisualElement class="ps-grow">
+                        <ui:Label text="Choose the profile" class="ps-step__title" />
+                        <ui:Label name="step-2-detail" class="ps-wrap ps-step__detail" />
+                        <ui:Label name="step-2-hint" class="ag-muted ps-wrap" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+                <ui:VisualElement name="step-3" class="ps-step">
+                    <ui:Label name="step-3-mark" text="3" class="ps-step__mark" />
+                    <ui:VisualElement class="ps-grow">
+                        <ui:Label text="Type your name" class="ps-step__title" />
+                        <ui:Label name="step-3-detail" class="ps-wrap ps-step__detail" />
+                        <ui:Label name="step-3-problem" class="ag-muted ps-wrap" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <Agenerela.Editor.UI.SectionTitle text="Then pick a tab" />
+            <ui:Label text="Write: add prompts, each with the answer it should get." class="ps-wrap" />
+            <ui:Label text="Label: answer other people's prompts without seeing their answers." class="ps-wrap" />
+            <ui:Label text="Agreement: compare everyone's answers and settle the splits." class="ps-wrap" />
+            <ui:Label text="More in Documentation~/evaluation.md, in the Agenerela package." class="ag-muted ps-wrap ps-footnote" />
+        </ui:ScrollView>
+
+        <!-- Shown over Label and Agreement while Write has unsaved edits -->
+        <ui:VisualElement name="save-first" class="ps-pad" />
+
+        <!-- B, C, D · The three views, each from its own UXML (PromptSetWriteView.uxml and so on) -->
+        <ui:VisualElement name="write-host" class="ps-host" />
+        <ui:VisualElement name="label-host" class="ps-host" />
+        <ui:VisualElement name="agreement-host" class="ps-host" />
+    </ui:VisualElement>
+</ui:UXML>

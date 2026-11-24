@@ -1,0 +1,33 @@
+<!--
+    Label mode (#160, screen 8 ⑥⑦): one prompt at a time, blind. PromptSetLabelView fills it from
+    BlindPrompts and LabelChoices only, so nothing in this tree can show an expected answer.
+    Layout is in PromptSetWindow.uss; colour and type come from Agenerela.uss (#167).
+-->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <!-- C · Label: one prompt at a time, blind -->
+    <ui:ScrollView name="label" class="ps-scroll">
+        <ui:VisualElement name="label-progress-row" class="ps-label__progress">
+            <ui:ProgressBar name="label-progress" low-value="0" high-value="1" />
+        </ui:VisualElement>
+        <ui:Label name="label-done" class="ps-wrap ps-label__done" />
+        <ui:VisualElement name="label-prompt">
+            <ui:VisualElement class="ag-card ps-label__card">
+                <ui:Label name="label-speaker" class="ps-label__speaker" />
+                <ui:Label name="label-stimulus" class="ps-wrap ps-label__stimulus" />
+                <Agenerela.Editor.UI.SectionTitle text="Observations" />
+                <ui:VisualElement name="label-observations" />
+                <Agenerela.Editor.UI.SectionTitle text="State" />
+                <ui:VisualElement name="label-state" />
+            </ui:VisualElement>
+            <ui:DropdownField name="label-action" label="Action" />
+            <ui:DropdownField name="label-target" label="Target" />
+            <ui:VisualElement name="label-no-target" />
+            <ui:VisualElement class="ps-row ps-end ps-label__buttons">
+                <ui:Button name="skip" text="Skip" tooltip="Leave this prompt for later. It comes back when you open Label mode again. (S)" />
+                <ui:Button name="save-answer" text="Save answer" tooltip="Saves your answer to your own label file. (Enter)" />
+            </ui:VisualElement>
+            <ui:Label name="label-saved-note" class="ag-muted ps-wrap" />
+            <ui:Label text="Keys: 1–9 picks an action, T the next target, Enter saves, S skips." class="ag-muted ps-wrap ps-footnote" />
+        </ui:VisualElement>
+    </ui:ScrollView>
+</ui:UXML>

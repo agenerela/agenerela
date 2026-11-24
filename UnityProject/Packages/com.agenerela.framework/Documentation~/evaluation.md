@@ -134,7 +134,8 @@ version of the window saves a newer file.
 
 Choose the set, the profile and type your name in the toolbar, and stay in **Write**. Pick a
 prompt on the left or **+ Add prompt** in a category: the id is made for you, your name goes in
-`labelledBy`, and the state is copied from the prompt before it.
+`labelledBy`, and the state is copied from the prompt before it. The search box above the list
+finds prompts by id, label or stimulus, and **⚠** beside an id marks a prompt that breaks a rule.
 
 The expected action is a dropdown of the profile's actions and `none`; the target is a dropdown
 of the set's targets and `no_target`. **+ open choice** adds a second right target.
@@ -179,12 +180,23 @@ rather than the set's, which groups them by category.
 
 **Save answer** writes your answer to your own file under `labels/<you>/` and moves on. An answer once
 saved is never replaced, even if you change your mind: agreement is measured on first answers.
-**Skip** leaves a prompt for later. Commit your label files like any other.
+**Skip** leaves a prompt for later. The bar above the prompt says how many are left. Commit your
+label files like any other.
+
+The keyboard does all of it, while the Label view has focus:
+
+| Key | Does |
+|---|---|
+| **1** to **9** | Picks that action, counted down the **Action** list |
+| **T** | Picks the next target |
+| **Enter** | **Save answer** |
+| **S** | **Skip** |
 
 ## Reading and settling agreement
 
 **Agreement** compares everyone's answers: overall, how many prompts answered by two or more
-people got the same answer from all; by category; and the list of prompts where they split.
+people got the same answer from all; by category, in a table with a bar for each that sorts by
+any column you click; and the list of prompts where they split.
 
 A prompt's answers are its writer's expected answer (until it is settled, when the writer is the
 only name in `labelledBy` and the target is not an open choice), the `labels` written when it

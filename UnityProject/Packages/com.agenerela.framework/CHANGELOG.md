@@ -72,6 +72,21 @@ While the version stays `0.x`, the public API may change in any release.
     after `statement` is corrected. The serializer's error for pairs that name targets in a schema
     with no target field has new wording.
 
+### Changed
+
+- **The Prompt Set window is built in UI Toolkit on the #167 kit** (#160): a tree from
+  `PromptSetWindow.uxml` and one UXML for each mode, which UI Builder opens, laid out by
+  `PromptSetWindow.uss` on the kit's variables, so it reads in both editor skins. No IMGUI is
+  left. The toolbar wraps instead of clipping at the window's 640 px minimum, where #159 found
+  Reload cut off. **Open the project's evaluation set** is the start page's one primary button.
+  Write gains a search box and a **⚠** beside each prompt that breaks a rule; Label shows a
+  progress bar and takes keys (1 to 9 pick an action, T the next target, Enter saves, S skips);
+  Agreement shows its categories in a table with a bar for each, sortable by any column. Drafts
+  kept through a recompile, unsaved-changes handling, the remembered set, profile and name, and
+  the blind-labelling guarantee are as before. EditMode tests now build the window's trees and
+  check the gate, the tabs, the progress bar, the keys, that the Label view shows no word of an
+  answer, and that nothing in the toolbar clips at 640 px.
+
 ## [0.4.0-preview.2] - 2026-11-16
 
 ### Changed

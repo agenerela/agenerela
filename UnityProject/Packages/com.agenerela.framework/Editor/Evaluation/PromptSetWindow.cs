@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using Agenerela.Editor.UI;
 using Agenerela.Evaluation;
 using Newtonsoft.Json;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Agenerela.Editor.Evaluation
 {
@@ -28,39 +30,21 @@ namespace Agenerela.Editor.Evaluation
     /// the set, the profile and your name are then remembered on this machine, per project, never
     /// in the set (<see cref="PromptSetPrefs"/>).
     /// </para>
+    /// <para>
+    /// Built in UI Toolkit from <c>PromptSetWindow.uxml</c> and each view's own UXML, on the #167
+    /// kit (#160). <see cref="PromptSetUi"/> shows the toolbar, the tabs and the start page; this
+    /// class holds the set, the profile and the drafts, and hands them over in <see cref="Refresh"/>.
+    /// </para>
     /// </remarks>
     public sealed class PromptSetWindow : EditorWindow
     {
-        private enum Mode { Write, Label, Agreement }
-
-        private static readonly string[] ModeNames = { "Write", "Label", "Agreement" };
-
-        // The line under the tabs, in #158's words.
-        private static readonly string[] ModeDescriptions =
-        {
-            "add prompts, each with the answer it should get",
-            "answer other people's prompts without seeing their answers",
-            "compare everyone's answers and settle the splits",
-        };
-
-        private static readonly GUIContent[] ModeTabs = ModeNames
-            .Select((name, i) => new GUIContent(name, char.ToUpperInvariant(ModeDescriptions[i][0]) + ModeDescriptions[i].Substring(1) + "."))
-            .ToArray();
-
-        private const string SetTip = "The set file: the agent.json beside a folder of prompts. Drag one in, or click Open the project's evaluation set while no set is open.";
-        private const string ProfileTip = "The AgentProfile the set is measured against. Write offers its actions, and every prompt is checked against its few-shot examples (hard rule 4).";
-        private const string NameTip = "Your name. It goes on the prompts you write, and your answers in Label are saved under it.";
-        private const string NamesTip = "Pick a name already in the set.";
-        private const string ReloadTip = "Read the set and everyone's label files again, say after pulling a teammate's commit.";
-
         private PromptSetPrefs prefs;
         private IReadOnlyList<string> foundSets;
-        private Vector2 startScroll;
 
         [SerializeField] private TextAsset setAsset;
         [SerializeField] private AgentProfile profile;
         [SerializeField] private string you = "";
-        [SerializeField] private Mode mode;
+        [SerializeField] private PromptSetMode mode;
 
         // Unsaved prompts, one category's list as JSON per entry, kept through a domain reload: a
         // script recompiling would otherwise drop them, since the set itself is not serialized.
@@ -83,6 +67,7 @@ namespace Agenerela.Editor.Evaluation
         private PromptSetWriteView writeView;
         private PromptSetLabelView labelView;
         private PromptSetAgreementView agreementView;
+        private PromptSetUi ui;
 
         [MenuItem("Window/Agenerela/Prompt Set")]
         public static void Open()
@@ -125,11 +110,8 @@ namespace Agenerela.Editor.Evaluation
         private void OnProjectChange()
         {
             foundSets = null;
-            Repaint();
+            Refresh();
         }
-
-        /// <summary>The tabs open once a set has loaded and a profile is chosen.</summary>
-        private bool Ready => set != null && profile != null;
 
         private void OnDisable()
         {
@@ -143,6 +125,7 @@ namespace Agenerela.Editor.Evaluation
             writeView?.SaveAll();
             hasUnsavedChanges = false;
             base.SaveChanges();
+            Refresh();
         }
 
         /// <summary>A category file's content hash, or "" when it does not exist yet.</summary>
@@ -241,326 +224,173 @@ namespace Agenerela.Editor.Evaluation
         /// Drafts from before a reload that were not applied: their file changed on disk since the
         /// edits, their category is gone, or the set did not load. Never applied without a click.
         /// </summary>
-        private void DrawWaitingDrafts()
+        private IReadOnlyList<PromptSetUi.WaitingDraft> WaitingDrafts()
         {
-            for (int i = draftCategories.Count - 1; i >= 0; i--)
+            var waiting = new List<PromptSetUi.WaitingDraft>();
+            for (int i = 0; i < draftCategories.Count; i++)
             {
                 var category = set != null ? set.FindCategory(draftCategories[i]) : null;
                 string why = set == null ? "the set did not load"
                     : category == null ? "the set no longer has this category"
                     : "its file changed on disk since you edited it";
-                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-                {
-                    EditorGUILayout.LabelField(
-                        $"Unsaved prompts for '{draftCategories[i]}' from before a reload were not applied: {why}. " +
-                        "Keeping them replaces that category's prompts in the window with your draft; nothing is written until you save.",
-                        EditorStyles.wordWrappedLabel);
-                    using (new EditorGUILayout.HorizontalScope())
-                    {
-                        using (new EditorGUI.DisabledScope(category == null || writeView == null))
-                        {
-                            if (GUILayout.Button("Keep my draft", GUILayout.Width(120)) && ApplyDraft(i, category, Fingerprint(set, category)))
-                            {
-                                RemoveDraft(i);
-                                hasUnsavedChanges = Unsaved;
-                                GUIUtility.ExitGUI();
-                            }
-                        }
-
-                        if (GUILayout.Button("Discard it", GUILayout.Width(100))
-                            && EditorUtility.DisplayDialog("Discard the draft?", $"Your unsaved prompts for '{draftCategories[i]}' are lost.", "Discard", "Cancel"))
-                        {
-                            RemoveDraft(i);
-                            hasUnsavedChanges = Unsaved;
-                            GUIUtility.ExitGUI();
-                        }
-                    }
-                }
+                waiting.Add(new PromptSetUi.WaitingDraft(draftCategories[i], why, category != null && writeView != null));
             }
+
+            return waiting;
         }
 
-        private void OnGUI()
+        private void KeepDraft(int i)
+        {
+            var category = set?.FindCategory(draftCategories[i]);
+            if (category != null && writeView != null && ApplyDraft(i, category, Fingerprint(set, category)))
+            {
+                RemoveDraft(i);
+            }
+
+            Refresh();
+        }
+
+        private void DiscardDraft(int i)
+        {
+            if (EditorUtility.DisplayDialog("Discard the draft?", $"Your unsaved prompts for '{draftCategories[i]}' are lost.", "Discard", "Cancel"))
+            {
+                RemoveDraft(i);
+            }
+
+            Refresh();
+        }
+
+        private void CreateGUI()
+        {
+            ui = new PromptSetUi(PromptSetUi.Load());
+            rootVisualElement.Add(ui.Root);
+
+            ui.SetChanged += chosen =>
+            {
+                OpenSet(chosen);
+                Refresh();
+            };
+            ui.ProfileChanged += chosen =>
+            {
+                // Only the checks depend on the profile, so nothing is reloaded and nothing unsaved is lost.
+                profile = chosen;
+                RememberProfile();
+                writeView?.Refresh();
+                Refresh();
+            };
+            ui.NameChanged += typed =>
+            {
+                // Not a reload: that would drop what is being written. Label mode rebuilds its
+                // queue for the new name on its own.
+                you = typed ?? "";
+                prefs.Annotator = you;
+                writeView?.Refresh();
+                Refresh();
+            };
+            ui.ModeChanged += chosen =>
+            {
+                mode = chosen;
+                RefreshLabels();
+                Refresh();
+            };
+            ui.Reload += () =>
+            {
+                if (!hasUnsavedChanges || EditorUtility.DisplayDialog("Reload the prompt set?", "Your unsaved changes are lost.", "Reload", "Cancel"))
+                {
+                    // Drafts still waiting from a reload stay offered: a reload is how a fixed
+                    // file is read again.
+                    Reload();
+                }
+
+                Refresh();
+            };
+            ui.SaveFirst += () =>
+            {
+                SaveChanges();
+                Reload();
+                Refresh();
+            };
+            ui.OpenProjectSet += anchor => OpenProjectSet(PromptSetStart.FindSets(), anchor);
+            ui.NewSet += CreateSet;
+            ui.KeepDraft += KeepDraft;
+            ui.DiscardDraft += DiscardDraft;
+
+            Refresh();
+        }
+
+        /// <summary>
+        /// Hands the tree everything it shows, and places the view for the tab chosen. Before
+        /// <c>CreateGUI</c>, nothing to do.
+        /// </summary>
+        private void Refresh()
         {
             // A waiting draft cannot be saved, only kept or discarded, so closing the window says so.
             saveChangesMessage = draftCategories.Count == 0 ? SaveMessage
                 : SaveMessage + $" {draftCategories.Count} draft(s) from before a reload are still waiting to be kept or discarded, and are lost when the window closes.";
+            hasUnsavedChanges = Unsaved;
 
-            DrawToolbar();
-            DrawWaitingDrafts();
-
-            if (!Ready)
+            if (ui == null)
             {
-                DrawStart();
                 return;
             }
 
-            foreach (string difference in PromptSetChecks.CompareWithProfile(set, profile))
+            var state = new PromptSetUi.State
             {
-                EditorGUILayout.HelpBox(difference + ". Nothing is changed here: fix the profile or the set file.", MessageType.Warning);
-            }
+                SetAsset = setAsset,
+                Profile = profile,
+                You = you,
+                SetLoaded = set != null,
+                LoadError = loadError,
+                SetSummary = set != null ? $"{AssetDatabase.GetAssetPath(setAsset)}: {set.Prompts.Count()} prompts in {set.Categories.Count} categories." : null,
+                FoundSets = foundSets ?? (foundSets = PromptSetStart.FindSets()),
+                KnownNames = KnownNames(),
+                Mode = mode,
+                WriteUnsaved = writeView != null && writeView.HasUnsavedChanges,
+                ProfileDifferences = set != null && profile != null ? PromptSetChecks.CompareWithProfile(set, profile) : Array.Empty<string>(),
+                Drafts = WaitingDrafts(),
+            };
 
-            // Only edits block the other modes: a waiting draft cannot be saved, and stays offered above.
-            if (mode != Mode.Write && writeView != null && writeView.HasUnsavedChanges)
+            ui.Show(state);
+            if (!state.Ready)
             {
-                EditorGUILayout.HelpBox("Save the prompts you changed in Write mode first.", MessageType.Info);
-                if (GUILayout.Button("Save", GUILayout.Width(80)))
-                {
-                    SaveChanges();
-                    Reload();
-                    hasUnsavedChanges = Unsaved;
-                }
-
                 return;
             }
 
             switch (mode)
             {
-                case Mode.Write:
-                    writeView.Draw(position);
-                    hasUnsavedChanges = Unsaved;
+                case PromptSetMode.Write:
+                    ui.Place(PromptSetMode.Write, writeView.Root);
                     break;
-                case Mode.Label:
-                    DrawLabel();
+                case PromptSetMode.Label:
+                    ui.Place(PromptSetMode.Label, LabelRoot());
                     break;
-                case Mode.Agreement:
-                    agreementView.Draw();
+                case PromptSetMode.Agreement:
+                    ui.Place(PromptSetMode.Agreement, agreementView.Root);
                     break;
             }
         }
 
-        private void DrawToolbar()
-        {
-            using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
-            {
-                ToolbarLabel("Set", SetTip, 26);
-                var chosenSet = (TextAsset)EditorGUILayout.ObjectField(setAsset, typeof(TextAsset), false, GUILayout.Width(140));
-                Tooltip(SetTip);
-                ToolbarLabel("Profile", ProfileTip, 44);
-                var chosenProfile = (AgentProfile)EditorGUILayout.ObjectField(profile, typeof(AgentProfile), false, GUILayout.Width(140));
-                Tooltip(ProfileTip);
-
-                if (chosenSet != setAsset)
-                {
-                    // What is drawn below the toolbar changes with the set, so this pass ends here. The
-                    // fields' widths leave Reload room at the window's 640 px minimum.
-                    OpenSet(chosenSet);
-                    GUIUtility.ExitGUI();
-                }
-                else if (chosenProfile != profile)
-                {
-                    // Only the checks depend on the profile, so nothing is reloaded and nothing unsaved is lost.
-                    profile = chosenProfile;
-                    RememberProfile();
-                }
-
-                ToolbarLabel("Your name", NameTip, 64);
-                EditorGUI.BeginChangeCheck();
-                you = EditorGUILayout.TextField(you, EditorStyles.toolbarTextField, GUILayout.Width(90));
-                Tooltip(NameTip);
-                if (GUILayout.Button(new GUIContent("▾", NamesTip), EditorStyles.toolbarDropDown, GUILayout.Width(18)))
-                {
-                    ShowKnownNames();
-                }
-
-                if (EditorGUI.EndChangeCheck())
-                {
-                    // Not a reload: that would drop what is being written. Label mode rebuilds its
-                    // queue for the new name on its own.
-                    prefs.Annotator = you;
-                }
-
-                GUILayout.FlexibleSpace();
-                if (GUILayout.Button(new GUIContent("Reload", ReloadTip), EditorStyles.toolbarButton))
-                {
-                    if (!hasUnsavedChanges || EditorUtility.DisplayDialog("Reload the prompt set?", "Your unsaved changes are lost.", "Reload", "Cancel"))
-                    {
-                        // Drafts still waiting from a reload stay offered: a reload is how a
-                        // fixed file is read again.
-                        Reload();
-                        hasUnsavedChanges = Unsaved;
-                    }
-                }
-            }
-
-            using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
-            {
-                using (new EditorGUI.DisabledScope(!Ready))
-                {
-                    var chosen = (Mode)GUILayout.Toolbar((int)mode, ModeTabs, EditorStyles.toolbarButton, GUILayout.Width(220));
-                    if (chosen != mode)
-                    {
-                        mode = chosen;
-                        GUI.FocusControl(null);
-                        RefreshLabels();
-                    }
-                }
-
-                GUILayout.FlexibleSpace();
-            }
-
-            EditorGUILayout.LabelField(Ready ? $"{ModeNames[(int)mode]}: {ModeDescriptions[(int)mode]}." : NotReadyReason(), EditorStyles.wordWrappedMiniLabel);
-        }
-
-        private string NotReadyReason()
-        {
-            string missing = set == null && profile == null ? "a set and a profile are"
-                : set == null ? "a set is"
-                : "a profile is";
-            return $"The tabs open once {missing} chosen: the steps are below.";
-        }
-
-        private static void ToolbarLabel(string text, string tooltip, float width)
-        {
-            GUILayout.Label(new GUIContent(text, tooltip), GUILayout.Width(width));
-        }
-
-        // An object or text field takes no tooltip of its own, so one is laid over the field just
-        // drawn. A label uses no mouse events, so clicks and drags still reach the field.
-        private static void Tooltip(string tooltip)
-        {
-            GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", tooltip));
-        }
-
-        /// <summary>
-        /// The window before a set and a profile are chosen: three numbered steps, the first with
-        /// a button that opens the project's own set and the profile beside it (#158).
-        /// </summary>
-        private void DrawStart()
-        {
-            startScroll = EditorGUILayout.BeginScrollView(startScroll);
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Start here", EditorStyles.largeLabel);
-            EditorGUILayout.LabelField("Three steps, once: the window remembers all three on this machine.", EditorStyles.wordWrappedMiniLabel);
-            EditorGUILayout.Space();
-
-            using (Step(1, set != null, "Choose the set",
-                       set != null
-                           ? $"{AssetDatabase.GetAssetPath(setAsset)}: {set.Prompts.Count()} prompts in {set.Categories.Count} categories."
-                           : "The set file, the agent.json beside a folder of prompts. It names the agent's actions and targets, and the categories."))
-            {
-                if (loadError != null)
-                {
-                    EditorGUILayout.HelpBox(loadError, MessageType.Error);
-                }
-
-                var sets = foundSets ?? (foundSets = PromptSetStart.FindSets());
-                using (new EditorGUILayout.HorizontalScope())
-                {
-                    using (new EditorGUI.DisabledScope(sets.Count == 0))
-                    {
-                        var open = new GUIContent("Open the project's evaluation set",
-                            sets.Count == 0 ? "There is no agent.json under Assets/ yet." : "Opens the set and the profile beside it, if there is one.");
-                        if (GUILayout.Button(open, GUILayout.Width(240)))
-                        {
-                            OpenProjectSet(sets);
-                            GUIUtility.ExitGUI();
-                        }
-                    }
-
-                    GUILayout.Label(
-                        sets.Count == 0 ? "No agent.json under Assets/ yet."
-                        : sets.Count == 1 ? sets[0]
-                        : $"{sets.Count} found: you choose which.",
-                        EditorStyles.miniLabel);
-                }
-
-                EditorGUILayout.LabelField("Or drag a set file into Set above, or start a new one from the profile:", EditorStyles.wordWrappedMiniLabel);
-                using (new EditorGUILayout.HorizontalScope())
-                {
-                    using (new EditorGUI.DisabledScope(profile == null))
-                    {
-                        if (GUILayout.Button(new GUIContent("New set from this profile…", "Writes a set file with the profile's actions and none. Add targets by hand."), GUILayout.Width(240)))
-                        {
-                            CreateSet();
-                            GUIUtility.ExitGUI();
-                        }
-                    }
-
-                    if (profile == null)
-                    {
-                        GUILayout.Label("Choose the profile first (step 2).", EditorStyles.miniLabel);
-                    }
-                }
-            }
-
-            using (Step(2, profile != null, "Choose the profile",
-                       profile != null
-                           ? $"{profile.name}: {profile.Actions.Count(a => a != null)} actions."
-                           : "The AgentProfile the set is measured against. Write offers its actions, and every prompt is checked against its few-shot examples (hard rule 4)."))
-            {
-                if (profile == null)
-                {
-                    EditorGUILayout.LabelField(
-                        set != null ? "Drag the agent's AgentProfile into Profile above." : "Opening the set picks the profile beside it, if there is one. Otherwise, drag yours into Profile above.",
-                        EditorStyles.wordWrappedMiniLabel);
-                }
-            }
-
-            bool named = PromptSet.ValidateAnnotator(you, out string nameProblem);
-            using (Step(3, named, "Type your name",
-                       named ? you + "." : "In Your name above. It goes on the prompts you write, and your answers in Label are saved under it."))
-            {
-                if (!named && !string.IsNullOrEmpty(you))
-                {
-                    EditorGUILayout.LabelField(nameProblem + ".", EditorStyles.wordWrappedMiniLabel);
-                }
-            }
-
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Then pick a tab", EditorStyles.boldLabel);
-            for (int i = 0; i < ModeNames.Length; i++)
-            {
-                EditorGUILayout.LabelField($"{ModeNames[i]}: {ModeDescriptions[i]}.", EditorStyles.wordWrappedLabel);
-            }
-
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("More in Documentation~/evaluation.md, in the Agenerela package.", EditorStyles.wordWrappedMiniLabel);
-            EditorGUILayout.EndScrollView();
-        }
-
-        private static GUI.Scope Step(int number, bool done, string title, string detail)
-        {
-            var scope = new StepScope();
-            GUILayout.Label(done ? "✓" : number + ".", EditorStyles.boldLabel, GUILayout.Width(22));
-            EditorGUILayout.BeginVertical();
-            EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
-            EditorGUILayout.LabelField(detail, EditorStyles.wordWrappedLabel);
-            return scope;
-        }
-
-        // One step: a number, then its text and controls in a column beside it. A GUI.Scope, so
-        // GUIUtility.ExitGUI inside a step leaves the layout groups alone.
-        private sealed class StepScope : GUI.Scope
-        {
-            internal StepScope()
-            {
-                EditorGUILayout.BeginHorizontal();
-            }
-
-            protected override void CloseScope()
-            {
-                EditorGUILayout.EndVertical();
-                EditorGUILayout.EndHorizontal();
-                EditorGUILayout.Space();
-            }
-        }
-
-        private void OpenProjectSet(IReadOnlyList<string> sets)
+        private void OpenProjectSet(IReadOnlyList<string> sets, VisualElement anchor)
         {
             if (sets.Count == 1)
             {
                 OpenSet(AssetDatabase.LoadAssetAtPath<TextAsset>(sets[0]));
+                Refresh();
                 return;
             }
 
-            // A division slash in place of each '/': GenericMenu would make each one a submenu.
-            var menu = new GenericMenu();
+            // A division slash in place of each '/', which a menu would make a submenu.
+            var menu = new GenericDropdownMenu();
             foreach (string path in sets)
             {
-                menu.AddItem(new GUIContent(path.Replace('/', '∕')), false, () => OpenSet(AssetDatabase.LoadAssetAtPath<TextAsset>(path)));
+                menu.AddItem(path.Replace('/', '∕'), false, () =>
+                {
+                    OpenSet(AssetDatabase.LoadAssetAtPath<TextAsset>(path));
+                    Refresh();
+                });
             }
 
-            menu.ShowAsContext();
+            menu.DropDown(anchor.worldBound, anchor, DropdownMenuSizeMode.Auto);
         }
 
         /// <summary>
@@ -596,7 +426,6 @@ namespace Agenerela.Editor.Evaluation
             }
 
             RememberProfile();
-            GUI.FocusControl(null);
         }
 
         /// <summary>For the set already open and no profile: the remembered one, or the one beside it.</summary>
@@ -619,12 +448,18 @@ namespace Agenerela.Editor.Evaluation
             return setAsset == null ? null : PromptSetStart.FindProfileBeside(AssetDatabase.GetAssetPath(setAsset), set);
         }
 
-        private void DrawLabel()
+        /// <summary>
+        /// Label mode's view, made for <see cref="you"/> when the name changes or the labels are read
+        /// again, or a note saying why there is none.
+        /// </summary>
+        private VisualElement LabelRoot()
         {
             if (!PromptSet.ValidateAnnotator(you, out string problem))
             {
-                EditorGUILayout.HelpBox(problem + ". Type it into Your name in the toolbar, or pick it from ▾.", MessageType.Info);
-                return;
+                labelView = null;
+                var box = new ProblemBox(problem + ". Type it into Your name in the toolbar, or pick it from ▾.");
+                box.style.marginTop = 8;
+                return box;
             }
 
             if (labelView == null || labelView.Annotator != you)
@@ -634,7 +469,7 @@ namespace Agenerela.Editor.Evaluation
                     LabelProgress.TotalFor(set, you));
             }
 
-            labelView.Draw();
+            return labelView.Root;
         }
 
         private bool Record(BlindPrompt prompt, LabelAnswer answer)
@@ -643,6 +478,7 @@ namespace Agenerela.Editor.Evaluation
             AssetDatabase.Refresh();
             labels = set.LoadLabels();
             agreementView = new PromptSetAgreementView(set, labels, AfterSettle);
+            writeView?.SetLabels(labels);
             return recorded;
         }
 
@@ -650,6 +486,7 @@ namespace Agenerela.Editor.Evaluation
         {
             AssetDatabase.Refresh();
             Reload();
+            Refresh();
         }
 
         private void Reload()
@@ -677,11 +514,16 @@ namespace Agenerela.Editor.Evaluation
 
             if (set != null)
             {
-                writeView = new PromptSetWriteView(set, () => profile, () => you, OnFilesWritten);
+                writeView = new PromptSetWriteView(set, () => profile, () => you, OnFilesWritten, OnEdited);
                 RefreshLabels();
             }
+            else
+            {
+                writeView = null;
+                agreementView = null;
+            }
 
-            Repaint();
+            Refresh();
         }
 
         private void RefreshLabels()
@@ -700,6 +542,12 @@ namespace Agenerela.Editor.Evaluation
         private void OnFilesWritten()
         {
             AssetDatabase.Refresh();
+            Refresh();
+        }
+
+        // An edit in Write mode: the unsaved flag, and the tabs' gate, follow it.
+        private void OnEdited()
+        {
             hasUnsavedChanges = Unsaved;
         }
 
@@ -719,9 +567,11 @@ namespace Agenerela.Editor.Evaluation
             foundSets = null;
             RememberProfile();
             Reload();
+            Refresh();
         }
 
-        private void ShowKnownNames()
+        /// <summary>Everyone who wrote or labelled a prompt in the set, for the ▾ beside Your name.</summary>
+        private IReadOnlyList<string> KnownNames()
         {
             var names = new SortedSet<string>(StringComparer.Ordinal);
             if (set != null)
@@ -734,23 +584,7 @@ namespace Agenerela.Editor.Evaluation
                 names.UnionWith(labels.Select(l => l.Annotator));
             }
 
-            var menu = new GenericMenu();
-            foreach (string name in names)
-            {
-                menu.AddItem(new GUIContent(name), name == you, () =>
-                {
-                    you = name;
-                    prefs.Annotator = you;
-                    GUI.FocusControl(null);
-                });
-            }
-
-            if (names.Count == 0)
-            {
-                menu.AddDisabledItem(new GUIContent("Nobody has written or labelled a prompt yet"));
-            }
-
-            menu.ShowAsContext();
+            return names.ToList();
         }
 
         private void RememberProfile()
