@@ -38,8 +38,13 @@ namespace Agenerela.Providers
         /// </summary>
         MalformedResponse,
 
-        // Extension point, not now: RateLimited, with a retry-after, when the first cloud
-        // provider arrives (Phase 6). Added at the end, so no kind already logged changes number.
+        /// <summary>
+        /// The server kept saying it is busy (HTTP 429 or 503) until the provider's
+        /// <see cref="RetryPolicy"/> ran out: its attempts, its time for pauses, or its deadline
+        /// (DR-026). Nothing is broken; the server, or the gateway in front of it, is serving
+        /// others. Added at the end, so no kind already logged changes number.
+        /// </summary>
+        RateLimited,
     }
 
     /// <summary>
@@ -79,5 +84,17 @@ namespace Agenerela.Providers
 
         /// <summary>The <see cref="ILLMProvider.Name"/> of the provider that failed, such as <c>"ollama"</c>.</summary>
         public string ProviderName { get; }
+
+        /// <summary>
+        /// How many times the request was sent again before it failed, as
+        /// <see cref="ProviderResult.Retries"/> counts them for a reply (DR-026); 0 when it was sent once.
+        /// </summary>
+        public int Retries { get; set; }
+
+        /// <summary>
+        /// The seconds before the last attempt began, failed attempts and pauses together, as
+        /// <see cref="ProviderResult.RetryWaitSeconds"/> counts them for a reply (DR-026); 0 when it was sent once.
+        /// </summary>
+        public float RetryWaitSeconds { get; set; }
     }
 }

@@ -144,6 +144,18 @@ namespace Agenerela
         /// <summary>The wait in the provider's queue, in seconds (<see cref="DecisionTelemetry.QueueWaitSeconds"/>).</summary>
         [JsonProperty("queueWaitSeconds")] public float QueueWaitSeconds;
 
+        /// <summary>
+        /// How many times the provider sent the request again because the server was busy
+        /// (<see cref="DecisionTelemetry.Retries"/>, DR-026); left out when it sent it once.
+        /// </summary>
+        [JsonProperty("retries")] public int? Retries;
+
+        /// <summary>
+        /// The seconds before the provider's last attempt: busy answers and pauses
+        /// (<see cref="DecisionTelemetry.RetryWaitSeconds"/>, DR-026); left out with no retry.
+        /// </summary>
+        [JsonProperty("retryWaitSeconds")] public float? RetryWaitSeconds;
+
         /// <summary>The wait in the agent's own backlog, in seconds (<see cref="DecisionTelemetry.BacklogWaitSeconds"/>).</summary>
         [JsonProperty("backlogWaitSeconds")] public float BacklogWaitSeconds;
 
@@ -301,6 +313,8 @@ namespace Agenerela
                 FrameworkVersion = Empty(telemetry.FrameworkVersion),
                 LatencySeconds = telemetry.LatencySeconds,
                 QueueWaitSeconds = telemetry.QueueWaitSeconds,
+                Retries = telemetry.Retries > 0 ? telemetry.Retries : (int?)null,
+                RetryWaitSeconds = telemetry.Retries > 0 ? telemetry.RetryWaitSeconds : (float?)null,
                 BacklogWaitSeconds = telemetry.BacklogWaitSeconds,
                 QueuedAhead = telemetry.QueuedAhead,
                 PromptTokens = telemetry.PromptTokens,

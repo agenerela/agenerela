@@ -14,7 +14,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: Agenerela::Agenerela.Providers.OllamaProviderConfig
   maxInFlight: 1
   Endpoint: http://127.0.0.1:11434
+  EndpointVariable: 
   Model: qwen3.5:2b
   ContextSize: 4096
   Temperature: 0
   TimeoutSeconds: 30
+  Retry:
+    MaxAttempts: 2
+    MaxWaitSeconds: 3
+    DeadlineSeconds: 0
+    BackoffSeconds: 0.5
+    MaxBackoffSeconds: 2
+  TokenAlternatives: 20
+  TokenProbabilities: 1
+  ApiKeyVariable: 

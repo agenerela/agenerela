@@ -568,6 +568,14 @@ gives after reading the results, in as many phases as it likes, each decision re
 memory, drops the whole round on cancellation with nothing remembered, and groups a round's
 decisions in the log as one `DecisionChain`. `Documentation~/decision-rounds.md`.
 
+**Images** are a provider kind of their own (#359; DR-024, DR-025): `IImageProvider` takes an
+`ImageRequest` (prompt, size, seed, open parameters) and returns an `ImageResult`, a PNG or a
+failure with its `ProviderErrorKind`, never an exception for the backend's failure.
+`ImagePromptBuilder` puts the game's style first and cleans a model's words;
+`CachedImageProvider` keeps pictures by the request's key, in `ImageFileCache` or the developer's
+own store. `ComfyUIProvider` is in its own assembly, `Agenerela.ComfyUI`. Nothing in a decision
+changes. `Documentation~/images.md`.
+
 An action may declare **parameters** (#266 item 2; DR-023, first step): closed choices beside its
 target, a set of words or a number list, in `ActionDefinition.Parameters`,
 `[AgentParameter]` and `[Argument]`. A call that offers one sends the paired schema with the
@@ -2727,6 +2735,142 @@ Images or audio as input to the language model. Music. Any default voice or art 
 this shape cannot carry (streaming audio for long stories, or pictures that need the previous
 picture as input). A measured finding that speech or pictures on the same card slow decisions
 enough to need arbitration in the framework.
+
+### DR-025 — The image provider: a result that carries its failure, a cache in front, ComfyUI in its own assembly
+
+**Status:** Decided by the framework tech lead, 24 November 2026, under DR-024 (#359). The lead
+asked for Painted Realm's rulers to get generated portraits and flags when a world is made, in
+the final presentation's demo in the week of 7 December, so the framework part comes first and
+the game uses it, rather than the other way round as DR-024 expected.
+
+**Context.** DR-024 settled that images are their own provider kind, with its interface and plain
+value types in the core and every real backend isolated. It left the shape open. Three things
+shape it now: the first backend is the team's ComfyUI server, which takes 10 to 26 s an image and
+fails in several ways a game must survive (the card is busy, the gate is down, a model is
+missing); a game asks for images at a loading screen and must start anyway; and a picture must
+come back the same for the same world, which generation alone does not promise.
+
+**Options considered**
+
+| Question | Option | Verdict |
+|---|---|---|
+| How a failure reaches the caller | Throw `ProviderException`, as `ILLMProvider` does | Rejected: every caller of an image wants a fallback picture, not an exception, and there is no `Agent` in between to catch it |
+| | **Return an `ImageResult` whose `Error` names a `ProviderErrorKind`** | **Chosen.** The same kinds as a decision's, so one vocabulary; only the caller's own cancellation throws |
+| Where the cache sits | Inside each provider | Rejected: every backend would write it again |
+| | **A wrapper, `CachedImageProvider`, that is itself an `IImageProvider`** | **Chosen.** A cached picture needs no backend at all, and a game swaps either half |
+| How ComfyUI is isolated | A version define in the core assembly | Rejected: it needs no package, so there is no define to key on |
+| | **Its own assembly, `Agenerela.ComfyUI`, in the package, referencing only the core and Newtonsoft** | **Chosen.** A game that never references it never compiles it into its code paths; CI's dependency check applies to it as to the core |
+| What ComfyUI is told to run | A graph built in C# | Rejected: tied to one model's nodes |
+| | **The developer's workflow, in the format `tools/comfyui/` already uses (an API export with named `params`)** | **Chosen.** The same file runs from `comfy.py` and from a game |
+
+**Decision.**
+
+- **`IImageProvider`** (core, `Runtime/Providers/`): `Name`, `Capabilities` (`ImageCapabilities`:
+  the size step, the largest side, whether a seed is honoured) and
+  `Awaitable<ImageResult> GenerateAsync(ImageRequest, CancellationToken)`.
+- **`ImageRequest`**: the prompt, a width and height, an optional seed, and optional
+  backend parameters as open `name → value` strings (DR-008: no enum of backends' settings).
+  `Key(provider)` is a SHA-256 of all of it and the provider's name, so a cache never hands one
+  backend's picture to another.
+- **`ImageResult`**: PNG bytes, the seed used, the seconds it took end to end and, where the
+  backend reports it, on the card; whether it came from a cache; or an `Error`, a
+  `ProviderErrorKind` and a message with no key in it. `GenerateAsync` throws only
+  `OperationCanceledException` for the caller's cancellation and `ArgumentException` for a request
+  that cannot be sent.
+- **`ImagePromptBuilder`**: the developer's style line first, trusted details next, then untrusted
+  text (a model's words, a generated backstory) capped and cleaned of prompt syntax and of
+  sentences that try to change the style, then exclusions. The cleaning is a floor, not a filter
+  that makes any text safe; the style always comes first so it cannot be displaced.
+- **`IImageCache`** and **`CachedImageProvider`**: a hit returns the stored bytes and never calls
+  the backend; only a success is stored. `ImageFileCache`, in `Runtime/Unity/`, keeps one PNG a
+  key in a folder the developer names, and `ImageTextures` turns bytes into a `Texture2D` there.
+  `ScriptedImageProvider` answers tests.
+- **`ComfyUIProvider`** (`Runtime/Providers/ComfyUI/`, assembly `Agenerela.ComfyUI`): posts the
+  workflow to `/prompt` with the request written into its `prompt`, `seed`, `width` and `height`
+  params and any `node.input` parameter, polls `/history`, downloads the first image from `/view`,
+  checks it is a PNG, and asks `/free` afterwards unless told not to. Settings come from code or a
+  `ComfyUIProviderConfig` asset, which stores the *names* of the environment variables
+  (`COMFY_URL`, `COMFY_API_TOKEN` by default), never the key. The key travels only in the
+  `Authorization` header and is redacted from every message.
+- **Swapping the backend** is writing another `IImageProvider`: one call, returning a failed
+  result instead of throwing. Nothing else in the framework or a game changes, and the cache key
+  changes with the provider's name, so old pictures are not mistaken for the new backend's.
+
+**Not in this decision**, left to #359: the image slot on the provider settings page (DR-013), a
+queue of its own (a game asks one at a time at a loading screen today), the decision log's image
+line, and an action-handler example. Images during play: on a card shared with the decision model,
+each image unloads the model, so a game asks only where no decision waits.
+
+**Consequences.**
+
+- The core gains five public types and a builder; nothing a decision sends changes.
+- A second assembly in the package. A game that uses ComfyUI references `Agenerela.ComfyUI`.
+- Painted Realm generates a portrait and a flag for each ruler behind its loading card, cached per
+  world seed and country, and falls back to its art pack on any failure.
+
+**What would change this.** A backend whose failures a game must tell apart beyond
+`ProviderErrorKind`'s kinds (a content refusal, say), which would add a kind at the end; or a
+second game that needs images during play, which would bring the queue forward.
+
+### DR-026 — A provider waits out a busy server, and two settings profiles choose how long
+
+**Status:** Accepted, 24 November 2026, by the framework tech lead at the lead's request: "one
+place that says development vs production". Built in the pull request that adds this record.
+
+**Context.** Since 23 November every session's model runs on the home server, behind a gate that
+puts one request on the card at a time. A request waits up to 120 s while another client holds the
+card, then gets **HTTP 503 with `Retry-After`** (`tools/ollama-server/AGENT_USAGE.md`, "On the home
+server"). `OllamaProvider` counted its 30 s timeout from sending and mapped any 5xx to
+`ServerError` with no retry, so a game or a live test failed whenever the card was busy, although
+nothing was broken. Any developer on a shared or cloud server meets the same thing; a cloud API
+answers 429. `ProviderErrorKind` already marked `RateLimited` as the extension point for it.
+
+The other half: what a developer wants while building (wait patiently for a shared server, its
+address and key from the environment) is the opposite of what a shipped game wants (fail in
+seconds, so the game's own fallback runs). The project had one Default Provider, so every demo
+either hard-coded one behaviour or built its providers in code from environment variables.
+
+**Decision.**
+
+| Question | Decision | Why |
+|---|---|---|
+| What is retried | HTTP 429 and 503 only (`RetryPolicy.IsBusy`). Never another 4xx, another 5xx, a timeout, a refused connection or the caller's cancellation | A busy answer is the one that sending again can change. A decision request changes nothing on the server, so a second send is safe |
+| The pause | `Retry-After` when the server gives one, seconds or an HTTP date; else exponential back-off with equal jitter | The server knows when it will be free; jitter stops clients turned away together from returning together |
+| The limits | `RetryPolicy`: `MaxAttempts`, `MaxWaitSeconds` (all pauses together) and `DeadlineSeconds` (the whole call). A pause that would pass either is never begun: the request fails at once as `RateLimited`, the new kind, added at the end of `ProviderErrorKind` and as `PipelineErrorKind.ProviderRateLimited` | A pause known to be too long only delays the game's fallback |
+| The timeout | `TimeoutSeconds` stays per attempt; the deadline bounds the call and cuts the last attempt's timeout to what is left | One number cannot be both "the model is slow" and "the queue is long" |
+| What is recorded | `Retries` and `RetryWaitSeconds` on `ProviderResult` and `ProviderException`, copied into `DecisionTelemetry` and the decision log; the wait is taken out of `LatencySeconds` | A request that waited for a busy server must never read as a slow model in a report or an A/B run |
+| Where it lives | A plain serializable class on `OllamaSettings` and `OllamaProviderConfig`, shaped so any provider can hold one | The next provider, a cloud one, needs the same thing |
+| The default | 3 sends within 10 s, no deadline | A local Ollama with a full queue answers 503 too; a few seconds of patience costs a player nothing |
+| Profiles | Two `AgenerelaProfile` assets, Development and Production, each naming a provider config, in `AgenerelaSettings` (Project Settings → Agenerela). Resolution becomes the agent's own config, then the active profile's, then the Default Provider | Unity-native (ScriptableObjects in `Resources`), no new dependency (hard rule 6), and a project with no profiles resolves as before |
+| Which is active | `AGENERELA_PROFILE` first, everywhere; then, in the Editor only, the page's **Editor Uses**; then the build: Development in the Editor and a development build, Production in a release build | The variable lets an agent or a CI run choose without editing an asset; a choice made in the Editor can never ship by mistake |
+| The server's address | `OllamaProviderConfig.EndpointVariable` names a variable such as `AGENERELA_OLLAMA_URL`. Not set, the config falls back to its `Endpoint` and sends no key | One Development config serves a teammate on the shared server and one without it, and a key never reaches an address it was not meant for. Keys stay in variables (hard rule 1) |
+
+**Not in this decision.** Retrying a 502 or a timeout (a restarting server, a slow model); a
+profile for more than the decision provider configs (guards, prompt options); more than two
+profiles; a retry for the refusal line's second request beyond what its provider does on its own.
+
+**Image providers in a profile, not yet.** DR-025's `ComfyUIProviderConfig` is a plain
+`ScriptableObject` in its own assembly, `Agenerela.ComfyUI`, which references the core; the core
+cannot name it, and there is no image-config base type in the core for a profile to hold. DR-025
+left the image slot on the settings page to #359. When #359 adds that base type, `AgenerelaProfile`
+gains an image provider field of it, resolved the same way. Until then a ComfyUI config already
+reads its server and key from environment variables, so Development and Production differ only in
+which asset a game passes. Its 503 is still a `ServerError` with no retry: giving `ComfyUIProvider`
+a `RetryPolicy` is a follow-up.
+
+**Consequences.**
+
+- An HTTP 429 that was `Rejected` and a 503 that was `ServerError` are now `RateLimited`, after the
+  retries. A game that switched on those kinds adds the new one.
+- The demo games each gain `Resources/AgenerelaSettings` with both profiles: Development on the
+  shared server, patient (180 s a try, up to 30 sends within 10 minutes); Production their previous
+  behaviour with `RetryPolicy.FailFast`. In the Editor they now ask the server in
+  `AGENERELA_OLLAMA_URL` when it is set, and a local Ollama when it is not.
+- `LatencySeconds` no longer includes a busy server's wait. Results from before and after agree for
+  every request that was sent once.
+
+**What would change this.** A gateway or a cloud API whose busy answer is another status; a
+measured case where retrying made a game worse than failing at once; a demo needing a third profile.
 
 ## Appendix A — carried measurements (source: test-ai-framework prototype, Aug 2026, RTX 4060 Laptop 8GB, qwen3.5 family via Ollama)
 

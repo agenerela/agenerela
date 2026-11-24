@@ -136,7 +136,10 @@ namespace LivingVale.Unity
             Routes = new QuestRoutes(Quests, tradeLink);
             Executor = new NpcActionExecutor(Trade, Quests, Routes);
             Driver = new ScriptedNpcDecisionDriver(executor: Executor);
-            ModelDriver = AgenerelaNpcDecisionDriver.ForOllama(ollamaModel, Executor, server: ollamaServer);
+            // No server set here: the active profile's, Resources/AgenerelaSettings (DR-026), a shared
+            // server that waits its turn in the Editor and a local Ollama that fails fast in a build.
+            var server = ollamaServer != null ? ollamaServer : global::Agenerela.AgenerelaSettings.ActiveProvider as global::Agenerela.Providers.OllamaProviderConfig;
+            ModelDriver = AgenerelaNpcDecisionDriver.ForOllama(ollamaModel, Executor, server: server);
             // The scripted replies are a provider of the same agents (#194, #198): one pipeline and
             // one memory per NPC, whichever answers (LV #23).
             Drivers = new NpcProviderSwitch(ModelDriver, new ScriptedReplies(Driver), driver);
@@ -156,7 +159,7 @@ namespace LivingVale.Unity
             // The server's own model list, warm-up and unload (#198), through the provider in use.
             Models = new ModelCycle(Coordinator, Drivers,
                 new ModelSelector(ollamaModels, Drivers.ModelLabel, new ProviderModelCatalog(() => Drivers.ModelProvider)),
-                model => AgenerelaNpcDecisionDriver.OllamaFor(model, ollamaServer));
+                model => AgenerelaNpcDecisionDriver.OllamaFor(model, server));
             Models.Finished += OnModelCycled;
             Models.NoticeChanged += OnModelCycled;
 

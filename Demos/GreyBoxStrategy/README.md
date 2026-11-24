@@ -242,6 +242,7 @@ unity command script eval -- --code 'return GreyBoxStrategy.Realm.DevTools.Run("
 | `faults off` | Clear every pretended fault |
 | `readouts` | Frames per second, UI scale, resolution, the last reply's latency and tokens, the last played decision's queue wait, requests in flight, and who holds the card |
 | `screenshot [name]` · `save-recording [name]` | Save to `Logs/Dev/`. A saved recording replays with `load-recording <path>` from the start menu |
+| `demo <timeline>` · `demo-status` · `demo-stop` · `demo-find <selector>` | Play a demo video's timeline over its replay, from the start menu: `demo sample` is `Screen/Demo/Timelines/sample.demo.txt`, the presentation video's sample. The cursor, callouts and titles are the game's own UI Toolkit; elements are found by selector, never by pixel. `-demo <timeline>` on the command line starts one too. `Screen/Demo/Editor/DemoCapture.cs` records one to an MP4 from an editor in the background (its comment has the Unity CLI lines, and why it is not Unity Recorder). The format is in `Screen/Replay/DemoScript.cs` |
 | `size <w>x<h>` | 1366x768, 1920x1080, 2560x1440 or 3840x2160, or 16:10 1920x1200 or 3840x2400 (the lead's display): the Game view in the editor, the window in a build |
 | `menu` | Show or hide the dev menu |
 

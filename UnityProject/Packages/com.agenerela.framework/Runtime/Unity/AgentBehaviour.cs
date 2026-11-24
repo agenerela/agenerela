@@ -47,7 +47,7 @@ namespace Agenerela
         [Tooltip("Who this agent is and what it can do. Ten guards can share one profile.")]
         public AgentProfile Profile;
 
-        [Tooltip("The provider this agent asks. Leave empty for the default in Project Settings → Agenerela.")]
+        [Tooltip("The provider this agent asks. Leave empty for the active profile's, or the default, in Project Settings → Agenerela.")]
         public ProviderConfig Provider;
 
         [Tooltip("Offer the Targetables around this agent as targets, using the settings below.")]

@@ -222,17 +222,27 @@ namespace GreyBoxStrategy.Realm
             }
         }
 
+        /// <summary>
+        /// A provider for <paramref name="model"/> on the active profile's server (Resources/AgenerelaSettings,
+        /// DR-026): in the Editor one that waits its turn on a shared, queued card, in a build one that
+        /// fails fast. With no profile, the server in <see cref="UrlVariable"/> with 90 s, as before.
+        /// </summary>
         public static ILLMProvider Provider(string model) => DevProvider.Wrap(new OllamaProvider(Settings(model)));
 
         // One set of settings for the game's provider and the warm-up's: a warm-up with another context size would load
         // the model a second time when the first decision came.
-        private static OllamaSettings Settings(string model) => new OllamaSettings
+        private static OllamaSettings Settings(string model)
         {
-            Endpoint = Environment.GetEnvironmentVariable(UrlVariable),
-            ApiKey = Key,
-            Model = model,
-            TimeoutSeconds = 90f,
-        };
+            var template = AgenerelaSettings.ActiveProvider as OllamaProviderConfig;
+            var settings = template != null ? template.ToSettings() : new OllamaSettings
+            {
+                Endpoint = Environment.GetEnvironmentVariable(UrlVariable),
+                ApiKey = Key,
+                TimeoutSeconds = 90f,
+            };
+            settings.Model = model;
+            return settings;
+        }
 
         private static string warming;
 

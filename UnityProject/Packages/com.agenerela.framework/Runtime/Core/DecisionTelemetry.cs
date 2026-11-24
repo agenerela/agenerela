@@ -6,7 +6,7 @@ namespace Agenerela{
     [System.Serializable]
     public sealed class DecisionTelemetry
     {
-        public float LatencySeconds; // Measured around the provider's request, from the send: its time alone, never the queue's (#89)
+        public float LatencySeconds; // Measured around the provider's request, from the send: its time alone, never the queue's (#89), nor the time before the attempt that answered when the provider sent it again (RetryWaitSeconds, DR-026)
         public int PromptTokens; // Come from provider response (when available)
         public int CompletionTokens; 
         public string ProviderName = string.Empty; // Checks provider name, such as Ollama 
@@ -56,6 +56,8 @@ namespace Agenerela{
         public bool OverBudget; // Whether the prompt went over PromptBudget after every trim: on PromptTokens once the provider reported them, else on PromptTokensEstimated; false with no budget (#151)
         public List<string> PromptTrims = new List<string>(); // Each trim step taken to fit the budget, in order, as "<PromptTrim>: <what>", such as "History: 1 exchange"; empty when none was (#151)
         public string ChainSource; // The Agent.Id of the agent whose decision was relayed to this one; null at a chain's start, with no chain, or when that agent has no id (#190, G4)
+        public int Retries; // How many times the provider sent the request again because the server answered busy (HTTP 429 or 503), under its RetryPolicy, from ProviderResult.Retries or, for a failure, ProviderException.Retries; 0 when the first send was the last (DR-026)
+        public float RetryWaitSeconds; // The seconds from the provider's first send to the start of its last attempt: the busy answers and the pauses between them. Never part of LatencySeconds or QueueWaitSeconds; 0 with no retry (DR-026)
 
         public DecisionTelemetry()
         {
@@ -109,6 +111,8 @@ namespace Agenerela{
             PromptBudget = 0;
             OverBudget = false;
             PromptTrims = new List<string>();
+            Retries = 0;
+            RetryWaitSeconds = 0f;
         }
     }
 
@@ -158,7 +162,10 @@ namespace Agenerela{
         BacklogFull,
 
         // Not sent: a DecisionRelay.RelayAsync past its chain's hop cap. Logs no warning (#190, G4)
-        ChainTooLong
+        ChainTooLong,
+
+        // The server kept answering busy until the provider's RetryPolicy ran out (ProviderErrorKind.RateLimited, DR-026)
+        ProviderRateLimited
     }
 
     /// <summary>What a <see cref="PipelineErrorKind"/> says about where a failure came from.</summary>
@@ -166,7 +173,7 @@ namespace Agenerela{
     {
         /// <summary>
         /// True when the failure is the provider's, not this decision's: no server, no model, no
-        /// reply in time, a refusal, a server error, an envelope that could not be read, any other
+        /// reply in time, a refusal, a server error, a server busy past its retries, an envelope that could not be read, any other
         /// provider failure, or a background request held back while the provider is down
         /// (<see cref="PipelineErrorKind.ProviderDown"/>). A game shows these as "the model is not
         /// answering", once, rather than as one agent's mistake.
@@ -190,6 +197,7 @@ namespace Agenerela{
                 case PipelineErrorKind.ProviderMalformedResponse:
                 case PipelineErrorKind.ProviderFailed:
                 case PipelineErrorKind.ProviderDown:
+                case PipelineErrorKind.ProviderRateLimited:
                     return true;
                 default:
                     return false;
