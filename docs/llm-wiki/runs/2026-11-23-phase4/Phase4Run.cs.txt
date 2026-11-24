@@ -4,7 +4,7 @@
 // tools/live-runs/model-sweep/ModelSweepRun.cs.txt.
 //
 // Environment:
-//   AGENERELA_P4_RUN        gate | idle | list | grounding | models
+//   AGENERELA_P4_RUN        gate | idle | list | grounding | models | rename | targetrule | history
 //   AGENERELA_OLLAMA_URL / AGENERELA_OLLAMA_API_KEY  the server (LiveOllama)
 //   AGENERELA_OLLAMA_MODEL  arm model (qwen3.5:2b when unset); "models" uses 2b then 4b
 //   AGENERELA_P4_LOW        the lower grounding threshold for "grounding" (0.6 when unset)
@@ -80,8 +80,24 @@ namespace Agenerela.Tests
                     b = new EvalArm("qwen3.5-4b", Config("p4-B", "qwen3.5:4b"), new DecideOptions());
                     order = EvalArmOrder.Sequential;
                     break;
+                case "rename":
+                    // DR-008: the free-text field as `statement` (the default) against the prototype's `dialogue`.
+                    a = new EvalArm("statement", Config("p4-A", model), new DecideOptions());
+                    b = new EvalArm("dialogue", Config("p4-B", model), new DecideOptions { StatementFieldName = DecisionSchema.DialogueFieldName });
+                    break;
+                case "targetrule":
+                    // #107: probabilities and the grounding guard (the default) against no probabilities, which sends the one-line target rule.
+                    a = new EvalArm("probabilities", Config("p4-A", model), new DecideOptions());
+                    var noProbs = (OllamaProviderConfig)Config("p4-B", model);
+                    noProbs.TokenProbabilities = false;
+                    b = new EvalArm("target-rule", noProbs, new DecideOptions());
+                    break;
+                case "history":
+                    a = new EvalArm("history", Config("p4-A", model), new DecideOptions());
+                    b = new EvalArm("no-history", Config("p4-B", model), new DecideOptions()) { IgnoreHistory = true };
+                    break;
                 default:
-                    Assert.Fail($"AGENERELA_P4_RUN '{run}' is not one of gate, idle, list, grounding, models");
+                    Assert.Fail($"AGENERELA_P4_RUN '{run}' is not one of gate, idle, list, grounding, models, rename, targetrule, history");
                     return;
             }
 

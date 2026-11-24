@@ -1,6 +1,6 @@
 # 005: the economy's live check, E3
 
-Status: open, for the Phase 4 runs session on the home server (tech lead, 23 November 2026)
+Status: done (results.md)
 
 **Why.** With `Economy` on (manpower, terrain yields, tax levels, market, barracks, farm), do model courts play it
 legally, what does each persona buy over a game and when (the merchant's markets against the warmonger's barracks,
