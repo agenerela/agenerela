@@ -28,47 +28,58 @@
   "targets": [
     {
       "id": "bridge",
-      "description": "The wooden bridge over the stream"
+      "description": "The wooden bridge over the stream",
+      "category": "place"
     },
     {
       "id": "village_gate",
-      "description": "The main gate in the village wall"
+      "description": "The main gate in the village wall",
+      "category": "place"
     },
     {
       "id": "campfire",
-      "description": "The campfire in the guards' camp"
+      "description": "The campfire in the guards' camp",
+      "category": "place"
     },
     {
       "id": "well",
-      "description": "The stone well in the village square"
+      "description": "The stone well in the village square",
+      "category": "place"
     },
     {
       "id": "north_tower",
-      "description": "The tower on the north side of the village"
+      "description": "The tower on the north side of the village",
+      "category": "place"
     },
     {
       "id": "market",
-      "description": "The open-air market where villagers trade"
+      "description": "The open-air market where villagers trade",
+      "category": "place"
     },
     {
       "id": "docks",
-      "description": "The docks where supply boats unload"
+      "description": "The docks where supply boats unload",
+      "category": "place"
     },
     {
       "id": "shelter",
-      "description": "The shelter where villagers take cover"
+      "description": "The shelter where villagers take cover",
+      "category": "place"
     },
     {
       "id": "eastern_road",
-      "description": "The road leaving the village to the east"
+      "description": "The road leaving the village to the east",
+      "category": "place"
     },
     {
       "id": "wolf",
-      "description": "A wolf that came out of the woods"
+      "description": "A wolf that came out of the woods",
+      "category": "creature"
     },
     {
       "id": "locked_cave",
-      "description": "A cave whose entrance is locked"
+      "description": "A cave whose entrance is locked",
+      "category": "place"
     }
   ],
   "categories": [

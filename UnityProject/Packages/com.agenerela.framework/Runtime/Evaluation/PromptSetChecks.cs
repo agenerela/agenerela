@@ -67,7 +67,9 @@ namespace Agenerela.Evaluation
         /// <summary>
         /// Where <paramref name="profile"/> and the actions <paramref name="set"/> declares disagree:
         /// an action only one of them has, or one whose target differs: required, optional or never taken. <c>none</c> is in
-        /// every set and no profile. The window shows these and never fixes them.
+        /// every set and no profile. Also a label whose action the profile restricts to
+        /// <see cref="ActionDefinition.TargetCategories"/> that its target's <see cref="DeclaredTarget.Category"/>
+        /// is not among (#151). The window shows these and never fixes them.
         /// </summary>
         public static IReadOnlyList<string> CompareWithProfile(PromptSet set, AgentProfile profile)
         {
@@ -100,6 +102,30 @@ namespace Agenerela.Evaluation
                 if (declared.Id != ActionRegistry.None && profileActions.All(a => a.Id != declared.Id))
                 {
                     differences.Add($"The set declares '{declared.Id}', which the profile does not have");
+                }
+            }
+
+            // Categories (DR-020, #151): a label must stay a pair the agent may give, or a run would
+            // score the model against an answer the schema and the category guard forbid.
+            foreach (var prompt in set.Prompts)
+            {
+                var action = profileActions.FirstOrDefault(a => a.Id == prompt.ExpectedAction);
+                if (action == null || !action.DeclaresTargetCategories || prompt.ExpectedTarget == null)
+                {
+                    continue;
+                }
+
+                foreach (string id in prompt.ExpectedTarget.Ids)
+                {
+                    var target = set.Targets.FirstOrDefault(t => t != null && t.Id == id);
+                    if (id == TargetRegistry.NoTarget || target == null || action.AcceptsCategory(target.Category))
+                    {
+                        continue;
+                    }
+
+                    differences.Add($"{prompt.Id} expects {action.Id}/{id}, but the profile's '{action.Id}' takes "
+                                  + $"{string.Join(" or ", action.TargetCategories.Where(c => !string.IsNullOrWhiteSpace(c)))} "
+                                  + $"and the set puts '{id}' in {(string.IsNullOrWhiteSpace(target.Category) ? "no category" : target.Category)}");
                 }
             }
 

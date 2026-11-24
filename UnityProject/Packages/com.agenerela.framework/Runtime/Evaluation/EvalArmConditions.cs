@@ -91,6 +91,12 @@ namespace Agenerela.Evaluation
         /// </summary>
         [JsonProperty("standingLinesAsCallObservations")] public bool StandingLinesAsCallObservations;
         /// <summary>
+        /// Whether the arm told the targets as <see cref="TargetSummarySource"/>'s summary, one line
+        /// per category, instead of a line per target (<see cref="EvalArm.SummariseTargets"/>, §2.8,
+        /// #151); false in a report written before it existed.
+        /// </summary>
+        [JsonProperty("summariseTargets")] public bool SummariseTargets;
+        /// <summary>
         /// Whether the arm ignored each prompt's history (<see cref="EvalArm.IgnoreHistory"/>, #151);
         /// false in a report written before it existed, which staged it.
         /// </summary>

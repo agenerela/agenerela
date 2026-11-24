@@ -83,6 +83,17 @@ namespace Agenerela.Evaluation
         public bool StandingLinesAsCallObservations { get; set; }
 
         /// <summary>
+        /// Whether the arm tells the set's targets as <see cref="TargetSummarySource"/>'s summary, one
+        /// line per category naming each target's id with its description, instead of the templated
+        /// <c>id: description.</c> line per target; false unless set (build plan §2.8, #151). The
+        /// summary takes the templated lines' place among the standing lines, after the state's, and
+        /// is built without a model call, so it is the same on every prompt and costs no latency. The
+        /// categories are the ones the arm's agents register, the set's or the arm's own
+        /// <see cref="Legality"/>'s, with its extra targets in their groups.
+        /// </summary>
+        public bool SummariseTargets { get; set; }
+
+        /// <summary>
         /// Whether the arm ignores each prompt's <c>history</c> (#147, #151): false unless set, which
         /// puts a multi-turn prompt's earlier turns in the agent's memory before its stimulus is asked.
         /// On, every prompt is asked alone, as a prompt without history always is, and scored against
