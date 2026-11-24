@@ -373,6 +373,7 @@ namespace Agenerela.Tests
         [TestCase(ProviderErrorKind.Rejected, PipelineErrorKind.ProviderRejected, false)]
         [TestCase(ProviderErrorKind.ServerError, PipelineErrorKind.ProviderServerError, false)]
         [TestCase(ProviderErrorKind.MalformedResponse, PipelineErrorKind.ProviderMalformedResponse, false)]
+        [TestCase(ProviderErrorKind.RateLimited, PipelineErrorKind.ProviderRateLimited, false)]
         public async Task AProviderExceptionsKindIsOnTheResult(ProviderErrorKind kind, PipelineErrorKind expected, bool failsImmediately)
         {
             var fake = new FakeProvider(GoToTheTower) { FailsImmediately = failsImmediately };

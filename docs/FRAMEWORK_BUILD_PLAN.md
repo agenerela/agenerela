@@ -2812,6 +2812,66 @@ each image unloads the model, so a game asks only where no decision waits.
 `ProviderErrorKind`'s kinds (a content refusal, say), which would add a kind at the end; or a
 second game that needs images during play, which would bring the queue forward.
 
+### DR-026 — A provider waits out a busy server, and two settings profiles choose how long
+
+**Status:** Accepted, 24 November 2026, by the framework tech lead at the lead's request: "one
+place that says development vs production". Built in the pull request that adds this record.
+
+**Context.** Since 23 November every session's model runs on the home server, behind a gate that
+puts one request on the card at a time. A request waits up to 120 s while another client holds the
+card, then gets **HTTP 503 with `Retry-After`** (`tools/ollama-server/AGENT_USAGE.md`, "On the home
+server"). `OllamaProvider` counted its 30 s timeout from sending and mapped any 5xx to
+`ServerError` with no retry, so a game or a live test failed whenever the card was busy, although
+nothing was broken. Any developer on a shared or cloud server meets the same thing; a cloud API
+answers 429. `ProviderErrorKind` already marked `RateLimited` as the extension point for it.
+
+The other half: what a developer wants while building (wait patiently for a shared server, its
+address and key from the environment) is the opposite of what a shipped game wants (fail in
+seconds, so the game's own fallback runs). The project had one Default Provider, so every demo
+either hard-coded one behaviour or built its providers in code from environment variables.
+
+**Decision.**
+
+| Question | Decision | Why |
+|---|---|---|
+| What is retried | HTTP 429 and 503 only (`RetryPolicy.IsBusy`). Never another 4xx, another 5xx, a timeout, a refused connection or the caller's cancellation | A busy answer is the one that sending again can change. A decision request changes nothing on the server, so a second send is safe |
+| The pause | `Retry-After` when the server gives one, seconds or an HTTP date; else exponential back-off with equal jitter | The server knows when it will be free; jitter stops clients turned away together from returning together |
+| The limits | `RetryPolicy`: `MaxAttempts`, `MaxWaitSeconds` (all pauses together) and `DeadlineSeconds` (the whole call). A pause that would pass either is never begun: the request fails at once as `RateLimited`, the new kind, added at the end of `ProviderErrorKind` and as `PipelineErrorKind.ProviderRateLimited` | A pause known to be too long only delays the game's fallback |
+| The timeout | `TimeoutSeconds` stays per attempt; the deadline bounds the call and cuts the last attempt's timeout to what is left | One number cannot be both "the model is slow" and "the queue is long" |
+| What is recorded | `Retries` and `RetryWaitSeconds` on `ProviderResult` and `ProviderException`, copied into `DecisionTelemetry` and the decision log; the wait is taken out of `LatencySeconds` | A request that waited for a busy server must never read as a slow model in a report or an A/B run |
+| Where it lives | A plain serializable class on `OllamaSettings` and `OllamaProviderConfig`, shaped so any provider can hold one | The next provider, a cloud one, needs the same thing |
+| The default | 3 sends within 10 s, no deadline | A local Ollama with a full queue answers 503 too; a few seconds of patience costs a player nothing |
+| Profiles | Two `AgenerelaProfile` assets, Development and Production, each naming a provider config, in `AgenerelaSettings` (Project Settings → Agenerela). Resolution becomes the agent's own config, then the active profile's, then the Default Provider | Unity-native (ScriptableObjects in `Resources`), no new dependency (hard rule 6), and a project with no profiles resolves as before |
+| Which is active | `AGENERELA_PROFILE` first, everywhere; then, in the Editor only, the page's **Editor Uses**; then the build: Development in the Editor and a development build, Production in a release build | The variable lets an agent or a CI run choose without editing an asset; a choice made in the Editor can never ship by mistake |
+| The server's address | `OllamaProviderConfig.EndpointVariable` names a variable such as `AGENERELA_OLLAMA_URL`. Not set, the config falls back to its `Endpoint` and sends no key | One Development config serves a teammate on the shared server and one without it, and a key never reaches an address it was not meant for. Keys stay in variables (hard rule 1) |
+
+**Not in this decision.** Retrying a 502 or a timeout (a restarting server, a slow model); a
+profile for more than the decision provider configs (guards, prompt options); more than two
+profiles; a retry for the refusal line's second request beyond what its provider does on its own.
+
+**Image providers in a profile, not yet.** DR-025's `ComfyUIProviderConfig` is a plain
+`ScriptableObject` in its own assembly, `Agenerela.ComfyUI`, which references the core; the core
+cannot name it, and there is no image-config base type in the core for a profile to hold. DR-025
+left the image slot on the settings page to #359. When #359 adds that base type, `AgenerelaProfile`
+gains an image provider field of it, resolved the same way. Until then a ComfyUI config already
+reads its server and key from environment variables, so Development and Production differ only in
+which asset a game passes. Its 503 is still a `ServerError` with no retry: giving `ComfyUIProvider`
+a `RetryPolicy` is a follow-up.
+
+**Consequences.**
+
+- An HTTP 429 that was `Rejected` and a 503 that was `ServerError` are now `RateLimited`, after the
+  retries. A game that switched on those kinds adds the new one.
+- The demo games each gain `Resources/AgenerelaSettings` with both profiles: Development on the
+  shared server, patient (180 s a try, up to 30 sends within 10 minutes); Production their previous
+  behaviour with `RetryPolicy.FailFast`. In the Editor they now ask the server in
+  `AGENERELA_OLLAMA_URL` when it is set, and a local Ollama when it is not.
+- `LatencySeconds` no longer includes a busy server's wait. Results from before and after agree for
+  every request that was sent once.
+
+**What would change this.** A gateway or a cloud API whose busy answer is another status; a
+measured case where retrying made a game worse than failing at once; a demo needing a third profile.
+
 ## Appendix A — carried measurements (source: test-ai-framework prototype, Aug 2026, RTX 4060 Laptop 8GB, qwen3.5 family via Ollama)
 
 | Finding | Numbers |

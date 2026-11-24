@@ -48,6 +48,13 @@ namespace Agenerela.Providers
     /// envelope.
     /// </para>
     /// <para>
+    /// A server that answers busy, HTTP 429 or 503, gets the request again under
+    /// <see cref="OllamaSettings.Retry"/>, after the pause its <c>Retry-After</c> asks for or a
+    /// jittered back-off, and <see cref="ProviderErrorKind.RateLimited"/> when the policy runs out
+    /// (DR-026). The result, or the exception, says how many retries there were and how long they
+    /// took (<see cref="ProviderResult.Retries"/>, <see cref="ProviderResult.RetryWaitSeconds"/>).
+    /// </para>
+    /// <para>
     /// It manages its server's models too (<see cref="IModelLifecycle"/>, DR-019): the models
     /// installed, from <c>/api/tags</c>; a warm-up that loads its model, an <c>/api/generate</c>
     /// with no prompt and the context size its decisions send; and an unload, <c>keep_alive: 0</c>, which waits until
@@ -74,6 +81,8 @@ namespace Agenerela.Providers
         private readonly int tokenAlternatives;
         private readonly bool tokenProbabilities;
         private readonly float timeoutSeconds;
+        private readonly RetryPolicy retry;
+        private readonly System.Random jitter = new System.Random();
         private readonly bool sendsKey;
         private readonly JsonSchemaSerializer serializer = new JsonSchemaSerializer();
 
@@ -136,6 +145,13 @@ namespace Agenerela.Providers
                     $"OllamaSettings.TimeoutSeconds is {settings.TimeoutSeconds}. It must be above 0.", nameof(settings));
             }
 
+            var policy = settings.Retry ?? new RetryPolicy();
+            string problem = policy.Problem();
+            if (problem != null)
+            {
+                throw new ArgumentException("OllamaSettings.Retry: " + problem, nameof(settings));
+            }
+
             // The key goes into a header, so a line break in it could add a header of its own.
             // The key itself is never named (hard rule 1).
             string apiKey = (settings.ApiKey ?? "").Trim();
@@ -168,6 +184,7 @@ namespace Agenerela.Providers
             tokenAlternatives = settings.TokenAlternatives;
             tokenProbabilities = settings.TokenProbabilities;
             timeoutSeconds = settings.TimeoutSeconds;
+            retry = policy.Copy();
 
             // The provider's own timeout runs on a token, so it can be told apart from the caller's
             // cancellation; the client's would throw the same exception for both.
@@ -251,16 +268,130 @@ namespace Agenerela.Providers
 
         private async Awaitable<ProviderResult> Send(string body, CancellationToken ct)
         {
+            var exchanged = await Exchange(HttpMethod.Post, chatUri, body, null, ct);
+            var result = Read(exchanged.Text, exchanged.Seconds);
+            result.Retries = exchanged.Retries;
+            result.RetryWaitSeconds = exchanged.RetryWaitSeconds;
+            return result;
+        }
+
+        // What one exchange ended with: the reply's text, the seconds its own attempt took, and
+        // the retries before it.
+        private struct Exchanged
+        {
+            public string Text;
+            public float Seconds;
+            public int Retries;
+            public float RetryWaitSeconds;
+        }
+
+        // One attempt's answer, any status.
+        private struct Answer
+        {
+            public int Status;
+            public string Text;
+            public float Seconds;
+            public float? RetryAfter;
+        }
+
+        // The pause between attempts. A seam for EditMode tests, which record the pauses asked for
+        // rather than wait them out.
+        internal Func<TimeSpan, CancellationToken, System.Threading.Tasks.Task> Pause =
+            (wait, ct) => System.Threading.Tasks.Task.Delay(wait, ct);
+
+        // One request, sent again under the retry policy while the server answers busy (DR-026).
+        // Path is null for /api/chat, the decision, and names the endpoint otherwise.
+        private async Awaitable<Exchanged> Exchange(HttpMethod method, Uri uri, string body, string path, CancellationToken ct)
+        {
+            var whole = Stopwatch.StartNew();
+            int retries = 0;
+            float paused = 0f;
+            while (true)
+            {
+                float before = retries == 0 ? 0f : (float)whole.Elapsed.TotalSeconds;
+                float attemptTimeout = timeoutSeconds;
+                bool deadlineCuts = false;
+                if (retry.DeadlineSeconds > 0f && retry.DeadlineSeconds - before < attemptTimeout)
+                {
+                    attemptTimeout = Math.Max(retry.DeadlineSeconds - before, 0.001f);
+                    deadlineCuts = true;
+                }
+
+                Answer answer;
+                try
+                {
+                    answer = await Attempt(method, uri, body, path, attemptTimeout, deadlineCuts, ct);
+                }
+                catch (ProviderException e)
+                {
+                    throw Stamped(e, retries, before);
+                }
+
+                if (answer.Status >= 200 && answer.Status <= 299)
+                {
+                    return new Exchanged { Text = answer.Text, Seconds = answer.Seconds, Retries = retries, RetryWaitSeconds = before };
+                }
+
+                if (!RetryPolicy.IsBusy(answer.Status))
+                {
+                    throw Stamped(Refusal(answer.Status, answer.Text), retries, before);
+                }
+
+                int sends = retries + 1;
+                float wait = answer.RetryAfter ?? retry.BackoffFor(sends, NextUnit());
+                string stop = null;
+                if (sends >= retry.MaxAttempts)
+                {
+                    stop = retry.MaxAttempts == 1
+                        ? "RetryPolicy.MaxAttempts is 1, so it was not sent again."
+                        : $"It was sent {sends} times, RetryPolicy.MaxAttempts.";
+                }
+                else if (paused + wait > retry.MaxWaitSeconds)
+                {
+                    stop = $"The next pause, {Seconds(wait)} s, would pass RetryPolicy.MaxWaitSeconds, {Seconds(retry.MaxWaitSeconds)} s " +
+                           $"({Seconds(paused)} s paused already).";
+                }
+                else if (retry.DeadlineSeconds > 0f && whole.Elapsed.TotalSeconds + wait >= retry.DeadlineSeconds)
+                {
+                    stop = $"The next pause, {Seconds(wait)} s, would end past RetryPolicy.DeadlineSeconds, " +
+                           $"{Seconds(retry.DeadlineSeconds)} s from the first send.";
+                }
+
+                if (stop != null)
+                {
+                    throw Stamped(Busy(answer, path, sends, (float)whole.Elapsed.TotalSeconds, stop), retries, before);
+                }
+
+                try
+                {
+                    await Pause(TimeSpan.FromSeconds(wait), ct);
+                }
+                catch (Exception e) when (ct.IsCancellationRequested)
+                {
+                    throw new OperationCanceledException("The caller cancelled the request to Ollama while it waited to send it again.", e, ct);
+                }
+
+                paused += wait;
+                retries++;
+            }
+        }
+
+        // One send, with its own timeout. Any status comes back; only the transport's failures throw.
+        private async Awaitable<Answer> Attempt(HttpMethod method, Uri uri, string body, string path, float seconds,
+                                                bool deadlineCuts, CancellationToken ct)
+        {
             using (var timeout = new CancellationTokenSource())
             using (var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, timeout.Token))
-            using (var message = new HttpRequestMessage(HttpMethod.Post, chatUri))
+            using (var message = new HttpRequestMessage(method, uri))
             {
-                message.Content = new StringContent(body, Utf8, "application/json");
-                timeout.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
+                if (body != null)
+                {
+                    message.Content = new StringContent(body, Utf8, "application/json");
+                }
 
+                timeout.CancelAfter(TimeSpan.FromSeconds(seconds));
                 var clock = Stopwatch.StartNew();
-                int status;
-                string text;
+                var answer = new Answer();
 
                 // No ConfigureAwait(false) on these awaits: each resumes on the caller's context,
                 // the main thread, so the result reaches Agent there.
@@ -268,41 +399,93 @@ namespace Agenerela.Providers
                 {
                     using (var response = await client.SendAsync(message, linked.Token))
                     {
-                        status = (int)response.StatusCode;
-                        text = Utf8.GetString(await response.Content.ReadAsByteArrayAsync());
+                        answer.Status = (int)response.StatusCode;
+                        answer.Text = Utf8.GetString(await response.Content.ReadAsByteArrayAsync());
+                        if (RetryPolicy.IsBusy(answer.Status))
+                        {
+                            answer.RetryAfter = RetryAfter(response);
+                        }
                     }
                 }
                 catch (Exception e) when (ct.IsCancellationRequested)
                 {
                     // An aborted request can surface as some other exception; it is still the
                     // caller's cancellation.
-                    throw new OperationCanceledException("The caller cancelled the request to Ollama.", e, ct);
+                    throw new OperationCanceledException(path == null
+                        ? "The caller cancelled the request to Ollama."
+                        : $"The caller cancelled the request to Ollama's {path}.", e, ct);
                 }
                 catch (Exception e) when (timeout.IsCancellationRequested)
                 {
-                    throw new ProviderException(ProviderErrorKind.Timeout, Name,
-                        $"Ollama at {endpoint} sent no reply within {Seconds(timeoutSeconds)} s. A model loading " +
-                        "for the first time can take that long; raise OllamaSettings.TimeoutSeconds if it keeps happening.",
-                        e);
+                    string to = path == null ? "" : " to " + path;
+                    if (deadlineCuts)
+                    {
+                        throw new ProviderException(ProviderErrorKind.Timeout, Name,
+                            $"Ollama at {endpoint} sent no reply{to} before RetryPolicy.DeadlineSeconds, " +
+                            $"{Seconds(retry.DeadlineSeconds)} s from the first send, ran out.", e);
+                    }
+
+                    throw new ProviderException(ProviderErrorKind.Timeout, Name, path == null
+                        ? $"Ollama at {endpoint} sent no reply within {Seconds(timeoutSeconds)} s. A model loading " +
+                          "for the first time can take that long; raise OllamaSettings.TimeoutSeconds if it keeps happening."
+                        : $"Ollama at {endpoint} sent no reply{to} within {Seconds(timeoutSeconds)} s.", e);
                 }
                 catch (Exception e) when (e is HttpRequestException || e is IOException || e is System.Net.WebException
                                           || e is System.Net.Sockets.SocketException)
                 {
                     throw new ProviderException(ProviderErrorKind.Unreachable, Name,
-                        $"Nothing answered at {endpoint}. Is Ollama running there? Start the Ollama app or `ollama serve`. " +
+                        $"Nothing answered at {endpoint}. Is Ollama running there? " +
+                        (path == null ? "Start the Ollama app or `ollama serve`. " : "") +
                         $"({Excerpt(FirstLine(e.GetBaseException().Message))})",
                         e);
                 }
 
-                float latency = (float)clock.Elapsed.TotalSeconds;
-
-                if (status < 200 || status > 299)
-                {
-                    throw Refusal(status, text);
-                }
-
-                return Read(text, latency);
+                answer.Seconds = (float)clock.Elapsed.TotalSeconds;
+                return answer;
             }
+        }
+
+        // What a busy answer's Retry-After asks for, parsed by HttpClient or, failing that, as text.
+        private static float? RetryAfter(HttpResponseMessage response)
+        {
+            var now = DateTimeOffset.UtcNow;
+            float? parsed = RetryPolicy.RetryAfterSeconds(response.Headers.RetryAfter, now);
+            if (parsed.HasValue)
+            {
+                return parsed;
+            }
+
+            return response.Headers.TryGetValues("Retry-After", out var values)
+                ? RetryPolicy.RetryAfterSeconds(string.Join(",", values), now)
+                : null;
+        }
+
+        // A number from 0 to 1 for the back-off's jitter. Locked: requests may run at once.
+        private double NextUnit()
+        {
+            lock (jitter)
+            {
+                return jitter.NextDouble();
+            }
+        }
+
+        // A server still busy when the policy ran out (DR-026).
+        private ProviderException Busy(Answer answer, string path, int sends, float elapsed, string stop)
+        {
+            string asked = answer.RetryAfter.HasValue ? $", asking to wait {Seconds(answer.RetryAfter.Value)} s" : "";
+            string after = sends > 1 ? $" after {sends} attempts over {Seconds(elapsed)} s" : "";
+            string at = path == null ? "" : " at " + path;
+            return new ProviderException(ProviderErrorKind.RateLimited, Name,
+                $"Ollama at {endpoint} is busy{at}: HTTP {answer.Status}{asked}{after}. {stop} " +
+                "A shared server is serving others; raise OllamaSettings.Retry's limits to wait longer. " +
+                $"It said: {Excerpt(ErrorField(answer.Text) ?? answer.Text)}");
+        }
+
+        private static ProviderException Stamped(ProviderException e, int retries, float waited)
+        {
+            e.Retries = retries;
+            e.RetryWaitSeconds = retries > 0 ? waited : 0f;
+            return e;
         }
 
         // ---- Model lifecycle (DR-019) -----------------------------------------------------------
@@ -499,56 +682,13 @@ namespace Agenerela.Providers
             }
         }
 
-        // One short request to another endpoint than /api/chat, failing as Send does.
+        // One short request to another endpoint than /api/chat, failing and retrying as Send does.
         private async Awaitable<string> Call(HttpMethod method, string path, string body, CancellationToken ct)
         {
             // Beside /api/chat, so a server under a path prefix keeps it.
             string chat = chatUri.AbsoluteUri;
             var uri = new Uri(chat.Substring(0, chat.Length - "api/chat".Length) + path.TrimStart('/'));
-            using (var timeout = new CancellationTokenSource())
-            using (var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, timeout.Token))
-            using (var message = new HttpRequestMessage(method, uri))
-            {
-                if (body != null)
-                {
-                    message.Content = new StringContent(body, Utf8, "application/json");
-                }
-
-                timeout.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
-                int status;
-                string text;
-                try
-                {
-                    using (var response = await client.SendAsync(message, linked.Token))
-                    {
-                        status = (int)response.StatusCode;
-                        text = Utf8.GetString(await response.Content.ReadAsByteArrayAsync());
-                    }
-                }
-                catch (Exception e) when (ct.IsCancellationRequested)
-                {
-                    throw new OperationCanceledException($"The caller cancelled the request to Ollama's {path}.", e, ct);
-                }
-                catch (Exception e) when (timeout.IsCancellationRequested)
-                {
-                    throw new ProviderException(ProviderErrorKind.Timeout, Name,
-                        $"Ollama at {endpoint} sent no reply to {path} within {Seconds(timeoutSeconds)} s.", e);
-                }
-                catch (Exception e) when (e is HttpRequestException || e is IOException || e is System.Net.WebException
-                                          || e is System.Net.Sockets.SocketException)
-                {
-                    throw new ProviderException(ProviderErrorKind.Unreachable, Name,
-                        $"Nothing answered at {endpoint}. Is Ollama running there? " +
-                        $"({Excerpt(FirstLine(e.GetBaseException().Message))})", e);
-                }
-
-                if (status < 200 || status > 299)
-                {
-                    throw Refusal(status, text);
-                }
-
-                return text;
-            }
+            return (await Exchange(method, uri, body, path, ct)).Text;
         }
 
         // A byte count /api/ps may leave out, which then reads as 0.
