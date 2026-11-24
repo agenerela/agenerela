@@ -434,27 +434,29 @@ async function build() {
     header(s, "2 · REQUIREMENTS · ADDED SINCE", "Requirements we added, and why", "B");
     const rows = [
       ["**Observations and memory**", "Knows what it sees and what it just did", "DR-012 · #90, #91", "built"],
+      ["**Outcomes**", "Memory records what really happened", "DR-018 · PR #195", "built"],
+      ["**Decision rounds**", "Many agents decide, then act in your order", "DR-021 · PR #243", "built"],
+      ["**Typed parameters**", "Numbers and choices beside the target", "DR-023 · PR #342", "built"],
       ["**Guards**", "Checks every answer; add your own", "Phase 3 · #106–#109", "built"],
       ["**Evaluation harness**", "209 labelled prompts and A/B runs", "Phase 4 · #145, #147", "work"],
-      ["**Demo games**", "Three games test the API from outside", "DR-010 · #20, #69", "built"],
       ["**Prompt budget**", "Measures prompts; trims only what you list", "#151 · PR #392", "built"],
       ["**Provider retry, profiles**", "Waits out a busy server; settings profiles", "DR-026 · PR #395", "built"],
-      ["**Image generation**", "Actions can ask for a picture; cached", "DR-025 · #394; game open", "work"],
-      ["**Speech**", "A line read aloud by a voice provider", "DR-024, not built yet", "planned"],
-      ["**Map naming and backstory**", "Places and history written by the model", "Not filed yet", "planned"],
+      ["**Image provider**", "An action can ask for a picture; cached", "DR-025 · PR #394", "built"],
+      ["**Speech provider**", "A line read aloud by a voice provider", "DR-024, not built yet", "planned"],
     ];
     table(s, ["New requirement", "What it gives the developer", "Where it is", "Status"],
       rows.map((r) => [r[0], r[1], r[2], { status: r[3] }]),
-      { x: 0.4, y: 1.12, w: 9.25, colW: [2.6, 3.55, 2.1, 1.0], rowH: 0.36, size: S.table });
-    source(s, "Status on test, 24 Nov 2026, after #394 and #395 merged. Sources: build plan §2.8, §2.9, §3, DR-010, DR-012, DR-024 to DR-026 [1]; GitHub (numbers.md).");
+      { x: 0.4, y: 1.12, w: 9.25, colW: [2.6, 3.55, 2.1, 1.0], rowH: 0.33, size: S.table });
+    source(s, "Framework features only; the games' own features are not listed. Status on test, 24 Nov 2026. Sources: build plan §2.8, §2.9, §3, DR-012, DR-018, DR-021, DR-023 to DR-026 [1]; GitHub (numbers.md).");
     notes(s, [
       "Speaking notes · Presenter TBD (part B) · about 50 seconds",
       "",
-      "- These requirements came after September, each because a game or a measurement needed it.",
+      "- These are framework requirements added after September: features any game can use. Each came because a demo game or a measurement showed the API was missing it.",
+      "- The game now reports what its action actually did, and memory records that. Many agents can decide on one snapshot and then act in an order the game sets. Actions can take typed parameters, like a number of troops, beside the target.",
       "- Guards became a whole pipeline, and developers can add their own rules. That was Phase 3, closed 3 November.",
       "- The evaluation harness: 209 labelled prompts and an A/B runner. It's Phase 4, due 7 December; what's left is a second person labelling a subset blind.",
       "- The prompt budget merged today, 24 November: the framework measures every prompt and trims only what the developer marked optional.",
-      "- Provider retries and settings profiles merged today: a provider waits out a busy server, and a game switches between development and production settings. Image generation's framework part merged too; the game's part is still open. Speech and map naming are planned.",
+      "- Provider retries and settings profiles merged today: a provider waits out a busy server, and a game switches between development and production settings. The image provider merged today too: an action can ask for a picture, and results are cached. A speech provider is decided (DR-024) but not built.",
       "",
       "TEAM NOTE: re-check the In work and Planned rows before presenting; they will move before 7 December.",
       "If asked 'How did you decide what to add?': From the demo games. The gaps they hit are logged in issue #190 and became framework features.",
@@ -499,7 +501,7 @@ async function build() {
       ["Agent", "who it is, the request", [["Observations", "built"], ["Memory", "built"], ["Execution outcome", "built"]]],
       ["Actions and targets", "registry, availability", [["Target categories", "built"], ["Typed parameters", "built"], ["Choice calls", "built"]]],
       ["Schema and prompt", "action → target → statement", [["Prompt budget", "built"], ["Examples with situation", "built"]]],
-      ["Queue and providers", "one interface, Ollama", [["Model lifecycle", "built"], ["Retry, profiles", "built"], ["Speech, image", "work"]]],
+      ["Queue and providers", "one interface, Ollama", [["Model lifecycle", "built"], ["Retry, profiles", "built"], ["Image provider", "built"]]],
       ["Guards", "the grounding check", [["Guard pipeline", "built"], ["Your own guards", "built"]]],
       ["Result and telemetry", "outcome classes", [["Decision feed, log", "built"], ["Evaluation harness", "work"]]],
     ];
@@ -522,15 +524,15 @@ async function build() {
     // legend
     s.addText("+ Added, built", { shape: pres.shapes.ROUNDED_RECTANGLE, rectRadius: 0.05, x: 0.4, y: 4.88, w: 1.45, h: 0.26, fill: { color: C.blue }, line: { color: C.blue }, fontFace: F.sans, fontSize: S.cap, color: C.white, bold: true, align: "center", valign: "middle", margin: 0 });
     s.addText("+ Added, in work", { shape: pres.shapes.ROUNDED_RECTANGLE, rectRadius: 0.05, x: 1.95, y: 4.88, w: 1.55, h: 0.26, fill: { color: C.white }, line: { color: C.blue, dashType: "dash", width: 1.25 }, fontFace: F.sans, fontSize: S.cap, color: C.blue, bold: true, align: "center", valign: "middle", margin: 0 });
-    text(s, "Black: September. Each addition came from a demo game or a measurement.", { x: 3.65, y: 4.88, w: 6.0, h: 0.26, size: S.cap, color: C.ink3, valign: "middle" });
+    text(s, "Black: September. Framework features only.", { x: 3.65, y: 4.88, w: 6.0, h: 0.26, size: S.cap, color: C.ink3, valign: "middle" });
     source(s, "Figure 2. Agenerela's modules then and now, our own drawing from build plan §2 and DR-012 to DR-026 [1]; status on test, 24 Nov 2026.");
     notes(s, [
       "Speaking notes · Presenter TBD (part C) · about 40 seconds",
       "",
       "- This is our design: six modules in the order a decision flows. The grey line in each is what we had in September; the blue chips are what we added. Solid is built, dashed is in work.",
       "- The agent gained observations, memory, and an outcome: the game now tells the framework what actually happened, so memory records that, not just the choice.",
-      "- Providers gained model lifecycle, retries and settings profiles; speech and images are in work.",
-      "- Every one of these came from a demo game asking for something the API couldn't say.",
+      "- Providers gained model lifecycle, retries, settings profiles and an image provider; a speech provider is next.",
+      "- Every one is a framework feature any game can use; each came from a demo game asking for something the API couldn't say.",
       "",
       "If asked 'Did the core change shape?': No. The game still asks, Agenerela offers legal options, the model picks, the guards check and the game acts. Everything here plugs into that loop through an interface.",
     ]);
@@ -585,7 +587,7 @@ async function build() {
       "",
       "- When a design choice costs more than an hour to undo, we write a decision record: what we chose, why, what we measured, and what would change our mind. There are eighteen since September.",
       "- October's big one is DR-016: the guard checks the model's own confidence in its target instead of matching the player's words, because we measured the word check refusing good requests.",
-      "- November's came from the games: the game reports outcomes, decision rounds for many rulers, typed parameters, speech and images as two more kinds of provider, and retries and profiles.",
+      "- November's added framework features the games needed: the game reports outcomes, decision rounds for many agents, typed parameters, speech and images as two more kinds of provider, and retries and profiles.",
       "",
       "If asked 'Who decides a record?': The lead or the framework tech lead proposes it with the measurement; the team lead accepts it. Each one names its status and date.",
       "If asked about DR-001 to DR-008: those came with the build plan from the prototype, before the course started; DR-001, the in-process model, is still 'probable' until Phase 6b.",

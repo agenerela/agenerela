@@ -27,7 +27,7 @@ Hard rule 2: n, the control and the noise floor are on the slide with each resul
 | 3, 14 | 3 demo games built on it (GreyBoxVillage, Living Vale, Painted Realm) | `Demos/README.md`; GreyBoxVillageClassic is a frozen copy, not counted |
 | 5, 6, 11 | Phase gates and dates: Phase 1 closed 11 Oct (due 5 Oct), Phase 2 closed 25 Oct (due moved 19 → 29 Oct), Phase 3 closed 3 Nov (due 9 Nov), Phase 4 due 7 Dec; Phases 5–8 due 22 Feb to 26 Apr 2027 | `AGENTS.md` "Current state"; GitHub milestones (`gh api repos/agenerela/agenerela/milestones?state=all`); `docs/course/2026-10-20-github-roadmap/README.md` for the moved date |
 | 6 | Six initial requirements, owners and issue numbers | Build plan §6.6 (the SRS of 10 September); issue numbers checked as closed by their assignees |
-| 7 | Status of each added requirement | `git log origin/test`; PR #392 (prompt budget), #395 (retry and profiles, DR-026) and #394 (image provider's framework part, DR-025) merged 24 Nov; the game's image part is still open; speech is DR-024, accepted, nothing built in the framework; **map naming and backstory: no issue, branch or commit found on 24 Nov** |
+| 7 | Status of each added framework requirement | Build plan §7 for each record; PR #195 (outcomes, DR-018), #243 (decision rounds, DR-021), #342 (typed parameters, DR-023), #392 (prompt budget), #395 (retry and profiles, DR-026) and #394 (image provider, DR-025) merged into `test`, the last three on 24 Nov; speech is DR-024, accepted, nothing built. Game-only features (the game's use of images, map naming) are left out on purpose |
 | 10 | 18 decision records, DR-009 to DR-026, with their dates | Build plan §7, each record's Status line |
 
 ## GitHub (slides 15, 16, 19, 20)
