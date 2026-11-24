@@ -5,8 +5,10 @@
         "GreyBoxStrategy.Screen",
         "GreyBoxStrategy.Sim",
         "GreyBoxStrategy.Replay",
+        "GreyBoxStrategy.Chart",
         "GreyBoxStrategy",
-        "Agenerela"
+        "Agenerela",
+        "Agenerela.ComfyUI"
     ],
     "includePlatforms": [
         "Editor"

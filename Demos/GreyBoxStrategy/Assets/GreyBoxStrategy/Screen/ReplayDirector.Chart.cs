@@ -229,6 +229,9 @@ namespace GreyBoxStrategy.Realm
                 game = opening.BuildReplay();
                 ruleStart = (you, ruling.Model, ruling.Scripted, ruling.Arm, setup.Seed, liveMap, liveRules);
             }
+            // Each ruler's portrait and banner, from the image server or the cache, before any decision is asked for:
+            // a picture unloads the decision model on a shared card (DR-025), so none is made during play.
+            yield return PaintCourt(loading, setup.MapSeed ?? setup.Seed);
             loading.Set("Laying out the chart...", 0.95f);
             yield return null;
             CountryLook.UseWorld(world);
@@ -239,7 +242,7 @@ namespace GreyBoxStrategy.Realm
             labelSizes = new float[world.Provinces.Count];
             loading.Close();
             LoadReport = $"world in {made} ms{(making.Result.TimedOut ? " (the budget ran out: the best world found)" : "")}, game and chart prepared in {prepared} ms off the main thread, " +
-                         $"drawn in {drawn} ms on the {(gpu ? "GPU" : "CPU")}; {map.ChartReport}";
+                         $"drawn in {drawn} ms on the {(gpu ? "GPU" : "CPU")}; {map.ChartReport}; court art: {RulerArtServer.LastReport}";
             Debug.Log($"Painted Realm: a generated world, seed {setup.Seed}, {world.Provinces.Count} provinces, {world.Countries.Count} countries, {game.Turns.Count} turns; {LoadReport}");
         }
 
