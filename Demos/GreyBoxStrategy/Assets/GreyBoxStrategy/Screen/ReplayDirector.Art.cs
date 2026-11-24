@@ -31,8 +31,12 @@ namespace GreyBoxStrategy.Realm
             return subjects;
         }
 
+        /// <summary>Whether the last <see cref="PaintCourt"/> made a picture on the image server, which unloads the decision model.</summary>
+        private bool courtPainted;
+
         private IEnumerator PaintCourt(LoadingCard loading, int worldSeed)
         {
+            courtPainted = false;
             RulerArtServer.Clear();
             var backend = RulerArtServer.Provider(out string why);
             var cache = new ImageFileCache(RulerArtServer.CacheFolder(worldSeed));
@@ -57,6 +61,7 @@ namespace GreyBoxStrategy.Realm
                 Debug.Log($"Painted Realm: court art for world {worldSeed}: {RulerArtServer.LastReport} (cache {cache.Folder})");
                 if (backend != null && set != null && set.Made > 0)
                 {
+                    courtPainted = true;
                     // Give the card back to the decision model before the first turn.
                     var freeing = Free(backend);
                     float until = Time.realtimeSinceStartup + 10f;

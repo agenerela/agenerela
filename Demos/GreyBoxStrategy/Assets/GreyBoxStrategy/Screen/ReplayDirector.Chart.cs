@@ -188,8 +188,9 @@ namespace GreyBoxStrategy.Realm
             MapDefinition liveMap = null; GameRules liveRules = null;
             if (ruling != null)
             {
-                // A rule game: its map and rules first, so its session begins now, behind the loading card, and turn 1's
-                // rulers decide while the chart is drawn and the screen built (request 004: turn 1 was End turn's long wait).
+                // A rule game: its map and rules first, so its session is made now, behind the loading card, for the court's
+                // personas; its rulers begin once the court is painted and decide while the chart is laid out and the screen
+                // built (request 004: turn 1 was End turn's long wait).
                 var defining = System.Threading.Tasks.Task.Run(() => { var d = world.ToDefinition(); return (d, RulesFor(setup, d)); });
                 while (!defining.IsCompleted) yield return null;
                 if (defining.IsFaulted)
@@ -254,6 +255,8 @@ namespace GreyBoxStrategy.Realm
             // Each ruler's portrait and banner, from the image server or the cache, before any decision is asked for:
             // a picture unloads the decision model on a shared card (DR-025), so none is made during play.
             yield return PaintCourt(loading, setup.MapSeed ?? setup.Seed);
+            // A rule game's rulers wait for the painting (BeginRuleEarly), then decide while the chart is laid out.
+            if (ruling != null) StartEarlyRulers(courtPainted);
             loading.Set("Laying out the chart...", 0.95f);
             yield return null;
             CountryLook.UseWorld(world);

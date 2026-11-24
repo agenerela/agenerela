@@ -105,17 +105,30 @@ namespace GreyBoxStrategy.Realm
         }
 
         /// <summary>
-        /// A rule game on a generated world, begun behind the loading card as soon as its map and rules exist, before the
-        /// chart is drawn and the screen built: turn 1's rulers decide while the world is laid out and the first-turn help
-        /// is read, where before they started only once the screen was up (request 004: turn 1 was End turn's one long
-        /// wait). Nothing about the game changes: the session plays exactly as one begun by <see cref="BeginRule"/>, which
-        /// takes it over once the screen is built.
+        /// A rule game on a generated world, made behind the loading card as soon as its map and rules exist, before the
+        /// chart is drawn and the screen built. Its rulers wait: the court is painted from the session's personas first,
+        /// and a picture unloads the decision model on a shared card (DR-025), so the rulers' calls and the painting would
+        /// take turns loading the card. <see cref="StartEarlyRulers"/> lets them begin once the court is painted, and turn
+        /// 1's rulers then decide while the chart is laid out and the first-turn help is read, where before they started
+        /// only once the screen was up (request 004: turn 1 was End turn's one long wait). Nothing about the game changes:
+        /// the session plays exactly as one begun by <see cref="BeginRule"/>, which takes it over once the screen is built.
         /// </summary>
         private void BeginRuleEarly(string country, string model, bool scripted, string arm, int gameSeed, MapDefinition map, GameRules rules)
         {
             var (providerFor, cardLock) = RuleSeats(model, scripted, gameSeed, map);
-            earlyRule = CreateRule(country, scripted ? "scripted" : model, gameSeed, providerFor, cardLock, arm, map, rules);
+            earlyRule = CreateRule(country, scripted ? "scripted" : model, gameSeed, providerFor, cardLock, arm, map, rules, run: false);
             if (scripted) earlyRule.Dev = true;
+        }
+
+        /// <summary>
+        /// The court is painted: the early session's rulers begin. When the painting made a picture, the model is warmed
+        /// again first, as the picture unloaded it (the painting freed the image server already).
+        /// </summary>
+        private void StartEarlyRulers(bool painted)
+        {
+            if (earlyRule == null || earlyRule.Started) return;
+            if (painted && earlyRule.Model != "scripted") Gateway.WarmUp(earlyRule.Model);
+            RunRulers(earlyRule);
         }
 
         /// <summary>A session begun by <see cref="BeginRuleEarly"/>, until <see cref="BeginRule"/> takes it over.</summary>
@@ -285,7 +298,11 @@ namespace GreyBoxStrategy.Realm
             if (started) return;
             started = true;
             // Begun early behind the loading card (a generated world): the same session, taken over here.
-            if (earlyRule != null && earlyRule.You == country) rule = earlyRule;
+            if (earlyRule != null && earlyRule.You == country)
+            {
+                rule = earlyRule;
+                if (!rule.Started) RunRulers(rule); // its court's painting never reached StartEarlyRulers
+            }
             else
             {
                 earlyRule?.Stop();
@@ -315,9 +332,10 @@ namespace GreyBoxStrategy.Realm
             StartCoroutine(Play());
         }
 
-        // The session and its start, apart from the screen: the menu's settings for the next rule game are taken here, once.
+        // The session, apart from the screen, and its rulers begun unless run is false: the menu's settings for the next
+        // rule game are taken here, once.
         private RuleSession CreateRule(string country, string model, int gameSeed, Func<string, World, ILLMProvider> providerFor, RuleSession.ICardLock cardLock, string arm,
-            MapDefinition map, GameRules rules)
+            MapDefinition map, GameRules rules, bool run = true)
         {
             rules = WithYourWrits(rules, country, yourWritsUnlimited);
             yourWritsUnlimited = false;
@@ -326,10 +344,15 @@ namespace GreyBoxStrategy.Realm
             string path = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs", "Rule", $"seed-{gameSeed:D4}-{country}-{DateTime.Now:yyyyMMdd-HHmmss}.jsonl"));
             var session = new RuleSession(country, model, arm ?? "default", gameSeed, path, providerFor, cardLock, map, rules) { AdvisorOn = advise };
             Debug.Log($"Painted Realm: rule game, you rule {country}, seed {gameSeed}, {model} x4 with personas; decisions into {path}");
+            if (run) RunRulers(session);
+            return session;
+        }
+
+        private void RunRulers(RuleSession session)
+        {
             ruleBegan = DateTime.UtcNow;
             headStartLogged = false;
             RunRule(session);
-            return session;
         }
 
         private static async void RunRule(RuleSession session)

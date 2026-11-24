@@ -249,6 +249,37 @@ namespace GreyBoxStrategy.Screen.Tests
         }
 
         [Test]
+        public async Task A_session_made_for_the_court_painting_asks_no_ruler_until_it_runs()
+        {
+            // The director makes the session behind the loading card for the court's personas, paints the court, and only
+            // then runs it: a picture unloads the decision model on a shared card (DR-025), so no ruler may call before.
+            var setup = GameSetup.Writs(5);
+            var map = setup.BuildMap();
+            var rules = setup.BuildRules(map);
+            rules.FreeOrders = true;
+            World w = null;
+            var provider = Rulers(() => w);
+            var scripted = provider.Callback;
+            int calls = 0, providersMade = 0;
+            provider.Callback = r => { calls++; return scripted(r); };
+            var s = new RuleSession(You, "qwen3.5:4b", "default", 5, Path.Combine(folder, "held.jsonl"), (m, world) => { providersMade++; w = world; return provider; }, null, map, rules);
+
+            var g = s.BuildReplay();
+            Assert.That(g.Initial, Is.Not.Null, "the screen's opening exists before the rulers run");
+            var personas = s.Players.Where(p => p.Key != You).Select(p => p.Value.Persona).ToList();
+            Assert.That(personas.Count, Is.EqualTo(map.Countries.Count - 1));
+            Assert.That(personas, Has.All.Not.Null, "every ruler's persona is there for the painting");
+            await Task.Delay(200);
+            Assert.That((s.Started, providersMade, calls), Is.EqualTo((false, 0, 0)), "no provider made and no call while the court is painted");
+
+            var run = s.RunAsync();
+            await Until(() => calls > 0, "the rulers' first call once the session runs");
+            s.Stop();
+            await run;
+            Assert.That(s.Error, Is.Null);
+        }
+
+        [Test]
         public void A_writs_recording_saves_without_the_free_orders_field()
         {
             var rec = new Recording { Seed = 3, Title = "old", Source = "rule" };
