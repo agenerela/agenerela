@@ -7856,7 +7856,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Agenerela::Agenerela.AgentBehaviour
   Profile: {fileID: 11400000, guid: 8129482b3e52ebc49bd374486a1e7fe2, type: 2}
-  Provider: {fileID: 11400000, guid: f63960ea63dc16b4b981c631e3980e4e, type: 2}
+  Provider: {fileID: 0}
   FindTargetsNearby: 1
   Targets:
     Origin: {fileID: 0}
@@ -23661,7 +23661,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Agenerela::Agenerela.AgentBehaviour
   Profile: {fileID: 11400000, guid: 2bb10cca2323348438d169501d916f27, type: 2}
-  Provider: {fileID: 11400000, guid: f63960ea63dc16b4b981c631e3980e4e, type: 2}
+  Provider: {fileID: 0}
   FindTargetsNearby: 1
   Targets:
     Origin: {fileID: 0}
@@ -25391,7 +25391,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Agenerela::Agenerela.AgentBehaviour
   Profile: {fileID: 11400000, guid: 509b1eed61130be44a54b6ae7b0577ca, type: 2}
-  Provider: {fileID: 11400000, guid: f63960ea63dc16b4b981c631e3980e4e, type: 2}
+  Provider: {fileID: 0}
   FindTargetsNearby: 1
   Targets:
     Origin: {fileID: 0}
@@ -37373,7 +37373,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Agenerela::Agenerela.AgentBehaviour
   Profile: {fileID: 11400000, guid: 4ec587be43bf0dd468c1ca3b52b661b3, type: 2}
-  Provider: {fileID: 11400000, guid: f63960ea63dc16b4b981c631e3980e4e, type: 2}
+  Provider: {fileID: 0}
   FindTargetsNearby: 1
   Targets:
     Origin: {fileID: 0}

@@ -120,7 +120,7 @@ namespace Demos.GreyBoxVillage
         private string Describe(PipelineErrorKind? kind)
         {
             string model = "the model", where = "Ollama";
-            var config = Minds.Length > 0 && Minds[0] != null ? Minds[0].Behaviour.Provider : null;
+            var config = AskedConfig();
             if (config is OllamaProviderConfig ollama)
             {
                 model = ollama.Model;
@@ -134,6 +134,8 @@ namespace Demos.GreyBoxVillage
                     return "Ollama does not have " + model + ". Run \"ollama pull " + model + "\"; the agents answer once it is there.";
                 case PipelineErrorKind.ProviderTimeout:
                     return "The model did not answer in time. It may still be loading; the agents try again shortly.";
+                case PipelineErrorKind.ProviderRateLimited:
+                    return "The model's server is busy with others. The village keeps running; the agents try again shortly.";
                 case PipelineErrorKind.ProviderRejected:
                 case PipelineErrorKind.ProviderServerError:
                 case PipelineErrorKind.ProviderFailed:
@@ -202,6 +204,14 @@ namespace Demos.GreyBoxVillage
             foreach (var mind in Minds) mind.UseProvider(config);
         }
 
+        // The config the agents ask: their own, set by UseProvider, else the active profile's,
+        // Development in the Editor and Production in a build (Resources/AgenerelaSettings, DR-026).
+        private ProviderConfig AskedConfig()
+        {
+            var own = Minds.Length > 0 && Minds[0] != null ? Minds[0].Behaviour.Provider : null;
+            return own != null ? own : AgenerelaSettings.ActiveProvider;
+        }
+
         /// <summary>
         /// Fresh agents with empty memories, on the provider config they already ask, and a new
         /// recorder that keeps the log-file setting. The presenter's reset.
@@ -219,7 +229,7 @@ namespace Demos.GreyBoxVillage
         {
             get
             {
-                var config = Minds.Length > 0 ? Minds[0].Behaviour.Provider : null;
+                var config = AskedConfig();
                 if (config is OllamaProviderConfig ollama) return "ollama / " + ollama.Model;
                 return config != null ? config.Provider.Name : "project default";
             }

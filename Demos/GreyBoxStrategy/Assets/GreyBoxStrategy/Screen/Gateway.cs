@@ -222,13 +222,23 @@ namespace GreyBoxStrategy.Realm
             }
         }
 
-        public static ILLMProvider Provider(string model) => DevProvider.Wrap(new OllamaProvider(new OllamaSettings
+        /// <summary>
+        /// A provider for <paramref name="model"/> on the active profile's server (Resources/AgenerelaSettings,
+        /// DR-026): in the Editor one that waits its turn on a shared, queued card, in a build one that
+        /// fails fast. With no profile, the server in <see cref="UrlVariable"/> with 90 s, as before.
+        /// </summary>
+        public static ILLMProvider Provider(string model)
         {
-            Endpoint = Environment.GetEnvironmentVariable(UrlVariable),
-            ApiKey = Key,
-            Model = model,
-            TimeoutSeconds = 90f,
-        }));
+            var template = AgenerelaSettings.ActiveProvider as OllamaProviderConfig;
+            var settings = template != null ? template.ToSettings() : new OllamaSettings
+            {
+                Endpoint = Environment.GetEnvironmentVariable(UrlVariable),
+                ApiKey = Key,
+                TimeoutSeconds = 90f,
+            };
+            settings.Model = model;
+            return DevProvider.Wrap(new OllamaProvider(settings));
+        }
 
         /// <summary>Leaves the card as it was found: asks the server to unload the model (keep_alive 0).</summary>
         public static async Awaitable Unload(string model)

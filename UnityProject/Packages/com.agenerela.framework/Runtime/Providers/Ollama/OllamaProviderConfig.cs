@@ -28,8 +28,15 @@ namespace Agenerela.Providers
         private static readonly OllamaSettings Defaults = new OllamaSettings();
 
         [Tooltip("The server's base address, without /api/chat. Use 127.0.0.1 rather than " +
-                 "localhost: on Windows, localhost tries IPv6 first and costs about 2 s a request.")]
+                 "localhost: on Windows, localhost tries IPv6 first and costs about 2 s a request. " +
+                 "With an Endpoint Variable set, only the fallback.")]
         public string Endpoint = Defaults.Endpoint;
+
+        [Tooltip("Optional: the name of an environment variable holding the server's address, such as " +
+                 "AGENERELA_OLLAMA_URL. When it is set, it replaces Endpoint. When it is not, Endpoint is used " +
+                 "and no key is sent, since the key belongs to the server the variable names. Empty to use " +
+                 "Endpoint always.")]
+        public string EndpointVariable = "";
 
         [Tooltip("The model to ask, as `ollama list` names it. The server must already have it " +
                  "(`ollama pull <model>`).")]
@@ -45,9 +52,13 @@ namespace Agenerela.Providers
         public float Temperature = Defaults.Temperature;
 
         [Min(0.001f)]
-        [Tooltip("Seconds to wait for a whole reply, counted from sending, so it includes loading " +
-                 "a model that was not resident.")]
+        [Tooltip("Seconds to wait for a whole reply to one attempt, counted from sending, so it includes " +
+                 "loading a model that was not resident, and the wait for a turn behind a queueing gateway.")]
         public float TimeoutSeconds = Defaults.TimeoutSeconds;
+
+        [Tooltip("When a request is sent again after the server answers busy (HTTP 429 or 503, honouring " +
+                 "Retry-After), and how long the whole call may take (DR-026).")]
+        public RetryPolicy Retry = new RetryPolicy();
 
         [Range(1, OllamaSettings.MaxTokenAlternatives)]
         [Tooltip("How many alternatives each token's probabilities carry (top_logprobs), which the " +
@@ -74,9 +85,10 @@ namespace Agenerela.Providers
         /// </exception>
         public OllamaSettings ToSettings()
         {
+            string fromVariable = ReadEndpoint();
             return new OllamaSettings
             {
-                Endpoint = Endpoint,
+                Endpoint = fromVariable ?? Endpoint,
                 Model = Model,
                 ContextSize = ContextSize,
                 Temperature = Temperature,
@@ -85,7 +97,11 @@ namespace Agenerela.Providers
                 // builds a provider, rather than failing at the first decision (#244).
                 TokenAlternatives = Mathf.Clamp(TokenAlternatives, 1, OllamaSettings.MaxTokenAlternatives),
                 TokenProbabilities = TokenProbabilities,
-                ApiKey = ReadKey(),
+                Retry = (Retry ?? new RetryPolicy()).Copy(),
+                // A server named by a variable that is not set here is not the one in use, so its
+                // key is not sent to the fallback: a teammate without the home server gets a local
+                // Ollama rather than a failure, and the key never reaches another address.
+                ApiKey = UsesFallbackEndpoint() ? "" : ReadKey(),
             };
         }
 
@@ -97,6 +113,28 @@ namespace Agenerela.Providers
         protected override ILLMProvider CreateProvider()
         {
             return new OllamaProvider(ToSettings());
+        }
+
+        /// <summary>
+        /// True when <see cref="EndpointVariable"/> names a variable that is not set here, so
+        /// <see cref="Endpoint"/>, the fallback, is the address in use.
+        /// </summary>
+        public bool UsesFallbackEndpoint()
+        {
+            return (EndpointVariable ?? "").Trim().Length > 0 && ReadEndpoint() == null;
+        }
+
+        // The address the variable holds, or null when none is named or it is not set.
+        private string ReadEndpoint()
+        {
+            string variable = (EndpointVariable ?? "").Trim();
+            if (variable.Length == 0)
+            {
+                return null;
+            }
+
+            string value = Environment.GetEnvironmentVariable(variable);
+            return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
         }
 
         // A named variable that is missing fails here rather than as a 401 on the first decision,

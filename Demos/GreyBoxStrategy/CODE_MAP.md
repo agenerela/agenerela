@@ -64,7 +64,8 @@ A rule belongs in `Sim/`; a number the screen shows belongs in `Screen/Replay/` 
 |---|---|
 | `ReplayDirector.cs` and its partials | The scene's driver. `.cs` watch mode; `.Rule` rule mode; `.Writs` the writs turn on the map; `.Chart` generated worlds; `.Story` the storyteller; `.Menu` and `.StartMenu` menus and settings; `.Dev` the F1 dev menu; `.Armies` R3 settings; `.Detail` zoomed detail |
 | `RuleSession.cs`, `LiveSession.cs`, `LiveWritsSession.cs`, `LiveGame.cs` | Games without a scene, played by models; `RuleSession` is the person against four rulers |
-| `Gateway.cs` | The server address, the key from the environment, and the RTX 5080's lock |
+| `Gateway.cs` | The server address, the key from the environment, and the RTX 5080's lock; `Provider(model)` builds on the active profile's config |
+| `Resources/` (assets, no code) | `AgenerelaSettings` and the Development and Production profiles: patient retries on the shared server in the Editor, fail-fast in a build (DR-026) |
 | `WritsRecorder.cs`, `ScriptedStory.cs`, `DevTools.cs` | Recording decisions, a no-model storyteller, pretended faults |
 | `Map/MapView.cs`, `Map/ChartGpu.cs`, `Map/*.shader` | The map quad and its shader data; the GPU chart pass |
 | `Audio/SoundManager.cs` | Playing cues by name on buses (`Replay/SoundCues.cs` names them) |

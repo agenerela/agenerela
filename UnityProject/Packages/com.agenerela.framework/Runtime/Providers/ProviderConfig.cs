@@ -134,7 +134,8 @@ namespace Agenerela.Providers
         }
 
         /// <summary>
-        /// The config an agent uses: <paramref name="own"/> when it is set, otherwise the project
+        /// The config an agent uses: <paramref name="own"/> when it is set, otherwise the active
+        /// profile's (<see cref="AgenerelaSettings.ActiveProfile"/>, DR-026), otherwise the project
         /// default named in Project Settings → Agenerela. A code-built agent uses it as
         /// <c>new Agent(profile, ProviderConfig.Resolve().Provider)</c>.
         /// </summary>
@@ -151,8 +152,7 @@ namespace Agenerela.Providers
                 return own;
             }
 
-            var settings = AgenerelaSettings.Load();
-            var fallback = settings != null ? settings.DefaultProvider : null;
+            var fallback = AgenerelaSettings.ActiveProvider;
             if (fallback != null)
             {
                 return fallback;

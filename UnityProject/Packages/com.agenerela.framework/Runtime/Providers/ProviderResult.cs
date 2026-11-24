@@ -33,9 +33,10 @@ namespace Agenerela.Providers
         public string Text;
 
         /// <summary>
-        /// Wall-clock seconds from sending to reply, measured by the provider — the number
-        /// a player would feel. Includes queueing and network time, and for a local backend
-        /// includes loading the model if it was not resident.
+        /// Wall-clock seconds from sending to reply, measured by the provider. Includes queueing
+        /// and network time, and for a local backend includes loading the model if it was not
+        /// resident. For a request sent more than once (<see cref="Retries"/>), the attempt that
+        /// answered alone: the time before it is <see cref="RetryWaitSeconds"/>.
         /// </summary>
         /// <remarks>
         /// Timing is only comparable between runs when one model is resident (hard rule 3):
@@ -84,6 +85,21 @@ namespace Agenerela.Providers
         /// no measurement means anything without the model.
         /// </remarks>
         public string Model;
+
+        /// <summary>
+        /// How many times the request was sent again because the server said it was busy, under
+        /// the provider's <see cref="RetryPolicy"/> (DR-026). 0 when the first send answered, and
+        /// for a provider that never retries.
+        /// </summary>
+        public int Retries;
+
+        /// <summary>
+        /// The seconds from the first send to the start of the attempt that answered: the failed
+        /// attempts and the pauses between them (DR-026). 0 when the first send answered.
+        /// <c>Agent</c> keeps it out of <see cref="DecisionTelemetry.LatencySeconds"/>, so a busy
+        /// server never reads as a slow model.
+        /// </summary>
+        public float RetryWaitSeconds;
 
         // Extension point, not now: provider-specific extras (Ollama's eval_duration,
         // a cloud vendor's request id) belong in a string-keyed bag rather than as vendor

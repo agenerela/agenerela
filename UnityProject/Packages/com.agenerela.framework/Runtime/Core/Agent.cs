@@ -1412,6 +1412,7 @@ namespace Agenerela
             telemetry.QueuedAhead = sent.QueuedAhead;
             telemetry.QueueWaitSeconds = sent.QueueWaitSeconds;
             telemetry.LatencySeconds = sent.Seconds;
+            RecordRetries(telemetry, sent);
 
             if (sent.HeldBack != null)
             {
@@ -2469,6 +2470,23 @@ namespace Agenerela
             return new DecisionResult(null, telemetry, null, null, request, reply, correlation);
         }
 
+        // The provider's retries, from its result or its exception, kept out of the latency, so a
+        // request that waited for a busy server is not read as a slow model (DR-026).
+        private static void RecordRetries(DecisionTelemetry telemetry, SentRequest sent)
+        {
+            int retries = sent.Reply?.Retries ?? (sent.Failure as ProviderException)?.Retries ?? 0;
+            float waited = sent.Reply?.RetryWaitSeconds ?? (sent.Failure as ProviderException)?.RetryWaitSeconds ?? 0f;
+            if (retries <= 0)
+            {
+                return;
+            }
+
+            waited = Mathf.Clamp(waited, 0f, telemetry.LatencySeconds);
+            telemetry.Retries = retries;
+            telemetry.RetryWaitSeconds = waited;
+            telemetry.LatencySeconds -= waited;
+        }
+
         // A provider says why it failed by throwing a ProviderException, whose kind maps one to
         // one. Any other exception says only that the provider failed.
         private static PipelineErrorKind KindOf(Exception e)
@@ -2492,6 +2510,8 @@ namespace Agenerela
                     return PipelineErrorKind.ProviderServerError;
                 case ProviderErrorKind.MalformedResponse:
                     return PipelineErrorKind.ProviderMalformedResponse;
+                case ProviderErrorKind.RateLimited:
+                    return PipelineErrorKind.ProviderRateLimited;
                 default:
                     // A kind added to ProviderErrorKind before it has one here.
                     return PipelineErrorKind.ProviderFailed;

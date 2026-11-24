@@ -55,7 +55,7 @@ public class GuardEars : MonoBehaviour
 | Field | What it does |
 |---|---|
 | **Profile** | Who this agent is and what it can do. Ten guards can share one |
-| **Provider** | This agent's own `ProviderConfig`. Empty uses the project default. Telemetry records which one resolved. Read once, when the agent is built: to switch at runtime, set `Agent.Provider` ([providers.md](providers.md#switching-an-agents-provider)) |
+| **Provider** | This agent's own `ProviderConfig`. Empty uses the active profile's, Development or Production, then the project default ([providers.md](providers.md#settings-profiles-development-and-production)). Telemetry records which one resolved. Read once, when the agent is built: to switch at runtime, set `Agent.Provider` ([providers.md](providers.md#switching-an-agents-provider)) |
 | **Find Targets Nearby**, **Targets** | On by default. Offers the `Targetable`s around this agent as targets, through a `ProximityTargetSource`. An empty **Origin** means this transform |
 | **Notice Nearby**, **Observations** | On by default. Tells the agent the `Description` of the `Targetable`s around it, through a `ProximityObservationSource`. A `Targetable` with no description adds nothing. An empty **Origin** means this transform. The two sources have separate settings, so an agent can notice farther than it can name |
 | **Handlers** | Pairs of an action id and an `ActionHandlerBehaviour`, for actions the profile lists that no method on this GameObject runs. The handler can be on another GameObject |
