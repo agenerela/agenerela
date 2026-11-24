@@ -92,17 +92,12 @@ written. A test checks that our set breaks none of them.
   #297) is flagged only when a prompt matches its stimulus and its observations both; an arm that shows
   the examples without their situations is judged on the bare stimulus, as before.
   `VillageGuard.asset`'s examples are GreyBoxVillage's guard's, the four actions' and its idle
-  line, so the set is measured with the examples the demo plays with. Their statements
-  (`ExampleStatement` on each action and `IdleExampleStatement`, #151) were written here first,
-  since the demo's guard has none: "Lead the way, I'm right behind you.", "Understood, I'll hold
-  here.", "Heading over there now.", "Stand back, I'll deal with it." and "Aye, quiet enough for
-  now.". Its actions' counter-examples, each answered with `none` (`CounterExampleStimulus` and
-  `CounterExampleStatement`, #151), were written here too: "You walk the same rounds every day, don't
-  you?" / "Same rounds, rain or shine.", "Standing watch all day must get dull." / "It has its quiet
-  hours.", "Is the {0} far from here?" / "Not far, just down the road." and "Have you ever had to fight
-  a {0}?" / "Once or twice, never gladly.". An arm with `ExampleStatements = false` and
-  `CounterExamples = false` sends the prompt from before both; `PromptSetStartTests` checks that none
-  matches a prompt.
+  line, so the set is measured with the examples the demo plays with. #384 (#151) wrote example
+  statements (`ExampleStatement`, `IdleExampleStatement`) and counter-examples on them, and they were
+  taken off again on 24 November: on `qwen3.5:4b` the counter-examples cost 10 answers, and with
+  the statements about a third of the replies copied one word for word (findings, "#151 after
+  #384"). An arm that wants them sets them on a copy of the profile; `PromptSetStartTests` checks
+  that no example matches a prompt.
 - **Targets are registered ids, not descriptions.** Name a concrete `wolf`, not
   `nearby_enemy`. A new target goes into `agent.json` first, with its category: a label
   `move_to` / `wolf` is refused, because `move_to` takes places.

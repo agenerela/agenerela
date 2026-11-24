@@ -57,8 +57,9 @@ namespace Agenerela.Tests.Evaluation
         [TestCase("Interim")]
         public void OurSetsAgreeWithOurProfileTheirCategoriesIncluded(string subfolder)
         {
-            // The categories (#190 B, #210) and the example statements (#190 G14, #218) are written
-            // on our set and profile; no label may become illegal, and no prompt may be an example.
+            // The categories (#190 B, #210) are written on our set and profile; no label may become
+            // illegal, and no prompt may be an example. The example statements and counter-examples
+            // #384 wrote were taken off on 24 November (findings, "#151 after #384"), so none is left.
             string folder = Path.Combine(EvalFixtures.OurSetFolder(), subfolder);
             var set = PromptSet.Load(Path.Combine(folder, "agent.json"));
             var profile = AssetDatabase.LoadAssetAtPath<AgentProfile>(OurProfilePath);
@@ -68,10 +69,10 @@ namespace Agenerela.Tests.Evaluation
             Assert.That(set.Targets.Select(t => t.Category).Distinct(), Is.EquivalentTo(new[] { "place", "creature" }), "Every target has one.");
             Assert.That(profile.Actions.Select(a => a.Action).Where(a => a.RequiresTarget).Select(a => string.Join(",", a.TargetCategories)),
                 Is.EquivalentTo(new[] { "place", "creature" }));
-            Assert.That(profile.Actions.Select(a => a.Action.ExampleStatement), Has.All.Not.Empty);
-            Assert.That(profile.IdleExampleStatement, Is.Not.Empty);
-            Assert.That(profile.Actions.Select(a => a.Action.CounterExampleStimulus), Has.All.Not.Empty);
-            Assert.That(profile.Actions.Select(a => a.Action.CounterExampleStatement), Has.All.Not.Empty);
+            Assert.That(profile.Actions.Select(a => a.Action.ExampleStatement), Has.All.Null.Or.Empty);
+            Assert.That(profile.IdleExampleStatement, Is.Null.Or.Empty);
+            Assert.That(profile.Actions.Select(a => a.Action.CounterExampleStimulus), Has.All.Null.Or.Empty);
+            Assert.That(profile.Actions.Select(a => a.Action.CounterExampleStatement), Has.All.Null.Or.Empty);
         }
 
         [Test]
@@ -105,11 +106,12 @@ namespace Agenerela.Tests.Evaluation
         // sorted, each as "system prompt, a line of three dashes, few-shot block". Stored, so a
         // change to what the default request says fails here even when both arms of a run change
         // together. Taken on a clean origin/test at 5f07e03 (16 November 2026), before typed parameters.
-        // A change that has to move it updates the hashes, and owes an A/B (#151). These are now what
-        // an arm with ExampleStatements and CounterExamples off sends: the statements and the
-        // counter-examples written on the profile (#151) are the only changes since, and the runs
-        // comparing them are #151's.
-        private static readonly string[] OurPromptHashesWithoutStatements =
+        // A change that has to move it updates the hashes, and owes an A/B (#151). The example
+        // statements and counter-examples #384 wrote on VillageGuard.asset were taken off again on
+        // 24 November: on the 4B the counter-examples cost 10 answers, and with the statements 68 of
+        // its replies copied one (findings, "#151 after #384"). The categories #384 added change no
+        // request unless pairing is on, so the default prompt is the one from before #384 again.
+        private static readonly string[] OurPromptHashes =
         {
             "06057a4179d077bb750563be8dded4ee0846c45518f1ccffe0cb30e19cf5316a",
             "2be670ed354f62d21738e3233b7f3e43ef24bf7af94a1c2a6ead308a2b79eb2a",
@@ -119,66 +121,12 @@ namespace Agenerela.Tests.Evaluation
             "d6cfb5249a2f8dde10e3d86c074e2409677ddf5fc02cfc84afd4f8d95b1e9dad",
         };
 
-        // The same, with the example statements written on VillageGuard.asset (#151, #190 G14), taken
-        // on 23 November 2026: what an arm with CounterExamples off sends.
-        private static readonly string[] OurPromptHashesWithoutCounterExamples =
-        {
-            "59f6c4b14f8c546f91964f8936ee12b25a84ba886380dd4b728bd4d4e66bc537",
-            "6da47a725081bcb3bdc638e0796bcce2a24f8beb7ac3a2a4d29506cf32ae9607",
-            "75406297b51605b87ab32ad0106891c1a96c042e9a66f2606af95b205aa687cb",
-            "7a5a9009ab85840f930f3d6bfa3ac702181f04594e4c418add83aca6a8e148da",
-            "c49a3aa2674ebc2e6a33560d0576e73b73757fd44bd11e43af06451543cfe8e6",
-            "d2a8ee93c84273fd4f5f9e3ae4f6d7f0930a2632f741af44de822c525fd88fdb",
-        };
-
-        // And with the counter-examples written on its actions too (#151, #190), taken on 23 November
-        // 2026: what the default arm sends since.
-        private static readonly string[] OurPromptHashes =
-        {
-            "3901a28dbeff01e8652bd13e788ce83bdc20a75b4ec0d539adedc469b860c81b",
-            "44c45985e7ab8f69a8c16c54a89f1c85cd757f94d14d930e0a74c7656adee183",
-            "4ab760d013d48135598b99738c15f33bdab1e2aa1fdda3041ea91243daf6e533",
-            "a2575f6a111fffc21ecdfaed5deb1bb12b95c7f1c757ebfb071ec54d1133c1ea",
-            "a584e6523c3e9c466aa35c0afb38cad333063e748054eeeea1c598a5f6e7797e",
-            "f820b39f084289311c93060e60485003d41218459411dbeff0fc31a6bd23aaae",
-        };
-
         [Test]
         public Task OurSetsDefaultPromptIsWhatItWas() => AssertPromptHashes(null, OurPromptHashes);
 
         [Test]
-        public Task WithoutCounterExamplesOurSetsPromptIsTheOneFromBeforeThem() =>
-            AssertPromptHashes(new DecideOptions { CounterExamples = false }, OurPromptHashesWithoutCounterExamples);
-
-        [Test]
-        public Task WithoutStatementsOrCounterExamplesOurSetsPromptIsTheOneFromBeforeBoth() =>
-            AssertPromptHashes(new DecideOptions { ExampleStatements = false, CounterExamples = false }, OurPromptHashesWithoutStatements);
-
-        [Test]
-        public async Task OurSetsDefaultArmShowsEachOfferedActionsCounterExampleAnsweredWithNone()
-        {
-            // The counter-examples on vs off run (#151) needs lines to switch: each action's, its
-            // {0} filled with its first preferred target, shown while the action is offered.
-            string folder = EvalFixtures.OurSetFolder();
-            var set = PromptSet.Load(Path.Combine(folder, "agent.json"));
-            var profile = AssetDatabase.LoadAssetAtPath<AgentProfile>(OurProfilePath);
-            var on = new FakeProvider("{\"action\":\"none\",\"target\":\"no_target\",\"statement\":\"\"}");
-            var off = new FakeProvider("{\"action\":\"none\",\"target\":\"no_target\",\"statement\":\"\"}");
-            using (var fixtures = new RunnerFixtures())
-            {
-                await Fixtures.NotCancelled(new EvalRunner(set, profile, new EvalArm("on", fixtures.Config(on, "FakeOn")),
-                    new EvalArm("off", fixtures.Config(off, "FakeOff"), new DecideOptions { CounterExamples = false })).RunAsync());
-            }
-
-            string shown = string.Join(" | ", on.Requests.Select(r => r.FewShotBlock));
-            Assert.That(shown, Does.Contain("Player: \"You walk the same rounds every day, don't you?\" -> action: none, target: no_target"));
-            Assert.That(shown, Does.Contain("Player: \"Standing watch all day must get dull.\" -> action: none, target: no_target"));
-            Assert.That(shown, Does.Contain("Player: \"Is the well far from here?\" -> action: none, target: no_target"));
-            Assert.That(shown, Does.Contain("Player: \"Have you ever had to fight a wolf?\" -> action: none, target: no_target"));
-            Assert.That(shown, Does.Contain("Not far, just down the road."), "With its statement.");
-            string leftOut = string.Join(" | ", off.Requests.Select(r => r.FewShotBlock));
-            Assert.That(leftOut, Does.Not.Contain("far from here").And.Not.Contain("same rounds").And.Not.Contain("fight a wolf").And.Not.Contain("must get dull"));
-        }
+        public Task OurSetsProfileHasNoStatementsOrCounterExamplesToSwitch() =>
+            AssertPromptHashes(new DecideOptions { ExampleStatements = false, CounterExamples = false }, OurPromptHashes);
 
         private static async Task AssertPromptHashes(DecideOptions options, string[] expected)
         {
