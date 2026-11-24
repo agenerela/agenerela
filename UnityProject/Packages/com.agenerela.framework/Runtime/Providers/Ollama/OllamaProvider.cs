@@ -72,6 +72,7 @@ namespace Agenerela.Providers
         private readonly int contextSize;
         private readonly float temperature;
         private readonly int tokenAlternatives;
+        private readonly bool tokenProbabilities;
         private readonly float timeoutSeconds;
         private readonly bool sendsKey;
         private readonly JsonSchemaSerializer serializer = new JsonSchemaSerializer();
@@ -165,6 +166,7 @@ namespace Agenerela.Providers
             contextSize = settings.ContextSize;
             temperature = settings.Temperature;
             tokenAlternatives = settings.TokenAlternatives;
+            tokenProbabilities = settings.TokenProbabilities;
             timeoutSeconds = settings.TimeoutSeconds;
 
             // The provider's own timeout runs on a token, so it can be told apart from the caller's
@@ -188,7 +190,8 @@ namespace Agenerela.Providers
                 Dialect = SchemaDialect.JsonSchema,
                 RateLimit = null,
                 RejectsEmptyEnumValues = false,
-                ReportsTokenProbabilities = true,
+                // Asked without them, the provider says so, and a call sends the target rule (#107).
+                ReportsTokenProbabilities = tokenProbabilities,
             };
         }
 
@@ -198,7 +201,8 @@ namespace Agenerela.Providers
         /// <summary>
         /// Constrained decoding, no explicit property ordering, the <c>JsonSchema</c> dialect, no
         /// rate limit, empty enum values not rejected, and token probabilities reported, taken
-        /// before the schema's mask (checked on Ollama 0.34.2).
+        /// before the schema's mask (checked on Ollama 0.34.2), unless
+        /// <see cref="OllamaSettings.TokenProbabilities"/> is off (#107).
         /// </summary>
         public ProviderCapabilities Capabilities { get; }
 
@@ -392,6 +396,9 @@ namespace Agenerela.Providers
 
         // What top_logprobs is sent as, for the evaluation report's conditions (#244).
         internal int TokenAlternatives => tokenAlternatives;
+
+        // Whether logprobs is asked for, for the evaluation report's conditions (#107).
+        internal bool TokenProbabilities => tokenProbabilities;
 
         /// <summary>The server's address, without any user name or password it carried.</summary>
         internal string Endpoint => endpoint;
@@ -595,16 +602,34 @@ namespace Agenerela.Providers
                 json.WritePropertyName("options");
                 json.WriteStartObject();
                 json.WritePropertyName("temperature");
-                json.WriteValue(temperature);
+                json.WriteValue(req.Temperature ?? temperature);
                 json.WritePropertyName("num_ctx");
                 json.WriteValue(contextSize);
+
+                // Only when the call set them, so a call that did not sends what it always sent
+                // (#266 item 7, #244 item 11).
+                if (req.Seed.HasValue)
+                {
+                    json.WritePropertyName("seed");
+                    json.WriteValue(req.Seed.Value);
+                }
+
+                if (req.MaxReplyTokens.HasValue)
+                {
+                    json.WritePropertyName("num_predict");
+                    json.WriteValue(req.MaxReplyTokens.Value);
+                }
+
                 json.WriteEndObject();
 
-                // For the grounding guard (DR-016).
-                json.WritePropertyName("logprobs");
-                json.WriteValue(true);
-                json.WritePropertyName("top_logprobs");
-                json.WriteValue(tokenAlternatives);
+                // For the grounding guard (DR-016), unless the settings ask without them (#107).
+                if (tokenProbabilities)
+                {
+                    json.WritePropertyName("logprobs");
+                    json.WriteValue(true);
+                    json.WritePropertyName("top_logprobs");
+                    json.WriteValue(tokenAlternatives);
+                }
 
                 json.WriteEndObject();
             }

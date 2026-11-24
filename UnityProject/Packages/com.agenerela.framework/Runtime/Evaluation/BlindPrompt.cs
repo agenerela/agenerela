@@ -24,6 +24,14 @@ namespace Agenerela.Evaluation
             Stimulus = prompt.Stimulus;
             Observations = (prompt.Observations ?? new List<string>()).ToList();
             PreconditionState = (JObject)(prompt.PreconditionState ?? new JObject()).DeepClone();
+            History = (prompt.History ?? new List<HistoryTurn>()).Where(t => t != null).Select(t => new HistoryTurn
+            {
+                Label = t.Label,
+                Stimulus = t.Stimulus,
+                Action = t.Action,
+                Target = t.Target,
+                Statement = t.Statement,
+            }).ToList();
         }
 
         public string Id { get; }
@@ -40,12 +48,21 @@ namespace Agenerela.Evaluation
         public JObject PreconditionState { get; }
 
         /// <summary>
+        /// The earlier exchanges the prompt is asked after, oldest first, copied (#147). Shown to the
+        /// annotator as context: they are what the agent did, not the answer being labelled. Empty
+        /// for a prompt with none.
+        /// </summary>
+        public IReadOnlyList<HistoryTurn> History { get; }
+
+        /// <summary>
         /// The prompts <paramref name="annotator"/> still has to label, in the set's order: every
         /// prompt they have neither written nor answered.
         /// </summary>
         /// <param name="labels">The label files, usually <see cref="PromptSet.LoadLabels"/>.</param>
         /// <param name="categoryId">Only this category; null for all of them.</param>
-        public static IReadOnlyList<BlindPrompt> Queue(PromptSet set, IEnumerable<AnnotatorLabels> labels, string annotator, string categoryId = null)
+        /// <param name="cohort">Only the prompts of this cohort (#148); null for the whole set.</param>
+        public static IReadOnlyList<BlindPrompt> Queue(PromptSet set, IEnumerable<AnnotatorLabels> labels, string annotator, string categoryId = null,
+                                                       AgreementCohort cohort = null)
         {
             var files = labels.ToList();
             var queue = new List<BlindPrompt>();
@@ -58,6 +75,11 @@ namespace Agenerela.Evaluation
 
                 foreach (var prompt in category.Prompts)
                 {
+                    if (cohort != null && !cohort.Contains(prompt.Id))
+                    {
+                        continue;
+                    }
+
                     bool wrote = prompt.LabelledBy != null && prompt.LabelledBy.Contains(annotator);
                     if (!wrote && !AgreementReport.AnnotatorsOf(prompt, files).Contains(annotator))
                     {

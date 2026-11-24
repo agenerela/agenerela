@@ -3,6 +3,8 @@
 Five countries on a map of 25 provinces, one move each a turn, until one holds 15. The design,
 the rules and why they are what they are: [`docs/demos/grey-box-strategy.md`](../../docs/demos/grey-box-strategy.md).
 Issue #20, a sub-issue of #47.
+Which file owns what: [`CODE_MAP.md`](CODE_MAP.md). This README is long; read its headings and jump to the section you need.
+A deeper version of the rules, [`docs/demos/painted-realm-rules-v2.md`](../../docs/demos/painted-realm-rules-v2.md), is being built slice by slice. Its first turn, the writs turn with armies as pieces, exists headless as a setting beside the one-move game, which stays the default ([R1a](#rules-v2-being-built)).
 
 **Stages 1 and 2 of 3 are built.** Stage 1 is the game as a headless simulation, a scripted AI
 with two temperaments, a random baseline, and a runner that plays whole games and logs every
@@ -11,6 +13,8 @@ scripted AI; [its results are below](#stage-2-a-model-plays-a-country). Any seat
 model, a script or random, with personas; [the table of models](#models-at-one-table) scores them.
 Stage 3, the map and the screen, has begun: [watch mode plays back a recorded game](#the-screen-watch-mode-playing-back-a-recorded-game).
 A [storyteller](#storyteller) that invents the game's events is built as an arm, `+storyteller`, and measured against the random event table.
+[Rules v2](../../docs/demos/painted-realm-rules-v2.md), the deeper game, is being built a slice at a time; [what exists so far](#rules-v2-being-built).
+How a turn is played in Rule mode, step by step with its timings, and three proposed changes: [`docs/demos/painted-realm-turn-flow.md`](../../docs/demos/painted-realm-turn-flow.md) (research, 16 November; nothing built).
 
 ## Play it
 
@@ -24,23 +28,70 @@ language model through the framework, fighting over 25 provinces on a painted se
   4 for the reach map, then open a country and Follow it to see what it can attack and its odds.
 - **Rule:** take Kesh. Open Report to read what a model would be told. Click Southgate and order
   the attack, then press End turn. Declare war on a neighbour, and an envoy may come with peace.
+  Click a rival's chronicle line: what it did and said opens at once, and its court's report
+  stays private until the game ends.
+- **Storyteller:** New game → Storyteller: Saga, then Rule. When the chronicler's banner
+  appears over the map, click it to open the event. Its "storyteller's decision" button shows
+  the template it picked and the targets it was not offered, with the reasons. Open **Tales** in
+  the chronicle. With no server, the dev menu's **Rule kesh, saga** plays the same game with
+  stand-ins, and **Dilemma on you** puts the choice card in front of you.
+- **Settings:** try the UI scale steps, then Esc in a game for the pause menu.
+- **The start menu:** the arrow keys and Enter walk its buttons. Read the model status line at its foot, then
+  open **Load a replay**: a game you play or watch to its end is kept there.
 
 1. Open `Demos/GreyBoxStrategy` in Unity 6000.3.23f1, then open
-   `Assets/GreyBoxStrategy/Screen/Watch.unity` and press **Play**.
-2. The start menu offers three games:
-   - **Replay the recorded game.** Seed 4 of the persona table: five `qwen3.5:4b` rulers, Kesh
-     wins by domination on turn 17. Every line is the rulers' own. It needs no model and no
-     server.
-   - **Watch a live game.** Five model rulers with personas play a new game now. Choose the model
-     (`qwen3.5:4b` by default) and the seed, then **Watch live**.
-   - **Rule a country.** You rule one country, chosen by its crest, against four model rulers
-     with personas on the same server. Choose the model and the seed, then **Rule**.
+   `Assets/GreyBoxStrategy/Screen/Watch.unity`.
+   - **Set the Game view to your screen first:** in its resolution menu choose **Free Aspect**,
+     set **Scale** to **1x**, and untick **Low Resolution Aspect Ratios**.
+   - A fixed size such as 1920 × 1080 is drawn at that size and stretched to fill a larger
+     window, so it looks soft. The game says so across the top of the map when it happens.
+   - The screen's text and panels grow with the screen: 1× at 1080 pixels tall, 1.33× at 1440,
+     2× at 2160.
+   - Then press **Play**.
+2. The start menu is the first screen ([what it is](#the-start-menu-16-november)): the title over the painted
+   map, which drifts and changes hands behind it, and **New game**, **Watch a game**, **Load a replay**,
+   **Settings**, **Credits** and **Quit**. The arrow keys (or W and S) and Enter work them, as the mouse does.
+   The line at the foot says which model the game will use and whether its server answers.
+   - **New game** (you rule) and **Watch a game** (the models play) open one framed window. **Watch** or
+     **Rule** is on top, then four groups behind tabs, with **Start** at the foot whichever is open:
+     **World**, **Rivals**, **Rules** and **Model**.
+     - Choose **Watch** (five model rulers with personas play) or **Rule** (you rule one country,
+       chosen by its crest, against four).
+     - Choose the model (`qwen3.5:4b` by default) and the seed (Roll picks one), then **Start**.
+     - **Map:** Classic (the painting) or **Generated** (a chart drawn by code), with a size and a
+       land shape. A generated world was first a look: the scripted rulers played it at once
+       and you watched the replay ([the drawn chart](#the-drawn-chart-spike-12-november)). It now
+       also plays live, and you can rule a realm on it, on the writs turn
+       ([the writs turn on generated worlds](#the-writs-turn-on-generated-worlds-14-november)).
+     - **Storyteller:** Off (the random event table, as every measured game), or one of its
+       presets: Even hand, Underdog, Cruel fate, Quiet years, Saga
+       ([what it shows](#the-storyteller-on-screen-13-november)).
+     - **Advisor:** on or off, for rule mode with model rulers (on by default; [the advisor in rule
+       mode](#the-advisor-in-rule-mode-14-november)). The persona mix is listed as coming.
+   - **Load a replay:** the finished games, newest first, each with the date, the turns and who won. The
+     game that ships is last: seed 4 of the persona table, five `qwen3.5:4b` rulers. Kesh wins by domination
+     on turn 17. Every line is the rulers' own. A replay needs no model and no server.
+   - **Settings:**
+     - Display mode, resolution, UI scale (automatic or fixed steps), VSync, frame cap, the
+       default playback speed, event windows, sound volumes (no sound plays yet), and the voices to
+       come.
+     - Each applies at once and is saved in `settings.json` in the game's persistent data
+       folder.
+     - A change of display mode or resolution reverts after 12 s unless you keep it.
+     - In the editor, the Game view decides the size, and the page says so.
 3. In the game:
    - Space plays and pauses, N steps one move, and + changes the speed.
-   - Keys 1 to 4 switch the map modes, D opens diplomacy, and Esc closes a panel.
+   - Keys 1 to 4 switch the map modes, and D opens diplomacy.
+   - **Esc** closes the top panel. With none open it opens the **pause menu**: Resume, Settings,
+     Back to the start menu, or Quit. Menu (top right) opens the same pause menu. With a game under
+     way that would be lost, the last two ask first.
+   - Every country's army stands at its capital with its size, in every map mode.
    - Click a province, a crest or a chronicle line to open it. A chronicle line or a speech banner
      opens the decision behind it.
-   - Right-drag pans the map, and the wheel zooms.
+   - Right-drag pans the map, and the wheel zooms: a notch is a 20% step toward the cursor, eased over about a tenth
+     of a second, so out to in takes about twelve notches (`ScreenModels.WheelNotches`, `ZoomTarget`, `EaseZoom`).
+     It was tuned for 120 a notch, but the Input System reports 1 a notch by default, so a notch moved it 0.15%.
+   - **Back to the start menu** in the pause menu ends the game and lets the RTX 5080 go.
 4. When you rule a country:
    - The orders panel, bottom centre, lists every move the rules offer you. These are the moves
      a model ruler would be offered in your place. A move that is not offered says why in its
@@ -52,8 +103,11 @@ language model through the framework, fighting over 25 provinces on a painted se
    - A peace offer to you opens the envoy's card: **Accept** or **Refuse**.
    - **Report** shows what your court tells you, the same lines a model ruler reads.
    - **Fog of war:** you see what your court knows. Other countries' treasuries and stability
-     are hidden, and so are garrisons and forts beyond your borders. The rulers' councils open
-     in the inspector when the game is over. The design page has the full rule.
+     are hidden, and so are garrisons and forts beyond your borders, except where one of your
+     armies stands, besieging or passing through: it sees the walls. What rivals do and say is
+     shown as it happens: their decisions open in the inspector during the game. What their
+     courts tell them (their treasuries) opens when the game is over. The design page has the
+     full rule.
 
 **What a live game or a rule game needs:**
 - **Two environment variables, in the environment Unity was started from:**
@@ -63,12 +117,145 @@ language model through the framework, fighting over 25 provinces on a painted se
 - **The RTX 5080, behind its lock.** The server is the card shared by every live run. A live game
   takes `.scratch/ollama-5080-lock/held` while the model plays, unloads the model, and releases
   the lock as soon as the model is done (playback carries on from the log). A full game holds the
-  card for a few minutes. A rule game takes the lock for each round of the rulers' decisions
-  only, and unloads the model after each. It never holds the card while it waits for your
-  order, and if another session holds it, the orders panel says who.
+  card for a few minutes.
+- **A rule game holds the card for the whole game,** from before the first council until it
+  ends or you leave with Menu (the lead's decision, 12 November). The top bar shows
+  **RTX 5080 · held** meanwhile. The lock is let go, and the model unloaded, on every way out:
+  the end, Menu, stopping Play mode, quitting, a script reload, or an error.
+  - **While another session holds the card,** the game waits and shows who holds it, since when,
+    and how long you have waited.
+  - **When the server is slow** (another client using it without the lock), the status line says
+    so after 20 s.
+  - **A round with no answer in 150 s** stops the game with a message.
+- **The game never sits silent.** A live game's council clock runs in the top bar, and a notice
+  appears after 30 s.
 - **If it cannot start, the menu says why rather than wait:** a variable is not set, the lock is
   held (and by whom), the server cannot be reached, or the key is refused. A game that stops
   mid-way says so across the top of the map.
+
+### The first sounds (17 November)
+
+Six sounds play: a click and a soft hover on the menus' buttons, a page for a window or side panel opening and
+closing, a struck chime when you end your turn, and a quill and a turned page as your turn plays out.
+
+- **One table** (`Screen/Replay/SoundCues.cs`) lists every cue: its file, its bus, its level and where it plays.
+  Swap a sound by replacing its file or editing its line. The whole first list is named there; the cues still without a
+  sound play nothing until theirs is added, so other parts of the game can hook them now
+  (`SoundManager.Play(SoundCues.Battle)`).
+- **Four buses** (music, effects, interface, voice), each with its volume in Settings next to the master. The
+  interface sits below the effects by default, and a hover is barely there.
+- **Nothing plays when the window has no focus.** In batch mode and the tests no manager is made, so they need no
+  audio device and make no sound.
+- **Settings → Sound test** plays each cue at the levels above it.
+- How each sound was made (prompt, seed, workflow) and how it was chosen without listening:
+  [`Assets/GreyBoxStrategy/Screen/Audio/README.md`](Assets/GreyBoxStrategy/Screen/Audio/README.md).
+
+### The start menu (16 November)
+
+The game opens on a title screen in the game's own look, not on a card of settings.
+
+- **The background is alive, and costs nothing.** It is the Classic board's painting, which is already loaded when
+  the menu opens. The camera drifts slowly over it, closer than a game shows it, and every few seconds the borders
+  change to the next turn of the recorded game. A generated world behind the menu would need seconds of making
+  behind a loading card before the first frame, so it was not chosen. Only the map's owners are painted: the
+  screen's own state is untouched, so a game starts from exactly where it would.
+- **The title** is one constant, `StartMenu.Title`, with the subtitle "Realms ruled by language models, built on
+  the Agenerela framework".
+- **The buttons** are New game, Watch a game, Load a replay, Settings, Credits and Quit. The arrow keys, W and S
+  move a mark, Enter presses, and the mouse moves the same mark. A hint under them says what the marked one does.
+  - **Continue** is listed only when a saved game exists (`Saves/continue.json` in the game's data folder). Nothing
+    writes one yet (saving is the lead's next item after the turn rework), so it
+    never shows. The button, its place and its test are there for the day one can be saved.
+- **New game** is a framed window. Watch or Rule is on top. Under it are four groups behind tabs: **World** (the
+  map, its size, shape, countries and the seed), **Rivals** (your realm, models or scripted rulers, the advisor
+  and the five personas), **Rules** (the turn, victory, your writs, the four army rules and the storyteller) and
+  **Model** (its name and whether its server answers). Start is at the foot whichever is open. **Watch a game**
+  opens the same window set to Watch. Nothing a model reads changed: the window sets the same `NewGameChoice`.
+- **Load a replay** lists finished games, newest first, with the date, the turns and who won; the game that ships
+  is last. A game played or watched to its end is saved by itself in `Replays` in the game's data folder, the
+  newest 40.
+  - A game the scripted rulers played is saved as its setup and made again from the seed.
+  - Any other is saved with its decisions and replayed on the same world and rules.
+  - Not saved: a replay itself, a game the dev menu touched, and a game ruled with unlimited writs.
+- **New game's Rivals group** has **Your face**: the art pack's four neutral portraits, the one you wear framed
+  (`ScreenUI.YourFace`, kept between games).
+- **Settings** has room for the voices the lead decided (`painted-realm-direction.md`): a **Voices** section that
+  lists rulers' lines (off by default, a click on a phrase speaks it) and the storyteller's stories and events (on
+  by default) as coming, beside the Voices volume.
+- **Credits** name the team, the framework's version (`AgenerelaInfo.Version`) and the MIT licence.
+- **The model status line**, at the foot, names the provider and the model and says whether the server answers.
+  - It asks the server for its models through the framework's own provider (`IModelLifecycle.ListModelsAsync`),
+    so it also knows when the server is up and the model is not installed.
+  - It never holds the menu up: the line says "asking the server…" until an answer or 8 s.
+  - With no server it says "No model is running: you can still watch a scripted game or a replay".
+  - While another session holds the RTX 5080's lock, the server is not asked at all, and the line says who holds
+    the card.
+- **The pause menu** (Esc in a game) is Resume, How to play, the advisor, Settings, Back to the start menu and
+  Quit, with the same keys. Leaving a rule game or a live game that is not over asks first, with the safe answer
+  under the keys.
+
+The code is `Screen/UI/ScreenUI.StartMenu.cs`, `Screen/ReplayDirector.StartMenu.cs`,
+`Screen/Replay/StartMenuModel.cs` and `Screen/Replay/ReplayLibrary.cs`; `StartMenuTests` checks it without a scene.
+From the Unity CLI: `OpenTitle()`, `OpenNewGame(true)`, `OpenReplays()`, `OpenPause()`, and `ModelLine` for the
+status line.
+
+## Dev menu
+
+**F1** opens the dev menu in the editor and in development builds. It is not in a release build,
+and the pause menu says so where it is available. It is a plain, dense tool, not part of the
+look. Every button runs one command line, and the same lines run from code:
+
+```csharp
+GreyBoxStrategy.Realm.DevTools.Run("scripted-rule kesh 7");   // returns what happened, as text
+GreyBoxStrategy.Realm.DevTools.Run("help");                   // every command
+```
+
+A session drives it through the Unity CLI:
+
+```bash
+unity command script eval -- --code 'return GreyBoxStrategy.Realm.DevTools.Run("turn 12");'
+```
+
+| Command | What it does |
+|---|---|
+| `scripted-rule <country> [seed]` | Rule a country against four stand-in rulers: a `ScriptedProvider` picks a move the rules offer, through the real agents. No server, no card |
+| `scripted-watch [seed]` | Watch five stand-in rulers. No server, no card |
+| `generated <small\|medium\|large\|huge> [shape] [seed] [countries]` | Watch scripted rulers play a generated world, drawn as a chart. Shapes: `continent`, `two_lands`, `inland_sea`, `peninsula`, `long_coast` |
+| `turn <n>` · `step` · `play` · `pause` · `speed <x>` | Jump to a turn without animating the turns before it, land one event, or play and pause. Speed is 0.25 to 32 |
+| `autoplay on\|off` | Play to the end at 8× or faster. In rule mode it also holds every turn and refuses every envoy, and takes the default of every dilemma |
+| `gold\|army\|stability <country> <+n\|-n\|=n>` | Change a country's numbers, within the rules' ranges |
+| `forts <province> <+n\|-n\|=n>` · `owner <province> <country\|neutral>` | Change a province |
+| `war\|peace <country> <country>` · `eliminate <country>` | Change relations, or take a country out of the game |
+| `event <template> <target> [Title: story]` · `events` | Fire any event template at the next upkeep: the table's, the storyteller's, a dilemma (`event sellswords kesh`), or a planned tale's beginning (`event begin_pretender kesh`). In a storyteller game it takes that turn's place, and the dev menu deals the turn the kind its event needs. `events` lists them all, read from `EventRules.AllTemplates`. The rules allow none before turn 3 |
+| `scripted-rule <country> [seed] [preset]` · `scripted-watch [seed] [preset]` | The stand-in games above, with a stand-in storyteller on a preset (`saga`, `even_hand`...) that picks legal events, leaning toward dilemmas and tales |
+| `story-open` · `story-inspect [title]` · `tales` · `choose <option>` | Open the last storyteller event, its decision (or its title call's) in the inspector, the tales panel; answer the choice card |
+| `writs classic\|<size> [seed] [conquest\|domination_75]` | Watch stand-in rulers play the writs turn, on the Classic board or a generated world: armies as pieces, occupation, treaties |
+| `writs-live classic\|<size> [seed] [turns] [model]` · `writs-agents classic\|<size> [seed] [turns]` | The writs turn played live: model rulers on the RTX 5080 (the lock, its pause file and the server are checked first), or stand-ins through the same agents with no server |
+| `until <event kind>` · `battle-report` | Play on and hold before the next event of a kind (`Battle`, `March`, `Occupy`, `Treaty`...); open the last battle's report card |
+| `spawn <country> <province> <n>` · `march <army> <province>` · `battle <army> <enemy army>` | The writs turn's armies: raise one, order one, or step one into an enemy's province so they fight when the turn resolves |
+| `occupy <province> <country>` · `free <province>` · `warscore <a> <b> =<n>` · `treaty <a> <term> <b>` | Occupation, the battles part of a war score (4 a battle, at most 20), and a treaty term landed at once. In a writs game with stand-in rulers, an edit lands at the start of the next turn and the game is played again from there |
+| `fog off\|on` | Reveal everything in rule mode, or restore what your court knows |
+| `fault lock <holder…>` · `fault lock off` | Pretend another session holds the RTX 5080. The real lock directory is never read, written or taken while this is on |
+| `fault server on\|off` | Pretend the server cannot be reached |
+| `fault timeout on\|off` | Requests hang until cancelled, and a rule round times out after 8 s instead of 150 s |
+| `fault unreadable on\|off` | Every reply is text no parser can read. The model is never asked |
+| `faults off` | Clear every pretended fault |
+| `readouts` | Frames per second, UI scale, resolution, the last reply's latency and tokens, the last played decision's queue wait, requests in flight, and who holds the card |
+| `screenshot [name]` · `save-recording [name]` | Save to `Logs/Dev/`. A saved recording replays with `load-recording <path>` from the start menu |
+| `size <w>x<h>` | 1366x768, 1920x1080, 2560x1440 or 3840x2160, or 16:10 1920x1200 or 3840x2400 (the lead's display): the Game view in the editor, the window in a build |
+| `menu` | Show or hide the dev menu |
+
+**State edits work in rule games, at the start of the next turn.** The screen rebuilds every turn
+from the recording, so an edit is recorded and applied at the same point in the game and its
+replay. It shows in the chronicle as a "Dev menu:" line.
+- A recorded replay cannot change.
+- A watch-live game runs on the table runner, which has no hook between turns. Start
+  `scripted-rule` to try edits without the card.
+
+**A game the dev menu touched is a dev game.** That covers an edit, stand-in rulers, or a
+pretended fault. The top bar marks it with a red **DEV**, and its saved recording carries
+`"dev": true` and the edits. The table runner and the scorecard never go through the screen, so
+they never meet the dev menu.
 
 ## Run it
 
@@ -137,10 +324,1587 @@ framework writes the moves as one line among the facts, `LegalTargets = Observat
 
 Each game log shows the model's answer and its statement under each of its moves.
 
-**Tests:** 123 EditMode tests in `Assets/GreyBoxStrategy/Tests/Editor/`, about 5 seconds once the
-project has imported. Twenty of them drive the model seat through `ScriptedProvider`,
-sixteen in `TableTests` the table, the personas and the scorecard, and fifteen in `StorytellerTests`
-the storyteller. The screen has its own in `Screen/Tests/Editor/`.
+**Tests:** 374 EditMode tests in all, counted on 13 November. 289 are the game's, in
+`Assets/GreyBoxStrategy/Tests/Editor/`: 285 run every time, about a minute once the project has
+imported (the map generator's take most of it), and four long ones are run by hand. Of the game's,
+twenty drive the model seat through `ScriptedProvider`, sixteen in `TableTests` the table, the
+personas and the scorecard, and fifteen in `StorytellerTests` the storyteller. 85 are the screen's,
+in `Screen/Tests/Editor/`.
+
+## Rules v2, being built
+
+[`docs/demos/painted-realm-rules-v2.md`](../../docs/demos/painted-realm-rules-v2.md) is the plan, in
+slices R0 to R10. Built so far:
+
+**R0, settings and the map as data** (12 November). Today's game plays exactly as before; what
+changed is where it comes from.
+
+- **The map is data.** `WorldMap` (`Sim/Map/`) holds countries, provinces and borders, and v2's
+  province fields that no rule reads yet: terrain (plains, forest, hills, marsh, mountains), coast,
+  port, population, good, region, special place. It reads and writes JSON
+  (`WorldMap.FromJson`, `ToJson`), refusing a map it cannot play with the reason.
+  `MapDefinition.Standard()` is the **Classic** preset (`ClassicMap`), today's 25 provinces with
+  terrain set by hand from the painting.
+- **The settings are data.** `GameSetup` (`Sim/Rules/`) is what the menu, the runners and the tests
+  share: seed, map, number of countries, victory mode and its values, the storyteller preset and the
+  advisor switch (both were data only at first; the storyteller is played since 13 November and the
+  advisor since 14 November). Its saved form:
+
+  ```json
+  { "version": 1, "turn": "one_move", "seed": 4, "map": "classic", "countries": 5, "victory": "domination",
+    "dominationPercent": 60, "turnLimit": 30, "turnCap": 150, "storyteller": "off", "advisor": true }
+  ```
+
+  `GameSetup.FromJson` refuses unknown names and invalid values with a message ("the Classic board has
+  five countries, not 6"); `NewGame()` starts the game; `GameRunner.Play(setup, lineup)` plays one
+  headless.
+- **Three victory modes.** `domination` is today's (15 of 25, or the most after turn 30) and stays the
+  default until armies arrive in R1. `conquest`: the last country standing wins; a headless run stops
+  at `turnCap` and records the game as `Unfinished`. `turn_limit`: the most provinces after
+  `turnLimit` turns. A ruler's first fact and goal line say the mode's goal; on domination they read
+  word for word as before.
+- **Proof it is the same game:** `SetupTests` pins the hash of the 200-game mixed series' `summary.md`
+  and of every turn's owner grid, as measured on the commit before R0, and compares the Classic data
+  with the board as it was built in code (`LegacyBoard`), field by field.
+
+**R2, the map generator, headless** (12 November). Worlds of any size are generated from a seed,
+checked, and played by today's rules. Nothing draws them on screen yet (R4); a script draws them on a
+sheet.
+
+```csharp
+var made = MapGenerator.Generate(seed: 7, countries: 6, new MapSettings { Size = MapSize.Medium, Shape = LandShape.InlandSea });
+// made.Passed, made.Map (a WorldMap with Geometry), made.Problems, made.Attempts, made.Fairness
+var game = new GameSetup { Seed = 7, Map = "generated", Countries = 6, Generator = new MapSettings() }.NewGame();
+```
+
+- **Settings** (`MapSettings`): size (small ~30 provinces, medium ~60, large ~100, huge ~150, with 4, 6,
+  8 and 10 countries by default), land shape (`continent`, `two_lands`, `inland_sea`, `peninsula`,
+  `long_coast`), starting realm (2 to 5 provinces) and special places (none, few, many). The same seed
+  and settings make the same world on every machine: integer noise and hashes throughout, and a test
+  pins one world per size, measured under .NET and matched under Unity's Mono.
+- **The steps** (`Sim/Map/MapGenerator.cs`), each drawing its randomness from the seed and its own name:
+  1. land from a height field shaped by the land shape, whose proportions vary by seed. Two warps,
+     one broad and one fine, give the coasts bays and headlands and keep the inland sea from being an
+     oval. The land fades out before the frame, so no coast runs along it. Small land clear of the main
+     land stays as scenery islands;
+  2. Poisson-disc seeds relaxed three times;
+  3. provinces by nearest seed after a low-frequency warp, so borders wander, with small provinces
+     grown, borders smoothed, and pieces, corners and short contacts repaired;
+  4. adjacency from the cells (three shared cell edges make a border);
+  5. ridges that cut borders except at passes;
+  6. terrain by quota from its own relief and moisture noise;
+  7. coasts and ports;
+  8. regions of about eight provinces;
+  9. goods and population;
+  10. capitals placed by a seeded search for fair starts, with starting realms that never touch;
+  11. names from syllable tables, a style a region;
+  12. special places.
+- **The checks** (`MapChecks`) judge any world, generated or not, and say why one fails:
+  - connectivity: connected, capitals reach each other, every province has borders, no ridge crossed
+    except at a pass, adjacency equal to the cells;
+  - shape: one piece, area within 0.5 to 1.8 times the mean, a minimum width, no corner or short contacts;
+  - fairness: reach, its value, neutral land bordering each start, rival capitals near, equal realms
+    that do not touch, capitals off mountains and marsh and apart, scarce goods;
+  - content: names, special places.
+
+  A world that fails is made again from the next sub-seed, up to 50 times. When none passes, the best
+  is returned with its problems, and `GameSetup` refuses one whose rules graph is wrong.
+- **Special places**: an old castle, a silver mine, a sacred lake and six more, on slots the code picks
+  (never a capital or starting realm, four steps apart, one a region), each with a name and a line of
+  story from tables. `ISpecialPlaceMaker` is where the world-maker agent and the Cartographer (R9) plug
+  in, and `INameMaker` is where the model's names (R10) do. Whatever they return is checked, and falls
+  back to the tables.
+- **Geometry for drawing** (`MapGeometry`, in the world's JSON): the cell grid, each province's outline
+  loops, centre, label point and label radius, every border and coast as polylines with its kind (land,
+  ridge, pass, coast, shore), the ridge lines, and the scenery islands' outlines (cell value -4).
+  Also:
+  - **rivers**, from high land to the sea or an inland sea, along cell corners, each with its rank, its
+    mouth, the provinces it touches and the borders it forms;
+  - **roads**: highways joining every capital and tracks to the ports and the most populous provinces,
+    crossing ridges only at passes, each bridge recorded;
+  - each province's **development**, 0 to 4, from `Development.Of` (population, capital, port; R6's
+    buildings will feed it).
+
+  No rule reads rivers, roads or development yet.
+- **Progress and a time budget.** `MapGenerator.Generate(..., progress, budget)` reports after every try
+  (tries so far, the best world's problems and reach spread, a line to show). After the budget it
+  returns the best world found, with its problems and `TimedOut`, so a menu shows a loading state and
+  never hangs.
+- **A sheet of worlds**: **GreyBoxStrategy → Export 20 generated worlds** (or
+  `MapExportMenu.ExportFromCommandLine` in batch mode) writes one world per size and shape with a
+  `summary.md`. `python ArtSource/world_sheet.py <folder> sheet.png` draws them.
+- **Today's rules on a generated world**: **GreyBoxStrategy → Play 200 games on a generated world**, or
+  `StrategyRunMenu.RunFromCommandLine` with `-strategyMap generated -strategySize medium
+  -strategyShape continent -strategyMapSeed 1`. One world, every game its own dice. The rules ran on
+  every size without a change.
+
+  **Where they assume today's board** (none fixed here; each waits for its slice):
+  - **The game's length:** 30 turns and 60% to win suit 25 provinces. On 60 or more, every scripted game
+    ran to the turn limit (R1's pacing, or conquest).
+  - **The standing facts** list every rival, one line each: 12 lines with ten countries, over the budget
+    of 8 the tests hold Classic to. The page's "facts stay local" is a prompt change and owes an A/B.
+  - **The moves on offer:** up to 41 moves and 20 attack targets a turn, against the page's limit of
+    about 12 targets.
+  - **The labels:** `SeriesSummary` names the ending "domination (15 provinces)" whatever the share.
+  - **The line-ups** have five kinds, so with six or more countries a kind sits twice, and "every kind
+    at every country once in five games" no longer holds.
+  - **The owner grid** in the logs places provinces on a coarse grid by their centres. It shows every
+    province once, but sparsely.
+
+### The drawn-chart spike (12 November)
+
+The screen half of R2: a generated world drawn by code in the sea-chart style, for the lead to
+judge against the painting. Classic is unchanged: its painting, its baked province map and its
+look.
+
+**See it:** New game → Map: Generated, or the dev menu's **Generated world** buttons
+(`generated medium continent 7`). The world is made from the seed, and a whole game is played on it
+at once by the rules' own scripted rulers (`ScriptedWorldGame`, Sim's `mixed` line-up), then
+replayed on the screen like any recording. The model seats' runner plays the Classic board only, and
+it lives in `Agents/`, which the rules sessions own. It is a dev game: the top bar says **DEV**.
+
+**How it is drawn** (`Screen/Chart/`, plain C#, no Unity, so the tests and a .NET harness draw it
+too):
+- `ChartRaster` turns the cell grid into pixels at any width. Each pixel looks up the cells around a
+  point moved a little by noise and takes the province with the most weight. Corners round off and
+  borders wander like inked ones, and a neck one cell wide survives.
+- `ChartPainter` draws the layers, all sized in grid cells, so a chart for 1366 and one for 3840 are
+  the same drawing:
+  - the sea, with engraved wave marks, ripples along the coast, rhumb lines from two points and a
+    compass rose;
+  - the coast line, and a cliff face under every coast that faces south;
+  - land toned by terrain, with a soft relief and paper grain;
+  - terrain as ink glyphs placed by Poisson rejection, clear of names and towns: conifers and round
+    trees, peaks with a lit and a shaded side, hills, marsh reeds, field strips;
+  - ridges as a chain of peaks, open at their passes with a pass mark;
+  - a settlement for each province by population (a hamlet, a village, a town; a capital walled);
+  - an anchor at each port, and a gilt seal for each special place, with its own mark.
+- `ChartImage` makes the chart and the shader's inputs from one raster. The **chart** is a texture
+  1.25 times the screen's width (2048 to 6144). The **province map** is half that width, with 16-bit
+  ids in red and green, so any number of provinces fits. Its **edge field** is as Classic's bake.
+- The map shader (`PaintedMap`) reads 16-bit ids when `_IdWide` is on. The state texture has a
+  column per province (at least 32), so the owner wash, the borders between owners, the focus and
+  the capture animation work as on Classic.
+- `ChartPalette` gives ten owner colours. The first five are Classic's. The wash keeps the chart's
+  lightness and takes only hue and saturation, so the palette is checked as the map shows it: both
+  colours washed over a chart tone, then their CIE distance. The closest pair is 14 apart; Classic's
+  five alone are 15. A test holds it at 12 or more.
+- `ChartLabels` places names as screen text, never baked, so they stay sharp:
+  - a province's name at its label point (the cell farthest from its border), sized to the room
+    there, hidden when it does not fit or would collide with a larger one;
+  - below about 4 screen pixels a cell, region names in spaced italic capitals instead.
+
+**What it costs** (medium world, seed 7; the editor's Mono runtime unless said):
+
+| Screen | Chart | Province map | Time to draw |
+|---|---|---|---|
+| 1366 × 768 | 2048 × 1153 | 1024 × 576 | 1.4 s |
+| 1920 × 1080 | 2400 × 1351 | 1200 × 675 | about 2 s (estimated; not timed after the last speed-up) |
+| 3840 × 2400 | 4800 × 2702 | 2400 × 1351 | 7.3 s (under .NET: 1.7 s) |
+
+The second slice below moves the drawing to the GPU: about 0.1 s at 3840 × 2400.
+
+About 4.4 s of the 7.3 s is one pass over every pixel, which runs about 15 times slower under the
+editor's Mono than under .NET. Memory for the chart at 4800 wide is about 70 MB with mipmaps. A
+huge world's generator takes about 12 s in the editor before any of this (R2's own number).
+
+**What looks wrong because of today's rules** (noted, not fixed):
+- The game is 30 turns with 60% to win. That is 36 of 60 provinces on medium and 90 of 150 on
+  huge, which no one reaches, so every game ends on the turn limit. "Turn 8 of 30" and "90 wins"
+  say so in the top bar.
+- With one move a turn, a huge map changes slowly. After 8 turns most of it is still neutral
+  hatching.
+- Scripted rulers say nothing, so the chronicle has no speech.
+
+### The drawn chart, second slice: development, roads, the GPU (13 November)
+
+The lead's verdict on the spike was to keep improving it, with farms and buildings by how much a
+province has, and the generated roads. This slice draws what the world's data says, and moves the
+drawing onto the GPU. Classic is unchanged.
+
+**What the chart shows now** (`ChartLayout` in `Screen/Chart/ChartScene.cs` decides what goes where,
+from the world alone, and both renderers draw that one scene):
+- **Development.** Each province's `Development` (R6 feeds it; today `Development.Of` from its
+  population, capital, port and buildings) is read once and decides its settlement and its fields:
+  - a hamlet, a village, a town or a large town (tiers 0 to 3); a capital is a walled city with a
+    banner (tier 4); each fort is a tower beside it, up to three; a port adds an anchor;
+  - farmland around the settlement, wider and denser with development (`FarmRadius`, `FarmShare`),
+    drawn as fields of strips and furrows with hedges, each field turned its own way. A test holds
+    that a developed plains province is farmed at least 1.3 times as much as a poor one.
+- **Terrain massed, not scattered.** Forests are closed canopies of conifers and round trees; mountains
+  two staggered rows of peaks along their ridges, open at passes; hills, marsh reeds, scattered trees
+  and hedgerow trees on plains, so no plain is empty.
+- **Rivers and roads** from `MapGeometry` (#277): every river at its rank's width, smoothed from the
+  cell corners and given a meander; every road from settlement to settlement through its provinces, a
+  highway cased, a track dashed; and a bridge wherever a road crosses a river, at the generator's own
+  crossing point.
+- **Scenery islands** (cell `-4`) are drawn as land with a coast, trees and rocks. The province map
+  sees sea there, so the rules, the wash and clicks never treat them as a province.
+- **Special places** have their own marks: a ruined castle, mines, a lake, a spring, a horseshoe, a
+  great tree, crossed swords, a crown with a gilt halo.
+- **Paper.** The land and the sea are printed on a tileable paper texture
+  (`Screen/Art/Resources/chart-paper.png`, its licence is in the screen page's asset list).
+
+**How it is drawn.** `ChartImage.Make(..., gpu: true)` prepares the inputs off the main thread: the
+raster at half width, the ids, the coast's distance field, the scene, the terrain and farmland fields,
+and the atlas (`ChartAtlas`: every distinct glyph look drawn once by the CPU's own code, about 170 for
+4,800 glyphs). `ChartGpu` then draws, on the main thread:
+- the ground with `ChartGround.shader`, a port of the CPU painter's per-pixel pass (same hashes, so the
+  same noise), into an sRGB texture with mipmaps;
+- the rivers and roads as triangle strips and every glyph as a quad from the atlas
+  (`ChartMarks.shader`), in the scene's order.
+
+The CPU painter (`ChartPainter`) stays as the fallback on a machine without float textures or the two
+shaders (`ChartGpu.Supported`), and for the .NET harness and the tests. It draws without the paper texture.
+
+**Loading.** A generated world shows a loading card (`UI/LoadingCard.cs`) while the generator runs, with
+its attempts and time, then while the game is played and the chart prepared. The generator has a
+12-second budget; past it the best world found so far is played, and the load report says so. When
+no playable world was found, the card closes and the screen stays on the Classic board, with a warning
+in the console.
+
+**What it costs** (medium world, seed 7, 3840 × 2400, in the editor):
+
+| Step | Where | Time |
+|---|---|---|
+| The world (generator) | worker thread | 4.2 s |
+| The game played, the chart's inputs prepared | worker thread | 1.7 s |
+| The chart drawn on the GPU, read back once so the time is honest | main thread | 106 to 121 ms |
+| The spike's CPU drawing, for comparison | main thread | 7.3 s |
+
+**Noted, not fixed:**
+- The 1366 × 768 frame shows a chart built for a 3840-wide window and scaled down: changing the Game
+  view's size did not rebuild the chart. Fixed with the writs turn on screen: the chart is drawn again
+  for the new size once it settles, if it needs at least 10% more or fewer pixels.
+- Seed 7 has one bridge. Roads cross rivers rarely on the generator's maps today.
+- The farmland test reads the scene, not the pixels; how the fields look is judged by eye.
+
+### The writs turn on screen: watch and replay (13 November)
+
+The screen's half of R1, first part: a writs game played back on the map, by stand-in rulers. Rule
+mode on the writs turn and model rulers on the screen came after, in the two sections below. The one-move game
+and Classic's painting stay the default.
+
+**See it:** New game → The turn: Writs and armies (with the victory preset), on Classic or a
+generated world, or the dev menu's `writs classic 3` and `writs medium 7`.
+
+**What the screen shows** (`Screen/Replay/ReplayBuilder.Writs.cs` makes the events,
+`Screen/ReplayDirector.Writs.cs` plays them, `Screen/UI/ScreenUI.Writs.cs` draws them):
+- **Every army, always, in every map mode:** a piece with its owner's crest, its soldiers and its
+  general's initial. Several in one province stand side by side, in two rows when there are many.
+  One waiting on rough ground stands on the border. Its tooltip gives its order and why it awaits
+  orders.
+- **Marches:** a dashed ink line in the owner's colour along the rest of the path, with the turns
+  left. At the turn's march every army steps at the same moment, 0.6 s a step at 1×. Two steps over
+  open ground are two slides.
+- **Battles:** crossed swords and a puff where it happens, in a province or on a border, and the
+  losers sliding back to where they fall back to. The report card (from the chronicle line, or
+  `battle-report`) is built from `TurnReport.BattleRecords`: both sides, their armies and soldiers,
+  each term of the result as a pair of bars with the dice last, the losses and retreats, and the
+  rules' own sentence on why.
+- **Occupation** as section 5.1 of the rules page draws it: the owner's wash stays, and the
+  occupier's colour goes over it as inked diagonal hatching, a pattern rather than only a colour.
+  A pennant stands on the province. The hatching is drawn in from the side the army came from, and
+  lifts from the edges inward when the land is freed.
+- **A treaty:** the ceded land's hatching thickens and flows into the new owner's wash, a wax seal
+  stamps on it, and the borders redraw. This is the colouring moment now. Returned land's hatching
+  lifts.
+- **War score** beside each war in the realm panel, the country panel and the diplomacy grid.
+- **The chronicle** has a line for each order, battle, occupation, freeing, term, answer and
+  treaty. Each army order opens its marshal's decision in the inspector (the army in its
+  correlation, `RecordedDecision.ArmyId`).
+- **Conquest** shows "last realm wins" in the standings instead of a province count.
+
+**How the replay is checked.** `ReplayBuilder` rebuilds each writs turn from the recorded orders,
+round by round as the rules ask them, then reads the turn's report in the order the rules resolve
+it. Each turn's owners and occupiers must match the game's, or it throws, as for the one-move game.
+The armies' places are counted too (`ReplayTurn.ArmyDrift`). Ten scripted games, eight Classic seeds
+and two medium worlds, about 25,000 army positions, leave none away from where the rules put them,
+and every step goes from a province to one bordering it. Armies the rules send home after a peace
+are set down, not marched.
+
+**Dev menu:** `spawn`, `march`, `battle`, `occupy`, `free`, `warscore` and `treaty`, in the table
+above. A stand-in writs game is played in full before it is shown, so an edit plays the game again
+from the start of the next turn, with the edit, and the turns before it stay as they were. The
+recording carries the edits, as a rule game's does.
+
+**What it costs:** a Classic writs game is played and rebuilt in about 0.2 s under .NET, a medium
+world's in about 0.5 to 0.9 s, off the main thread behind the loading card.
+
+**Noted, not fixed:**
+- Pieces in neighbouring provinces can overlap each other and the names when many armies gather.
+- The seal can sit under a piece standing on the same province.
+- The scripted rulers order armies into land they may not enter, so the chronicle shows many
+  refused orders; that is the stand-ins' play, not the screen's.
+
+### The end of a game, and a first look (14 November)
+
+**The end screen.** Every way of playing ends on it, once the last turn has landed (`ScreenUI.EndScreen.cs`, from
+`Replay/EndSummary.cs`). It shows:
+- who won and how ("by conquest, the last realm standing"), or that nobody did, and the leader;
+- **Watch the replay**, **New game** and **Back to the map** (Esc), right under the heading;
+- **the land**: provinces each realm held, turn by turn, a line in its colour, the winner's drawn thickest;
+- **wars and treaties**, at most twelve: every realm's fall first, then the earliest wars and peaces, one line for
+  a pair's peace on a turn. A realm falls when the rules eliminate it, or when it loses its last province for good,
+  as a broken realm does while its occupiers keep what they hold;
+- **the rulers**, the winner first: face, persona and model (a scripted ruler names only its style), its land or
+  the turn it fell, and its last two distinct lines.
+
+**Watch the replay** plays the same game again from turn 1 with every council open. After a rule game, the council,
+the advisor and the fog step aside. **New game** reloads straight to the New game page.
+
+**The first-turn help** in rule mode on the writs turn (`ScreenUI.Help.cs`, from `Replay/HelpCallouts.cs`): no more
+than six notes, each beside what it explains, with an ink line and a ring round it:
+- writs;
+- ordering an army;
+- the stripes of occupation;
+- the markers at the map's edge (on a world of more than 40 provinces);
+- your advisor (when it is on);
+- End turn.
+
+It opens by itself the first time your council meets, once. "How to play" in the pause menu opens it again, and
+Esc or "Got it" closes it. Notes look their targets up each time they are placed, and are placed again once the
+council has its advice. They keep clear of the council, the chronicle and each other.
+
+**Also:** two battles in one place get one edge marker.
+
+**Tests**, each seen failing once against a deliberate break:
+- `EndSummaryTests`: the land chart runs from the start to the result; every fall is kept, and the timeline is
+  short and in order; each ruler speaks in its own last lines;
+- `HelpCalloutsTests`: at most six notes, about what this game shows, in a player's words.
+
+### The advisor in rule mode (14 November)
+
+The lead's answer 29: "have it optional and enabled by default which you can disable in game or turn on in game".
+
+**What it is.** When your turn opens on the writs turn, a model on your own seat proposes the turn's plan
+(`Agents/Advisor.cs`). It is the same court and marshal a model ruler has, a `WritRuler` used as it is, asked with
+your realm's facts:
+- the court's order first;
+- then an order for each army a writ reaches, each told the orders before it.
+
+Every suggestion maps to a move the rules offer on that request, and an answer naming any other move holds instead.
+Nothing it decides is carried out, and its memory drops each turn.
+
+**In the council.** A YOUR ADVISOR section shows:
+- its counsel: the first line any of its decisions kept;
+- each suggestion, with **Take** and **Why?**;
+- **Take the advice**, which fills your plan with them all.
+
+You can take one order, change any, or ignore them all; nothing is sent until End turn. **Why?** opens the inspector
+on the advisor's decision (what it read, was offered and answered), headed "your advisor ... advice, not a move".
+
+**Asked alongside the rulers.** The advice starts when your court request opens, beside the rulers' decisions. The
+turn never waits for it, and ending the turn drops advice still being decided. Its agents have their own names in
+the decision log (`kesh_advisor`, `kesh_advisor_marshal`), so the recording never takes them for yours. Only advice
+you take becomes your move, recorded as yours.
+
+**The switch:**
+- **In New game:** "Advisor: on / off" beside the rulers. On by default, and hidden for scripted rulers, where there
+  is no model to advise.
+- **In game:** "Advisor: on / off" in the pause menu, from the next turn (`ReplayDirector.SetAdvisor`).
+
+The stand-in rulers answer for the advisor too, so frames work without a server.
+
+**Tests**, each seen failing once against a deliberate break (`AdvisorTests`, a scripted model that names
+moves the rules never offer on alternate calls):
+- the advice maps only to moves the rules offer, checked against the rules themselves, and a legal answer is
+  the advice exactly;
+- taking it gives exactly that plan, and ignored advice is never recorded as your move;
+- with it off, no call is made, and turning it on in game asks it from the next turn.
+
+### The defaults since 15 November: R3's army rules on, a generated world first
+
+The lead's call: "Lets make all those features like sieges and generals and supply on by default and lets also
+use the maps generated by us by default rather than old one".
+
+- **On by default in `GameRules`:** `UnitTypes`, `Generals`, `Sieges`, `Supply`, `Fog` and `HungerFirst` (it acts
+  only with supply). `CountersLine` was on already. `FortsHoldTheRoad`, `SiegeStopsIncome` and
+  `StalemateByWarScore` stay off.
+- **The writs turn only:** a one-move game's rules carry all six off (`GameSetup.BuildRules`). The one-move game
+  is exactly as it was.
+- **New game** starts on a generated world, on the writs turn, with unit types, generals, sieges and supply on.
+  Classic, the one-move game and each rule's Off stay choices. Off now turns a rule off
+  (`ReplayDirector.WithArmySettings` sets each of the four; before, it could only add one).
+- **Saved recordings replay as they were played:** a recording holds only decisions, so one built with no rules
+  (`ReplayBuilder.Build(recording)`, the bundled replay and `load-recording`) replays with the six army rules off
+  (`ReplayBuilder.RecordedRules`), not under the new defaults. Those are one-move games, which read none of the six,
+  so they replayed the same either way; a test pins both.
+- **Fog and hunger first have no New game switch:** every writs game a player starts has them, by the `GameRules`
+  default. The screen's own fog of what you see is separate and unchanged. Only a headless arm turns them off.
+- **Headless runs keep Classic** (`-strategyMap classic` is still the table's default; `-strategyMap medium` asks for
+  a generated world). Only the rules changed: an arm called `default` now plays with all six on.
+- **Reproducing an earlier run:** every finding before this change ran with those rules off unless it named them. To
+  repeat one, turn them off for the arm:
+  `-strategyRules "UnitTypes=false;Generals=false;Sieges=false;Supply=false;Fog=false;HungerFirst=false"`, or one at
+  a time (`-strategyRules "Supply=false"`). The .NET harness takes the same as `rule:Supply=False`.
+- **Scripted tests** that leaned on the old defaults now set the rules they need (`TestGames` and each test's own
+  rules), rather than reading the defaults.
+
+### R3's armies on screen: unit types and generals (14 November)
+
+R3's first three parts, the unit types (#306, #309) and the generals (#310), on the screen. Both are settings of
+the rules, off when this was written and on by default since 15 November (above); with both off the screen is
+exactly as it was.
+
+**In New game.** "Unit types: off / on" and "Generals: off / on" under "Your writs", with a line saying what each
+does. They apply on the writs turn only, to every way of playing it: the replay, model rulers live and rule mode,
+on Classic or a generated world. Every place that makes a writs game's rules goes through
+`ReplayDirector.RulesFor`, which ORs the two settings into a copy; the one-move game's rules never change.
+
+**Armies at a glance**, with unit types on:
+- a piece carries a small mark of its largest type: a pike head, a horseshoe or a bow;
+- your army rows show the mix as three small bars (pikes, riders, bows), and your piece's tooltip the exact mix,
+  "12 pikes, 8 riders";
+- a rival's piece inside your sight shows only what it mostly is, "Mostly riders." or "Mixed." (rule 3.8's spirit:
+  no exact mix of a rival).
+
+**The council** in rule mode offers `recruit_pikes`, `recruit_riders` and `recruit_bows` in place of Recruit, each a
+button with its cost and what it beats on a second line ("4 gold each · beat bows"), and a tooltip with the
+upkeep, how many you have and what beats them. The advisor's suggestions name the type ("Recruit riders").
+
+**Generals**, with generals on: the army row shows its general's title in italics ("Aldo the Bowmaster"), the
+tooltip "Led by Maren the Wary (+10% defending)." with each trait's effect. The chronicle has a line when a general
+gains a trait ("Maren, leading Maren's host, is now Maren the Wary and Bold after three victories") or falls, with
+who takes command.
+
+**The battle report** shows both sides' mix under their numbers, a bar for the counters' and the generals' effect
+on each side when it is not ×1, and a sentence a player reads: "Kesh's bows broke Merrow's pikes (+29%). Maren the
+Wary held firm (+10%)." With R3 on, its terrain line says terrain does not change a battle yet.
+
+**What the replay knows.** The turn-end states carry each army's mix and general from the rules' world, and since
+15 November so does the council: `ArmySnapshot` carries each army's mix, general, traits and stores, and
+`TurnSnapshot` each siege, so a replay's council is the live game's (`ReplayCouncilTests`, with all four R3 settings
+on, fails without them). The moments after the council carry each army's council mix on, split over the soldiers
+left the way the rules split losses, and its council general (a fall is told at the turn's end). An army raised
+and routed in the same turn has no mix to show unless its recruit order typed it, and no general; its side of the
+report then shows no mix rather than a wrong one. Since 15 November `BattleRecord` carries each side's mix and
+commander as the battle began (`AttackerMix`, `DefenderMix`, `AttackerCommander`, `DefenderCommander`), which
+closes that gap once the screen reads them.
+Recordings hold only decisions, and the replay plays the rules again, so recordings made before this load as they did.
+
+**Tests** (`ArmiesScreenTests`), each seen failing once against a deliberate break:
+- New game's two settings reach the rules of every writs game, each on its own and together, and never the
+  one-move game's or the standard rules (broken by dropping the generals from the routing);
+- with both off, no army has a mix or a general, its tooltip adds nothing, the chronicle has no general's line,
+  every battle has no counter and no general, and the recruit order is still "Recruit" (broken by keeping the
+  mix with types off);
+- with both on, every army's mix adds up to its soldiers and names its general, and every report's mix agrees with
+  its counter sentence (broken by swapping riders and bows in a side's mix).
+
+### R3's sieges and supply on screen (14 November)
+
+R3's parts four and five, sieges (#311) and supply (#313), on the screen, the same way as unit types and
+generals: two more settings in New game, off when this was written and on by default since 15 November, and with
+them off the screen is exactly as it was.
+
+**In New game.** "Sieges: off / on" and "Supply: off / on" under "Generals", for every way of playing the writs
+turn, through the same `ReplayDirector.RulesFor`.
+
+**Sieges.** A besieged province carries a tag beside its fort marks, "Siege 2 of 4", edged in the besieger's
+colour: the turns the siege has lasted and the turns it needs (`Game.SiegeTurnsNeeded`, so a siegewright or a
+three-to-one host shortens it). The chronicle says when a siege begins ("Valen besieges Corwick, Orsk's"), is
+broken, or ends ("Valen takes Corwick, Orsk's, after a siege: the walls were breached early"). An ended siege
+lands like an occupation, its hatching spreading from the nearest held land, with the walls a level lower.
+
+Before this, a replay with sieges on stopped at the first siege that ended: it did not read the rules' line, so its
+occupiers no longer matched the game's.
+
+**Supply.** Your army's row shows its stores as four pips, half-filled for half a turn, and its tooltip "Stores: 3
+of 4 turns; refilled in your own land." An army with none shows "No stores" in red on its row, a red edge on its
+piece, and a tooltip that says it loses soldiers every turn outside your land and fights weaker. The chronicle
+says when an army goes hungry and how many it lost, or when it starves. A rival's stores are not shown.
+
+**What the replay knows.** The turn-end states carry each siege and each army's stores. Inside a turn an army has
+the stores it began with (they change only at the turn's end), a new army full stores (as the rules raise it), and
+a hungry one none from its hunger line.
+
+**Tests** (`SiegesSupplyScreenTests`), each seen failing once against a deliberate break:
+- New game's two settings reach the rules of every writs game, and never the one-move game's or the standard rules
+  (broken by dropping supply from the routing);
+- with both off, no province has a siege, no army has stores, every tooltip is as before, and the chronicle has no
+  siege or hunger line (broken by keeping stores with supply off);
+- with both on, over four scripted games: sieges begin and end, an ended siege is occupied by its besieger and has no
+  tag, every turn's end tags each siege with the game's own turns, every army has its stores at every moment, and a
+  hungry army shows the warning to you and not to a rival (broken by not reading the line of a siege that ended).
+
+### Generated art: the first pack (16 November)
+
+Variant B's empty picture frames are filled, from an art pack made ahead of time and shipped with the game.
+- **One style for every picture**, a fixed line at the head of every prompt: painted like a late-medieval illuminated
+  chronicle, muted earth colours with small gilt accents, no lettering, border or modern object. Every picture was
+  made on the team's asset server (Z-Image Turbo, `tools/comfyui/comfy.py`), two candidates each at least, and chosen
+  by looking: warped hands and faces, painted borders and anything that read as lettering were rejected.
+- **What is in it**, under `Screen/Art/Resources/ArtPack/`, with every file's prompt and seed in its `README.md`:
+  - **19 rulers:** three faces for each of the five personas, and four neutral faces for your own realm;
+  - **12 generals:** six men and six women;
+  - **27 event pictures:** the storyteller's eight first events, the random table's, the dilemmas, the tales'
+    events, the omen, a tale's beginning and its end.
+- **Who wears which face** is `ArtCatalogue`:
+  - a realm a persona rules wears one of that persona's faces, chosen by a stable hash of the game's seed and the
+    realm's id, so it keeps that face all game and in the game's replay;
+  - no two realms of one game share a face (19 faces, ten realms at most);
+  - your own realm wears one of the four neutral faces; while you rule, a click on your portrait in the top bar
+    changes it, and the choice is kept for later games;
+  - a general's face follows the general's name, a woman's face for a woman's name.
+- **Where the portraits hang:** the top bar beside your banner, the realm panel's header, the army panel's header and
+  its General tab, the inspector's header, an envoy's card, the words on the map and the end screen. Small frames
+  (up to 80 px) use a 192 × 224 copy; the pictures import with mipmaps so they stay smooth at 52 × 62.
+- **Fallbacks:** a realm the pack has no face for shows the persona sheet's face, then the empty frame.
+- **Event pictures** are ready for the storyteller's event window: `ScreenUI.EventPicture(templateId)` returns the
+  picture or null. The window is being built in another branch, which adds the one line that shows it.
+- **Flags stay the crests drawn in code.** A generated emblem, one charge in grey tinted with the realm's colour,
+  was tried at the top bar's 14 px: a tower reads no better than the code crest's own charges, and a wolf's head is
+  a blob ([`docs/demos/painted-realm-art/flags-at-14px.png`](../../docs/demos/painted-realm-art/flags-at-14px.png)).
+- **Remaking it:** `ArtSource/art-pack/pack.json` holds each chosen picture's subject, seed and candidate, and
+  `ArtSource/art-pack/build_pack.py <candidates>` resizes the chosen candidates into the pack and writes its README.
+- **Tests** (`ArtCatalogueTests`): the hash is pinned to a second implementation's numbers; a realm's face does not
+  depend on the order realms are listed in; over 300 seeds and four seatings no two realms share a face; clicking
+  through your own faces never moves a rival's; every storyteller template, every listed face and every listed event
+  has its picture, at the right shape; a missing picture is null; and a realm's panel hangs the portrait the
+  catalogue chose. The three that read the pack were seen failing before the pack existed.
+
+### The economy, part 3: taxes stick, and the court is told what a building gains (23 November; #372, #374)
+
+Run request 002's economy game (one seed, `qwen3.5:4b`) changed the tax level 79 times in 448 council answers and built
+twice in 40 turns. Two rule changes, still under `GameRules.Economy` (off):
+
+- **A tax change sticks for `TaxLockTurns` (5) turns.** After a court sets the level, none of the three tax orders is
+  offered until five turns have passed (set on turn 1, offered again on turn 6). The rule is in
+  `WritLegality.WhyNotCourt`, so the offer and the re-check agree, and its reason is "taxes were set 2 turns ago; they
+  can change in 3". The court reads "Taxes: high (income x1.3; stability falls 1 a turn), can change in 3 turns." The
+  realm's own turn is `Country.TaxesSetTurn` (0: never set), the wait `World.TaxTurnsLeft`; 0 turns is the old rule.
+  A lock rather than a stability cost: a cost still leaves the order offered every turn, while the lock takes it out of
+  the list, so a model court cannot toggle it and a model court's three orders a turn go to something else.
+- **The moves line names each building**, with its price, where it may go and what it gains there, the most first:
+  "build a farm (30 gold): +5 gold a turn at corwick, +3 at orskhaven or redcliff". Before, the line ("Moves open to
+  us") listed recruits, forts and wars and never a building; the action list said "+5 gold a turn there (+8 on a coast)"
+  and the target list held all 29 provinces and countries, with a province's whole yield rather than the gain. About
+  60 more prompt tokens on a request that offers a building (+256 characters on average, at most +372, replayed below).
+  Prices and gains are unchanged.
+
+**What the replay found.** The 1,208 answers of game e1 replayed through the rules headlessly (all of them matched what
+was offered, none left over): a building was offered in 129 of 448 council requests, 90 of 187 courts' first requests.
+In those 90 the court recruited 74 times and built once. After a recruit a building was still affordable in 31 of 207
+requests, since a levy takes up to its whole cost in gold. A court's spendable gold at its first request was 28 at the
+median (13 and 53 at the quartiles), 40 or more in 67 of 187. Late in the game gold piled up (Merrow 274 at turn 30,
+its levies cut by manpower) and the court answered `none` with every building offered. So gold was short early, but
+the larger gap was what the court read: never the building in its moves line, never its gain.
+
+**Tests**, each seen failing once against a deliberate break: `EconomyTaxLockTests` (no tax order for the lock's turns,
+the reason, the line the court reads, other realms not waiting, offered again after), and in `EconomyBuildingTests` the
+moves line's buildings, prices, places and gains, and a model court's prompt carrying them.
+
+### The economy, part 2: market, barracks, farm (18 November)
+
+Under the same switch (`GameRules.Economy`, with free orders). A court buys a building at once with gold, by an order on
+one of our provinces that we hold; it stands from the turn the order lands and stays with the province when it changes
+hands. Every number is a starting sketch.
+
+| Order | Gold | What it does |
+|---|---|---|
+| `build_market` | 40 | +5 gold a turn in that province, +8 on a coast |
+| `build_barracks` | 40 | +3 manpower a turn, and +10 to the realm's manpower cap |
+| `build_farm` | 30 | +3 gold a turn in that province, +5 on plains; with three farms the realm's stability recovers 1 more a turn |
+| `fortify` (as before) | 30 | the fort: unchanged, one thing, not a building |
+
+- One of each a province, and one building order a province a turn, a fort among them.
+- Each order lists at most `MaxBuildTargets` (6) provinces, those it would add most to first, as fortify lists six.
+- Their gold is held back from the court's later orders in the council, as a levy's is.
+- A court reads each of its own provinces as "ours, 0 forts, plains, 12 gold a turn, farm": its land, its gold a turn
+  and its buildings. Without the economy the line is as before.
+
+For the screen: the orders come through `WritLegality.CourtMovesAfter` and `CourtOrderCost` (a building's cost),
+nothing to compute. A province's buildings are `Province.Buildings` (`Province.Has(Building)`), its gold `World.Yield`;
+`World.Held(country, Building)` counts a realm's; `WritLegality.BuildingCost` and `BuildingGain` say what one costs and
+adds. The replay's `ReplayState.Buildings` has each province's, "market,farm" (null without the economy).
+
+**Tests**, each seen failing once against a deliberate break: `EconomyBuildingTests` (a market in our province, its
+yield and not twice, one order a province a turn with a fort among them, the gold held back, a barracks' manpower and
+cap, farms' yield and stability, a building staying with its province, what a court reads, a model court building).
+The six-target cap is not tested on Classic, where a realm starts with three provinces.
+
+### The economy, part 1: manpower, tax levels, terrain (18 November; the turn rework, slice 2)
+
+The lead's direction: "Light: gold, a few buildings, upkeep." This first part is behind `GameRules.Economy` (off), and
+applies only with free orders on the writs turn (`GameRules.EconomyOn`). Off, nothing changes, and what every model
+reads is the same byte for byte. Every number is a starting sketch, to be tuned by play.
+
+- **Manpower** limits recruiting. A realm gains `ManpowerPerProvince` (2) a turn for each province it holds, up to
+  `ManpowerCapPerProvince` (10) each, and starts at its full cap, so the opening is no slower than before. A recruit
+  costs 1 manpower a soldier, riders too, and its levy is cut to what both gold and manpower allow. A second recruit in
+  one council sees the men the first will take.
+- **Terrain.** A held province yields its owner `IncomePerProvince` (10), plus 2 on plains (farmland), 3 on hills and
+  mountains (mines) and 3 on a coast (trade). An occupied one still gives its occupier half the base.
+- **Taxes are a standing level**, set by a court order (`taxes_low`, `taxes_normal`, `taxes_high`) in place of the
+  one-off `raise_taxes`. Each is offered only when it differs from the level now, and one a turn. Since part 3, a
+  change then sticks for `TaxLockTurns` turns.
+  - Low: income x0.8, stability +1 a turn and +1 more below 3.
+  - Normal: income x1, stability +1 a turn, as before.
+  - High: income x1.3, stability -1 a turn while above 1.
+- **A court reads** "Manpower: 25 of 30, +6 a turn. Taxes: normal (income x1; stability recovers 1 a turn)." A model
+  court is offered the three levels with one line each on what they do. No extra calls: the cap of court orders
+  is unchanged.
+
+For the screen, nothing to compute: orders come through `WritLegality.CourtMovesAfter` and `CourtOrderCost` as before
+(a tax level costs nothing), with `WritLegality.CourtOrderManpower` for what a levy takes. A realm's numbers are
+`Country.Manpower`, `Country.Taxes`, `World.ManpowerCap`, `World.ManpowerGrowth`, `World.TaxFactor`; a province's
+gold is `World.Yield`. The replay's `CountryState` carries `Manpower`, `ManpowerCap`, `ManpowerGrowth` and `Taxes`.
+
+**Tests**, each seen failing once against a deliberate break: `EconomyTests` (the switch and the full start, the levy
+cut by manpower and the men held back, the growth to the cap, the yields and the tax factor, the three levels and their
+stability, one tax order a turn, no `raise_taxes`, a whole game, and a model court offered the levels).
+
+### Free orders, the rules (17 November; the turn rework, slice 1)
+
+The lead's direction ([`painted-realm-direction.md`](../../docs/demos/painted-realm-direction.md)): no writs, the same
+rules for human and model realms, everyone ordering on one snapshot. This first part is the rules, behind
+`GameRules.FreeOrders` (off; off is the writs turn exactly as before). The rulers deciding while you plan, and the
+screen's side, come next.
+
+- **The court** gives orders one at a time until it answers `none`. A person's court follows gold alone. A model
+  court stops at `MaxCourtOrders` (3) a turn: a pacing setting that bounds its calls, not a rule of the game (a realm's
+  own number goes in `CourtOrdersOverride`). Each later request is built on the same snapshot, tells the orders already
+  given, and offers only what is left: the gold its earlier orders will spend is held back (`Country.Reserved`), and an
+  order given once is not offered again, except a recruit, which raises one more company.
+- **The armies.** Every order stands: a hold as much as a march or a siege. An army is asked again when a wake rule
+  fires, or when it has held `AskHoldingArmyEvery` (3) turns unasked, another pacing setting: in watch mode every
+  call is a wait. Armies the court recalled come first.
+- **No writs.** A ruler reads no "Writs:" line, and `ArmyWrits` is every army.
+- **Resolution** is unchanged. The held-back gold is released as the orders land, in the rules' order.
+- `Submit` keeps its shape: each answer returns that realm's next request. So the headless runners, the tables
+  (`-strategyRules FreeOrders=true`) and the replay play a free game with no change.
+
+**Rule mode with free orders** (`RuleSession`, the second part). The model rulers decide from the moment your council
+opens, while you plan, each ruler's requests one after another and the rulers taken in turn. End turn waits only
+for what is left, then the treaty answers. Each ruler's answer goes through `Game.Answer`, which returns that
+ruler's next request, so no ruler waits for another or for you. Your court gives any number of orders gold allows
+(`WritsPlan.Courts`, in order); the model courts keep their pacing. For the screen:
+
+| `RuleSession` | Is |
+|---|---|
+| `RulersDeciding` | how many model rulers are still deciding ("2 rulers still deciding") |
+| `RulersStillDeciding` | which, by country id |
+| `EndTurnWaitSeconds` | how long the last End turn waited after your orders were in, treaty answers included |
+| `TreatyWaitSeconds` | of that, the treaty answers |
+
+A recording of such a game says `"freeOrders": true` (written only then), and the replay plays it with free orders
+whatever rules it is given. A writs recording replays as before.
+
+**Tests**, each seen failing once against a deliberate break: `FreeOrderTests` (the court until none and the cap, the
+override, gold held back, orders not offered twice, which armies are asked and the holding timer, a whole game) and `FreeOrderReplayTests`
+(a scripted free game replays with no drift).
+
+### Merging and splitting armies: the rules (16 November)
+
+The lead, after playing variant B: "a possibility to unify armies and separate". The rules are in the Sim; the
+buttons come in the screen's own pull request, built on the calls below.
+
+- **Merge.** Two or more of your armies in one province, none marching, become the army of the senior general, the one
+  longest in command (ties: the larger army, then the lower id), so splitting and merging back never rerolls a
+  general. Soldiers and each type add up, at most 100 (an army's cap, `ArmyMax`). Stores are the soldier-weighted
+  average in half-turns, rounded down. The other generals are dismissed, and the chronicle says so. A siege goes on where it was, since its progress belongs to the province.
+- **Split.** One army, not marching, gives 1 to its size less one soldiers to a new army in the same province. Each
+  type goes in proportion, the remainder to the largest fractions, as losses are taken, so the totals hold. Both
+  keep the same stores level. The general stays with the original; the new army gets a general of its own,
+  named as a newly raised army's is (every army has one), and holds.
+- **When.** On the writs turn, while the game waits for your orders and before they are given. Neither costs a writ.
+  A merged or new army is ordered like any other, for its writ.
+- **Only yours.** No model court or marshal is offered either, and nothing a model reads changes:
+  `ArmyOrderTests` pins a hash of every request of a 30-turn game, facts and offered moves, taken on the commit
+  before.
+- **Recorded.** A recording keeps them under `armyOrders`, and the replay gives each again in its turn's council,
+  before the plan's recalls. A recording without them saves and replays as before.
+
+For the screen (`RuleSession`, each returns null, or why not):
+
+| Call | Does |
+|---|---|
+| `CanMerge(armyIds)` | whether these armies can merge now |
+| `Merge(armyIds)` | merges them into the senior general's army |
+| `CanSplit(armyId, soldiers)` | whether this army can split that many off now |
+| `Split(armyId, soldiers)` | splits them off; the new army's id is `Game.ArmyOrdersGiven.Last().Others[0]` |
+
+The rules themselves are `Game.CanMerge`, `Merge`, `CanSplit` and `Split`, and `ArmyOrders` on a `World`. The replay
+shows each as an `ArmiesMerged` or `ArmySplit` event, with the armies as the order left them.
+
+**Tests**, each seen failing once against a deliberate break: `ArmyOrderTests` (the rules, the window, the siege,
+the writs, the hash) and `ArmyOrderReplayTests` (a rule game that merges and splits, its replay, and the recording
+saved and loaded).
+
+### The screen, variant B: the inspector and the council (16 November)
+
+Slice 3, the last of variant B.
+- **The inspector is a window** in the middle of the screen, 760 px wide (640 at 1366 × 768). It has a gilt frame,
+  sits above the map's legend and modes, and is as tall as its tab needs, up to 88% of the screen.
+- **Five tabs**, built with the panel kit, opening on **Answer**:
+  - **Answer:** what the model returned, in its field order;
+  - **Offered:** every move on its menu, and why others were not;
+  - **Told:** what its court told it;
+  - **Guards:** what the guards did, and its memory;
+  - **Model:** the model and its timings.
+
+  Only the shown tab is built. While you rule, a rival's Offered and Told tabs stay private, as before.
+- **Speech:** a click on a ruler's words opens that decision in the inspector. Where the words sit is
+  `ScreenModels.PlaceWords`, checked by `ScreenModelsTests`. They go above the capital, but never under a panel or
+  off the screen:
+  - right of the side panel when it is open;
+  - above the chronicle and the council;
+  - beside the inspector on the nearer side with room, or below it at 1366 × 768.
+
+  A capital near the bottom edge used to put them off the screen.
+- **Real model text** (one live game on qwen3.5:4b, 16 November): the rulers' lines run to about 105 characters and
+  fit a bubble in four lines. Your advisor's counsel runs to 650, and the council scrolls under it. The timing bar
+  on the Model tab, squeezed to 8 px by a label's default margins, is its full height again. The advisor's Take and
+  Why? keep clear of the council's scrollbar.
+- **The council:** each writ is a seal, red once your plan spends it and dim while it is left. End turn is larger
+  and gilt-framed (34 px high at 1366 × 768, 40 above), and it stays inside the council's frame: when the council
+  reaches its height, the orders above scroll and the foot does not shrink.
+- **Closing the inspector:** Esc, its ×, or a click on the map outside it. That click only closes the window; it
+  does not also open a province or order a march (`ScreenModels.OnMapClick`, checked by `ScreenModelsTests`).
+- **For tests and the CLI:** `ScreenUI.InspectorTabs()`, `ShowInspectorTab(name)` and `InspectorText()`.
+- **Tests** (`InspectorWindowTests`), each seen failing once against a deliberate break:
+  - a card opens on Answer, each tab holds its part, and every offered move is listed (broken by dropping a move);
+  - a rival's court stays private while you rule and opens while you watch (broken by treating every report as
+    known).
+
+### The screen, variant B: the panels (16 November)
+
+Slice 2: the province, army and realm views on the left are built from one kit (`ScreenUI.Rows.cs`).
+- **Header band:** a large crest, a portrait frame (the persona's face where the game has one, an empty frame
+  otherwise), the name and a line under it.
+- **Tabs with icons**, each remembered per kind of view:
+  - **Army:** Army, General, Orders, Battles.
+  - **Province:** Holding, Land (generated worlds), Orders (rule mode) or Attack (watch mode), History.
+  - **Realm:** What you know (Overview for your own), Ruler, Decisions.
+- **Rows:** an icon, a label, then a bar (each unit type), pips (forts, stores as loaves, stability) or nothing, and
+  the value. The sentence that explains a row is its tooltip.
+- **Fog:** a rival's army shows its size to ten and what it mostly is, never its counts or stores. A province
+  beyond your borders shows "not known" with no pips. A rival's treasury is not known.
+- **Models:** the rows come from `ScreenModels.ArmyRows`, `ProvinceRows` and `RealmRows`, which `ScreenModelsTests`
+  checks.
+- **Icon tints:** an icon's own tint now wins over the stylesheet's colour, so a pip can be lit or dim and a
+  chronicle icon keeps its kind's colour.
+
+### The screen, variant B: layout (16 November)
+
+The lead chose variant B of the UI rework (`docs/demos/painted-realm-ui-variant-b.md`); this is its first slice.
+- **Top bar.**
+  - The realm's banner hangs below it, with an empty portrait frame beside it.
+  - Gold, soldiers, provinces, writs left, stability, wars and truces each have a 30 px icon, a large number and a
+    caption. Each number's tooltip breaks it down (`ScreenModels.TopBar`).
+  - The rivals' crests are on the right.
+  - The framed date block holds the turn, the controls, **Decisions** and Menu.
+- **Outliner, top right.**
+  - Your armies, the most pressing first, with stores as loaves and what each is doing.
+  - The sieges you lay or suffer, and your wars with their scores (`ScreenModels.OutlinerOf`).
+  - Watching, every siege and war.
+  - **Realms** and **Diplomacy** open the ledgers.
+- **Left side.** Empty until a click opens a province, an army, a rival or the realms' ledger there; "‹ Realm" or Esc
+  closes it.
+- **Chronicle.**
+  - A narrow feed at the bottom left, one line an entry, with the speaker's crest and the kind's icon.
+  - Filters: All, Me, War and Land (`ScreenModels.Keeps`). "Me" appears only when you rule.
+  - A click opens an entry in place, with what was said and a link to find it on the map and open its decision.
+- **Controls** (the lead, 17 November). A **right** click on a province orders every chosen army there; a **left** click
+  only selects, an army or a province. A left-drag on the map draws a box and chooses every army of yours inside it;
+  Shift-click adds or removes one; Esc or a click on the sea clears the choice. With several chosen, the outliner's
+  rows and the pieces show it and the left panel shows the group, each army a row with the soldiers in all; those that
+  cannot go where you right-click are named in a notice. Panning is right or middle drag, the arrow keys, and the
+  window's edges (a setting, on by default; off without focus and over a panel other than the top bar). I opens the
+  decisions. The logic is `ScreenModels.OnMapClick`, `OnRightClick`, `BoxSelect`, `ClickArmy` and `EdgeScroll`,
+  tested; `ReplayDirector.ClickAt`, `RightClickAt` and `BoxAt` apply it, for the mouse and the CLI alike.
+- **Merge and split.** With two or more of your armies chosen, the group view offers **Merge** (and M); with one,
+  **Split…** under its panel (and S) opens a slider, half its soldiers by default, and a button that says what it
+  does. Each is disabled with the rules' reason in its tooltip when they say no (`RuleSession.CanMerge`, `CanSplit`,
+  the build session's). Both happen at once in your council and cost no order; the merged army, or the new one, is
+  then chosen, so a right click sends it off. The screen side is `ArmyControlsTests`.
+- **Words over the north.** A ruler's words keep clear of the map's mode row and legend too, as of every panel.
+- **Smaller windows.** At 1366 × 768 the bar drops the words beside its numbers and shrinks its icons; the feed and
+  the outliner narrow.
+
+### March arrows (15 November, evening)
+
+The lead found the planned march "too little and easy to miss" and asked for coloured arrows. A march is now a filled
+arrow along its path, with the corners rounded, a body 7 pixels wide and a head 20 wide. It is drawn in panel pixels, so it reads
+the same at every zoom.
+- **Under way.** The arrow is solid in the owner's colour, edged in ink.
+- **Ordered this council.** The same arrow, pale with an edge in the owner's colour.
+- The arrows follow the sight rules the lines did: yours, and rivals you can see.
+- `MarchArrowTests` checks the outline: the tip on the destination, an even body, a wider head.
+
+### Rule mode in plain words (15 November)
+
+The tech lead's clarity list after the readiness pass, each a frame before and after:
+- **War score.** One sign everywhere, labelled "WARS · WAR SCORE" in the top bar and the Realm panel.
+  - In rule mode it is your side: positive, you are winning. Your wars list you first.
+  - Elsewhere it is the first-named realm's side.
+- **No developer words on the menus.**
+  - The replay card says who won and how, not an id and a model.
+  - New game names no environment variable.
+  - With scripted rulers, Rule mode says "Scripted rivals" and hides the model field.
+  - The battle report no longer mentions "R3".
+- **Every number labelled.**
+  - In the top bar: "30 in 1 army" and "55 +15 a turn".
+  - An army's row names its stores and gives its mix in words ("20 pikes, 8 riders").
+- **Writs.** "2 of 3 used", matching the filled dots. A turn where no army awaits orders, or nothing can be ordered,
+  says why.
+- **The battle report** closes when the next council opens.
+- **The treasury.** When it will run dry within ten turns, the council says so, by the rules' own income and upkeep:
+  "The treasury runs dry in 2 turns (55 gold, -30 a turn)".
+- **A planned march** is drawn the moment it is ordered, in a lighter dashed stroke than a march under way.
+- **A holding or marching army** can be given new orders for a writ (#327 recalls it).
+  - Its row says "holding at X: click to give new orders (a writ)" while a writ is left, and "… until it wakes" when
+    none is.
+  - The armies' heading counts the writs left for armies ("1 of 2 army writs left"), one writ always the court's.
+  - Writs go as the rules give them: the armies your plan orders first, then those awaiting orders.
+  - Orders the rules did not take last turn (`RuleSession.PlanRefusals`) show in the council, with the reason.
+- **Battle report sides.** Each side's mix and commander come from the rules' battle record (#323), as the battle
+  began.
+  - An army raised and routed in one turn now shows its general and mix wherever it fought alone on its side.
+
+### Rule mode with all four R3 settings on: a readiness pass (15 November)
+
+A first-time player's path, played through the Unity CLI with Unit types, Generals, Sieges and Supply on, scripted
+rivals, on Classic and on a medium generated world, at 1080p and 4K. Fixes only:
+- **Chronicle.** A typed recruit ("raised 20 bows at highmoor (perrin_host +20)") now reads "raises 20 bows at
+  Highmoor for Perrin's host", like an untyped one.
+- **Army row.**
+  - An army awaiting orders says why, in the rules' words: "awaiting orders (stores running low)", "(starving)",
+    "(fought a battle)".
+  - An army besieging where it stands says so: "besieging it: siege 2 of 3".
+  - A long general's title wraps inside its column.
+  - "1 turn", not "1 turns", here and in the piece's tooltip.
+- **Map.** The siege tag shows on any besieged province. Before, rule mode hid it with the forts of land beyond your
+  borders, so your own army's siege of a rival capital had no sign on the map.
+- **Battle report.** With unit types or generals on, a battle where neither counted no longer says terrain will
+  matter "until unit types and generals come (R3)".
+- **End card.** A game that stopped with no winner reads "After 27 turns.", not ", after 27 turns.".
+
+What was found and left for a decision (the writs counter, war score's sign, holding armies, unlabelled numbers) is in
+the pull request.
+
+### Generated worlds: detail up close, fields that show, rule mode on a big map (14 November)
+
+R4's third part on screen.
+
+**Drawn again, not magnified.** Zoomed in, the land used to be a blurred enlargement of a chart drawn about 2,400
+pixels wide. Now, once the camera settles on a view where the chart is magnified (more than 0.8 screen pixels for
+each chart pixel), the visible window and a quarter of its size around it are drawn again at screen scale
+(`ReplayDirector.Detail.cs`, `ChartGpu.RenderRegion`):
+- the same ground pass, rivers and roads, and every glyph (trees, hills, marsh, fields, settlements);
+- the glyphs laid out at that scale off the main thread (`ChartGpu.RegionAtlas`).
+
+The far view, where the chart is not magnified, is untouched. The paper grain and field patterns come with the
+ground pass, so they hold at screen scale too.
+- **Occupation hatching** repeats every 9 map pixels as before, but never more than 22 screen pixels apart.
+  Zoomed in, broad bands buried the land drawn under them.
+- **The cost**, RTX 4060 laptop, seed 7:
+
+  | World, view | Map shader, without the window / with it | Drawing the window, once the camera settles | Laying out its glyphs, off the main thread |
+  |---|---|---|---|
+  | Medium, mid zoom, 1080p | 0.69 / 0.65 ms | 7 ms (2709 × 1620) | 72 ms |
+  | Medium, deepest, 1080p | 0.68 / 0.57 ms | 13 ms | 165 ms |
+  | Medium, mid zoom, 1440p | 1.08 / 1.11 ms | 12 ms | 120 ms |
+  | Medium, deepest, 1440p | 1.06 / 1.08 ms | 10 ms | 307 ms |
+  | Huge, mid zoom, 1080p | 0.84 / 0.84 ms | 23 ms (2880 × 1621) | 47 ms |
+  | Huge, deepest, 1080p | 0.75 / 0.77 ms | 24 ms | 153 ms |
+  | Huge, mid zoom, 1440p | 1.37 / 1.39 ms | 26 ms | 76 ms |
+  | Huge, deepest, 1440p | 1.19 / 1.21 ms | 17 ms | 236 ms |
+
+  The map shader costs the same with the window. Drawing it is a one-off after each pan or zoom, timed with the
+  upload and the GPU's work, so about one frame drops when the window lands.
+
+**Fields and settlements show development** (the lead: "farms buildings ... depending on how much of them there
+are"):
+- **The plough** reaches 1.4 cells from a hamlet and 9 from a developed town, from 2.2 and 8.2 before
+  (`ChartLayout.FarmRadius`).
+- **The share of land farmed** runs from 18% to all of it, from 30% to 94% (`FarmShare`).
+- **Plains away from towns** keep only a trace of fields: 0.08, from 0.2.
+- **Fields read in light, not only colour.** An owner's wash replaces the chart's hue and keeps its light, so crops,
+  furrows and hedges now differ in light (the GPU ground shader and the CPU painter alike).
+- **Settlements grow** by 0.3 of a cell a tier, from 0.14, so a town reads from a village at the middle zoom.
+
+The test now asks a developed province to have 2.5 times a poor one's fields; it had 1.3 times before this change.
+
+**Rule mode on a big world:**
+- **"Next army awaiting orders (N)"**, a button in the council, does what the N key does: it chooses the next army
+  with a writ and no order and brings the camera to it. From a far view of a big world it also zooms in until the
+  pieces read (`ReplayDirector.CloseEnough`, 9 pixels a cell).
+- **Markers at the map's edge** point to the last turn's battles and to your capital when they are off screen
+  (`ScreenUI.EdgeMarks.cs`). Each marker keeps inside the free map area, clear of the panels, the council and the
+  map key, and stacks along the edge with its neighbours. A click pans there and opens a battle's report.
+
+**Your writs: unlimited**, a New game setting for rule mode on the writs turn, off by default ("As the rules give").
+It gives you alone the rules' `GameRules.UnlimitedWrits` (#294, `WritsOverride`), through
+`ReplayDirector.WithYourWrits` as the rule game begins:
+- every army awaiting orders asks you;
+- your court may give a second order;
+- the council reads "no limit" instead of pips.
+
+The model rulers keep the rules' count. The setting is ignored when watching and on the one-move turn. Tested headless
+through a rule session's own rules (`Unlimited_writs_from_new_game_reach_the_rules_and_every_army_is_asked`).
+
+**The province panel speaks to a player:**
+- No rule or file names: the notes naming `Legality.WhyNot` and `Personas.cs`, and the line about rules v2 and R6,
+  are gone.
+- Reasons go through `Wording`: "Pellan · we are not at war with Korvane", never a raw id.
+- "Who can attack it" lists the realms that can, with their odds, and any that cannot for a reason of their own.
+  Then one line covers the rest: "6 others cannot: not next to it."
+- History rows wrap and grow, instead of overlapping, and say "Turn 6", not "t6".
+
+**Tests**, each seen failing once against a deliberate break:
+- the farmland check, now 2.5 times;
+- `The_panel_counts_realms_too_far_away_by_the_reason_the_rules_give`;
+- `An_edge_marker_stands_on_the_edge_toward_its_place`.
+
+**Not yet:**
+- Real buildings wait for R6.
+- The window is drawn for the view as a whole, so it does not follow a pan until the camera stops.
+
+### Generated worlds: a sharp chart, names that never collide, the land in the panel (14 November)
+
+R4's second part on screen.
+
+**Sharp at any zoom.** Zoomed in, borders came out as staircases and occupation hatching as blocks: the
+shader read each pixel's province from the province map, 1,200 pixels wide on a 1080p screen. Now it works
+the province out itself, per screen pixel, from the world's cell grid (`_CellTex`). It uses the same noisy vote
+the CPU raster uses (`ChartRaster.IdAtCell`, ported bit for bit), so the shader and a click never disagree about
+a province.
+- **Border lines** are measured from the true border. Where the two weights are equal, the shader walks onto it
+  with up to three Newton steps, each at most a quarter of a cell. A single linear estimate frayed the gilt
+  edge into dashes. Lines are antialiased over one screen pixel, at the old widths.
+- **The hatching's** stripe edges are antialiased the same way.
+- **Only within five map pixels of a border** does the vote run. Deeper inside a province the province map
+  already knows the answer.
+- **A larger id map was not used.** At 4096 the lines would still step at the deepest zoom (about 2 screen
+  pixels a map pixel), and it would cost load time and memory. Drawing borders from the polyline geometry
+  would have needed a second, slightly different line.
+
+`MapView.GeometricBorders` switches it off, to compare.
+
+The map shader's GPU time, RTX 4060 laptop, huge world, best of 5 × 40 draws:
+
+| | province map (before) | cell grid (now) |
+|---|---|---|
+| 1080p, whole world | 0.20 ms | 0.47 ms |
+| 1080p, deepest zoom | 0.33 ms | 0.75 ms |
+| 1440p, whole world | 0.31 ms | 0.77 ms |
+| 1440p, deepest zoom | 0.59 ms | 1.25 ms |
+
+**Nothing on the map covers anything else** (`MapDeclutter`, rules v2 2.6). One pass a frame, after
+everything is placed, in a fixed order:
+1. **Pieces** stay where they stand, set apart from each other. They are now spaced by their measured
+   size, not a fixed 58 × 24 pixels, which they had outgrown.
+2. **March tags** move down, clear of what they would cover.
+3. **Realm names** come next. Pieces and tags may lie over them, as over a printed map's area names.
+4. **Capital and province names** step down by up to their own height to get clear, or hide.
+5. **Region names** hide where they would cover something.
+
+`ScreenUI.LabelReport()` counts what shows and any pair still overlapping. Seed 7, at three zooms, 1080p and
+1440p alike:
+
+| World | Far | Mid | Deep |
+|---|---|---|---|
+| Medium, turn 25 (29 pieces) | 5 capitals, 54 names, 1 to 2 hidden | 60 names, none hidden | 60 names, none hidden |
+| Huge, turn 51 (75 pieces) | 6 realms, 13 regions | 145 names, 5 to 6 hidden, 2 moved | 150 names, none hidden |
+
+Every one of the twelve views reads "overlaps: none" once the view has settled. A frame or two after a
+zoom jump, before the pieces are measured at their new size, two pieces can still touch.
+
+**Realm names**, new: widely spaced capitals along the realm's longest axis (`RealmLabels`), on its largest
+piece of joined land, never steeper than 35°. They show zoomed out, where province names step back. A realm
+of one province is named by its province.
+
+**The province panel's land**, new: terrain and coast, region, the settlement the chart draws and its
+development, population, goods, and a special place with its story. The settlement's tier is one function,
+shared with the chart (`SettlementLook.TierOf`), so the panel names what the chart draws.
+
+**Settlement tiers and farms** were already drawn by development, from population, a capital and a port: a
+hamlet up to a walled town, and a capital city. Nothing in today's rules changes development or builds
+anything during a game, so the chart cannot change with play yet. That waits for R6 (economy and buildings),
+which needs:
+- buildings per province in the rules' state;
+- a development that changes when one is built or the population grows;
+- an event in the replay when that happens, so the screen can draw the province's settlement again.
+
+**The panels** are opaque. At 98.5% a bright name still showed through the dark panel, because the screen
+blends in linear colour, where 1.5% of a bright colour is visible.
+
+**Frame time**, huge world at turn 51, 1080p, on a fresh editor (another Unity editor was open on the same
+laptop, so take these as approximate): the player loop takes 4.6 to 6.3 ms a frame paused and 6.7 to 7.1 ms
+playing at 4×, against 4.6 and 5.8 ms before. The label pass costs 0.2 ms zoomed out and 0.9 ms at the middle
+zoom.
+
+**Tests**, each seen failing once against a deliberate break:
+- `MapLabelTests`: nothing overlaps at three zooms on medium and huge worlds, with every province crowded with
+  armies; the rules of the order; a piece caught between two others; each realm named on its own land; the
+  panel's settlement is the chart's.
+
+**Not yet:**
+- **Local facts** (facts kept local on big maps, per-call target sets) are rules v2's Sim and Agents item for R4.
+  They are left to the build session; this part does only the panel's side.
+- The id map's adjacency test at 2048 and 4096 is not written. The shader no longer depends on the id map's
+  resolution for what it draws.
+- The map key at the bottom is still a little translucent.
+
+### The writs turn on generated worlds (14 November)
+
+R4's first part on screen: a generated world in all three ways of playing, on the drawn chart.
+
+**See it:** New game → World: Generated, drawn, with a Size, a Shape and a number of Countries ("By size" is
+the size's own number). Then Rulers: "Models, live" or "Scripted, a replay", and Watch or Rule. Rule mode on a
+generated world picks the realm by its seat and colour: its name comes with the world. The dev menu:
+`writs-rule-world medium 7 2 6` rules the third seat of a medium world of six realms, with stand-ins and no server.
+Add a model's name to play against model rulers on the RTX 5080.
+
+**What New game starts** (`NewGameChoice.Route`, tested):
+
+| | Watch, scripted | Watch, models | Rule |
+|---|---|---|---|
+| **Classic** | the replay, or the writs replay | live rulers | rule a country |
+| **Generated** | the replay (writs, or one move) | live rulers on the writs turn | rule a realm on the writs turn |
+
+**The camera on any size.** Scroll or Page Up and Page Down to zoom, drag with any mouse button or use the arrow keys
+to pan, and Home to see the whole world. The view never leaves the land. The wheel over a panel scrolls the
+panel, not the map.
+
+A rule game on a generated world opens on your realm and its neighbours, in the space left of the council. It
+stays framed when the window changes size, until Home.
+
+**Pieces scale with the map:** full size while neighbouring provinces stand more than 110 panel pixels apart, down
+to 60% as a big world or a far zoom brings them closer (`ReplayDirector.HostScaleFor`). Below 70% a piece drops
+its general's initial. Classic at its fitted view keeps full size.
+
+**Lists on a big world:** the realm panel's wars, truces and neutral land show eight rows, then "Show all N".
+Neutral land is sorted as your court knows it, the weakest garrisons first, and a click finds the province. The
+chronicle draws its newest 150 entries, with older ones behind "Show older entries".
+
+**Smooth on a huge world** (150 provinces, ten realms, about 75 armies at turn 50, 1080p):
+
+| | screen update | Unity's player loop |
+|---|---|---|
+| paused | 2.4 ms mean | 4.6 ms mean, 6.7 ms worst |
+| playing at 4× | 2.4 ms mean | 5.8 ms mean, 65 ms worst |
+
+A medium world in rule mode, paused, runs at 1.5 ms a frame. Before two fixes the huge world playing cost 37 ms
+a frame:
+- the chronicle rebuilt every line it had on each new one;
+- every piece sorted every army to find its neighbours.
+
+`FrameStats` reports these, for the Unity CLI.
+
+**Also fixed:**
+- **The lit destinations** of a chosen army drew solid red over every province west of the chart's diagonal:
+  `fmod` of a negative number stays negative. The stripes now use `frac`, and keep eight screen pixels apart at
+  any zoom.
+- **Hard-coded counts:** "the four rulers" and "five countries" now say how many there are.
+- **Your realm's name** stays in the top bar however many realms share it.
+- **The panels** are nearly opaque (98.5%, from 93%): zoomed in on a generated world, province names showed through
+  the chronicle's text. Not enough: the next part makes them opaque.
+
+**Not yet:**
+- Rule mode on a generated world plays the writs turn only.
+- Unlimited writs for you waits for the build session's per-country writs setting.
+- R4's other parts (settlement tiers, label collision tests at three zooms, the id map's adjacency test at 4096)
+  are not part of this.
+
+### The writs turn on screen: polish (14 November)
+
+What the frames of rule mode showed, fixed:
+- **The council's buttons** look like the screen's other order buttons: gold on dark when offered. The
+  chosen one is filled and bold. One not offered is dim, its tooltip gives the rules' reason, and a click
+  says it in the panel rather than doing nothing.
+- **No ids in the chronicle or the panel.** A recruit reads "Orsk raises 15 soldiers at Orskhaven for
+  Fenna's host". A refusal or a reason the rules give is said with proper names and capitals
+  (`Wording` in `Screen/Replay/Chronicle.cs`).
+- **A ruler's orders of a turn are one entry.** On the writs turn a ruler gives several orders, and each
+  made its own line with its words under it. Now each ruler gets a heading, "Merrow's orders", with one
+  line an order ("fortifies Glimmerford, twice"), and what it said is shown once. A click on an order
+  still finds it on the map. Battles, land and the storyteller stay lines of their own (`Chronicle.Group`).
+- **Refused destinations:** the three nearest, nearest first, said of the province ("Highmoor: Valen's,
+  and we are at peace"). Any other is a click on the map away.
+- **Pieces never overlap.** Pieces in neighbouring provinces that would touch are set apart, one above
+  the other, while a moving piece keeps its path (`ScreenUI.Unclutter`). A treaty's seal is drawn above
+  the pieces, so a piece on the province no longer hides it. March lines run under the pieces, so a line never strikes through a piece's number. A march's "N turns" tag sits under its destination's name, not on it.
+- **The orders panel:** no stray horizontal scrollbar; Hold is a button like the others; an army with no march
+  offered says so instead of asking for a lit province; army names numbered by the rules read "Tolly's second host".
+- **The top bar** drops each country's lesser stats (gold, change, stability) when five countries in full
+  would push Menu off the right edge, as at 1080p in watch mode.
+
+Unlimited writs for the person waits for the rules' per-country setting.
+
+### The writs turn on screen: rule mode (13 November)
+
+The third part of the screen's R1: you rule one country on the writs turn against four model rulers, a
+court and a marshal each, on the Classic board. (Generated worlds came on 14 November: see
+[the writs turn on generated worlds](#the-writs-turn-on-generated-worlds-14-november).)
+
+**See it:** New game → Rule → The turn: Writs and armies. Or use the dev menu: `writs-rule kesh 3 [preset]`
+plays stand-in rulers through the same agents, with no server. `plan court recruit`,
+`plan maren_host march corwick` and `plan end` give orders from the command line.
+
+**Your turn is one plan** (`RuleSession.WritsPlan`):
+- the court's order;
+- an order for each army that gets a writ;
+- a second court order when a writ is left.
+
+The rules ask for these round by round, and the session answers each round from the plan. Anything the
+plan has no order for holds. You are offered, and held to, exactly what a model ruler is: the court's
+moves come from `WritLegality.CourtMoves`, an army's from `WritLegality.ArmyMoves`. An order not on the
+list is refused with the rules' reason.
+
+**Any of your armies may have an order, woken or not** (15 November, the tech lead's decision). The rules ask
+only armies something woke; for one holding, the court recalls it (`Game.Recall(country, armyId)`, before the
+court's first order): it is asked first, in the plan's order, with the wake reason "recalled by the court"
+(`Game.RecalledReason`), and spends a writ like any army asked. A plan may order at most `Game.ArmyWrits(country)`
+armies (the writs less one for the court) and is refused with the reason if it orders more. A planned order the
+rules still did not take is said in `RuleSession.PlanRefusals` ("army_id: why"), never dropped. The model
+rulers never recall: their requests and prompts are as before. A replay recalls every army a recorded order
+names, in the order asked (`RecordedPlayers.Recall`); for a model's armies that is the order the rules ask
+anyway, so every recording replays as it did (`WritTests.Recall_OfTheArmiesAGameAskedAnyway_ChangesNoRequestAndNoResult`).
+
+**What the council panel shows** (`Screen/UI/ScreenUI.WritsRule.cs`):
+- **Your writs** as pips, filled as the plan spends them, and, in the top bar, "Orders · writs 1 of 3 used" (since the 15 November clarity pass the counter says "used").
+  The tooltip gives the rule. The cap is the rules' setting (`BaseWrits`, `ProvincesPerWrit`,
+  `MaxWrits`, or a country's own `WritsOverride`), read from each request.
+- **The court's orders.** One not offered is greyed and says why. A treaty term shows the war score
+  with that country.
+- **Your armies, in the order the rules ask them:**
+  - those with a writ, with their order once given;
+  - those awaiting orders with no writ left, in red ("no writ left: it holds");
+  - those carrying out a standing order (marching, with the turns left, or holding) and what wakes them.
+- **An army chosen** in the list, by its piece, or with **N** (the next army awaiting orders) has
+  its plate ringed. The map lights its legal destinations and dims the rest. A click on a lit province
+  orders the march; a click elsewhere says why not. The panel lists the nearest provinces it cannot
+  go to, with each reason.
+
+**A treaty term put to you** is a card: the proposer's crest, face and line, the term in words, and the
+war score from your side, with Accept and Refuse.
+
+**Fog of war** (v2 3.8, `WritsSight`): your court sees its own and controlled provinces, every province
+with one of its armies, and the provinces bordering all of them. A rival army beyond that is not
+drawn; one inside it shows its size rounded to ten ("~30", and "<5" under five soldiers, `ArmySight.Short`), and its march line only while it is seen.
+
+**A ruler saying the same thing again** (`RepeatFilter`): on the writs turn a country speaks several
+times a turn, and the measured rulers repeat lines word for word (35% against 5% in the one-move game).
+A line said again at once shows no second banner, and the chronicle writes "(said again)".
+
+**The storyteller plays the writs turn now.** The rule and live sessions call it before every upkeep.
+Its dilemmas are answered by the model rulers' courts (`WritRuler` answers `Moment.Choice`) or by you, and
+New game offers it for the writs turn again. With stand-in rulers and the saga preset, six turns had
+four events, and two dilemmas were answered by the courts. Nothing on the rules side was missing: the
+screen's sessions had simply never called it.
+
+**What the rules would need for unlimited writs for a person:** `World.Writs` is one formula for
+every country. A per-country setting (for example a writs override by country in `GameRules`, read
+by `World.Writs`) would let "unlimited" be an easy option for the person alone while the models keep
+the cap. The screen reads the count from each request, so it needs no change.
+
+### The writs turn on screen: model rulers, live (13 November)
+
+The second part of the screen's R1: the writs turn played live by model rulers, a court and a marshal
+for every country (`WritRuler`, R1b), each with its persona, on the RTX 5080 behind its lock. Rule mode
+on the writs turn is next.
+
+**See it:** New game → The turn: Writs and armies → Watch, on Classic or a generated world. The dev
+menu's `writs-live classic 3 [turns] [model]` does the same, and `writs-agents classic 3 [turns]` plays
+stand-in rulers through the same agents with no server, so the inspector shows real prompts without
+the card.
+
+**How a live writs game is recorded** (`Screen/LiveWritsSession.cs`). The session drives the turn
+round by round, as `WritModelRunner` does, with one ruler's decisions back to back. The rulers' agents
+decide outside any `DecisionRound`, so their decision log lines carry no chain id to read a turn from,
+and the one-move game's way of turning the log into a recording cannot see them. The session records
+every decision as the game asked it: turn, moment, country, the army a marshal's order is for, what
+was chosen, and what `Agent.Execute` made of it when it landed. It pairs each one with that agent's
+log record in order, checked by the stimulus the ruler sent, for its prompt, facts, guards and
+telemetry. A pair that does not match keeps no prompt rather than another decision's. The replay
+rebuilds the game from that recording, and the inspector opens every court and marshal decision.
+A marshal's says which army it ordered.
+
+**Two rules that changed for every live game:**
+- The replay's gate refuses a move whose `Agent.Execute` failed, as well as one it refused, since
+  both keep a move from landing in the game.
+- The RTX 5080's lock is not taken while its `pause` file is set, so a measurement's gap between
+  blocks stays its own. New game and the dev menu say so.
+
+**The first commit's fixes,** from the frames of #284:
+- A country out of the game is at war with nobody, so the wars lists and the diplomacy grid no
+  longer show wars with a realm that is gone.
+- New game's Watch button says who plays the turn chosen.
+- The storyteller row is off for the writs turn, which has none yet.
+- The province names are drawn above the army plates, which stand a little higher, so a crowd of
+  armies never hides where it is.
+
+**R1a, the writs turn and armies as pieces, headless** (12 November). Rules v2's turn, as a setting
+beside today's: `GameSetup.Writs(seed)` (or `"turn": "writs"`) plays it, conquest with no turn limit.
+The default stays the one-move game, so every pinned series and recording is unchanged. In R1a the scripted players and the random baseline played it, and nothing asked a
+model. R1b's second part, below, adds model rulers (`WritRuler`), and R1c measured them live.
+
+- **A turn.** Each ruler has writs: 2, plus 1 for every 8 provinces it owns, at most 5 (R1b, #281: three writs, not two; the R1b paragraph below gives the rest of the retune). The court is
+  asked first. Then come the armies that are waiting for orders, the most urgent first (an enemy army
+  beside them, then the largest; with `GameRules.HungerFirst`, on by default, the starving first), while writs are left beyond one kept for the court. Last, a second
+  court order if a writ is left. Rounds of requests all see one snapshot:
+  ```csharp
+  var requests = game.BeginTurn();
+  while (requests.Count > 0) requests = game.Submit(answers);   // court, armies, second court, treaty answers
+  game.Resolve();
+  ```
+  Each request carries the ruler's earlier orders this turn (`Ordered`), and an army order its army
+  (`ArmyId`, which a model seat will send as the correlation).
+- **Armies** (`Sim/Rules/Armies.cs`) stand in provinces, named for their general (`maren_host`). An
+  order stands until it is done:
+  - `march` takes the shortest path, one step a turn, hills, marsh and mountains taking two (R1b: two steps a turn over plains and forest where it meets nothing to fight);
+  - `hold` lasts four turns.
+
+  An army waits for orders when one of the wake conditions built here fires:
+  - it was raised or reinforced;
+  - it arrived, or its path was blocked;
+  - it fought;
+  - an enemy army came near;
+  - war or peace was made;
+  - four turns passed.
+
+  The other two conditions, a siege ending and stores running low, wait for R3 (stores running low came with the
+  hunger wake, 15 November). `Country.Army` stays the
+  total, so upkeep, desertion and the storyteller's events land on the armies unchanged.
+- **The landing order** (`Sim/Rules/WritTurn.cs`):
+  1. treaties, then declarations of war;
+  2. recruits (at the capital), taxes, forts;
+  3. army orders, then every army steps at once;
+  4. battles, then neutral land taken and enemy land occupied.
+
+  Every order is re-checked as it lands, with the function that offered it (`WritLegality`). Two enemy
+  armies crossing one border meet on it. The winner steps through; the loser never crosses, and falls
+  back from the province it was leaving.
+- **Battles** keep today's formula: soldiers × a roll, the holder adding forts and the capital bonus,
+  30% casualties, 60% for the winner. A province with no army defends with a militia of 5 plus 10 a fort.
+  A loser falls back where it came from, or else to a bordering province it holds. One beaten 2.5 to 1,
+  or with nowhere to go, is routed.
+- **Occupation and treaties** (v2 5.1).
+  - Beating an enemy province's defence occupies it. The owner stays, and the occupier draws half its
+    income. Neutral land is taken outright.
+  - The war score counts the value occupied each way, battles (±4 each, at most ±20) and capitals.
+  - The court may put three terms to an enemy:
+    - `offer_white_peace`: everything returns;
+    - `demand_occupied`: what we occupy becomes ours; this needs the war score to pay for it, and is
+      enforced without asking at 90 (R1b: 80);
+    - `cede_occupied`: what they occupy becomes theirs.
+
+    The other side answers on the same snapshot, at most two a turn. A treaty ends the war in a 5-turn
+    truce (R1b: 3 turns).
+  - A realm with every province occupied and no army is broken: its occupiers keep what they hold.
+  - A game where nothing changes hands for 20 turns ends as a stalemate (R1b: 12 turns).
+
+**Simulated** (50 games a line-up on Classic, 20 on a medium generated world, scripted and random
+players, 12 November; no model):
+
+| Map, line-up | Turns | One left / stalemate / at the 150 cap | Battles a game | Treaties a game | Decisions a ruler a turn (army orders) |
+|---|---:|---|---:|---:|---|
+| Classic, mixed | 122 | 29 / 9 / 12 | 141 | 30 | 1.94 (49%) |
+| Classic, scripted | 107 | 44 / 3 / 3 | 138 | 17 | 1.86 (49%) |
+| Classic, expansionist against 4 random | 123 | 10 / 22 / 18; the expansionist won 47 | 107 | 56 | 2.16 |
+| Medium, mixed | 150 | 1 / 0 / 19 | 287 | 43 | 2.45 (61%) |
+
+On Classic a ruler is asked about 0.95 armies a turn, close to the page's estimate of 1.0. **A medium
+world rarely finishes within 150 turns**, so the game's length is the first thing R1's numbers have to
+tune.
+
+**R1b, first part: the writs turn's pace, battle reports, armies in snapshots** (12 November).
+
+- **Pace.** The writs turn played too long: 123 turns on Classic, and a medium world never finished
+  within 150. Measured with scripted players on the same seeds before and after:
+
+| Scripted games (mixed line-up) | Turns, mean / median / 90th | Ended | Countries out at turns | Treaties a game |
+|---|---|---|---|---:|
+| Classic, before (40 games) | 123 / 121 / 150 | 23 one left, 8 stalemate, 9 at the 150 cap | 49, ... | 30 |
+| **Classic, after** (40 games) | **78 / 80 / 106** | 39 one left, 1 stalemate | 18, 34, 57, 78 | 8 |
+| Medium, before (20 games, 150 cap) | 150 | 1 one left, 19 at the cap | | 41 |
+| **Medium, after** (20 games, 150 cap) | **141 / 150 / 150** | 10 one left, 10 at the cap | 22, 36, 55, 102, 132 | 12 |
+| Medium, before, no cap (12 games) | 226 / 217 / 292 | all one left | 46, 63, 106, 164, 215 | |
+| **Medium, after, no cap** (12 games) | **178 / 152 / 213** | 10 one left, 1 stalemate, 1 still going at turn 500 | 23, 31, 55, 102, 148 | |
+| For comparison, after, domination at 75% | Classic 63 / 58; medium 144 / 118 | | | |
+
+  What changed, every value a default of the writs turn only (today's game is untouched):
+  - three writs, not two;
+  - a march takes two steps a turn over open ground (plains, forest) where it meets nothing to fight,
+    and may be ordered four steps away;
+  - the militia of land without an army is 3 + 6 a fort (was 5 + 10);
+  - a 12-turn stalemate (was 20) and 3-turn truces after a treaty (was 5);
+  - demands are enforced from a war score of 80 (was 90);
+  - the scripted rulers fight wars out instead of trading small treaties: they demand at 80 (cautious
+    70), cede at −80 (−70), and offer white peace only when losing badly (`Temperament`'s new treaty
+    fields);
+  - an occupied province no longer adds to its owner's levy, as it already gave no income.
+
+  Things that did not help: earlier demands (more truces, longer games); two wars at once; a realm that
+  breaks when its capital falls (`GameRules.BreakWhenCapitalFalls`, off; realms keep an army to the end).
+  The medium rows "after" were measured on #277's new worlds, those "before" on R2's. The last war of a
+  medium world, between two large realms, is still long. Section 6.1's pressures
+  (fear of the leader, war weariness, the status-quo offer) are meant to end it, and come with R7.
+- **Battle reports.** `TurnReport.BattleRecords` lists every battle:
+  - the sides, armies and soldiers, and the militia or garrison;
+  - terrain, forts, and the fort and capital terms;
+  - both rolls and strengths, the losses, the winner, a rout, and each retreat;
+  - with unit types and generals, each side's mix and commander as the battle began (`AttackerMix`,
+    `DefenderMix`, `AttackerCommander`, `DefenderCommander`; null without them);
+  - `Why`, one sentence of the three terms that weighed most ("kesh won: 51 against 9; 1 fort (+15) for
+    the defence; the capital (+8) for the defence.").
+- **Snapshots.** `TurnSnapshot.Armies` and `Occupiers` hold every army and occupation as the council
+  saw them, so a replay or the inspector can show any past turn.
+
+**R1b, second part: model rulers for the writs turn** (12 November). `WritRuler` (`Agents/`) is a model
+seat for the writs turn: two framework agents with one identity and persona.
+
+- **The court** gives court orders, answers treaties and the storyteller's dilemmas. Each action's
+  availability comes from `WritLegality.WhyNotCourt`.
+- **The marshal** orders one army at a time. The army is named in the decision's correlation
+  (`ArmyOrder`), and each march target's availability is `WritLegality.WhyNotArmy` for that army.
+
+Each agent keeps its own memory of four decisions. A ruler's decisions run back to back
+(`WritModelRunner`), one ruler after another.
+
+What a model reads (it never reads the schema):
+- **Local standing facts** (`WritFacts.Standing`), at most eight lines on any map:
+  - the goal and this turn's writs;
+  - treasury;
+  - soldiers;
+  - our armies;
+  - at most three rivals (those at war with us first, then those our land borders), each with the war
+    score and what each side occupies;
+  - the neutral land bordering us.
+- **A moves line** written from the request's own offered moves: the court's ("Moves open to us:
+  recruit; fortify ...; demand what we occupy from orsk") or the army's ("Orders open to maren_host:
+  march to fenmark (neutral, garrison 9; next to us), ...; hold").
+- **An "Ordered this turn" line**, so a later decision does not repeat an earlier one.
+
+Fortify is offered at no more than six provinces, and a march at no more than twelve, so one decision
+stays near a dozen targets. The one-move game's `CountryAgent` and its prompts are unchanged.
+
+A fake model that answers like the scripted player plays exactly the scripted game through both agents
+(`WritRulerTests`).
+
+**Victory presets for the writs game:** `GameSetup.Writs(seed, map, victory)` with `conquest`, the default,
+or `domination_75`: 75% of all provinces wins, with the headless cap the only turn limit (63 against 78
+scripted turns on Classic, 144 against about 180 on medium). The lead decided on 13 November: both, conquest
+the default.
+
+**R1c: the live measurement** (12 and 13 November). A table can play the writs turn: its `Setup` is a writs
+`GameSetup`, and its seats are `WritRuler`s. The interleaved command takes `-strategyTurn writs`, with
+`-strategyCap` (the headless turn cap, 40 by default), `-strategyMap classic|medium`, `-strategyMapSeed` and
+`-strategyVictory conquest|domination_75`. The setting applies to every arm of that run, so the writs arm and
+the one-move arm run as separate blocks:
+
+```bash
+Unity.exe -batchmode -nographics -projectPath Demos/GreyBoxStrategy -executeMethod GreyBoxStrategy.Editor.StrategyTableMenu.RunInterleavedFromCommandLine -strategyTable personas -strategyModel qwen3.5:4b -strategyArms default -strategyArmNames w1 -strategyTurn writs -strategyCap 40 -strategyGames 5 -strategySeed 1 -strategyBlock 5 -strategyOut <folder> -logFile run.log
+```
+
+A writs run also writes `writs-turns.csv`, a row a country a turn: its armies (marching, holding, waiting),
+writs, court and army orders, holds, refusals, model seconds, and the turn's battles and treaties.
+`model.csv` names the army each order was for.
+
+What it measured on `qwen3.5:4b`, 20 writs games on Classic against 20 one-move games on the same seeds
+(full numbers in [`findings.md`](../../docs/llm-wiki/findings.md), 13 November):
+- **No Classic writs game finishes in 40 turns.** Five uncapped games ended after 193 turns on average, four
+  by stalemate; five on a medium world, capped at 40, did not finish either.
+- **Model time:** 7.1 s a turn for five rulers, inside the 7 to 9 s estimate, at its top (one-move: 2.45 s).
+- **Orders and armies:** 3.06 orders a ruler a turn; 80% of army answers march. Rulers use several armies,
+  and the three-writ cap is what leaves the rest waiting.
+- **Treaties:** 3.35 peace treaties a game; merchants accept about half of the treaties offered to them, warmongers almost none.
+- **Character:** the persona still shows (army holds: builder 89%, warmonger 6%; η² 0.68).
+- **Voice:** statements repeated word for word 35% of the time against 5% in the one-move game.
+- **Unlisted targets.** The run found 61 army orders for a march the rules allow but the twelve-target list
+  left out, which the game held as "not offered". The court's and the marshal's availability now also check
+  the decision's own offered moves (`NotOffered`), and the later runs had no illegal answers.
+
+**The statement repeats, measured** (13 and 14 November). Two voice arms for the writs turn, modifiers on any arm:
+- `+one-voice`: only a ruler's first court decision of a turn speaks. The framework always asks for the
+  `statement` field, so the others are told to leave it empty, and a line written anyway is dropped and kept
+  in `model.csv`'s `unspoken` column. Since #266 the framework can ask without the field (`DecideOptions.AskForStatement`); this arm, measured just before, does not use it yet.
+- `+own-lines`: a decision that speaks reads the ruler's last four distinct lines and is asked to say
+  something new (`WritRuler.OwnLinesLine`). **On in `default`** since 14 November; `+no-own-lines` turns it off.
+
+15 games an arm on the same seeds: repeated word for word 35.6% (control), 44.5% (one voice), 21.6% (own
+lines), with no illegal answers, the same model time and the persona as clear as before with own lines. One
+voice saved 1.7 s a turn but halved the treaties. Numbers in [`findings.md`](../../docs/llm-wiki/findings.md),
+13–14 November. The arm as measured cut "Ordered this turn" from 43% of later orders, because the extra line
+took a place the agents' 12 lines did not have; with own lines on the agents keep 13 now, so the default reads
+exactly the control's lines plus its own.
+
+**Silent armies** (`+silent-armies`, 14 November): the marshal's army orders are asked with no statement at
+all (`DecideOptions.AskForStatement` false, #266), so the schema has no `statement` field and the prompt no
+statement rules; both court orders keep their line and own lines. 15 games an arm against `default`, with
+`default+no-own-lines` as a third arm: 0.59 s a turn faster (6.87 to 6.28; an army order 0.50 s to 0.33 s),
+repeats in the court's lines unchanged (20% and 22%), no illegal answers, but 3.5 treaties a game against 4.7,
+a drop the run cannot tell from noise and cannot rule out. **Not the default**: it needs a time win with no loss
+elsewhere. Statements reach no other ruler; a line is kept only in its own ruler's memory (the last four
+decisions) and its own lines. The third arm confirmed the fixed own lines: repeats 36% to 21% against
+`no-own-lines`, treaties and time unchanged.
+
+**A country's own writ count.** `GameRules.WritsOverride` maps a country to its own number of writs a turn,
+in place of the formula; `GameRules.UnlimitedWrits` means no limit (shown as "Writs: no limit this turn."),
+so the screen can give the person alone unlimited writs as an easy setting. `World.Writs` reads it, it is
+copied with the rules, and any number below 1 counts as 1.
+
+**R3, part one: unit types and the counter rule** (14 November; rules v2 3.3). `GameRules.UnitTypes`, on by
+default since 15 November (off until then), gives the writs turn three types:
+- **Pikes, riders and bows.** Pikes counter riders, riders counter bows, bows counter pikes. Base strength
+  a soldier: pikes 1.0, riders 1.4, bows 0.9 (`PikeStrength`, `RiderStrength`, `BowStrength`).
+- **The counter rule** (`Units.Multiplier`): m(t) = 1 + 0.5 × the enemy's share of what t counters − 0.5 × the
+  enemy's share of what counters t (`CounterStrength`). A side's strength is the sum of soldiers × base × m(t);
+  a militia or a garrison fights as pikes.
+- **The army keeps its mix.** `Army.Pikes`, `Riders` and `Bows`; `Army.Soldiers` stays the total, and setting
+  it takes losses from each type in proportion. With the flag off every soldier is a pike, so a game plays
+  exactly as before.
+- **Recruiting by type.** `recruit_pikes`, `recruit_riders` and `recruit_bows` replace `recruit`. Riders cost
+  twice a pike to raise and to keep (`RiderCostFactor`).
+- **The report** names the largest counter effect: for example "…; valen's pikes broke
+  orsk's riders (+50%)." The battle record keeps `AttackCounter`, `DefenceCounter` and `CounterNote`.
+- **Scripted players** recruit the type that counters the largest type of their strongest enemy or neighbour.
+
+Scripted, 100 Classic games of the `mixed` lineup with the .NET harness (`pace classic 100 rule:UnitTypes=True`):
+off, 77 turns on average (the same games as before); on, 82 turns, 158 battles a game against 147, the same
+endings (97 last standing). Soldiers were 44% pikes, 13% riders and 43% bows; 82% of battles had a counter
+effect of 1% or more, and the counters turned the result of 6% of them.
+
+**R3, part two: what the model rulers read and order** (14 November), still only with `GameRules.UnitTypes`:
+- The court registers `recruit_pikes`, `recruit_riders` and `recruit_bows` in place of `recruit`, each saying
+  what it beats and what beats it ("Raise riders with gold, at our capital, at twice a pike's cost: riders
+  beat bows, and pikes beat riders.").
+- "Our armies" gives each army's mix ("nessa_host 30 (30 pikes) at highmoor"), a rival's line what its armies
+  mostly are ("mostly riders", or "mixed"), an army's own line its mix, and the moves line the recruit orders.
+- Off, every prompt is exactly as before. A first live look (14 November, six pairs on `qwen3.5:4b`): no illegal
+  answers and no extra model time, but the courts recruit mostly pikes and counter the type they see only 22% of the
+  time (chance 33%), so the setting stays off; numbers in `findings.md`.
+- **The counters line** (`GameRules.CountersLine`, on by default since 15 November; it acts only with unit types).
+  The recruit orders' descriptions say what beats what, but a model served by Ollama never reads the schema, so the
+  court's facts now say it: "Pikes beat riders, riders beat bows, and bows beat pikes; orsk is mostly riders, which
+  pikes beat" (`WritFacts.CountersLine`, each rival the facts name that is mostly one type). A march's detail names
+  the largest type among the enemy armies there ("enemy armies 30, mostly riders"; with fog, only where our riders
+  scout). Twelve pairs: the courts counter the type they see 67% of the time against 20%, with nothing else
+  measured worse beyond noise; the cost is personas that no longer differ in which types they buy.
+  `-strategyRules "CountersLine=false"` runs without it.
+- Headless table runs take rule settings, `-strategyRules "UnitTypes=false"` (`GameSetup.Numbers`, never saved
+  with a setup), for that run. Unit types are on by default since 15 November.
+
+**R3, part three: generals** (14 November; rules v2 3.5). `GameRules.Generals`, on by default since 15 November (off until then):
+- Every army gets a general named for it ("Nessa" leads `nessa_host`) with one trait drawn from the seed: `bold`
+  (+10% attacking, +10% own losses), `wary` (+10% defending), `horse-born` and `bowmaster` (their type +15%, with
+  unit types), `swift` (a march's first step a turn shorter), `stubborn` (retreats where it would be routed),
+  `inspiring` (-20% own losses). Siegewright came with the sieges (R3 part four, only with `GameRules.Sieges` on); the forager came with supply (R3 part five, only with `GameRules.Supply` on); the marshal waits for army sizes.
+- A side's commander is its largest army's general. Three wins bring a second trait; a losing general falls 5%
+  of the time, and the army keeps its id under a new one.
+- The report names the commander whose traits moved the battle most ("…; Maren the Bold led the attack (+10%)"),
+  and the rulers' facts the general of each army ("nessa_host 30, led by Nessa the Wary, at highmoor").
+- Scripted, 100 Classic games (`pace classic 100 rule:Generals=True`): 71 turns on average against 77 off,
+  94 last standing and 6 stalemates; with unit types too, 78. Unmeasured live, so off.
+
+**R3, part four: sieges** (14 November; rules v2 3.7). `GameRules.Sieges`, on by default since 15 November (off until then):
+- An army alone in enemy land with forts besieges it instead of storming the militia. The province stays its
+  controller's until the siege ends: 2 turns a fort (`SiegeTurnsPerFort`), a turn off for a `siegewright`
+  commander and for besiegers three times the garrison (10 a fort), and a 10% seeded breach each turn after the
+  first (`SiegeBreachChance`). Then the province is occupied with one fort fewer.
+- **Never below two turns** (`Game.MinSiegeTurns`, changed 15 November): a siege never falls in the turn it begins,
+  so the defender always has a turn to relieve it. Before, it could be 1, and in the first live look with every
+  army rule on 14 of 15 sieges fell the turn they began.
+- The siege breaks when the besiegers leave or are beaten there. `Province.SiegedBy` and `SiegeTurns` hold it.
+- The besieger reads "besieging corwick, turn 2 of 4" for its army, the besieged "it besieges our corwick" on the
+  rival's line.
+- `siegewright` joins the generals' traits only with sieges on (`GeneralTraits.Pool`).
+- **A fort holds the road** (`GameRules.FortsHoldTheRoad`, its own switch, off; 15 November): a march goes no
+  further than land beside an enemy's walled province that no one besieges, and an army standing there may step
+  only into that province (to besiege it) or back into land we hold. Our own land is never held up. A march under
+  way stops there and waits for orders ("held up by corwick's walls"). `WritLegality.HoldsTheRoad` and
+  `HeldByFort` say which.
+- **A siege stops income** (`GameRules.SiegeStopsIncome`, off; 15 November): a besieged province gives its owner
+  nothing (`World.Income`).
+- Both are scripted-tested only; neither has been in a live run.
+- Scripted, 100 Classic games: 80 turns on average against 77 off (94 last standing, 5 stalemates); with unit
+  types and generals too, 74. Unmeasured live, so off.
+
+**R3, part five: supply** (14 November; rules v2 3.6, model B; the page says why B over the land's capacity and
+distance attrition). `GameRules.Supply`, on by default since 15 November (off until then):
+- Every army carries stores, 0 to 4 turns of food (`Army.Stores`; `HalfStores` counts the halves a forager
+  saves). Full when raised and refilled 2 a turn in our own land; eaten 1 a turn in plains and forest, 2 in
+  hills, marsh and mountains.
+- An army with none loses 10% of its soldiers a turn (at least 2) and fights 15% weaker (`Game.Hunger`).
+- A `forager` general eats half; the trait joins the pool only with supply on.
+- The rulers read "stores 2 of 4" for each army, and an army what it eats where it stands ("eating 2 a turn
+  here").
+- Scripted armies abroad with a turn of stores left go home to refill, unless their siege ends next turn.
+- **Hunger first** (`GameRules.HungerFirst`, on by default since 15 November; the tech lead's call after the second all-on run,
+  where half the starving army-turns got no writ and the woken marshals mostly attacked on). With supply on:
+  - a starving army, then one whose stores last one more turn or less, is asked before the others within the
+    writs (`WritLegality.Hunger`), ahead of "a hostile army beside it" and size;
+  - its own facts say what hunger costs and where it ends, in the rules' numbers (`Game.HungerFact`): "Starving:
+    losing about 3 soldiers a turn, and fighting 15% weaker. It is fed only in land we own and hold: nearest
+    ashby, 2 steps. Neutral land it takes becomes ours and feeds it; land it occupies does not." or "Stores for 1
+    more turn here, then it starves. …" (`WritLegality.NearestSupply`, by steps it may take).
+  - No standing order sends it home by itself: the ruler decides. Off, every request is as before.
+  - Live, 15 November (6 pairs on `qwen3.5:4b`, findings): soldiers lost to hunger fell from 580 to 125 and no army
+    starved out, because the woken marshals went home instead of attacking on; battles, sieges and land changing
+    hands fell with it. Still off; the tech lead decides.
+- **Wake condition 6** (15 November): an army abroad that holds is asked again when a turn's food or less is
+  left ("stores running low") and every turn it starves ("starving"). Before, nothing woke it, and in the first
+  live look with every army rule on 16 armies starved where a hold given with full stores left them, one for
+  seven turns. Run again with this wake (15 November, `findings.md`), hunger was not solved by asking: the
+  models mostly attack on when woken and half the starving army-turns get no writ. Sieges now last and are relieved.
+- Not built yet: allies' and passage land as supplied, healing springs, famine and the 100-soldier cap.
+- Scripted, 100 Classic games: 90 turns against 77 off (91 last standing, 5 stalemates, 4 unfinished); with
+  all four R3 rules, 84. Off; a first live look at every army rule on is in `findings.md`, 15 November, with a rule fix and rerun owed.
+
+**R3, part six: what a country sees of a rival army** (14 November; rules v2 3.8, the lead's answer 12).
+`GameRules.Fog`, on by default since 15 November (off until then), as rules data (`ArmySight`; the screen keeps its own `Fog`):
+- A country sees its own land and its armies' provinces, and every province bordering them.
+- There a rival army shows its position, general and size rounded to 10 (a few under 5; "orsk's caspar_host, about 40, led by
+  Caspar the Bold, at corwick"); in forest only "an army of orsk's at corwick"; its mix only when one of our
+  armies with riders stands in or beside it. Nothing deeper in.
+- The rulers' facts gain "Rival armies we see: …" (at most 5, the nearest enemies first); each rival's line gives
+  its total rounded ("about 60 soldiers in 2 armies"), with "mostly riders" only from what our riders scout; a
+  march's detail names only the enemy armies we see.
+- Scripted players still read everything, so the scripted numbers do not move; fog for them, allies' sight and
+  watchtowers wait.
+
+**R3, part seven: land traditions** (15 November; the lead's answer to the counters line's cost: "Lets allow
+different bonuses for different army types depending on what you control … I dont think that we should make
+personas by default prioritize something"). `GameRules.LandTraditions`, off, acting only with unit types:
+- Each terrain leans to a type: hills and mountains to pikes, plains to riders, forest to bows, marsh to none.
+  The specials `iron_deep`, `horse_plains` and `great_wood` lean to pikes, riders and bows.
+- A realm's bonus for a type is 5% (`LandStep`) for each full 20% (`LandShareStep`) of the land it owns and holds
+  that leans to it, and a step for each special of the type it holds, at most 15% (`LandCap`). Land another
+  occupies does not count. By share, not count, so a large realm does not take the cap in every type, and taking
+  hills shifts a realm toward pikes (`LandTraditions.From`, `LandTraditions.Of`).
+- It counts in battle strength only, the way a general's horse-born or bowmaster does: the bonus times the type's
+  share of the side's plain strength (`BattleRecord.AttackLand`, `DefenceLand`). The cap equals one general's
+  type trait; a pure counter still wins against it, even with the dice at their worst (a test pins this).
+- The court reads one line beside the counters line, in the rules' numbers, for the types with a bonus: "Our
+  land makes our pikes 15% stronger (hills and mountains, 2 of 3) and our bows 5% stronger (forest, 1 of 3)."
+  The marshal does not; off, no one does. Personas are not told to prefer any type.
+- On Classic each realm starts on three provinces: valen, orsk and kesh lean to pikes, ilvar and merrow to riders.
+  The screen's half (the bonus in recruit and army rows) is the screen session's, later. The live A/B (16 November, 12 pairs on
+  Classic) found courts buying 7 points more of their land's type, the persona still explaining most of it; still
+  off, see findings.
+
+**Two pacing settings, both off** (14 November; the rules v2 page's "Why Classic stalls"):
+- `GameRules.OccupationBecomesOwnership`: a province occupied that many turns in a row becomes the occupier's,
+  with no treaty. `Province.OccupiedTurns` counts the turn ends it has been held, back to 0 when the occupier
+  changes; when the setting is on, the rulers' facts show "corwick (held 3 of 8 turns)".
+- `GameRules.BreakWhenAllOccupied`: a realm with every province occupied breaks even with armies left
+  elsewhere, which are disbanded with it.
+
+Scripted they barely move the pace (77 turns off, 74 to 76 on); the stall is the model rulers', and a live run
+will tell. Numbers in [`findings.md`](../../docs/llm-wiki/findings.md), 14 November.
+
+Live, two pairs on `qwen3.5:4b` (14 November): both on made the games longer, 249 turns against 101, because
+every province that passes by occupation resets the stalemate counter. Both stay off; the rules v2 page lists
+what to try instead.
+
+`GameRules.StalemateByWarScore`, off, is the first of those: the stalemate counter restarts on a treaty, free
+land taken, a realm broken, a new war, or a war's score moving 10 points (`StalemateWarScoreStep`), and no
+longer on land taken or freed by force of arms. Live, 15 November (4 uncapped pairs on `qwen3.5:4b`, findings):
+it never lengthened a game and ended two sooner (mean 186 turns against 217); the arms play the same game until
+one rule stops it. Still off; the tech lead decides.
 
 ## The first real run
 
@@ -989,8 +2753,260 @@ its ruler read about a fortune.
 - **New, N12: a reply that runs away.** One storyteller call per arm (of about 460) took 20 s and came
   back unreadable; nothing caps a reply's length per call.
 
-The screen's replay (`ReplayBuilder`) does not know storyteller events: a storyteller game's forts and
+The screen's replay (`ReplayBuilder`) did not know storyteller events when S1 was built; it does now
+([the storyteller on screen](#the-storyteller-on-screen-13-november)). It said: a storyteller game's forts and
 armies would not rebuild. That is the screen's to add when it wants one.
+
+### The storyteller on screen (13 November)
+
+The storyteller plays on the screen, in watch live and rule games.
+
+**Choosing it.** New game → **Storyteller**: Off, or one of its five presets. On, the arm is
+`default+storyteller+s2+chains-skeleton+preset-<name>`:
+- every stage S2 piece, with the title call on (the tech lead's decision, from S2's measurements:
+  titles missing went from 47% to 0%);
+- planned tales, which turn on what the rulers choose and so read as a story. Free tales ran longer
+  but seldom ended.
+
+The arm goes into the recording (`storyArm`), so a saved game replays under the same rules.
+
+**How the screen plays it.** The storyteller and its scribe decide outside the rulers' rounds, so
+their log lines have no chain id. `Recording.FromDecisionLog` takes the turn from the storyteller's
+stimulus ("Turn 7. What happens?"), and the scribe's title from the line after it. The rulers' answers
+to a dilemma are the `choices` round. `ReplayBuilder` then plays them through the game:
+- before each turn's upkeep it queues the event the storyteller queued (the same `StoryEvent`);
+- then each ruler's recorded choice (`Game.Choose`), an unanswered one taking the default.
+
+The game rebuilds exactly: a test plays ten turns with a stand-in storyteller and compares every
+event, choice and tale.
+
+**On the map and in the chronicle:**
+- **The chronicler's banner:** parchment, with its quill crest and no face. It stands where the event
+  strikes: at the province, or at a country's capital when it strikes the realm. It shows the title,
+  the story and who it struck, with what effect.
+- **Its chronicle line** carries the quill crest and the title, then who it struck and what each
+  chose. The story is the quote. The **Story** filter shows or hides these lines.
+- **Clicking either opens the event card:**
+  - the title, the story and the province's traits;
+  - each country it struck, with its effect, what it chose (and whether you, the model or the
+    default did), and what it said;
+  - its tale;
+  - the story check's verdict;
+  - two buttons that open the storyteller's decision and the title call in the inspector. The
+    inspector shows the templates offered, the targets left out with their reasons, the guards,
+    and the reply.
+
+**The choice card** (rule mode). When a dilemma reaches your country, the turn stops before its upkeep
+behind a parchment card:
+- the title and the story;
+- every option, with what it costs or gives in the game's words and amounts, the default marked.
+
+Nothing closes the card but a choice. Clicking an option selects it, and **Decide** takes it, so
+one stray click never chooses. Esc opens the pause menu over the card, and leaving to the main menu
+ends the game. The top bar says **Your choice**. The four rulers answer theirs at the same time.
+
+**Tales** (the chronicle's **Tales** button) lists every tale from its first event to its end:
+- each stage's turn, title and story, and what was chosen;
+- whether the tale is begun, going on, told or left untold, and why.
+
+Clicking a stage opens its event.
+
+**Without a server:** the dev menu's **Storyteller** row.
+- **Rule kesh, saga** and **Watch, saga** play with a stand-in storyteller (`ScriptedStory`). It
+  picks legal pairs from the paired schema, leaning toward dilemmas and tales, and draws titles from
+  a list.
+- **Dilemma on you**, **Pretender tale** and **Omen** fire one at the next upkeep.
+
+### Stage S2: dilemmas, events on many, tales, game-aware stories (12 November)
+
+What the lead asked for after reading S1's events: events that ask a ruler to decide, events that strike
+everyone, stories over several turns, stories that know what happened, and places with a character
+of their own. The design, with the alternatives it chose between, is the research page's ["Stage S2:
+design"](../../docs/demos/painted-realm-research.md#stage-s2-design-12-november). Built in the demo, with
+no framework change. **Every piece is a modifier on `+storyteller`, off in `default`**, and with every
+piece off the storyteller is S1's exactly (a test holds that):
+
+| Modifier | What it adds |
+|---|---|
+| `+choices` | Six dilemmas (`sellswords`, `petitioners`, `relic`, `muster`, `engineers`, `fever_camps`), two or three options each, every option an effect the game applies |
+| `+multi` | A group event reaches the members the fairness rules allow (open when two are) and records who was spared; a group dilemma gives each member its own choice |
+| `+chains-free` | Any recent event is a tale the storyteller may continue (an effect on `tale_<n>` strikes its subject again) or close (`end_tale`) |
+| `+chains-skeleton` | Four tales the game plans (`begin_pretender`, `begin_deep_vein`, `begin_fever`, `begin_long_winter`), each stage prescribed, the next one chosen by what the ruler chose |
+| `+history` | A "Recent happenings" line from the game's reports, and the story check against invented battles. The check is the storyteller's guard (`Storyteller.HistoryGuard`, `GuardVerdict.ReplaceStatement`, #292): an invented fight is told as the template's line under the model's title and the event stands, recorded in the decision's `StatementsReplaced`. `Game.HistoryVerdict` runs the event's own checks in the same order, so every verdict and story reads as before; `+history-in-game` leaves the check at the queue, as before |
+| `+traits` | A terrain, a landmark and a resource for every province, in its description: terrain and coast from the map's own data (`WorldMap`, rules v2's R0), the landmark and resource from its special place and trade good when the map has them, else drawn from the seed; `rich_vein`, `flood` and `pilgrims` need one. The A/B ran before the merge, on drawn terrain |
+| `+title-call` | The statement is the story alone; a second short call (the scribe) gives the title; "told so far" names template and target only |
+| `+call-choices` | With `+choices`, a dilemma's options come with the call as `DecideOptions.Choices` (#293, DR-022) instead of being registered as the seat's actions: no `target` field, the options listed with their descriptions. It changes what the model reads, so it is an arm until its A/B |
+| `+no-reply-cap` | The storyteller's event and title calls send no `MaxReplyTokens`; by default they send 400 (`ModelSeatOptions.StorytellerReplyCap`, #244 item 11), which binds only a runaway reply and changes nothing the model reads |
+| `+strength-bundled`, `+strength-param` | DR-023's A/B: `windfall`, `bad_harvest`, `plague` and `volunteers` strike `minor` (about half) or `major` (about one and a half times), never two majors in a row (`GameRules.EventStrength`). Bundled: two actions an event (`windfall_major`). Param: one action with a `strength` parameter, `major` left out by its per-value check. Both equally legal on the 4B; the parameter form costs 0.09 s a decision (findings, 16 November) |
+| `+preset-<name>` | `even_hand`, `underdog`, `cruel_fate`, `quiet_years`, `saga` (`StorytellerSettings.Presets`) |
+| `+s2` | Every piece but the chains, on `even_hand` |
+
+**Effects are data.** S1's eight templates keep their code; every new one is `EffectPart`s (gold,
+income, soldiers lost or gained, stability, a fort in the event's province) whose amounts the game
+sets (`EventEffects.Plan`) and whose applicability it checks (`EventEffects.WhyNot`). Nothing names a
+province or a country: dilemmas, skeletons, traits and presets carry over to a generated map.
+
+**The game deals each turn.** In the first smoke games the 4B, offered dilemmas on 40% of turns and
+tales on 30%, chose one dilemma in 28 events and began no tale. So each turn is dealt one kind from the
+preset's chances (`EventRules.KindOfTurn`): a **tale's** turn (only beginnings and continuations of
+tales are open), else a **dilemma's** (only dilemmas), else an **ordinary** one. A tale already open may
+go on in any turn. On `even_hand`, 15% of turns are a tale's and 25% a dilemma's when one is open.
+
+**A dilemma, step by step.** The storyteller picks `sellswords` on `valen` and writes the story. The
+game plans each option for valen and asks it, between turns, in a round of its own (`Moment.Choice`):
+the story and *"Our choice: hire_sellswords, hire them: pay 30 gold, 14 soldiers join our army;
+send_sellswords_away, send them away: nothing changes."* among its facts, the options as its only
+actions (registered on the seat with `+choices`, open only on that choice call; with `+call-choices`,
+given with the call instead). The answer lands at
+the next upkeep with the event: *"Event "The Sellswords": we chose to hire them: pay 30 gold, 14
+soldiers join our army."* A scripted seat takes the default, a random seat any option, an unanswered
+one the default. A dilemma counts as a gift when every option gains, a blow when every option costs,
+otherwise neither, and is open only when every option can apply.
+
+**Tales.** The game holds each chain (`Chain`: subject, events, what was chosen, status). An open one
+is a target of category `tale`, described with what happened so far (*"the tale "The Shadowed
+Pretender" of valen: turn 17 pretender, valen chose defy_pretender; next: unrest"*). Rules for both
+modes: at most two open; one not continued for three turns, or whose subject is out, is abandoned; at
+most six events, and only one tale a game may reach four.
+
+**The history check.** A sentence with a verb of capture or battle that names a province nobody has
+fought over, or two countries that never fought, has its story replaced (`replaced: invented: ...`).
+It cannot check a claim with no name in it, a motive, a count of the dead, or what an earlier story said.
+
+**What the screen can use** (plain C#, `Sim/`): `Game.PendingChoices` (each `EventChoice`: country,
+title, story, options with the game's effect line, default) and `Game.Choose(country, option)` for a
+person's seat, to be called before the next `BeginTurn`; `EventRecord.Choices`, `ChosenBy`, `ChainId`
+and `ChainStage`; `Game.Chains` to follow a tale; `World.Traits` for a province's card;
+`StorytellerSettings.Presets` for the menu.
+
+**Run it** as S1's A/B, one Unity run per arm and block (the lock is held for one arm's five games):
+
+```bash
+Unity.exe -batchmode -nographics -projectPath Demos/GreyBoxStrategy -executeMethod GreyBoxStrategy.Editor.StrategyTableMenu.RunInterleavedFromCommandLine -strategyTable personas -strategyModel qwen3.5:4b -strategyArms "default+storyteller+s2+chains-free" -strategyArmNames "s2-free" -strategyGames 5 -strategySeed 6 -strategyIndex 5 -strategyBlock 5 -strategyOut <folder> -logFile run.log
+```
+
+`-strategyIndex` is the series index of the first seed, so a block seats everyone as the whole series
+would. With chains on, an arm's folder also gets `chains.csv`; with choices, `choices.csv`.
+
+### What S2 did: against S1, 20 games an arm (12 November)
+
+`personas` table, five `qwen3.5:4b` seats, RTX 5080 (Docker Ollama 0.40.14), seeds 1 to 20, four arms
+interleaved in blocks of five seeds, one Unity run and one lock window per arm-block: **s1** (S1's
+storyteller, `default+storyteller`, the control), **s1-title** (`+title-call` alone), **s2-free**
+(`+s2+chains-free`) and **s2-skel** (`+s2+chains-skeleton`). Paired by seed with `compare.py`; **beyond**
+when the 95% interval excludes 0. The control reproduced S1's published numbers. Method and every
+number: [`findings.md`](../../docs/llm-wiki/findings.md), 12 November, "The storyteller's stage S2".
+
+| Per game, mean | s1 | s1-title | s2-free | s2-skel |
+|---|---:|---:|---:|---:|
+| titles missing | 47% | 0%, **beyond** | 0%, **beyond** | 0%, **beyond** |
+| titles distinct within a game | 60% | 96%, **beyond** | 92%, **beyond** | 95%, **beyond** |
+| kinds of event a game | 6.65 | 6.95 | 10.55, **beyond** | 11.30, **beyond** |
+| dilemmas among the events | – | – | 18% | 29% |
+| story-only events | – | – | 13% | 12% |
+| events needing a province's trait | – | – | 12% | 9% |
+| tales started a game (two events or more) | – | – | 2.20 | 1.10, **beyond** against free |
+| tale length | – | – | 3.63 | 2.25, **beyond** against free |
+| tales completed / abandoned a game | – | – | 0.40 / 1.15 | 0.20 / 0.65 |
+| stories naming a real happening / inventing one | – | – | 5% / 0.2% | 6% / 0.7% |
+| gifts among the events | 42% | 42% | 36%, **beyond** | 29%, **beyond** |
+| value tracks standing (r) | −0.37 | −0.37 | −0.25, **beyond** | −0.21, **beyond** |
+| hit rulers whose statement names the event | 29% | 28% | 22%, **beyond** | 22%, **beyond** |
+| event seconds a turn | 0.74 | 1.05, **beyond** | 1.23, **beyond** | 1.27, **beyond** |
+
+**The game itself did not change.** Battles, land changing hands, wars, peace, lead changes,
+eliminations and turns are within noise in every arm; only free tales show more games ended by
+domination (60% to 80%, just beyond). The rulers' sense and voice are within noise, persona still
+explains aggression (η² 0.81, 0.80, 0.85, 0.82, all p < 0.001), and no event was refused at upkeep.
+Per persona, a few numbers move in each arm, as twenty numbers by five personas will by chance; the
+builder holding more again (61% to 74%) shows only with the title call.
+
+**What it shows:**
+
+- **The title call fixes the titles,** at 0.35 to 0.39 s an event: every event has one, nearly all are
+  different within a game, and fewer repeat across games (72% to 38 to 48%).
+- **Choices read in character where the options are a real temptation.** A pretender was paid off by
+  the builder and the merchant 15 times out of 15, and defied by the warmonger and the proud ruler 11
+  times out of 11. On the other dilemmas the model takes the active option almost always (quarantine 62
+  of 64, hire the sellswords 33 of 34, call the muster 44 of 48), whatever the persona: those options
+  are simply better.
+- **Free tales are longer and more numerous; skeleton tales are tighter.** Free: 44 tales, 15 of four
+  events or more, motifs that recur across turns (a frozen bride, a bell, a weeping silence), and the
+  model hammers one subject with its effects. Skeletons: 22 tales, each turning on the ruler's choice.
+  Both leave most tales unfinished: the model seldom tells a due stage or closes a tale (8 of 44 and 4
+  of 22 completed).
+- **Stories rarely use what happened.** The happenings line is read on almost every call, but only 5 to
+  6% of stories name a real capture, war or rival; the history check replaced 4 that invented one.
+- **The rubber band loosens:** dilemmas count as neither gift nor blow, so fewer gifts go to the weak.
+- **Rulers name the event less** (29% to 22%) in both S2 arms, but not with the title call alone. Not
+  explained yet: one guess is that a ruler who answered a dilemma has already spoken about it in its
+  choice call, and its council statement moves on; the measure counts council statements only.
+
+**One reader's labels** (this session's author, not blind, 60 events drawn from the two S2 arms,
+`.scratch/storyteller-s2/labels.md`): 50 stories fit their effect, 5 partly (a wrong size, an invented
+consequence), 5 not (a wrong country or event, or replaced); 3 refer to a real happening, none invents
+one; of 15 dilemmas, 9 stories set up the choice, 5 restate it flatly, 1 decides it for the ruler. Traits
+are used whenever a province is the target. New defects: numbers in words pass the digit check
+("stability slipping to four", "fifty men"), and a target id leaked into a story once ("the lords of
+tale_8").
+
+### One tale: "The Silent Flock" (free tales, seed 14)
+
+Turn 23, an omen on the north: *"A strange silence falls over the North as the wind dies, and in the
+monastery at highmoor, a flock of white birds lands on the river valley, their wings bearing symbols
+that no saint has ever taught."* Turn 25, the storyteller continues it with a windfall for valen and
+orsk: *"A sudden downpour washes the banks of Highmoor clean, revealing a forgotten silver mine that
+glints ominously in the mud."* Turn 26, a bad harvest: *"The Silent Flock's flock starves as the frost
+bites highmoor and ashby, leaving the north with nothing to feed its armies."* Turn 28, a dilemma, fever
+in the camps of both. Valen, the builder: *"We pay the quarantine to save our soldiers and keep our
+stability intact."* Orsk, the opportunist: *"I pay the quarantine to preserve my army before I strike
+Highmoor."* Turn 30, the storyteller closes the tale with `end_tale`, following what they chose: *"The
+fever's grip finally breaks as the quarantine lifts, leaving the north to breathe once more."*
+
+A skeleton tale for contrast, seed 13, "The Grain Hoard": a pretender appears at orskhaven's crossroads
+inn; orsk, the warmonger, defies him (*"Grain feeds the weak; I feed my soldiers with blood and
+steel!"*); the people grumble at the rotting grain; the pretender's men rise *"demanding grain that was
+hoarded by the old king"*, and orsk crushes them (*"Gold buys silence, but steel buys victory"*).
+
+### Three events worth reading, and the worst
+
+- **"The Ruler's Choice"** (skeletons, seed 13, turn 8, a muster for valen while orsk and kesh take
+  its provinces): *"The ruler faces a grim choice: gather the few remaining men to face the encroaching
+  armies of Orsk and Kesh, or leave the fields untended and risk starvation while the enemy advances."*
+  Valen, the proud ruler: *"War demands steel not seed; we must face Kesh and Orsk with every man we have!"*
+- **"The Armless Kesh"** (free tales, seed 12, turn 20, sellswords): *"A fortune-teller in keshtar
+  whispers of silver that will not flow from the earth, and sellswords offer their swords to the
+  gold-rich but armless kesh."* Kesh, the warmonger: *"Gold feeds the sword; I will buy men to reclaim my
+  lost provinces!"*
+- **"The Pilgrims' Prayer"** (skeletons, seed 19, turn 21, pilgrims at highmoor, whose landmark is a
+  hermit's cave): *"A flock of weary pilgrims stumbled into the hermit's cave at highmoor, seeking solace
+  from the war-torn lands, and the walls of valen's capital grew steadier with their prayers."*
+- **The worst: "Fever Halts the March"** (skeletons, seed 19, turn 8). The storyteller chose the muster
+  dilemma for kesh and told a fever: *"The fever breaks out in the camps of the leader, forcing a
+  quarantine that halts the march."* Kesh, offered the men to arms or the harvest, answered the story
+  it was told: *"Fever breaks but steel remains, we summon men to arms!"*
+
+The events of all four arms can be read game by game, with every choice and every tale, in the page
+`.scratch/storyteller-s2/page/chronicler-events.html` (built by `build.py` from the run's files).
+
+### What the framework lacked in S2, by #266's numbers
+
+- **1, one target per decision:** hit, the workaround held twice more: a tale in progress is a target of
+  its own (`tale_3`), and an event on many is a group that leaves out the protected members.
+- **2, no closed choice beside action and target:** hit, the main cost. The option lines are the game's,
+  because one statement cannot carry a line per option; and every option of every dilemma is an action
+  registered on every seat, unavailable except on its own choice call.
+- **3, one free-text field:** hit, and the second call fixed it (titles missing 47% to 0%, 0.37 s an event).
+- **4, keep the move and replace the statement:** hit again, by the history check, invisible to telemetry. Since #308 the history check is a guard, and telemetry records it in `StatementsReplaced`.
+- **5, the fact ledger:** hit: tale state, the happenings line and a choice's facts are game code.
+- **6, remembering as a list:** hit: "told so far" by template and target, and each tale's description.
+- **8, fairness and cooldowns:** hit harder: a template's own cooldown, two open tales at most, one long
+  tale a game, abandonment, dilemmas open only when every option can apply, the turn's kind dealt by chance.
+- **9, variety:** the scorecard's events section grew chains, choices and history.
+- **New, N13: an optional action the model never takes.** Offered but not dealt, dilemmas and tales were
+  almost never chosen (1 dilemma and no tale in 28 events): frequency had to be the game's decision.
+- **New, N14: a follow-up call for one decision.** The title is a second agent's decision on the first's
+  story, chained by hand; telemetry shows two unrelated decisions.
 
 ## What the framework lacks for this game
 
@@ -1160,6 +3176,9 @@ the decision behind it in six numbered sections, from the recorded telemetry onl
 - memory;
 - model, tokens, and queue time against model time.
 
+Since variant B's slice 3 these are five tabs (Answer, Offered, Told, Guards with memory, Model) in a framed window
+in the middle of the screen; see [variant B: the inspector and the council](#the-screen-variant-b-the-inspector-and-the-council-16-november).
+
 `DecisionCard` builds the inspector's content in plain C#. Esc closes it. The rest of the screen:
 - The painting fades into a tile of its own open sea (`Art/sea-tile.jpg`), so the map fills
   any window edge to edge.
@@ -1199,8 +3218,12 @@ is covered by a review of the code, not yet by a live run.
 Assets/GreyBoxStrategy/
   Sim/                GreyBoxStrategy.Sim (noEngineReferences: true): no UnityEngine at all
     Rules/            Dice, GameRules, MapDefinition, World, Move, Legality, Facts, Requests, Game,
-                      TurnSnapshot, Events (the storyteller's templates, groups and fairness rules)
-    Players/          IPlayer, ScriptedPlayer and Temperament, RandomPlayer
+                      TurnSnapshot, Events (the storyteller's templates, groups and fairness rules),
+                      GameSetup (rules v2's settings); the writs turn: Armies (Army, WarRecord,
+                      WarScore), WritLegality, WritTurn (Game's second half)
+    Map/              WorldMap (the map as data, JSON), Terrain and TerrainTable, ClassicMap; the generator:
+                      MapGenerator, MapSettings, MapChecks, MapGeometry, MapNames, SpecialTemplates, MapRandom
+    Players/          IPlayer, ScriptedPlayer and Temperament, RandomPlayer, WritScripted (the writs turn)
     Runner/           GameRunner and Lineups, SeriesSummary, GameLog and StrategyRuns, Scorecard, EventLog
   Agents/             GreyBoxStrategy (refs Agenerela, GreyBoxStrategy.Sim): CountryAgent, the model seat;
                       ModelGameRunner (one DecisionRound a council) and ModelReport; ModelSeatOptions,
@@ -1209,13 +3232,15 @@ Assets/GreyBoxStrategy/
   Tests/Editor/       GreyBoxStrategy.Tests.Editor
   Screen/             GreyBoxStrategy.Screen: the screen (namespace GreyBoxStrategy.Realm)
     Replay/           GreyBoxStrategy.Replay (noEngineReferences): Recording, ReplayBuilder, Chronicle
-    Map/              PaintedMap.shader, MapView
+    Chart/            GreyBoxStrategy.Chart (noEngineReferences): a generated world drawn as a chart, by code
+    Map/              PaintedMap.shader, MapView, ChartGpu; Resources/ the chart's two shaders
     UI/               ScreenUI, CountryLook (crests and icons drawn by code), PaintedRealm.uss/.tss
     Art/              the painting, the faces, the baked province maps
     Replays/          recorded games to play back
     Editor/           the art import settings, ScreenSceneBuilder
     Tests/Editor/     GreyBoxStrategy.Screen.Tests.Editor
-ArtSource/            outside Assets: the art's sources and the scripts that bake and export
+ArtSource/            outside Assets: the art's sources and the scripts that bake and export;
+                      world_sheet.py draws exported generated worlds on one sheet
 ```
 
 

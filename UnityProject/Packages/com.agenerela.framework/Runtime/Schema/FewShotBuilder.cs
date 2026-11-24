@@ -98,6 +98,9 @@ namespace Agenerela
             options = options ?? new PromptOptions();
             string label = options.StimulusLabel;
             bool statements = options.ExampleStatements;
+            // The statement under the name the schema gives it (DR-008).
+            string field = string.IsNullOrWhiteSpace(options.StatementFieldName) ? DecisionSchema.StatementFieldName : options.StatementFieldName;
+            bool situations = options.ExampleObservations;
             HashSet<string> mentioned = options.ExampleTargetFallback ? Words(options.Stimulus) : null;
 
             List<string> lines = new List<string> { Header };
@@ -108,23 +111,35 @@ namespace Agenerela
                                 ?? (mentioned != null ? FallbackTarget(action, targets, mentioned, availability) : null);
                 string name = target == null ? null : NameOf(target, targets);
 
-                string example = ActionExample(action, target, name, label, statements);
+                string example = ActionExample(action, target, name, label, statements, situations, ExampleArguments(action, availability), field);
                 if (example != null)
                 {
                     lines.Add(example);
                 }
 
-                string counter = options.CounterExamples ? CounterExample(action, name, label, statements) : null;
+                string counter = options.CounterExamples ? CounterExample(action, name, label, statements, field) : null;
                 if (counter != null)
                 {
                     lines.Add(counter);
                 }
             }
 
+            if (options.AddedExamples != null)
+            {
+                foreach (FewShotExample added in options.AddedExamples)
+                {
+                    if (added != null && CanAnswer(added, available, targets, availability))
+                    {
+                        lines.Add(Example(label, added.Stimulus, added.ActionId, added.TargetId,
+                                          statements ? added.Statement : null, field: field));
+                    }
+                }
+            }
+
             if (!string.IsNullOrWhiteSpace(options.IdleExampleStimulus))
             {
                 lines.Add(Example(label, options.IdleExampleStimulus, "none", TargetRegistry.NoTarget,
-                                  statements ? options.IdleExampleStatement : null));
+                                  statements ? options.IdleExampleStatement : null, field: field));
             }
 
             string refusal = RefusalExample(available, targets, label);
@@ -143,8 +158,32 @@ namespace Agenerela
         }
 
         // The action's own example, or null when it has none, or needs a target and has none to name.
+        // ", strength: major" for each of the action's parameters, in declared order, so the example
+        // shows the field between the target and the statement, where the reply gives it (DR-023).
+        // The value is the parameter's ExampleValue, else its Default, else the first, and always one
+        // offered for this decision. Empty for an action that declares none.
+        private static string ExampleArguments(ActionDefinition action, AvailabilityAnswer availability)
+        {
+            if (!action.DeclaresParameters) return "";
+
+            var text = new System.Text.StringBuilder();
+            foreach (var parameter in action.Parameters)
+            {
+                var offered = availability != null ? availability.ValuesOf(action, parameter) : new List<string>(parameter.Values);
+                if (offered.Count == 0) continue;
+
+                string value = offered.Contains(parameter.ExampleValue) ? parameter.ExampleValue
+                    : offered.Contains(parameter.Default) ? parameter.Default
+                    : offered[0];
+                text.Append(", ").Append(parameter.Name).Append(": ").Append(value);
+            }
+
+            return text.ToString();
+        }
+
         private static string ActionExample(ActionDefinition action, string target, string name,
-                                            string label, bool statements)
+                                            string label, bool statements, bool situations, string arguments = "",
+                                            string field = DecisionSchema.StatementFieldName)
         {
             if (string.IsNullOrWhiteSpace(action.ExampleStimulus)) return null;
 
@@ -152,19 +191,42 @@ namespace Agenerela
 
             if (!action.RequiresTarget)
             {
-                return Example(label, action.ExampleStimulus, action.Id, TargetRegistry.NoTarget, statement);
+                return Situation(action, null, situations) +
+                       Example(label, action.ExampleStimulus, action.Id, TargetRegistry.NoTarget, statement, arguments, field);
             }
 
             if (target == null) return null;
 
-            return Example(label, Fill(action.ExampleStimulus, name), action.Id, target, Fill(statement, name));
+            return Situation(action, name, situations) +
+                   Example(label, Fill(action.ExampleStimulus, name), action.Id, target, Fill(statement, name), arguments, field);
+        }
+
+        // The example's observations, under the heading a real call's observations have, each "- "
+        // line on one line, then a line break before the example itself (#216 item 1). Empty when
+        // the option is off or the action wrote none, so the example is what it always was. A {0}
+        // names the example's target; with none to name, it is written as it stands.
+        private static string Situation(ActionDefinition action, string name, bool situations)
+        {
+            if (!situations || action.ExampleObservations == null) return "";
+
+            var lines = new List<string>();
+            foreach (string observation in action.ExampleObservations)
+            {
+                if (string.IsNullOrWhiteSpace(observation)) continue;
+
+                string line = System.Text.RegularExpressions.Regex.Replace(observation, @"\s+", " ").Trim();
+                lines.Add("- " + (name == null ? line : Fill(line, name)));
+            }
+
+            return lines.Count == 0 ? "" : PromptBuilder.ObservationsHeader + "\n" + string.Join("\n", lines) + "\n";
         }
 
         // A line that touches the action's subject and asks for nothing, answered with none (#190,
         // Living Vale #9). Its {0}s, in the stimulus and the statement, name the example's target;
         // with no target to name, the line is left out rather than sent with a placeholder in it.
         // Without {0} it is sent as written.
-        private static string CounterExample(ActionDefinition action, string name, string label, bool statements)
+        private static string CounterExample(ActionDefinition action, string name, string label, bool statements,
+                                             string field = DecisionSchema.StatementFieldName)
         {
             string stimulus = action.CounterExampleStimulus;
             if (string.IsNullOrWhiteSpace(stimulus)) return null;
@@ -179,7 +241,7 @@ namespace Agenerela
                 statement = Fill(statement, name);
             }
 
-            return Example(label, stimulus, ActionRegistry.None, TargetRegistry.NoTarget, statement);
+            return Example(label, stimulus, ActionRegistry.None, TargetRegistry.NoTarget, statement, field: field);
         }
 
         // One refusal of a target that is not here, worded from the first targeted action's own
@@ -367,6 +429,31 @@ namespace Agenerela
             return null;
         }
 
+        // Whether the call could give an added example's answer (#151): its action offered, or none,
+        // and its target one that action may name now, or no_target where the action needs none.
+        private static bool CanAnswer(FewShotExample example, IReadOnlyList<ActionDefinition> available,
+                                      TargetRegistry targets, AvailabilityAnswer availability)
+        {
+            bool noTarget = example.TargetId == TargetRegistry.NoTarget;
+            if (example.ActionId == ActionRegistry.None) return noTarget;
+
+            ActionDefinition action = null;
+            foreach (ActionDefinition offered in available)
+            {
+                if (offered.Id == example.ActionId)
+                {
+                    action = offered;
+                    break;
+                }
+            }
+
+            if (action == null) return false;
+            if (noTarget) return !action.RequiresTarget;
+            if (action.TakesNoTarget || targets == null || !targets.Contains(example.TargetId)) return false;
+
+            return action.AcceptsCategory(targets.CategoryOf(example.TargetId)) && MayName(action, example.TargetId, targets, availability);
+        }
+
         private static bool MayName(ActionDefinition action, string id, TargetRegistry targets, AvailabilityAnswer availability)
         {
             return availability == null || availability.ExampleMayName(action, id, targets.CategoryOf(id));
@@ -386,10 +473,11 @@ namespace Agenerela
 
         // "Label: "stimulus" -> action: id, target: id", then ", statement: "..."" when there is one,
         // in the order the reply's fields come: action, target, statement.
-        private static string Example(string label, string stimulus, string actionId, string targetId, string statement)
+        private static string Example(string label, string stimulus, string actionId, string targetId, string statement, string arguments = "",
+                                      string field = DecisionSchema.StatementFieldName)
         {
-            string line = $"{label}: {Quoted(stimulus)} -> action: {actionId}, target: {targetId}";
-            return string.IsNullOrWhiteSpace(statement) ? line : line + $", statement: {Quoted(statement)}";
+            string line = $"{label}: {Quoted(stimulus)} -> action: {actionId}, target: {targetId}{arguments}";
+            return string.IsNullOrWhiteSpace(statement) ? line : line + $", {field}: {Quoted(statement)}";
         }
 
         // Text inside an example's quotes, escaped as JSON escapes it, so a quote the developer wrote

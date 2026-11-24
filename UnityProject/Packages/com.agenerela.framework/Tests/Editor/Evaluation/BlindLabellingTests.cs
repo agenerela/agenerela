@@ -26,14 +26,118 @@ namespace Agenerela.Tests.Evaluation
         public void DeleteTheFixture() => fixture.Dispose();
 
         [Test]
-        public void ABlindPromptHoldsOnlyTheLabelStimulusObservationsAndState()
+        public void ABlindPromptHoldsOnlyTheLabelStimulusObservationsStateAndHistory()
         {
             var properties = typeof(BlindPrompt).GetProperties(BindingFlags.Public | BindingFlags.Instance).Select(p => p.Name);
 
-            Assert.That(properties, Is.EquivalentTo(new[] { "Id", "CategoryId", "Label", "Stimulus", "Observations", "PreconditionState" }));
+            // History (#147) is the earlier turns, which the agent has already answered: context,
+            // not the answer asked for. The next test checks it carries nothing else of the prompt.
+            Assert.That(properties, Is.EquivalentTo(new[] { "Id", "CategoryId", "Label", "Stimulus", "Observations", "PreconditionState", "History" }));
 
             var fieldTypes = typeof(BlindPrompt).GetFields(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance).Select(f => f.FieldType);
-            Assert.That(fieldTypes, Is.All.Matches<Type>(t => t == typeof(string) || t == typeof(IReadOnlyList<string>) || t == typeof(JObject)));
+            Assert.That(fieldTypes, Is.All.Matches<Type>(t => t == typeof(string) || t == typeof(IReadOnlyList<string>) || t == typeof(JObject)
+                                                             || t == typeof(IReadOnlyList<HistoryTurn>)));
+        }
+
+        [Test]
+        public void ABlindPromptsHistoryHoldsTheTurnsAndNothingOfThePromptsAnswer()
+        {
+            var set = fixture.Load();
+            var prompt = set.FindCategory("command_with_target").Prompts.First(p => p.Id == "target_002");
+            prompt.History = new List<HistoryTurn>
+            {
+                new HistoryTurn { Stimulus = "Walk with me a while.", Action = "follow_player", Target = "no_target", Statement = "Lead on." },
+            };
+            prompt.History[0].Extra["secret"] = JToken.FromObject("SECRET_TURN_FIELD");
+
+            var blind = BlindPrompt.Queue(set, set.LoadLabels(), "Bo").First(p => p.Id == "target_002");
+            string seen = JsonConvert.SerializeObject(blind);
+
+            Assert.That(blind.History, Has.Count.EqualTo(1));
+            Assert.That(blind.History[0].Stimulus, Is.EqualTo("Walk with me a while."));
+            Assert.That(blind.History[0].Action, Is.EqualTo("follow_player"));
+            Assert.That(blind.History[0], Is.Not.SameAs(prompt.History[0]), "The view holds the set's own turn, which it could change.");
+            foreach (string secret in new[] { "attack_target", "wolf\"", "SECRET_NOTE", "SECRET_TURN_FIELD", "Maxim", "expected" })
+            {
+                Assert.That(seen, Does.Not.Contain(secret), $"The blind prompt holds '{secret}':\n{seen}");
+            }
+        }
+
+        // ---- The agreement cohort (#148) ----------------------------------------------------------
+
+        private AgreementCohort WriteCohort(params string[] ids)
+        {
+            var manifest = new JObject
+            {
+                ["issue"] = 148,
+                ["categories"] = new JArray { new JObject { ["id"] = "any", ["promptIds"] = new JArray(ids) } },
+            };
+            File.WriteAllText(Path.Combine(fixture.Folder, AgreementCohort.FileName), manifest.ToString());
+            return AgreementCohort.FindBeside(fixture.Load());
+        }
+
+        [Test]
+        public void WithACohortTheQueueHoldsOnlyItsPrompts()
+        {
+            var cohort = WriteCohort("target_002", "situation_001");
+            var set = fixture.Load();
+
+            var queue = BlindPrompt.Queue(set, set.LoadLabels(), "Bo", cohort: cohort);
+
+            Assert.That(queue.Select(p => p.Id), Is.EquivalentTo(new[] { "target_002", "situation_001" }));
+            Assert.That(BlindPrompt.Queue(set, set.LoadLabels(), "Bo").Count, Is.GreaterThan(queue.Count), "Without the cohort, the whole set is asked.");
+        }
+
+        [Test]
+        public void WithACohortTheProgressCountsOnlyItsPrompts()
+        {
+            var cohort = WriteCohort("target_001", "target_002", "situation_001");
+            var set = fixture.Load();
+
+            // Maxim wrote all three, so he is asked none of them; Bo is asked the three.
+            Assert.That(LabelProgress.TotalFor(set, "Bo", cohort), Is.EqualTo(3));
+            Assert.That(LabelProgress.TotalFor(set, "Maxim", cohort), Is.EqualTo(0));
+            Assert.That(LabelProgress.TotalFor(set, "Bo"), Is.EqualTo(set.Prompts.Count()));
+        }
+
+        [Test]
+        public void ACohortGivesAwayNoAnswer()
+        {
+            // The cohort is ids only: what Label mode is given with it is still blind.
+            var cohort = WriteCohort("target_002");
+            var set = fixture.Load();
+            string seen = JsonConvert.SerializeObject(BlindPrompt.Queue(set, set.LoadLabels(), "Bo", cohort: cohort))
+                        + JsonConvert.SerializeObject(cohort);
+
+            foreach (string secret in new[] { "attack_target", "wolf\"", "SECRET_NOTE", "Maxim", "expected" })
+            {
+                Assert.That(seen, Does.Not.Contain(secret), $"Label mode with a cohort holds '{secret}'.");
+            }
+        }
+
+        [Test]
+        public void NoCohortFileIsNoCohortAndABrokenOneIsInvalidData()
+        {
+            Assert.That(AgreementCohort.FindBeside(fixture.Load()), Is.Null);
+
+            File.WriteAllText(Path.Combine(fixture.Folder, AgreementCohort.FileName), "{ \"categories\": [] }");
+            Assert.That(() => AgreementCohort.FindBeside(fixture.Load()), Throws.TypeOf<InvalidDataException>());
+
+            File.WriteAllText(Path.Combine(fixture.Folder, AgreementCohort.FileName), "not json");
+            Assert.That(() => AgreementCohort.FindBeside(fixture.Load()), Throws.TypeOf<InvalidDataException>());
+        }
+
+        [Test]
+        public void OurCohortIsTheSeventySixPeoplesPromptsAndAllAreInTheSet()
+        {
+            var set = PromptSet.Load(Path.Combine(EvalFixtures.OurSetFolder(), "agent.json"));
+            var cohort = AgreementCohort.FindBeside(set);
+
+            Assert.That(cohort, Is.Not.Null, "Our set has no agreement-subset.json beside it.");
+            Assert.That(cohort.Count, Is.EqualTo(76));
+            Assert.That(cohort.PromptIds.Where(id => set.Prompts.All(p => p.Id != id)), Is.Empty, "A cohort id is not in our set.");
+            Assert.That(set.Prompts.Where(p => cohort.Contains(p.Id)).SelectMany(p => p.LabelledBy).Distinct(),
+                Has.None.EqualTo("claude (tech lead session)"), "An AI-written prompt is in the people's cohort.");
         }
 
         [Test]
@@ -141,8 +245,19 @@ namespace Agenerela.Tests.Evaluation
             Assert.That(choices.ActionsAvailableIn(new JObject { ["isFollowing"] = true }),
                 Is.EqualTo(new[] { "follow_player", "stop_following", "move_to", "attack_target", "none" }));
             Assert.That(choices.Targets, Is.EqualTo(new[] { "bridge", "docks", "wolf" }));
-            Assert.That(choices.NeedsTarget("move_to"), Is.True);
-            Assert.That(choices.NeedsTarget("none"), Is.False);
+        }
+
+        [Test]
+        public void TheTargetsOfferedAreTheOnesTheCheckAllows()
+        {
+            var set = fixture.Load();
+            set.FindAction("stop_following").TakesNoTarget = true;
+            var choices = LabelChoices.From(set);
+
+            Assert.That(choices.TargetsFor("move_to"), Is.EqualTo(new[] { "bridge", "docks", "wolf" }), "Required.");
+            Assert.That(choices.TargetsFor("follow_player"), Is.EqualTo(new[] { "no_target", "bridge", "docks", "wolf" }), "Optional.");
+            Assert.That(choices.TargetsFor("stop_following"), Is.EqualTo(new[] { "no_target" }), "Never takes one.");
+            Assert.That(choices.TargetsFor("none"), Is.EqualTo(new[] { "no_target" }));
         }
 
         [Test]

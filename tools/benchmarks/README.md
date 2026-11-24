@@ -108,6 +108,70 @@ python tools/benchmarks/paired_schema_probe.py qwen3.5:2b .scratch/paired/probe.
 Takes about a minute per model. It appends to the output file and does not create its folder. Re-run it after upgrading Ollama, and unload other models first. The result of 6 November 2026 is in
 `docs/llm-wiki/findings.md`.
 
+## `closed_choice_grammar_probe.py`
+
+The probe #266 item 2 asks for before any design of typed parameters: does Ollama's grammar keep a
+closed choice beside `action` and `target`? Four schemas, each with six stimuli that push against
+it (three countries, a strength the enum lacks, no country at all): an enum field (`strength`,
+`minor` or `major`) after `target` and after `statement`, and an array of target ids with
+`minItems` 1 and `maxItems` 2, without and with `uniqueItems`. Each goes to both of Ollama's chat
+endpoints, `/api/chat` with `format` and `/v1/chat/completions` with `response_format`, at
+temperature 0.7 and seed 7, and each reply is checked in code: parsed, key order (the schema's, or
+sorted), enum values, array length, items and duplicates. A refused schema is recorded.
+
+```bash
+python tools/benchmarks/closed_choice_grammar_probe.py qwen3.5:4b .scratch/probe/closed_choice.jsonl
+```
+
+It talks to the server `tools/ollama-server/ollama_remote.py` is configured for, through that
+script's own client, so the key is read and sent as it does and never printed;
+`AGENERELA_OLLAMA_REMOTE` points it at another checkout's copy when this one has no `.env` beside
+it. 48 requests, about a minute. Which internal chat path a model takes (rendered, which keeps key
+order, or native, which sorts it) depends on the model: say which you ran. It leaves the model
+loaded. The gateway answers 403 for `/v1/chat/completions`, so through the RTX 5080 only the
+`/api/chat` half runs; the OpenAI-compatible half needs a local Ollama. The result of
+14 November 2026 is in `docs/llm-wiki/findings.md`.
+
+## `non_llm_decider_probe.py` and `non_llm_examples.json`
+
+Measures choosing the action and target **without a generative model**: embedding models by
+similarity to the action and target descriptions, by nearest reference examples (kNN) and with a
+small trained head, a keyword parser with rules, a reranker through `/api/generate` (no Ollama
+build we have runs one), a cascade that hands doubtful decisions to the 4B, and a hybrid where the
+engine chooses and the 4B writes only the statement. `qwen3.5:4b` is the control, sent the
+framework's request as `EvalRunner` builds it (where the probe differs is in
+`docs/llm-wiki/non-llm-deciders.md`). It reads both evaluation sets and `agent.json` and never
+writes to them.
+
+`non_llm_examples.json` holds the engines' reference examples and a separate 80-prompt tuning set,
+written new for this probe. Every threshold is tuned on that set, never on an evaluation prompt.
+`check-examples` checks both, templates and filled strings, against the two sets with `PromptSetChecks.MatchesExample`'s rule and a
+word-overlap check, and fails on any match (hard rule 4): run it after changing the file.
+
+```bash
+python tools/benchmarks/non_llm_decider_probe.py check-examples
+python tools/benchmarks/non_llm_decider_probe.py embed qwen3-embedding:0.6b .scratch/x/runs --limit 10
+python tools/benchmarks/non_llm_decider_probe.py control qwen3.5:4b .scratch/x/runs --limit 10
+python tools/benchmarks/non_llm_decider_probe.py decide qwen3.5:4b .scratch/x/runs --limit 10
+python tools/benchmarks/non_llm_decider_probe.py score .scratch/x/runs
+python tools/benchmarks/non_llm_decider_probe.py hybrid qwen3.5:4b .scratch/x/runs .scratch/x/runs/decisions-<engine>.jsonl
+```
+
+`decide` asks a model the decision as a decision model is asked it, two `choice` questions with lettered
+options, and reads each answer from the first token's probabilities (the format of Jev, Gemini Decision 1
+and the open decision models, on any model served through `/api/chat`).
+
+`systemone` asks a decision model (`tev1`, `d1`, `strands-decider`) on Ollama's `/v1/systemone`, the only
+route Ollama serves them on; the RTX 5080's gateway needs that route opened first
+(`docs/llm-wiki/non-llm-deciders.md`, "What to change on the RTX 5080").
+
+`embed`, `rerank`, `control`, `decide` and `systemone` ask the server once per prompt of the tuning set, the curated 76 and
+the interim 389 (`--limit N` takes the first N of each), write one file each and unload their model.
+`score` asks nothing: it builds every engine from those files and prints the tables. The server is
+read the way `ollama_remote.py` reads it; from a worktree, pass `--server-tools <main checkout>/tools/ollama-server`
+so its `.env` is used, and take the RTX 5080 lock around each stage. A full run of three embedders
+and the control took 7 minutes. The result of 12 November 2026 is in `docs/llm-wiki/findings.md`.
+
 ## Before trusting any number these print
 
 - Was there a **control arm**? A single before/after run is an anecdote.
@@ -116,3 +180,13 @@ Takes about a minute per model. It appends to the output file and does not creat
 - Is n large enough? At n≈50 the observed noise floor was about 10 points.
 
 The full checklist is in `docs/FRAMEWORK_BUILD_PLAN.md` §4.
+
+## `prompt_set_balance.py`
+
+Not a probe: it reads the evaluation prompt set and prints the *Category balance* section of
+[`UnityProject/Assets/Evaluation/README.md`](../../UnityProject/Assets/Evaluation/README.md)
+(#147), so that section is counted by script. No model, no Unity.
+
+```bash
+python tools/benchmarks/prompt_set_balance.py
+```

@@ -19,3 +19,5 @@ MonoBehaviour:
     ExampleStimulus: Strike the {0}.
     PreferredExampleTargets:
     - wolf
+    TargetCategories:
+    - creature

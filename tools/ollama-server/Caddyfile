@@ -4,8 +4,8 @@
 #   1. every request must carry "Authorization: Bearer <AGENERELA_OLLAMA_API_KEY>";
 #   2. only the routes the framework, the run kits and ollama_remote.py use are passed
 #      through. Deleting, creating, copying or pushing a model, uploading blobs and the
-#      OpenAI-compatible /v1 routes answer 403. Those stay on the server itself, through
-#      `docker exec agenerela-ollama ollama ...`.
+#      OpenAI-compatible /v1 routes answer 403; of /v1, only decision models' /v1/systemone
+#      passes. Those stay on the server itself, through `docker exec agenerela-ollama ollama ...`.
 # Caddy's access log redacts the Authorization header.
 
 {
@@ -46,7 +46,9 @@
 		respond "Missing or wrong token." 401
 	}
 
-	@api path /api/version /api/tags /api/ps /api/show /api/chat /api/generate /api/embed /api/pull
+	# /v1/systemone is decision models' route (Ollama 0.35 and later), the one /v1 route passed:
+	# inference only, like /api/chat (docs/llm-wiki/non-llm-deciders.md).
+	@api path /api/version /api/tags /api/ps /api/show /api/chat /api/generate /api/embed /api/pull /v1/systemone
 	handle @api {
 		reverse_proxy ollama:11434 {
 			header_up -Authorization

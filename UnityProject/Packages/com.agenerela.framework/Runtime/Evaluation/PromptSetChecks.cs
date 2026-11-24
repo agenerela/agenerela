@@ -54,6 +54,8 @@ namespace Agenerela.Evaluation
                 CheckAnswer(set, prompt, Add);
             }
 
+            CheckHistory(set, prompt, Add);
+
             if (profile != null)
             {
                 CheckExamples(prompt, profile, Add);
@@ -64,8 +66,10 @@ namespace Agenerela.Evaluation
 
         /// <summary>
         /// Where <paramref name="profile"/> and the actions <paramref name="set"/> declares disagree:
-        /// an action only one of them has, or one whose need for a target differs. <c>none</c> is in
-        /// every set and no profile. The window shows these and never fixes them.
+        /// an action only one of them has, or one whose target differs: required, optional or never taken. <c>none</c> is in
+        /// every set and no profile. Also a label whose action the profile restricts to
+        /// <see cref="ActionDefinition.TargetCategories"/> that its target's <see cref="DeclaredTarget.Category"/>
+        /// is not among (#151). The window shows these and never fixes them.
         /// </summary>
         public static IReadOnlyList<string> CompareWithProfile(PromptSet set, AgentProfile profile)
         {
@@ -82,8 +86,14 @@ namespace Agenerela.Evaluation
                 else if (declared.NeedsTarget != action.RequiresTarget)
                 {
                     differences.Add(action.RequiresTarget
-                        ? $"'{action.Id}' requires a target in the profile, but the set says it takes none"
-                        : $"'{action.Id}' takes no target in the profile, but the set says it needs one");
+                        ? $"'{action.Id}' requires a target in the profile, but the set says it does not"
+                        : $"'{action.Id}' does not require a target in the profile, but the set says it does");
+                }
+                else if (declared.TakesNoTarget != action.TakesNoTarget)
+                {
+                    differences.Add(action.TakesNoTarget
+                        ? $"'{action.Id}' takes no target in the profile, but the set says it may take one"
+                        : $"'{action.Id}' may take a target in the profile, but the set says it takes none");
                 }
             }
 
@@ -92,6 +102,30 @@ namespace Agenerela.Evaluation
                 if (declared.Id != ActionRegistry.None && profileActions.All(a => a.Id != declared.Id))
                 {
                     differences.Add($"The set declares '{declared.Id}', which the profile does not have");
+                }
+            }
+
+            // Categories (DR-020, #151): a label must stay a pair the agent may give, or a run would
+            // score the model against an answer the schema and the category guard forbid.
+            foreach (var prompt in set.Prompts)
+            {
+                var action = profileActions.FirstOrDefault(a => a.Id == prompt.ExpectedAction);
+                if (action == null || !action.DeclaresTargetCategories || prompt.ExpectedTarget == null)
+                {
+                    continue;
+                }
+
+                foreach (string id in prompt.ExpectedTarget.Ids)
+                {
+                    var target = set.Targets.FirstOrDefault(t => t != null && t.Id == id);
+                    if (id == TargetRegistry.NoTarget || target == null || action.AcceptsCategory(target.Category))
+                    {
+                        continue;
+                    }
+
+                    differences.Add($"{prompt.Id} expects {action.Id}/{id}, but the profile's '{action.Id}' takes "
+                                  + $"{string.Join(" or ", action.TargetCategories.Where(c => !string.IsNullOrWhiteSpace(c)))} "
+                                  + $"and the set puts '{id}' in {(string.IsNullOrWhiteSpace(target.Category) ? "no category" : target.Category)}");
                 }
             }
 
@@ -134,8 +168,52 @@ namespace Agenerela.Evaluation
 
         private static void CheckAnswer(PromptSet set, EvalPrompt prompt, System.Action<PromptRule, string> add)
         {
-            string action = prompt.ExpectedAction;
-            var targets = prompt.ExpectedTarget.Ids;
+            CheckAnswer(set, prompt.ExpectedAction, prompt.ExpectedTarget.Ids, prompt.PreconditionState, add);
+        }
+
+        // Each history turn (#147) is checked as an answer is, but for the state, which a turn does
+        // not declare: the prompt's is the state after the last turn, and an earlier one may differ.
+        // Its messages say which turn, counted from 1, oldest first.
+        private static void CheckHistory(PromptSet set, EvalPrompt prompt, System.Action<PromptRule, string> add)
+        {
+            if (prompt.History == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < prompt.History.Count; i++)
+            {
+                string turn = $"History turn {i + 1}: ";
+                void Add(PromptRule rule, string message) => add(rule, turn + message);
+
+                var t = prompt.History[i];
+                if (t == null)
+                {
+                    Add(PromptRule.Incomplete, "the turn is empty");
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(t.Stimulus)) Add(PromptRule.Incomplete, "the stimulus is empty");
+
+                if (string.IsNullOrWhiteSpace(t.Action))
+                {
+                    Add(PromptRule.Incomplete, "no action");
+                }
+                else if (string.IsNullOrWhiteSpace(t.Target))
+                {
+                    Add(PromptRule.Incomplete, "no target: use no_target for none");
+                }
+                else
+                {
+                    CheckAnswer(set, t.Action, new[] { t.Target }, null, Add);
+                }
+            }
+        }
+
+        // state null: the answer is not checked against a state.
+        private static void CheckAnswer(PromptSet set, string action, IReadOnlyList<string> targets, Newtonsoft.Json.Linq.JObject state,
+            System.Action<PromptRule, string> add)
+        {
             bool noTarget = targets.Contains(TargetRegistry.NoTarget);
 
             foreach (string target in targets)
@@ -163,23 +241,54 @@ namespace Agenerela.Evaluation
                 return;
             }
 
+            // Three states since DR-020, not two: an action requires a target, never takes one, or
+            // leaves it optional. Only the first two constrain the answer.
             if (declared.NeedsTarget && noTarget)
             {
                 add(PromptRule.ActionNeedsTarget, $"{action} needs a target, so it cannot take no_target");
             }
-            else if (!declared.NeedsTarget && (targets.Count != 1 || !noTarget))
+            else if (declared.TakesNoTarget && (targets.Count != 1 || !noTarget))
             {
                 add(PromptRule.ActionTakesNoTarget, $"{action} takes no target: use no_target");
             }
 
-            if (!declared.IsAvailableIn(prompt.PreconditionState))
+            if (state != null && !declared.IsAvailableIn(state))
             {
                 add(PromptRule.PreconditionMismatch,
                     $"{action} is only available when {declared.OnlyWhen.ToString(Newtonsoft.Json.Formatting.None)}; set the state to match");
             }
         }
 
+        /// <summary>
+        /// True when every line of an example's situation (<see cref="ActionDefinition.ExampleObservations"/>)
+        /// is one of <paramref name="observations"/>, by <see cref="MatchesExample"/>, a <c>{0}</c>
+        /// standing for any target. An example with no situation matches any observations, so it is
+        /// judged on its stimulus alone, as before (#216 item 1).
+        /// </summary>
+        public static bool MatchesSituation(IEnumerable<string> observations, IEnumerable<string> situation)
+        {
+            var seen = (observations ?? Enumerable.Empty<string>()).Where(o => !string.IsNullOrWhiteSpace(o)).ToList();
+            foreach (string line in situation ?? Enumerable.Empty<string>())
+            {
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                if (!seen.Any(o => MatchesExample(o, line))) return false;
+            }
+
+            return true;
+        }
+
+        private static bool HasSituation(IEnumerable<string> situation) =>
+            situation != null && situation.Any(l => !string.IsNullOrWhiteSpace(l));
+
         private static void CheckExamples(EvalPrompt prompt, AgentProfile profile, System.Action<PromptRule, string> add)
+        {
+            CheckExamples(prompt, profile, add, withSituations: true);
+        }
+
+        // withSituations: whether the examples are shown with their observations. An arm that shows
+        // them without (DecideOptions.ExampleObservations off) shows the bare stimulus, which is then
+        // judged alone, as every example was before #216 item 1.
+        internal static void CheckExamples(EvalPrompt prompt, AgentProfile profile, System.Action<PromptRule, string> add, bool withSituations)
         {
             // Every line an example shows the model: its stimulus, and its statement (#190, G14).
             void Check(string text, string what)
@@ -200,10 +309,14 @@ namespace Agenerela.Evaluation
                     Check(action.CounterExampleStatement, $"{action.Id}'s counter-example statement");
                 }
 
-                if (action != null && MatchesExample(prompt.Stimulus, action.ExampleStimulus))
+                // An example with a situation (#216 item 1) is its stimulus and its observations
+                // together: a prompt that asks the same thing in another situation is a new prompt.
+                if (action != null && MatchesExample(prompt.Stimulus, action.ExampleStimulus) &&
+                    (!withSituations || MatchesSituation(prompt.Observations, action.ExampleObservations)))
                 {
-                    add(PromptRule.StimulusIsExample,
-                        $"The stimulus is {action.Id}'s example \"{action.ExampleStimulus}\": never score on a few-shot example (hard rule 4)");
+                    add(PromptRule.StimulusIsExample, HasSituation(action.ExampleObservations) && withSituations
+                        ? $"The stimulus and observations are {action.Id}'s example \"{action.ExampleStimulus}\" in its situation: never score on a few-shot example (hard rule 4)"
+                        : $"The stimulus is {action.Id}'s example \"{action.ExampleStimulus}\": never score on a few-shot example (hard rule 4)");
                 }
 
                 // Shown answered with none, so scoring on it measures nothing either (#190).

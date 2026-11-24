@@ -92,9 +92,106 @@ namespace GreyBoxStrategy
 
         /// <summary>Whether the storyteller reads an inspiration line (<see cref="GreyBoxStrategy.Storyteller.InspirationLine"/>); <c>+no-inspiration</c> drops it.</summary>
         public bool Inspiration = true;
+        /// <summary>
+        /// With <c>+history</c>, the history check runs as the storyteller's guard (<see cref="GreyBoxStrategy.Storyteller.HistoryGuard"/>,
+        /// #292), which replaces the story through the framework; <c>+history-in-game</c> leaves it to the event's
+        /// check at the queue, as before. The verdicts are the same either way.
+        /// </summary>
+        public bool HistoryGuard = true;
+        /// <summary>
+        /// The most tokens a storyteller's reply may run to (<see cref="DecideOptions.MaxReplyTokens"/>, #244 item 11),
+        /// on its event call and its title call: <see cref="StorytellerReplyCap"/> by default, which binds only a
+        /// runaway (a story is a hundred or two); <c>+no-reply-cap</c> sends none, as before.
+        /// </summary>
+        public int? StorytellerMaxReplyTokens = StorytellerReplyCap;
+        /// <summary>The storyteller's reply cap: a story runs to one or two hundred tokens.</summary>
+        public const int StorytellerReplyCap = 400;
 
         /// <summary>Which inspiration draw the storyteller gets: <c>+inspiration-1</c> draws other words on the same seeds, for the divergence runs.</summary>
         public int InspirationSalt;
+
+        // --- The storyteller's stage S2 (the README's "Storyteller"), each a modifier on +storyteller ---
+
+        /// <summary><c>+choices</c>: dilemmas; the ruler struck chooses (and the seats register the options as actions).</summary>
+        public bool Choices;
+        /// <summary>
+        /// <c>+call-choices</c>: a dilemma's options come with the call as <see cref="DecideOptions.Choices"/>
+        /// (#293, DR-022) instead of being registered as the seat's actions. It changes what the model reads,
+        /// so it is an arm until its A/B.
+        /// </summary>
+        public bool CallChoices;
+        /// <summary><c>+multi</c>: group events reach the members the fairness rules allow.</summary>
+        public bool Multi;
+        /// <summary><c>+history</c>: the recent-happenings line, and the story check against invented history.</summary>
+        public bool History;
+        /// <summary><c>+traits</c>: province traits in the targets, and the three trait events.</summary>
+        public bool Traits;
+        /// <summary><c>+title-call</c>: the story in the statement, the title from a second call, "told so far" without titles.</summary>
+        public bool TitleCall;
+        /// <summary><c>+chains-free</c> or <c>+chains-skeleton</c>.</summary>
+        public ChainMode Chains = ChainMode.None;
+        /// <summary><c>+preset-&lt;name&gt;</c> (<see cref="StorytellerSettings.Presets"/>); null keeps S1's settings.</summary>
+        public string Preset;
+
+        /// <summary>
+        /// <c>+strength-bundled</c> or <c>+strength-param</c>: the storyteller chooses how hard an event
+        /// strikes, in the action's id or as a parameter (<see cref="GameRules.EventStrength"/>, DR-023's
+        /// A/B). The table sets it on the game; <see cref="EventStrengthForm.None"/> otherwise.
+        /// </summary>
+        public EventStrengthForm EventStrength = EventStrengthForm.None;
+
+        /// <summary>The game's <see cref="StoryRules"/> for these options.</summary>
+        public StoryRules StoryRules() => new StoryRules
+        {
+            Choices = Choices, Multi = Multi, History = History, Traits = Traits, TitleCall = TitleCall, Chains = Chains,
+            Settings = Preset == null ? new StorytellerSettings() : StorytellerSettings.Named(Preset),
+        };
+
+        // --- The writs turn's voice (rules v2, after R1c: statements repeated 35% word for word) ---
+
+        /// <summary>
+        /// <c>+one-voice</c>: in the writs turn only a ruler's first court decision of a turn speaks. The second
+        /// court order, army orders, treaty answers and dilemmas are asked to leave the statement empty, and a
+        /// line written anyway is dropped (<see cref="ModelDecision.Unspoken"/>). The framework always asks for
+        /// the statement field, so this is the demo's way. The framework's own way, <c>DecideOptions.AskForStatement</c> (#266),
+        /// merged after the A/B of 13–14 November and is not used here yet.
+        /// </summary>
+        public bool OneVoice;
+        /// <summary>
+        /// <c>+own-lines</c>: in the writs turn a decision that speaks reads the ruler's last few lines, and is asked to
+        /// say something new. On in <see cref="Default"/> since 14 November 2026 (statements repeated word for word fell
+        /// from 36% to 22% in 15 games an arm, legality and persona unchanged); <c>+no-own-lines</c> switches it off.
+        /// </summary>
+        public bool OwnLines;
+        /// <summary>
+        /// <c>+silent-armies</c>: in the writs turn the marshal's army orders are asked with no statement at all
+        /// (<see cref="DecideOptions.AskForStatement"/> false, #266): no field in the schema, nothing of one in the
+        /// prompt. Both court orders, treaty answers and dilemmas keep their line. Measured 14 November, 15 games an
+        /// arm: 0.59 s a turn faster (an army order 0.50 s to 0.33 s), repeats and legality unchanged, treaties
+        /// 4.7 to 3.5 a game (within noise, not excluded), so it stays an arm and <c>default</c> keeps every line.
+        /// </summary>
+        public bool SilentArmies;
+        /// <summary>How many of the ruler's last lines <see cref="OwnLines"/> shows.</summary>
+        public const int OwnLinesShown = 4;
+
+        /// <summary>
+        /// The court's prompt budget in tokens (the framework's <see cref="PromptBudget"/>, #151), or 0, the default,
+        /// for none, which sends every request as before. Set by the <c>+budget-&lt;n&gt;</c> modifier. Only the
+        /// court's own requests (<c>Moment.Council</c>) carry it.
+        /// </summary>
+        public int CourtBudget;
+
+        /// <summary>
+        /// Whether the court's budget may trim (<c>+trim</c>): the target lines no court order may take, then the
+        /// oldest remembered exchange, only while a request is over. Off, the budget only measures. An A/B arm,
+        /// never a default without the tech lead.
+        /// </summary>
+        public bool CourtTrims;
+
+        /// <summary>The court's budget as the framework takes it, or null for none.</summary>
+        public PromptBudget CourtPromptBudget() => CourtBudget <= 0 ? null
+            : CourtTrims ? new PromptBudget(CourtBudget, PromptTrim.UntakeableTargets, PromptTrim.History)
+            : new PromptBudget(CourtBudget);
 
         /// <summary>A short name for logs and tables: "control", "per-target", "no-moves-line", and so on.</summary>
         public string Arm = "control";
@@ -104,10 +201,12 @@ namespace GreyBoxStrategy
         /// on) plus the paired schema, which cut the model's illegal answers to none at no measured
         /// cost, and a grounding threshold of 0.6, which with the framework's 20 alternatives cut the
         /// guard's containments of legal moves from 72 to 3 (qwen3.5:4b) and 94 to 3 (qwen3.5:2b) in
-        /// 30 games (README, gap N4). The arm measured as <c>default</c> on 10 November is
-        /// <c>control+paired+alternatives-5</c> now.
+        /// 30 games (README, gap N4), and in the writs turn the ruler's own last lines (<see cref="OwnLines"/>,
+        /// measured 13–14 November). The arm measured as <c>default</c> on 10 November is
+        /// <c>control+paired+alternatives-5</c> now; the writs turn's <c>default</c> before 14 November is
+        /// <c>default+no-own-lines</c>.
         /// </summary>
-        public static ModelSeatOptions Default => new ModelSeatOptions { PairTargets = true, GroundingThreshold = 0.6f, Arm = "default" };
+        public static ModelSeatOptions Default => new ModelSeatOptions { PairTargets = true, GroundingThreshold = 0.6f, OwnLines = true, Arm = "default" };
 
         /// <summary>Stage 2's control arm: the moves line, a flat schema, grounding on.</summary>
         public static ModelSeatOptions Control => new ModelSeatOptions();
@@ -135,10 +234,15 @@ namespace GreyBoxStrategy
         /// moves line, <c>+moves-sentence</c> has the framework say the legal moves as an observation
         /// line (<see cref="LegalTargetListing.ObservationLine"/>), and <c>+how-it-reads</c> and
         /// <c>+own-words</c> word the statement rules (<see cref="StatementRulesWording"/>)
-        /// ("default+no-moves-line+moves-sentence", "default+how-it-reads"), and <c>+memory-move</c>
+        /// ("default+no-moves-line+moves-sentence", "default+how-it-reads"), <c>+one-voice</c>, <c>+own-lines</c> and
+        /// <c>+no-own-lines</c> and <c>+silent-armies</c> for the writs turn's statements, <c>+budget-&lt;n&gt;</c> and
+        /// <c>+trim</c> for the court's prompt budget (<see cref="CourtBudget"/>, #151), and <c>+memory-move</c>
         /// and <c>+memory-outcome</c> what a remembered move holds (<see cref="Remembers"/>, #244 item 4).
         /// For the storyteller: <c>+storyteller</c> (<see cref="Storyteller"/>), <c>+no-inspiration</c> and
-        /// <c>+inspiration-&lt;n&gt;</c> ("default+storyteller+inspiration-1").
+        /// <c>+inspiration-&lt;n&gt;</c> ("default+storyteller+inspiration-1"); stage S2's <c>+choices</c>,
+        /// <c>+multi</c>, <c>+history</c>, <c>+traits</c>, <c>+title-call</c>, <c>+chains-free</c>,
+        /// <c>+chains-skeleton</c>, <c>+preset-&lt;name&gt;</c>, and <c>+s2</c> for all but the chains on
+        /// <c>even_hand</c> ("default+storyteller+s2+chains-free").
         /// </summary>
         public static ModelSeatOptions Named(string arm)
         {
@@ -167,8 +271,35 @@ namespace GreyBoxStrategy
                     else if (modifier == "moves-sentence") options.LegalTargets = LegalTargetListing.ObservationLine;
                     else if (modifier == "how-it-reads") options.RulesWording = StatementRulesWording.HowItShouldRead;
                     else if (modifier == "own-words") options.RulesWording = StatementRulesWording.InYourOwnWords;
+                    else if (modifier == "one-voice") options.OneVoice = true;
+                    else if (modifier == "own-lines") options.OwnLines = true;
+                    else if (modifier == "no-own-lines") options.OwnLines = false;
+                    else if (modifier == "silent-armies") options.SilentArmies = true;
                     else if (modifier == "storyteller") options.Storyteller = true;
+                    else if (modifier == "choices") options.Choices = true;
+                    else if (modifier == "call-choices") options.CallChoices = true;
+                    else if (modifier == "multi") options.Multi = true;
+                    else if (modifier == "history") options.History = true;
+                    else if (modifier == "traits") options.Traits = true;
+                    else if (modifier == "title-call") options.TitleCall = true;
+                    else if (modifier == "strength-bundled") options.EventStrength = EventStrengthForm.Bundled;
+                    else if (modifier == "strength-param") options.EventStrength = EventStrengthForm.Parameter;
+                    else if (modifier == "chains-free") options.Chains = ChainMode.Free;
+                    else if (modifier == "chains-skeleton") options.Chains = ChainMode.Skeleton;
+                    else if (modifier.StartsWith("preset-") && StorytellerSettings.Named(modifier.Substring("preset-".Length)) != null)
+                        options.Preset = modifier.Substring("preset-".Length);
+                    else if (modifier == "s2")
+                    {
+                        // Every S2 piece but the chains, on the measured preset.
+                        options.Choices = options.Multi = options.History = options.Traits = options.TitleCall = true;
+                        options.Preset = options.Preset ?? StorytellerSettings.EvenHand.Name;
+                    }
+                    else if (modifier.StartsWith("budget-") && int.TryParse(modifier.Substring("budget-".Length), out int budget) && budget > 0)
+                        options.CourtBudget = budget;
+                    else if (modifier == "trim") options.CourtTrims = true;
                     else if (modifier == "no-inspiration") options.Inspiration = false;
+                    else if (modifier == "history-in-game") options.HistoryGuard = false;
+                    else if (modifier == "no-reply-cap") options.StorytellerMaxReplyTokens = null;
                     else if (modifier.StartsWith("inspiration-") && int.TryParse(modifier.Substring("inspiration-".Length), out int salt) && salt >= 0)
                         options.InspirationSalt = salt;
                     else return null;

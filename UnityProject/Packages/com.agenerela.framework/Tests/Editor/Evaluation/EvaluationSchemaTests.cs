@@ -53,6 +53,28 @@ namespace Agenerela.Tests.Evaluation
         private static readonly string Following = NotFollowing.Replace(
             "[\"follow_player\", \"move_to\"", "[\"follow_player\", \"stop_following\", \"move_to\"");
 
+        [TestCase("")]
+        [TestCase("Interim")]
+        public void OurSetsAgreeWithOurProfileTheirCategoriesIncluded(string subfolder)
+        {
+            // The categories (#190 B, #210) are written on our set and profile; no label may become
+            // illegal, and no prompt may be an example. The example statements and counter-examples
+            // #384 wrote were taken off on 24 November (findings, "#151 after #384"), so none is left.
+            string folder = Path.Combine(EvalFixtures.OurSetFolder(), subfolder);
+            var set = PromptSet.Load(Path.Combine(folder, "agent.json"));
+            var profile = AssetDatabase.LoadAssetAtPath<AgentProfile>(OurProfilePath);
+
+            Assert.That(PromptSetChecks.CompareWithProfile(set, profile), Is.Empty);
+            Assert.That(PromptSetChecks.Check(set, profile).Select(p => p.ToString()), Is.Empty);
+            Assert.That(set.Targets.Select(t => t.Category).Distinct(), Is.EquivalentTo(new[] { "place", "creature" }), "Every target has one.");
+            Assert.That(profile.Actions.Select(a => a.Action).Where(a => a.RequiresTarget).Select(a => string.Join(",", a.TargetCategories)),
+                Is.EquivalentTo(new[] { "place", "creature" }));
+            Assert.That(profile.Actions.Select(a => a.Action.ExampleStatement), Has.All.Null.Or.Empty);
+            Assert.That(profile.IdleExampleStatement, Is.Null.Or.Empty);
+            Assert.That(profile.Actions.Select(a => a.Action.CounterExampleStimulus), Has.All.Null.Or.Empty);
+            Assert.That(profile.Actions.Select(a => a.Action.CounterExampleStatement), Has.All.Null.Or.Empty);
+        }
+
         [Test]
         public async Task OurSetIsScoredAgainstTheSameSchemaWithEveryOptionOff()
         {
@@ -80,11 +102,123 @@ namespace Agenerela.Tests.Evaluation
                 "The set has prompts in both states.");
         }
 
+        // SHA-256 of every distinct system prompt and few-shot block our set's default arm sends,
+        // sorted, each as "system prompt, a line of three dashes, few-shot block". Stored, so a
+        // change to what the default request says fails here even when both arms of a run change
+        // together. Taken on a clean origin/test at 5f07e03 (16 November 2026), before typed parameters.
+        // A change that has to move it updates the hashes, and owes an A/B (#151). The example
+        // statements and counter-examples #384 wrote on VillageGuard.asset were taken off again on
+        // 24 November: on the 4B the counter-examples cost 10 answers, and with the statements 68 of
+        // its replies copied one (findings, "#151 after #384"). The categories #384 added change no
+        // request unless pairing is on, so the default prompt is the one from before #384 again.
+        private static readonly string[] OurPromptHashes =
+        {
+            "06057a4179d077bb750563be8dded4ee0846c45518f1ccffe0cb30e19cf5316a",
+            "2be670ed354f62d21738e3233b7f3e43ef24bf7af94a1c2a6ead308a2b79eb2a",
+            "5b0d5e0ccd749f4c1cdd03cfd6aae4eec99d804933cdf31e0fbbc25fc7f8feed",
+            "9b87e99a7df09618148737d6662d6964630cd76326952914eb27be139ca50a4f",
+            "c4e96134a332c70991dd7fc1fe46da24dfd3e82b03fac66751223de4ac3e0c34",
+            "d6cfb5249a2f8dde10e3d86c074e2409677ddf5fc02cfc84afd4f8d95b1e9dad",
+        };
+
+        [Test]
+        public Task OurSetsDefaultPromptIsWhatItWas() => AssertPromptHashes(null, OurPromptHashes);
+
+        [Test]
+        public Task OurSetsProfileHasNoStatementsOrCounterExamplesToSwitch() =>
+            AssertPromptHashes(new DecideOptions { ExampleStatements = false, CounterExamples = false }, OurPromptHashes);
+
+        private static async Task AssertPromptHashes(DecideOptions options, string[] expected)
+        {
+            string folder = EvalFixtures.OurSetFolder();
+            var set = PromptSet.Load(Path.Combine(folder, "agent.json"));
+            var profile = AssetDatabase.LoadAssetAtPath<AgentProfile>(OurProfilePath);
+            var provider = new FakeProvider("{\"action\":\"none\",\"target\":\"no_target\",\"statement\":\"\"}");
+            using (var fixtures = new RunnerFixtures())
+            {
+                var config = fixtures.Config(provider, "Fake");
+                await Fixtures.NotCancelled(new EvalRunner(set, profile, new EvalArm("A", config, options), new EvalArm("B", config, options)).RunAsync());
+            }
+
+            var hashes = new SortedSet<string>(System.StringComparer.Ordinal);
+            using (var sha = System.Security.Cryptography.SHA256.Create())
+            {
+                foreach (var request in provider.Requests)
+                {
+                    string text = request.SystemPrompt + "\n---\n" + request.FewShotBlock;
+                    hashes.Add(System.BitConverter.ToString(sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(text))).Replace("-", "").ToLowerInvariant());
+                }
+            }
+
+            Assert.That(provider.Requests, Is.Not.Empty);
+            Assert.That(hashes, Is.EqualTo(expected), "ACTUAL: " + string.Join(" ", hashes));
+        }
+
+        [Test]
+        public async Task AnArmWithADeclaredParameterLeavesTheOtherArmByteForByteWhatItWas()
+        {
+            // DR-023's first A/B: the same set, arm B with one harmless parameter on move_to. Arm A,
+            // which declares none, must still send exactly the schema every number was scored
+            // against; arm B's is paired, asks for the parameter between target and statement, and
+            // its prompt lists the actions.
+            string folder = EvalFixtures.OurSetFolder();
+            var set = PromptSet.Load(Path.Combine(folder, "agent.json"));
+            var profile = AssetDatabase.LoadAssetAtPath<AgentProfile>(OurProfilePath);
+            const string Idle = "{\"action\":\"none\",\"target\":\"no_target\",\"statement\":\"\"}";
+            var a = new FakeProvider(Idle);
+            var b = new FakeProvider(Idle);
+            var plain = new FakeProvider(Idle);
+
+            using (var fixtures = new RunnerFixtures())
+            {
+                var withPace = new EvalArm("B", fixtures.Config(b, "FakeB"))
+                {
+                    Legality = new EvalLegality
+                    {
+                        Name = "pace",
+                        ActionParameters =
+                        {
+                            ["move_to"] = new[] { new ActionParameter { Name = "pace", Description = "how fast to go", Values = new[] { "walk", "run" } } },
+                        },
+                    },
+                };
+                await Fixtures.NotCancelled(new EvalRunner(set, profile, new EvalArm("A", fixtures.Config(a, "FakeA")), withPace).RunAsync());
+
+                // The same arm A beside an arm with no parameter, to compare whole requests with.
+                await Fixtures.NotCancelled(new EvalRunner(set, profile,
+                    new EvalArm("A", fixtures.Config(plain, "FakePlain")), new EvalArm("B", fixtures.Config(new FakeProvider(Idle), "FakeOther"))).RunAsync());
+            }
+
+            var json = new JsonSchemaSerializer();
+            Assert.That(a.Requests, Is.Not.Empty);
+            Assert.That(a.Requests.Select(r => json.Serialize(r.Schema)), Has.All.EqualTo(NotFollowing).Or.EqualTo(Following));
+            Assert.That(a.Requests, Has.Count.EqualTo(plain.Requests.Count));
+            for (int i = 0; i < a.Requests.Count; i++)
+            {
+                Assert.That(a.Requests[i].SystemPrompt, Is.EqualTo(plain.Requests[i].SystemPrompt));
+                Assert.That(a.Requests[i].FewShotBlock, Is.EqualTo(plain.Requests[i].FewShotBlock));
+                Assert.That(a.Requests[i].Observations, Is.EqualTo(plain.Requests[i].Observations));
+                Assert.That(a.Requests[i].Stimulus, Is.EqualTo(plain.Requests[i].Stimulus));
+            }
+
+            Assert.That(b.Requests, Has.Count.EqualTo(a.Requests.Count));
+            foreach (var request in b.Requests)
+            {
+                var pairs = request.Schema.Pairs.Select(p => string.Join(", ", p.Actions) + " [" + string.Join(", ", p.Parameters.Select(f => f.Name)) + "]").ToList();
+                Assert.That(pairs, Is.EqualTo(new[] { "follow_player []", "move_to [pace]", "attack_target []", "none []" })
+                    .Or.EqualTo(new[] { "follow_player, stop_following []", "move_to [pace]", "attack_target []", "none []" }));
+                Assert.That(json.Serialize(request.Schema), Does.Contain("\"required\": [\"action\", \"target\", \"pace\", \"statement\"]"));
+                Assert.That(request.SystemPrompt, Does.Contain("pace (how fast to go): walk or run."));
+                Assert.That(request.FewShotBlock, Does.Contain(", pace: walk"));
+            }
+        }
+
         [Test]
         public async Task AnArmThatPairsTargetsChangesNothingButTheSchema()
         {
-            // #151's A/B for DR-020: the same set, arm B with the paired schema. Our set declares no
-            // categories, so pairing narrows only what an action that needs a target and none take.
+            // #151's A/B for DR-020: the same set, arm B with the paired schema. Our set's targets are
+            // places and a creature, and the profile's move_to takes places and attack_target creatures
+            // (#190 B, #210), so pairing gives each its own targets.
             string folder = EvalFixtures.OurSetFolder();
             var set = PromptSet.Load(Path.Combine(folder, "agent.json"));
             var profile = AssetDatabase.LoadAssetAtPath<AgentProfile>(OurProfilePath);
@@ -112,8 +246,9 @@ namespace Agenerela.Tests.Evaluation
                 Assert.That(a.Requests[i].Schema.Pairs, Is.Null);
 
                 var pairs = b.Requests[i].Schema.Pairs.Select(p => string.Join(", ", p.Actions) + " -> " + p.Targets.Count).ToList();
-                Assert.That(pairs, Is.EqualTo(new[] { "follow_player -> 12", "move_to, attack_target -> 11", "none -> 1" })
-                    .Or.EqualTo(new[] { "follow_player, stop_following -> 12", "move_to, attack_target -> 11", "none -> 1" }));
+                Assert.That(pairs, Is.EqualTo(new[] { "follow_player -> 12", "move_to -> 10", "attack_target -> 1", "none -> 1" })
+                    .Or.EqualTo(new[] { "follow_player, stop_following -> 12", "move_to -> 10", "attack_target -> 1", "none -> 1" }));
+                Assert.That(b.Requests[i].Schema.Pairs.Single(p => p.Actions.Contains("attack_target")).Targets, Is.EqualTo(new[] { "wolf" }));
             }
         }
     }

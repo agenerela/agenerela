@@ -150,6 +150,13 @@ namespace Agenerela
         public bool CounterExamples = true;
 
         /// <summary>
+        /// The few-shot examples the call adds (#151); null adds none. <c>Agent</c> copies it from
+        /// <see cref="DecideOptions.AddedExamples"/>. Read by <see cref="FewShotBuilder.Build"/>, not by
+        /// <see cref="PromptBuilder"/>.
+        /// </summary>
+        public System.Collections.Generic.IReadOnlyList<FewShotExample> AddedExamples;
+
+        /// <summary>
         /// What the agent says in the idle example (#190, G14). <c>Agent</c> fills it from the call,
         /// the agent or the profile, never from further down than the idle stimulus came from
         /// (<see cref="DecideOptions.IdleExampleStatement"/>). Null or empty gives no statement. Read by
@@ -163,6 +170,21 @@ namespace Agenerela
         /// Read by <c>FewShotBuilder.Build</c>.
         /// </summary>
         public bool ExampleStatements = true;
+
+        /// <summary>
+        /// The name the examples give the statement, <c>statement</c> unless set, as the schema names
+        /// the field (DR-008). <c>Agent</c> copies it from <see cref="DecideOptions.StatementFieldName"/>.
+        /// Read by <c>FewShotBuilder.Build</c>; <see cref="PromptBuilder"/> reads the schema's own
+        /// (<see cref="DecisionSchema.StatementName"/>). Null or blank is the default.
+        /// </summary>
+        public string StatementFieldName = DecisionSchema.StatementFieldName;
+
+        /// <summary>
+        /// Whether the examples show their <see cref="ActionDefinition.ExampleObservations"/> (#216
+        /// item 1). Off by default. <c>Agent</c> copies it from <see cref="DecideOptions.ExampleObservations"/>.
+        /// Read by <see cref="FewShotBuilder.Build"/>.
+        /// </summary>
+        public bool ExampleObservations;
 
         /// <summary>
         /// Whether an example with no registered preferred target names the first offered target its
@@ -195,5 +217,10 @@ namespace Agenerela
         /// <c>Agent</c> sets it. Null mentions nothing.
         /// </summary>
         public string Stimulus;
+
+        // Whether the action and target list names only the targets some offered action may take
+        // now, the others going into the unlisted list: Agent sets it for PromptTrim.UntakeableTargets
+        // (#151). Off, the list is what it always was.
+        internal bool ListTakeableTargetsOnly;
     }
 }

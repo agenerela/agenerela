@@ -3,14 +3,16 @@ using System;
 namespace Agenerela
 {
     /// <summary>
-    /// What one guard made of a decision (build plan §2.5): let it through, turn it into
-    /// <c>none</c>, or reject it. A guard returns one from <see cref="IDecisionGuard.Inspect"/>,
-    /// made with <see cref="Pass"/>, <see cref="RewriteToNone"/> or <see cref="Reject"/>.
+    /// What one guard made of a decision (build plan §2.5): let it through, keep the move and
+    /// replace its statement, turn it into <c>none</c>, or reject it. A guard returns one from
+    /// <see cref="IDecisionGuard.Inspect"/>, made with <see cref="Pass"/>, <see cref="ReplaceStatement"/>,
+    /// <see cref="RewriteToNone"/> or <see cref="Reject"/>.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// The pipeline stops at the first verdict that is not <see cref="GuardVerdictKind.Pass"/>, and
-    /// both kinds that stop it leave the agent doing <c>none</c> with <c>no_target</c>. They differ
+    /// <see cref="ReplaceStatement"/> does not stop the pipeline: the move stands, so every later
+    /// guard still judges it, with the new statement. The pipeline stops at the first verdict that
+    /// is neither that nor <see cref="GuardVerdictKind.Pass"/>, and both kinds that stop it leave the agent doing <c>none</c> with <c>no_target</c>. They differ
     /// in what went wrong, which the eval harness needs to tell apart. A rewrite is a contained
     /// refusal: the model chose something legal, and the guard judged it wrong, so the agent does
     /// nothing and <see cref="Agent.Execute"/> returns true. A reject means the provider broke the
@@ -27,17 +29,48 @@ namespace Agenerela
         private readonly string modelReason;
 
         private GuardVerdict(GuardVerdictKind kind, string reason, string guard, string modelReason = null,
-            string availabilityReason = null)
+            string availabilityReason = null, string statement = null)
         {
             Kind = kind;
             Reason = reason;
             Guard = guard;
             this.modelReason = modelReason;
             AvailabilityReason = availabilityReason;
+            Statement = statement;
         }
 
         /// <summary>The decision may go on to the next guard. Also what <c>default</c> is.</summary>
         public static GuardVerdict Pass => default;
+
+        /// <summary>
+        /// The move is right, but its statement is not: the agent does what it chose and says
+        /// <paramref name="statement"/> instead (#266 item 4). Empty or null drops the statement.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// For a fair move with a bad line: a story that names the wrong country, a grievance the
+        /// facts do not hold. Containing the move would lose it; patching the line in the handler would
+        /// hide it from telemetry. The pipeline goes on, so later guards judge the same move with the
+        /// new statement, and one of them may still stop it, which leaves the statement empty as any
+        /// stop does. Each replacement is recorded in <see cref="DecisionTelemetry.StatementsReplaced"/>
+        /// and <see cref="DecisionTelemetry.GuardsFired"/>, and written to the decision log;
+        /// <see cref="DecisionResult.Verdict"/> stays null unless a later guard stops the move, and
+        /// <see cref="DecisionResult.ModelDecision"/> keeps the model's own words.
+        /// </para>
+        /// <para>
+        /// On a call that asked for no statement (<see cref="DecideOptions.AskForStatement"/>) there is
+        /// nothing to replace: the verdict counts as a pass and nothing is recorded. Only inside
+        /// <see cref="Agent.DecideAsync"/>: <see cref="Agent.Execute(DecisionResult)"/>'s re-check runs
+        /// no guard that returns it.
+        /// </para>
+        /// </remarks>
+        /// <param name="reason">Why, in words a developer reads in telemetry and logs.</param>
+        /// <param name="statement">What the agent says instead; null or empty for nothing.</param>
+        /// <exception cref="ArgumentException"><paramref name="reason"/> is null, empty or whitespace.</exception>
+        public static GuardVerdict ReplaceStatement(string reason, string statement)
+        {
+            return new GuardVerdict(GuardVerdictKind.ReplaceStatement, Required(reason), null, statement: statement ?? "");
+        }
 
         /// <summary>
         /// The decision is legal, but wrong: the agent does <c>none</c> instead. A contained
@@ -76,8 +109,14 @@ namespace Agenerela
             return new GuardVerdict(GuardVerdictKind.Reject, Required(reason), null, null, availabilityReason);
         }
 
-        /// <summary>Pass, rewrite to <c>none</c>, or reject.</summary>
+        /// <summary>Pass, replace the statement, rewrite to <c>none</c>, or reject.</summary>
         public GuardVerdictKind Kind { get; }
+
+        /// <summary>
+        /// What the agent says instead, for <see cref="GuardVerdictKind.ReplaceStatement"/>: empty
+        /// when the guard dropped the statement. Null for every other kind.
+        /// </summary>
+        public string Statement { get; }
 
         /// <summary>Why the guard stopped the decision. Null for <see cref="Pass"/>.</summary>
         public string Reason { get; }
@@ -100,7 +139,7 @@ namespace Agenerela
         // The pipeline's stamp: the same verdict, naming the guard that returned it.
         internal GuardVerdict From(string guard)
         {
-            return new GuardVerdict(Kind, Reason, guard, modelReason, AvailabilityReason);
+            return new GuardVerdict(Kind, Reason, guard, modelReason, AvailabilityReason, Statement);
         }
 
         private static string Required(string reason)
@@ -125,6 +164,9 @@ namespace Agenerela
         RewriteToNone,
 
         // The provider broke the contract: the agent does none, and Execute returns false
-        Reject
+        Reject,
+
+        // The move stands and only its statement changes; the pipeline goes on (#266 item 4)
+        ReplaceStatement
     }
 }

@@ -568,6 +568,15 @@ gives after reading the results, in as many phases as it likes, each decision re
 memory, drops the whole round on cancellation with nothing remembered, and groups a round's
 decisions in the log as one `DecisionChain`. `Documentation~/decision-rounds.md`.
 
+An action may declare **parameters** (#266 item 2; DR-023, first step): closed choices beside its
+target, a set of words or a number list, in `ActionDefinition.Parameters`,
+`[AgentParameter]` and `[Argument]`. A call that offers one sends the paired schema with the
+parameters after `target` and before `statement`, and the action list with their values; the
+chosen values are `AgentDecision.Arguments`, which the legality guard holds to the declaration
+inside `DecideAsync` and again at `Execute`. A per-value check (`IValueAvailability`,
+`[AvailableValue]`) leaves a value out of one decision. Nothing changes for an agent that declares
+none. `Documentation~/parameters.md`.
+
 ### 2.2 Actions (`Runtime/Actions/`) — the heart of the framework
 
 **Settled rule: the action vocabulary is data, not an enum.** The prototype's fixed
@@ -925,7 +934,7 @@ An ordered guard pipeline every decision passes through before any handler execu
 
 ```csharp
 public interface IDecisionGuard {
-    GuardVerdict Inspect(DecisionRequest req, AgentDecision d);  // Pass | RewriteToNone(reason) | Reject(reason)
+    GuardVerdict Inspect(DecisionRequest req, AgentDecision d);  // Pass | RewriteToNone(reason) | Reject(reason) | ReplaceStatement(reason, statement), #266
 }
 ```
 
@@ -2432,6 +2441,201 @@ the two are executed interleaved.
 **Revisit if:** a game needs one agent asked twice in a round, a broadcast with merged answers
 (#216, F8), or a round deadline the token cannot express.
 
+### DR-022 — A choice among options given with the call is a call whose actions are those options
+
+**Status:** Decided, 14 November 2026 (#266 item 2's cheaper half, and its S2 comment), by the #266
+framework-gaps session, for the framework tech lead's review in the pull request that builds it. Additive: a call that passes no choices is
+exactly what it was, and removing the option changes nothing in `Agent`'s other paths.
+
+**Context.** GreyBoxStrategy's storyteller deals a dilemma, and the ruler it strikes picks one of
+its two or three options ("hire them: pay 30 gold, 14 soldiers join our army"). The framework can
+offer only registered actions, so the demo registers every option of every dilemma as an action on
+every seat, 20 actions, and keeps all but the current dilemma's unavailable. A per-call list of
+options is what the game means; the 20 registrations, their availability code and their handlers
+are the workaround. The full half of #266 item 2, typed parameters beside action and target, needs
+a probe and its own record; this is not that.
+
+**Options considered**
+
+| Question | Options | Verdict |
+|---|---|---|
+| Where the options go | A new method (`Agent.ChooseAsync`); a list on `DecideOptions`; a per-call filter over registered actions (`OfferOnly`) | **`DecideOptions.Choices`**, a list of `Choice` (id, description, availability). A filter still needs the 20 registrations; a new method would duplicate `DecideAsync`'s queue, backlog, feed, relay and round paths, which all take `DecideOptions` already |
+| What the choices become | A new field in the schema; the `action` field's values for this call | **The `action` field's values.** The schema, the parser, the legality guard, memory, telemetry and the feed already read a chosen action id; a new field would need a probe first (#266 item 2) |
+| Choices beside the registered actions, or instead of them | Joined; instead | **Instead.** A dilemma's question is "which of these", and the agent's ordinary moves in the same enum would compete with them. A game that wants both registers its moves as choices too |
+| `none` | Left out of a choice call; kept, last, as in every enum | **Kept, last** (build plan §2.2: in every action enum). The game reads it as "declined", and can deal a default option itself |
+| Targets | Per-choice categories; no target field | **No target field.** A choice takes no target, so the schema is shape 2 (no target field), as for an agent with no targets registered; the target rule, the grounding guard and the target list have nothing to do |
+| How a local model learns the options | Only from the schema; the prompt's action list | **The prompt's action list, always**, on a choice call: Ollama never shows the schema (findings, 10 October 2026), so without it a model sees no option's words. Only choice calls carry it, so no existing prompt changes |
+| What `Execute` does with a chosen option | Run a delegate each choice carries; nothing | **Nothing**: no handler runs and no re-check (the choices were the call's, not the agent's), `Done` is recorded, and memory under `OnExecute` is settled. The game acts on `Decision.ActionId`. A delegate is a later, additive field if a game wants one |
+| An unavailable option | Leave it out of the list given; mark it | **Marked, and left out of the schema and the prompt**, its reason in `DecisionTelemetry.ChoicesUnavailable`, so "why was that not offered?" has an answer in the log (#172), as a per-target check's does |
+
+**Decision.** `DecideOptions.Choices`, null by default, a list of `Choice { Id, Description,
+Available }` (`Available` an `Availability`, `Yes` by default). When it holds any, the call's
+context has an action registry made of those choices (each `TakesNoTarget`, with no example) and an
+empty target registry, so everything downstream runs unchanged on it: availability, the schema
+(available choices, then `none`; no target field), the few-shot block (only the idle example and
+any counter-example can appear: the choices have none), the legality guard and the developer's
+guards. The system prompt lists the offered choices with their descriptions whatever
+`ListActionsAndTargets` says. `DecisionTelemetry.ChoicesOffered` and `ChoicesUnavailable`, and the
+decision log's `choices` and `choicesUnavailable`, record the call. An empty list, a choice id
+`ActionDefinition` would refuse, `none`, or an id given twice throws, as a mistake in the call.
+
+**Consequences.** GreyBoxStrategy's ruler drops its 20 registered dilemma actions and their
+availability, and asks `DecideAsync(stimulus, new DecideOptions { Choices = dilemma.Options })`.
+The agent's identity, observations and memory are the same as on any other call, so a remembered
+choice is replayed to the next call like any decision; an agent that should not remember its
+choices uses its own memory or none. A developer guard runs on a choice call too, and can tell one
+from `input.Options.Choices`. The prompt a choice call sends is new and unmeasured (#151).
+
+**Revisit if:** a choice needs a target or a quantity (that is #266 item 2's typed parameters), a
+game wants choices and its ordinary actions in one enum, or a chosen option should run code.
+
+### DR-023 — Typed parameters beside action and target: declared on the action, written before the statement, sent only in the paired schema
+
+**Status:** Accepted, 15 November 2026. Proposed on 14 November (#266 item 2, its second box) by
+the #266 framework-gaps session; the lead answered "Yes to all five" to the questions below, so each
+proposed answer is the decision. **The first step is built** (16 November 2026, #266): closed sets
+and number lists, as decided in question 2, with the forced paired schema of question 4; its first
+A/B on the evaluation sets is in findings, 16 November. The two things the table still owed
+followed the same day: `DecisionTelemetry.OrderLost`, and `ProviderCapabilities.SupportsPairedSchema`,
+on which an agent refuses an action with a parameter at setup. Not built: `also_targets`
+(question 3) and an open number range. Nothing becomes a default before the measurement in
+question 5. *Question 5's A/B ran on 16 November 2026 (findings, that day): both forms equally
+legal, the parameter form no closer to the game's state, for 0.09 s and 5.5 completion tokens more
+a decision. No default changed; the lead decides.*
+
+**The lead's questions, each decided as proposed** (the table further down gives the reasons):
+
+1. **Build it now, or keep the "a parameter is a target" idiom** (Living Vale's bundled ids,
+   `stock_mara_potion_one`, and the storyteller's `windfall_major`; design review F9, 7 October)
+   until a game shows the idiom failing? *Decided: build it, off unless declared, because the
+   storyteller and Living Vale want the same thing, and the probe shows the grammar holds it.*
+2. **Which kinds come first.** *Decided: a closed set (`minor | major`) and a number given as a
+   short list of allowed values, first. An open number range and extra targets come second, each
+   after its own probe or design pass.*
+3. **Several targets: how.** An array that *replaces* `target`, or `target` kept and an
+   `also_targets` array of 0 to N−1 more beside it, or groups as targets only (the #298 recipe).
+   *Decided: `target` kept plus `also_targets`, in the second step.*
+4. **Should a parameter force the paired schema** for the actions that declare one? *Decided:
+   yes.* A flat schema could only carry parameters with a "not used" value in every enum.
+5. **Which game measures first.** *Decided: GreyBoxStrategy's storyteller: strength as a
+   parameter against the bundled `windfall_major` ids, 20 games an arm on `qwen3.5:4b`.*
+
+**Context.** A decision is `action`, `target`, `statement`. A game that needs "how hard", "how
+many" or "for what price" encodes the answer in the ids:
+
+- Living Vale's gap 12 bundles the quantity into the target (`stock_mara_potion_one`).
+- The storyteller design bundles the strength into the action (`windfall_major`,
+  `painted-realm-research.md` §1).
+
+Both work, and both multiply the enum by every value. #263 found the storyteller wanting strength
+and several countries; the lead wants events that ask for a decision, which need the same shape.
+
+What is known:
+
+- **The grammar holds it** on Ollama 0.40.14's `/api/chat` for `qwen3.5:4b` (findings,
+  14 November). Every enum value was legal, and every array of target ids stayed within
+  `minItems`/`maxItems`.
+- **A parameter after `statement` is written into the statement.** That happened in 3 replies
+  of 6. Before `statement`, it happened in none. That contradicts `DecisionSchema`'s own remark,
+  "any field added later … goes after `statement`", which was written before any measurement.
+- **Not known:**
+  - Ollama's native path. It sorts keys (findings, 5 November), so `strength`, `turns` and
+    `targets` would all land after `statement`.
+  - `/v1/chat/completions`.
+  - An integer range.
+  - Whether `uniqueItems` is enforced.
+  - Accuracy of any kind: the probe was a grammar check.
+
+DR-022 already covers the cheaper half: a choice *among options given with the call*
+(`DecideOptions.Choices`).
+
+**Options considered**
+
+| Question | Options | Verdict (proposed) |
+|---|---|---|
+| Parameters at all | Keep the bundled-id idiom (F9) as the only way; parameters on the action | **Parameters**, for values that are plain scalars (strength, a count, a price). The idiom stays the recipe when each value is a game object with its own description (a stock bundle the shop actually holds) |
+| Where they are declared | On `ActionDefinition`; per call on `DecideOptions`; on the target | **`ActionDefinition.Parameters`**, a list of `ActionParameter { Name, Description, Values, Min, Max, Default }`, so both front doors fill one plain type (DR-011). Code: `[AgentParameter("strength", "how hard it strikes", "minor", "major")]` beside `[AgentAction]`, and the method takes `[Argument("strength")] string strength` (or `int`); `DelegateActionHandler` reads `decision.Arguments`. Asset: a serialized list on `ActionDefinitionAsset` |
+| Kinds | Closed set of strings; a number from an allowed list; an open integer range (`minimum`/`maximum`); a free string; extra target ids | **First step: closed set and number-from-list**, both an `enum` of strings in the schema, the shape the probe held. **Second step: extra targets** (below). **Not now: an open integer range** (unprobed, and a small model invents numbers; F9) **and free strings** (a second free-text field is #266 item 3, answered by a recipe) |
+| Values per decision | Fixed at registration; asked each decision | **Asked each decision when a check is given** (`IsAvailableValue(ctx, value)`, like `[AvailableFor]`), so an unaffordable quantity is absent from the schema rather than refused in prose (the settled rule). A value left out is recorded with its reason, as `TargetsUnavailable` is. An action with a required parameter and no value left is left out, as an action with no legal target is |
+| Place in the reply | After `statement`; between `target` and `statement`; before `target` | **After `target`, before `statement`**, in declaration order: `action`, `target`, parameters, `statement`. Measured: after `statement`, the value lands in the statement. Before `target` would move the grounding guard's field and the measured `action`-then-`target` pair; there is no evidence for it |
+| Ollama's native path, which sorts keys | Rename fields so they sort right; reply as an array (`prefixItems`); detect it and say so | **Detect it and record it** (5 November's "detect it" suggestion): the provider compares the reply's key order with the schema's, and telemetry marks `OrderLost`. Renaming a developer's fields, or changing the reply's format, is out of proportion. Recommend rendered-path models (the `qwen3.5` family) for parameters in the docs. *As built (16 November 2026): **flagged, never refused**. The grammar still held every value, so the decision is legal; refusing it would make every native-path model unusable for a fault that is the server's, and the game can read the flag. The parser makes the comparison, not the provider, so it holds for any provider, and it covers every field, so `statement` before `target` on an agent with no parameter is flagged too* |
+| Several targets | An array replacing `target`; `target` plus `also_targets` (0 to N−1, items from the action's legal targets); groups only (#298) | **`target` plus `also_targets`**, second step. `TargetId` stays the first target, so every existing reader, the grounding guard, `TargetCategoryGuard` and the per-target checks keep working on it. The extra ones are checked by category and availability, de-duplicated by the parser (the probe could not show `uniqueItems` enforced), and not scored by grounding until the guards area (#138) says how |
+| A value's check and the target (found in question 5's A/B, 16 November 2026) | `IsAvailableValue(ctx, parameter, value)` as built, blind to the target; a check given the target too | **Recorded, not built**: the check sees no target, so "not major on the same country twice" cannot be said as a parameter, while a bundled id says it through its target check. To be settled with `also_targets` in the second step, where a check per (target, value) would need a branch per target in the paired schema |
+| Which schema carries them | Flat, with a "not used" value in every parameter enum; paired only | **Paired only**: offering an action with a parameter makes that call's schema paired (DR-020 decision 7), each branch carrying its action's own parameters in order, `required` and `additionalProperties: false`. Actions share a branch only if their targets *and* parameters match. A call with no parameters is byte-identical to today |
+| How a local model learns them | The schema; the prompt | **The prompt, always**, as for choices (DR-022): an action with parameters is listed with them whatever `ListActionsAndTargets` says ("`blight`: a country falls sick. strength: minor or major."). Its example shows them (`ExampleArguments`), so the few-shot block demonstrates the field rather than leaving it to the schema the model never reads |
+| Parsing | Lenient (bad value → default); strict | **Strict, with a declared default as the only fallback**: a missing or illegal value takes `Default` if the parameter has one, recorded as `ArgumentsDefaulted`; with none, `SchemaLegalityGuard` rejects, as it rejects a pair the grammar should have prevented. Numbers parse with the invariant culture. *Narrowed in review of the first step (16 November 2026, the tech lead): `Default` covers only a **missing** value. A value of the wrong type (a float, a boolean, an array, an integer past 64 bits) makes the reply unreadable, an `UnreadableReply` pipeline error, even when the parameter has a default; a string the parameter does not declare or the request did not offer is rejected by `SchemaLegalityGuard`. And `Execute` never applies `Default`: a hand-built decision missing a required value is refused.* |
+| Guards | Score parameters for grounding; legality only | **Legality and availability only**, inside the existing built-in guards (`SchemaLegalityGuard`, `TargetAvailabilityGuard` re-run at `Execute`). A developer guard reads `decision.Arguments`; `RewriteToNone`, `Reject` and `ReplaceStatement` apply unchanged. No verdict rewrites one value: it would be a fifth verdict for a need not seen |
+| Telemetry and the log | Nothing; the chosen values and what was offered | **Both**: the decision log's line carries `arguments` (an object, left out when empty), plus `argumentsDefaulted` and `valuesUnavailable`; `DecisionTelemetry` carries the same three. Memory under `Move` keeps the arguments with the move (#251) |
+| `AgentDecision` | New fields per kind; a map | **`Arguments`, an `IReadOnlyDictionary<string, string>`, empty and never null**, with `TryGetArgument` and an `int` reader; a 4-argument constructor beside the 3-argument one, which keeps meaning "no arguments". Source-compatible: no member changes, every existing call compiles |
+| Cloud providers | Assume the paired form travels | **Each provider says**, through `ProviderCapabilities`, whether it takes a paired schema. Gemini: `anyOf` yes, `oneOf` no, no `""` in an enum (a parameter value is refused at registration if empty), size limited by overall complexity rather than an enum count, so a paired schema grows with actions × targets × values. OpenAI's strict mode refuses a root `anyOf`, so an action with parameters cannot be sent there until a provider finds another shape. Neither provider exists yet (§2.4) |
+| Overlap with `Choices` (DR-022) | Merge them; keep both | **Both, with one rule**: a choice *among moves* is `Choices` (each an action value); a choice *about a move* (how hard, how many) is a parameter. A `Choice` takes no target and, in this step, no parameters; that stays a "revisit if" of DR-022 |
+
+**Measured before anything is recommended** (every arm on the RTX 5080 under the lock, one Ollama,
+rule 2):
+
+1. **The probe, extended** (`closed_choice_grammar_probe.py`):
+   - A native-path model. `MiniCPM5-2B` logged that path on 4 November and is not pulled, so
+     pulling it is the lead's call.
+   - An integer `minimum`/`maximum`, if question 2 opens it.
+   - `/v1/chat/completions` on a local Ollama.
+   - A repeated id under `uniqueItems`.
+2. **No change where none is declared.** A test holds the evaluation set's schema and prompt,
+   as `EvalRunner` sends them, byte-identical. No A/B is owed for the 76 curated or the 389 interim
+   prompts, since none declares a parameter.
+3. **GreyBoxStrategy's storyteller (#20).** *Run 16 November 2026, findings that day.*
+   - Arms: `windfall_major` ids against a `strength` parameter, the same templates, seeds and
+     table.
+   - 20 games an arm, `qwen3.5:4b` (the demo rule); the 2B only if the lead asks.
+   - Measures:
+     - illegal answers;
+     - containment;
+     - a statement that is a bare value;
+     - story and strength that agree, counted in code where possible;
+     - titles present;
+     - kinds of event;
+     - model seconds;
+     - prompt tokens.
+4. **`also_targets`**, if built: the same table, groups as targets against `also_targets`, the
+   same measures plus how many countries an event strikes.
+5. **Living Vale (gap 12)**, when its owner wants it: `quote_purchase` with a `quantity` 1 to 3 and
+   per-value availability against its bundled stock ids, on its scenario bench.
+
+No evaluation prompt is reused for examples (rule 4). A new labelled slice for parameters would
+come through the Prompt Set window (#134), not this record.
+
+**How the two games would use it.**
+
+- **GreyBoxStrategy's storyteller.**
+  - `blight` declares `strength: minor | major`, and `turns: 1 | 3 | 5` if the game wants it;
+    `also_targets` comes in step two.
+  - A per-value check keeps `major` from striking the same country twice in a row: the fairness
+    recipe in `guards.md`, now on a value.
+  - The handler reads `decision.Arguments["strength"]` and scales the effect.
+  - The event's story is written after the strength (the order above), which is what the probe
+    says keeps it out of the statement.
+  - Groups as targets (#298) stay for "the north"; `also_targets` is for "orsk and kesh, this
+    once".
+- **Living Vale.**
+  - `quote_purchase` takes the stock item as its target, with no bundle ids, and `quantity: 1 |
+    2 | 3`. Its value check hides a quantity the stall cannot cover or the buyer cannot pay.
+  - A counter-offer price is a `price` from a short list the game computes each decision (for
+    example 80%, 90% and 100% of the list price), never an open number.
+  - Its `TradeActionBinding` lines that spell out each bundle's price shrink to one per item.
+
+**Consequences.**
+
+- Additive, as DR-020 and DR-022 were. Nothing changes for an agent that declares no parameter.
+- `DecisionSchema`'s remark that later fields go after `statement` is corrected, with tonight's
+  finding as the reason, in the pull request that builds the first step.
+- Rule-6 safe: no dependency. DR-011 safe: no scene type.
+
+**Revisit if:**
+
+- the storyteller A/B shows parameters cost accuracy against bundled ids;
+- a native-path model keeps the values legal but loses the order;
+- a provider needs a shape other than a root `anyOf`;
+- or a game needs an open number the list form cannot give.
+
 ### Decisions already recorded elsewhere in this plan
 
 | ID | Decision | Where |
@@ -2445,6 +2649,84 @@ the two are executed interleaved.
 | DR-008 | No speaking-character assumption and no input taxonomy: the free-text field is `statement`, not `dialogue`; the developer decides when an agent is asked and passes a free-form stimulus, label and observations; the framework never classifies the call. Rename unmeasured — early Phase 4 A/B | §2.1, §2.3, issues #2, #8, #17, #18 |
 
 ---
+
+### DR-024 — Speech and images are two more provider kinds; the model reaches them only through its statement and through actions
+
+**Status:** Accepted, 17 November 2026. Proposed that morning by the framework tech lead at the
+lead's request ("I was thinking of using framework just like we wanted for TTS but also for image
+gen models"); the lead answered "Yes to all 5 but we may want it sooner then phase 4", so each
+proposed answer below is the decision, and question 5's timing is his to call: it may be built
+before Phase 4's gate. Nothing is built in the framework yet. GreyBoxStrategy builds both in its
+own code first, behind interfaces shaped like the ones below, so the framework lifts something a
+game has already used. Issues: #358 (the speech provider) and #359 (the image provider).
+
+**The lead's questions, each decided as proposed** (the table further down gives the
+reasons):
+
+1. **One provider that does everything, or separate kinds?** *Decided: separate. `ILLMProvider`
+   stays as it is; `ISpeechProvider` and `IImageProvider` stand beside it.*
+2. **Where do they live?** *Decided: the two interfaces and their plain value types in the core,
+   which adds no dependency; turning bytes into an `AudioClip` or a `Texture2D` in
+   `Runtime/Unity/`; every real backend in its own package or behind a version define, as hard
+   rule 6 already asks of providers.*
+3. **Does an agent speak every statement by itself?** *Decided: no. The developer calls for it,
+   as with `DecideAsync` (DR-008, DR-015): the framework never decides the moment.*
+4. **May the model ask an image model for a picture directly?** *Decided: no. It chooses a
+   registered action, and that action's handler calls the image provider (hard rule 5).*
+5. **When?** *Decided: after GreyBoxStrategy's voices and live pictures work in the game. The
+   lead may ask for it before Phase 4's gate (7 December).*
+
+**Context.** The framework knows one kind of request: a `DecisionRequest` goes to an
+`ILLMProvider` and a decision comes back. A speech model takes text and returns sound; an image
+model takes a prompt and returns a picture. Neither fits that slot, and nothing in the framework
+carries audio or images.
+
+Two things made the question concrete on 16 and 17 November:
+
+- GreyBoxStrategy's rulers say a line every turn and its storyteller writes event stories; the
+  lead wants them spoken (`docs/demos/painted-realm-direction.md`), and a session is building
+  that in the demo behind one interface with a Windows-voices backend and a local neural one.
+- The demo's art pack (#353) was generated on the team's asset server, and the next step is
+  pictures made during play from a ruler's name and an event's story.
+
+A developer using Agenerela for talking, illustrated characters would otherwise write the same
+plumbing each time: a queue so requests do not pile up, a cache so a replay shows the same
+picture, a voice per character, and the care that model-written text needs before it reaches
+another model.
+
+**Decision.**
+
+| Question | Decision | Why |
+|---|---|---|
+| Kinds | `ISpeechProvider`: text, a voice and options in; audio out. `IImageProvider`: a prompt, a size and a seed in; an image out. Each has a `Name`, capabilities, cancellation and the same health reporting as an LLM provider (DR-015 as amended) | Different inputs and outputs; a developer may want one without the others, or a different backend for each |
+| Data types | Plain data, no scene types: audio as PCM samples with a sample rate and channel count, an image as encoded bytes with its format. `Runtime/Unity/` holds the helpers that make an `AudioClip` or a `Texture2D` | DR-011: only `Runtime/Unity/` touches Unity's scene and asset types, so a headless game and a test need neither |
+| Backends | None in the core. A scripted provider of each kind ships with the framework for tests, as `ScriptedProvider` does. Real ones (a local neural voice, an HTTP image server, a cloud API) are separate packages or sit behind a version define | Hard rule 6 and DR-009: the core's one dependency stays Newtonsoft JSON |
+| Speech and the agent | `AgentIdentity` gains an optional voice: an open string id plus rate and pitch. A helper speaks a `DecisionResult`'s statement through the provider, and always the statement after the guards, never `ModelDecision`'s | The open string follows DR-008 (no taxonomy); a contained refusal must not be heard saying what the agent did not do (#109) |
+| When to speak | Only when the developer calls. Nothing is spoken as a side effect of `DecideAsync` | DR-008 and DR-015: the developer's systems decide the moment |
+| Images and the agent | No new field in the decision. An action's handler asks the image provider; the framework offers a prompt builder that puts the developer's fixed style first, caps the length, adds the developer's exclusions, and treats model-written text as untrusted | Hard rule 5; a storyteller's words must not be able to steer the picture off the game's art direction |
+| Queueing | Each kind has its own small queue, one request at a time by default, apart from the decision queue. A speech or image request never delays a decision | A decision's latency is what the game waits on; DR-015's queue is measured for decisions only |
+| Sharing a GPU | The framework does not arbitrate between a language model, a voice and an image model on one card. It reports each request's time, and DR-019's lifecycle interface is available to a backend that can unload | The right policy depends on the game and the machine; measured in GreyBoxStrategy first |
+| Caching | An optional cache keyed by a hash of the request, so a replay or a second visit shows the same picture and voice without the provider. The cache's storage is the developer's; a file cache ships in `Runtime/Unity/` | Generation is not repeatable across backends, and a recorded game must replay the same |
+| Telemetry | Each result carries its timings and the backend's name. The decision log gains line kinds for a speech and an image request. No change to `DecisionTelemetry` | A decision's record stays a decision's; a developer still sees what was asked of every model |
+| Editor | The provider settings page (DR-013) gains a slot for each kind, resolved the same three ways | One place to choose backends |
+
+**Not in this decision.** Speech to text. Audio that streams while it is generated. Lip sync.
+Images or audio as input to the language model. Music. Any default voice or art style.
+
+**Consequences.**
+
+- The framework's public API grows by two interfaces, their request and result types, a voice on
+  the identity and two helpers. Each is optional; an agent that uses none sends and does exactly
+  what it does today.
+- Two more scripted providers and their tests.
+- Phase 6's provider work gains two kinds to document. Phase 8's demos are the first users.
+- A developer can ship a game that never loads a voice or image model: with no provider of a
+  kind configured, the helpers do nothing and say so once.
+
+**What would change this.** GreyBoxStrategy's version showing that one of the two needs something
+this shape cannot carry (streaming audio for long stories, or pictures that need the previous
+picture as input). A measured finding that speech or pictures on the same card slow decisions
+enough to need arbitration in the framework.
 
 ## Appendix A — carried measurements (source: test-ai-framework prototype, Aug 2026, RTX 4060 Laptop 8GB, qwen3.5 family via Ollama)
 

@@ -82,6 +82,15 @@ namespace GreyBoxStrategy
             while (!game.IsOver)
             {
                 if (guard-- <= 0) throw new InvalidOperationException("The game did not end within its turn limit.");
+                if (game.Rules.Turn == TurnStyle.Writs)
+                {
+                    // The writs turn: rounds of orders until every ruler is done, then the treaty answers.
+                    var requests = game.BeginTurn();
+                    while (requests.Count > 0)
+                        requests = game.Submit(requests.Select(r => new CountryAnswer(r, players[r.CountryId].Decide(r))).ToList());
+                    game.Resolve();
+                    continue;
+                }
                 var council = game.BeginTurn();
                 var envoys = game.SubmitCouncil(council.Select(r => new CountryAnswer(r, players[r.CountryId].Decide(r))).ToList());
                 game.Resolve(envoys.Select(r => new CountryAnswer(r, players[r.CountryId].Decide(r))).ToList());
@@ -89,10 +98,18 @@ namespace GreyBoxStrategy
             return new GameRecord(game, players.ToDictionary(kv => kv.Key, kv => kv.Value.Kind, StringComparer.Ordinal));
         }
 
-        /// <summary>Plays one game per seed with a named line-up, seats rotating game by game.</summary>
-        public static List<GameRecord> PlaySeries(string lineup, IReadOnlyList<int> seeds, GameRules rules = null)
+        /// <summary>Plays one game from a setup (<see cref="GameSetup"/>) with a named line-up.</summary>
+        public static GameRecord Play(GameSetup setup, string lineup, int gameIndex = 0)
         {
-            var map = MapDefinition.Standard();
+            var map = setup.BuildMap();
+            return Play(setup.Seed, Lineups.Seat(lineup, gameIndex, map), map, setup.BuildRules(map));
+        }
+
+        /// <summary>Plays one game per seed with a named line-up, seats rotating game by game.</summary>
+        /// <param name="map">The map; the Classic board when null.</param>
+        public static List<GameRecord> PlaySeries(string lineup, IReadOnlyList<int> seeds, GameRules rules = null, MapDefinition map = null)
+        {
+            map = map ?? MapDefinition.Standard();
             var records = new List<GameRecord>(seeds.Count);
             for (int i = 0; i < seeds.Count; i++)
                 records.Add(Play(seeds[i], Lineups.Seat(lineup, i, map), map, rules));

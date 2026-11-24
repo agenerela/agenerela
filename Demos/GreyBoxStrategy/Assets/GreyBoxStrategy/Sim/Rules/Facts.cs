@@ -38,6 +38,25 @@ namespace GreyBoxStrategy
         /// <summary>Most turn facts that go with one call.</summary>
         public const int MaxTurnFacts = 3;
 
+        /// <summary>
+        /// The first standing fact: the turn and what wins. Today's domination game reads exactly as it
+        /// always has; the other victory modes of rules v2 say their own goal.
+        /// </summary>
+        public static string Goal(World world, int held)
+        {
+            var rules = world.Rules;
+            int all = world.ProvinceList.Count;
+            switch (rules.Victory)
+            {
+                case VictoryMode.Conquest:
+                    return $"Turn {world.Turn}. We hold {held} of {all} provinces; the last country standing wins.";
+                case VictoryMode.TurnLimit:
+                    return $"Turn {world.Turn} of {rules.MaxTurns}. We hold {held} of {all} provinces; the most at the end wins.";
+                default:
+                    return $"Turn {world.Turn} of {rules.MaxTurns}. We hold {held} of {all} provinces; {rules.ProvincesToWin} wins.";
+            }
+        }
+
         /// <summary>The standing facts for one country: at most eight lines.</summary>
         public static List<string> Standing(World world, string countryId)
         {
@@ -46,7 +65,7 @@ namespace GreyBoxStrategy
             int held = world.ProvinceCount(countryId);
             var lines = new List<string>
             {
-                $"Turn {world.Turn} of {rules.MaxTurns}. We hold {held} of {world.ProvinceList.Count} provinces; {rules.ProvincesToWin} wins.",
+                Goal(world, held),
                 $"Treasury: {me.Gold} gold; income {world.Income(me)} and upkeep {world.Upkeep(me)} a turn.",
                 me.Stability <= 1
                     ? $"Army: {me.Army} soldiers. Stability: {me.Stability} of {rules.MaxStability}, so a province may revolt."

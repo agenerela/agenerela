@@ -307,6 +307,146 @@ namespace Agenerela.Tests.Evaluation
             Assert.That(provider.Requests.Select(r => r.History.Count), Is.All.EqualTo(0));
         }
 
+        // A multi-turn prompt (#147): asked to follow, then told something else, then the stimulus.
+        private static readonly string Released = Prompt("target_003", "You can go now.", "stop_following", "no_target", true,
+            extra: ", \"history\": ["
+                 + "{ \"stimulus\": \"Walk with me a while.\", \"action\": \"follow_player\", \"target\": \"no_target\", \"statement\": \"Lead on.\" },"
+                 + "{ \"label\": \"Event\", \"stimulus\": \"A bell rings in the square.\", \"action\": \"none\", \"target\": \"no_target\" }"
+                 + "]");
+
+        [Test]
+        public async Task AMultiTurnPromptIsAskedAfterItsHistoryOldestFirst()
+        {
+            var provider = new FakeProvider(Reply("stop_following", "no_target"));
+
+            await Run(new[] { Bridge, Released }, null, provider);
+
+            Assert.That(Request(provider, "You can go now.").History, Is.EqualTo(new[]
+            {
+                "Player: \"Walk with me a while.\"",
+                "{\"action\":\"follow_player\",\"target\":\"no_target\",\"statement\":\"Lead on.\"}",
+                "Event: \"A bell rings in the square.\"",
+                "{\"action\":\"none\",\"target\":\"no_target\"}",
+            }));
+            Assert.That(Request(provider, "Meet me over at the bridge.").History, Is.Empty, "A prompt's history reached another prompt.");
+        }
+
+        [Test]
+        public async Task AnArmThatNamesTheFieldDialogueAsksStagesAndRecordsIt()
+        {
+            // The DR-008 rename's two arms (#151): A as it is, B with the prototype's name.
+            var statement = new FakeProvider(Reply("stop_following", "no_target", "Very well."));
+            var dialogue = new FakeProvider("{\"action\":\"stop_following\",\"target\":\"no_target\",\"dialogue\":\"Very well.\"}");
+
+            var report = await Fixtures.NotCancelled(
+                Runner(new[] { Released }, null, statement, dialogue, null, new DecideOptions { StatementFieldName = DecisionSchema.DialogueFieldName }).RunAsync());
+
+            var asked = Request(dialogue, "You can go now.");
+            Assert.That(asked.Schema.Fields.Select(f => f.Name), Is.EqualTo(new[] { "action", "target", "dialogue" }));
+            Assert.That(asked.History[1], Is.EqualTo("{\"action\":\"follow_player\",\"target\":\"no_target\",\"dialogue\":\"Lead on.\"}"),
+                "The staged history keeps the name the arm asks under.");
+            Assert.That(Request(statement, "You can go now.").History[1], Does.Contain("\"statement\":\"Lead on.\""));
+
+            Assert.That(report.Conditions.Arms.Select(a => a.StatementFieldName), Is.EqualTo(new[] { "statement", "dialogue" }));
+            Assert.That(report.Answers.Select(a => a.ModelStatement), Is.All.EqualTo("Very well."), "Both arms read their own field.");
+            Assert.That(report.Arms.Select(a => a.OrderLost), Is.All.EqualTo(0));
+            Assert.That(report.ToMarkdown(), Does.Contain("Arm B named the free-text field `dialogue`.").And.Not.Contain("Arm A named"));
+            Assert.That(EvalReport.FromJson(report.ToJson()).Conditions.Arms[1].StatementFieldName, Is.EqualTo("dialogue"));
+        }
+
+        [Test]
+        public async Task AnArmThatIgnoresHistoryAsksEachPromptAloneAndSaysSo()
+        {
+            // History on against off (#151): B is asked the multi-turn prompt as if it had none.
+            var a = new FakeProvider(Reply("stop_following", "no_target"));
+            var b = new FakeProvider(Reply("stop_following", "no_target"));
+            var runner = Runner(new[] { Released }, null, a, b);
+            runner.ArmB.IgnoreHistory = true;
+
+            var report = await Fixtures.NotCancelled(runner.RunAsync());
+
+            Assert.That(Request(a, "You can go now.").History, Has.Count.EqualTo(4), "Arm A lost the history.");
+            Assert.That(Request(b, "You can go now.").History, Is.Empty, "Arm B was sent the history it ignores.");
+            Assert.That(report.Conditions.Arms.Select(c => c.IgnoreHistory), Is.EqualTo(new[] { false, true }));
+            Assert.That(report.ToMarkdown(), Does.Contain("Arm B ignored each prompt's history").And.Not.Contain("Arm A ignored"));
+            Assert.That(EvalReport.FromJson(report.ToJson()).Conditions.Arms[1].IgnoreHistory, Is.True);
+            Assert.That(new EvalArm("C", fixtures.Config(a, "FakeC")).IgnoreHistory, Is.False, "Off by default.");
+        }
+
+        [Test]
+        public async Task AnArmsAddedExampleIsShownInThatArmOnly()
+        {
+            // A free choice answered with an action (#151), in B alone.
+            var a = new FakeProvider(Reply("move_to", "bridge"));
+            var b = new FakeProvider(Reply("move_to", "bridge"));
+            var added = new List<FewShotExample> { new FewShotExample("Use your own judgement.", "move_to", "bridge", "I'll watch from the bridge.") };
+            var runner = Runner(new[] { Bridge }, null, a, b, optionsB: new DecideOptions { AddedExamples = added });
+            added.Add(new FewShotExample("Added later.", "none"));
+
+            var report = await Fixtures.NotCancelled(runner.RunAsync());
+
+            string line = "\"Use your own judgement.\" -> action: move_to, target: bridge, statement: \"I'll watch from the bridge.\"";
+            Assert.That(Request(b, "Meet me over at the bridge.").FewShotBlock, Does.Contain(line));
+            Assert.That(Request(b, "Meet me over at the bridge.").FewShotBlock, Does.Not.Contain("Added later."), "The arm's options are copied when it is made.");
+            Assert.That(Request(a, "Meet me over at the bridge.").FewShotBlock, Does.Not.Contain("Use your own judgement."));
+            Assert.That(report.Conditions.Arms[0].AddedExamples, Is.Empty);
+            Assert.That(report.Conditions.Arms[1].AddedExamples, Is.EqualTo(new[] { "\"Use your own judgement.\" -> move_to, bridge" }));
+            Assert.That(report.ToMarkdown(), Does.Contain("Arm B added 1 few-shot example(s)").And.Not.Contain("Arm A added"));
+        }
+
+        [Test]
+        public async Task AnArmsAddedExampleThatIsAPromptIsRefused()
+        {
+            var provider = new FakeProvider(Reply("none", "no_target"));
+            var runner = Runner(new[] { Bridge }, new[] { Quiet }, provider, provider,
+                optionsB: new DecideOptions { AddedExamples = new List<FewShotExample> { new FewShotExample("Meet me over at the bridge!", "none") } });
+
+            var e = await Refused(runner);
+
+            Assert.That(e.Message, Does.Contain("target_001").And.Contain("arm 'B'").And.Contain("added example").And.Contain("hard rule 4"));
+            Assert.That(provider.Requests, Is.Empty);
+        }
+
+        [Test]
+        public async Task AnArmsAddedStatementThatIsAPromptIsRefused()
+        {
+            var provider = new FakeProvider(Reply("none", "no_target"));
+            var runner = Runner(new[] { Bridge }, new[] { Quiet }, provider, provider,
+                optionsB: new DecideOptions { AddedExamples = new List<FewShotExample> { new FewShotExample("Use your own judgement.", "none", null, "The square is empty.") } });
+
+            var e = await Refused(runner);
+
+            Assert.That(e.Message, Does.Contain("situation_001").And.Contain("added example's statement"));
+        }
+
+        [Test]
+        public async Task AnArmThatAsksForNoStatementStagesNone()
+        {
+            var provider = new FakeProvider(Reply("stop_following", "no_target"));
+
+            await Run(new[] { Released }, null, provider, provider, new DecideOptions { AskForStatement = false });
+
+            var histories = provider.Requests.Where(r => r.Stimulus.Contains("\"You can go now.\"")).Select(r => r.History).ToList();
+            Assert.That(histories, Has.Count.EqualTo(2));
+            Assert.That(histories[0][1], Is.EqualTo("{\"action\":\"follow_player\",\"target\":\"no_target\"}"),
+                "An arm with no statement field still read one in its history.");
+            Assert.That(histories[1][1], Does.Contain("\"statement\":\"Lead on.\""), "The other arm, which asks for one, lost it.");
+        }
+
+        [Test]
+        public async Task AHistoryLongerThanTheMemorysDefaultsIsSentWhole()
+        {
+            string turns = string.Join(",", Enumerable.Range(1, 9).Select(i =>
+                $"{{ \"stimulus\": \"Turn {i} of a long and rambling conversation about the weather and the harvest.\", \"action\": \"none\", \"target\": \"no_target\", \"statement\": \"I hear you, and I have nothing to add to that.\" }}"));
+            var longOne = Prompt("target_004", "Stand guard by the bridge.", "move_to", "bridge", false, extra: ", \"history\": [" + turns + "]");
+            var provider = new FakeProvider(Reply("move_to", "bridge"));
+
+            var report = await Run(new[] { longOne }, null, provider);
+
+            Assert.That(Request(provider, "Stand guard by the bridge.").History, Has.Count.EqualTo(18));
+            Assert.That(report.Answers[0].Result.Telemetry.HistoryTurnsDropped, Is.EqualTo(0));
+        }
+
         // ---- Order and warm-up -------------------------------------------------------------------
 
         [Test]
@@ -692,7 +832,9 @@ namespace Agenerela.Tests.Evaluation
             var legality = new EvalLegality { Name = "empty-categories" };
             legality.ActionCategories["follow_player"] = new string[0];
             var provider = new FakeProvider(Reply("follow_player", "bridge"));
-            var runner = new EvalRunner(fixtures.Set(new[] { Escort }), profile,
+            var set = fixtures.Set(new[] { Escort });
+            set.FindAction("follow_player").TakesNoTarget = true; // CompareWithProfile refuses a set that disagrees
+            var runner = new EvalRunner(set, profile,
                 new EvalArm("A", fixtures.Config(provider, "FakeA")), new EvalArm("B", fixtures.Config(provider, "FakeB")) { Legality = legality });
 
             var report = await Fixtures.NotCancelled(runner.RunAsync());

@@ -844,8 +844,14 @@ def check_probes():
         except SyntaxError as e:
             errors.append((f"Does not compile: {e.msg}", f, e.lineno))
             continue
+        here = posixpath.dirname(f)
         siblings = {posixpath.splitext(posixpath.basename(p))[0] for p in probes
-                    if posixpath.dirname(p) == posixpath.dirname(f)}
+                    if posixpath.dirname(p) == here}
+        # A kit's own package (a folder with __init__.py) beside the script or beside its folder,
+        # as tools/live-runs/runner/runner/ is to runq.py and to tests/: local code, not a dependency.
+        siblings |= {posixpath.basename(posixpath.dirname(p)) for p in probes
+                     if posixpath.basename(p) == "__init__.py"
+                     and posixpath.dirname(posixpath.dirname(p)) in (here, posixpath.dirname(here))}
         imports = []
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):

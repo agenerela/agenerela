@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace GreyBoxStrategy
 {
@@ -22,14 +24,67 @@ namespace GreyBoxStrategy
         public const string AcceptPeace = "accept_peace";
         public const string RefusePeace = "refuse_peace";
 
+        // The writs turn (rules v2, R1).
+        /// <summary>An army order: march to a province, the rules' shortest path.</summary>
+        public const string March = "march";
+        /// <summary>A treaty term: all occupied land between the two returns (v2 5.1).</summary>
+        public const string OfferWhitePeace = "offer_white_peace";
+        /// <summary>A treaty term: every province of theirs we occupy becomes ours; ours they occupy return.</summary>
+        public const string DemandOccupied = "demand_occupied";
+        /// <summary>A treaty term, the losing side's offer: every province of ours they occupy becomes theirs.</summary>
+        public const string CedeOccupied = "cede_occupied";
+
         public static readonly string[] Council = { Recruit, Fortify, RaiseTaxes, DeclareWar, Attack, OfferPeace, None };
+        /// <summary>The court's orders in the writs turn: no attack (armies do that) and treaty terms for peace.</summary>
+        public static readonly string[] Court = { Recruit, Fortify, RaiseTaxes, DeclareWar, OfferWhitePeace, DemandOccupied, CedeOccupied, None };
+
+        /// <summary>Economy (<see cref="GameRules.EconomyOn"/>): the court sets the standing tax level, in place of raise_taxes.</summary>
+        public const string TaxesLow = "taxes_low";
+        public const string TaxesNormal = "taxes_normal";
+        public const string TaxesHigh = "taxes_high";
+        public static readonly string[] TaxLevels = { TaxesLow, TaxesNormal, TaxesHigh };
+
+        /// <summary>Economy, E2: the court builds in one of our provinces, at once, for gold.</summary>
+        public const string BuildMarket = "build_market";
+        public const string BuildBarracks = "build_barracks";
+        public const string BuildFarm = "build_farm";
+        public static readonly string[] Builds = { BuildMarket, BuildBarracks, BuildFarm };
+
+        /// <summary>The building an action builds, or null.</summary>
+        public static Building? BuildsWhat(string action) =>
+            action == BuildMarket ? Building.Market : action == BuildBarracks ? Building.Barracks : action == BuildFarm ? Building.Farm : (Building?)null;
+
+        /// <summary>The tax level an action sets, or null.</summary>
+        public static TaxLevel? SetsTaxes(string action) =>
+            action == TaxesLow ? TaxLevel.Low : action == TaxesNormal ? TaxLevel.Normal : action == TaxesHigh ? TaxLevel.High : (TaxLevel?)null;
+
+        /// <summary>The court's actions under these rules: with the economy, the tax levels in place of raise_taxes.</summary>
+        public static IEnumerable<string> CourtFor(GameRules r)
+        {
+            var list = r.EconomyOn ? Court.Where(a => a != RaiseTaxes).Concat(TaxLevels).Concat(Builds) : Court;
+            return r.UnitTypes ? list.Concat(RecruitTypes) : list;
+        }
+        public static readonly string[] ArmyOrders = { March, None };
+
+        // R3: recruiting one unit type, in place of recruit while GameRules.UnitTypes is on (rules v2 3.1).
+        public const string RecruitPikes = "recruit_pikes";
+        public const string RecruitRiders = "recruit_riders";
+        public const string RecruitBows = "recruit_bows";
+        /// <summary>The court's recruit orders by type, offered only while <see cref="GameRules.UnitTypes"/> is on.</summary>
+        public static readonly string[] RecruitTypes = { RecruitPikes, RecruitRiders, RecruitBows };
+        /// <summary>The unit type a recruit order raises, or null for any other action.</summary>
+        public static UnitType? RecruitsType(string action) =>
+            action == RecruitPikes ? UnitType.Pikes : action == RecruitRiders ? UnitType.Riders : action == RecruitBows ? UnitType.Bows : (UnitType?)null;
+        public static string RecruitFor(UnitType t) => t == UnitType.Riders ? RecruitRiders : t == UnitType.Bows ? RecruitBows : RecruitPikes;
+        /// <summary>Whether the action is a treaty term, answered by the other side.</summary>
+        public static bool IsTerm(string action) => action == OfferWhitePeace || action == DemandOccupied || action == CedeOccupied;
         public static readonly string[] Envoy = { AcceptPeace, RefusePeace };
 
         /// <summary>Whether the action names a province (fortify, attack) rather than a country.</summary>
-        public static bool TargetsProvince(string action) => action == Fortify || action == Attack;
+        public static bool TargetsProvince(string action) => action == Fortify || action == Attack || action == March || BuildsWhat(action) != null;
 
         /// <summary>Whether the action names a country (declare_war, offer_peace).</summary>
-        public static bool TargetsCountry(string action) => action == DeclareWar || action == OfferPeace;
+        public static bool TargetsCountry(string action) => action == DeclareWar || action == OfferPeace || IsTerm(action);
     }
 
     /// <summary>

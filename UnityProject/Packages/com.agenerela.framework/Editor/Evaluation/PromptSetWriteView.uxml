@@ -1,0 +1,76 @@
+<!--
+    Write mode (#160, screen 8 ③④⑤): the prompts by category on the left, one prompt's editor on
+    the right. PromptSetWriteView builds a fresh copy for each set it opens and fills the named
+    elements; prompt rows, state rows, target rows and checks are built there.
+    Layout is in PromptSetWindow.uss; colour and type come from Agenerela.uss (#167).
+-->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <!-- B · Write: prompts by category on the left, one prompt's editor on the right -->
+    <ui:VisualElement name="write" class="ps-row ps-write">
+        <ui:VisualElement name="write-list" class="ps-write__list">
+            <uie:ToolbarSearchField name="search" class="ps-write__search" tooltip="Finds prompts by id, label or stimulus." />
+            <ui:ScrollView name="prompt-list" class="ps-grow" />
+            <ui:VisualElement class="ps-row ps-write__new-category">
+                <ui:TextField name="new-category" class="ps-grow" tooltip="A new category's id, such as command_with_target." />
+                <ui:Button name="add-category" text="+ Category" />
+            </ui:VisualElement>
+            <ui:Label name="write-name-hint" text="Type your name into Your name in the toolbar to add prompts." class="ag-muted ps-wrap ps-pad-s" />
+        </ui:VisualElement>
+        <ui:VisualElement class="ps-grow ps-write__side">
+            <ui:ScrollView name="editor-scroll" class="ps-grow">
+                <ui:Label name="nothing-selected" text="Pick a prompt on the left, or add one to a category." class="ag-muted ps-wrap ps-pad" />
+                <ui:VisualElement name="editor" class="ps-editor">
+                    <ui:Label name="editor-title" class="ag-mono ps-editor__title" />
+                    <ui:TextField name="prompt-id" label="Id" is-delayed="true" />
+                    <ui:VisualElement class="ps-row">
+                        <ui:TextField name="prompt-label" label="Label" class="ps-grow" />
+                        <uie:ToolbarMenu name="known-labels" class="ps-editor__pick" tooltip="Pick a label already used in the set." />
+                    </ui:VisualElement>
+                    <ui:TextField name="stimulus" label="Stimulus" multiline="true" class="ps-editor__text" />
+                    <ui:TextField name="observations" label="Observations" multiline="true" class="ps-editor__text" tooltip="One per line. Empty for most player commands." />
+                    <ui:Label text="One per line. Empty for most player commands." class="ag-muted ps-field-note" />
+                    <ui:VisualElement class="ps-row ps-editor__state-head">
+                        <ui:Label text="State" class="unity-base-field__label ps-editor__state-label" tooltip="The agent's state the prompt assumes." />
+                        <ui:VisualElement name="state-rows" class="ps-grow" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="ps-row ps-editor__state-add">
+                        <ui:TextField name="new-state-key" label="Add state" class="ps-grow" tooltip="A state key, such as isFollowing. It starts as false." />
+                        <ui:Button name="add-state" text="+" class="ps-editor__small" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="ps-row ps-editor__state-head">
+                        <ui:Label text="History" class="unity-base-field__label ps-editor__state-label" tooltip="Earlier turns of a multi-turn prompt, oldest first, staged in the agent's memory before the stimulus." />
+                        <ui:Label text="Earlier turns, oldest first. The state above is the one after them." class="ag-muted ps-wrap ps-grow" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="history-rows" />
+                    <ui:VisualElement class="ps-row ps-end">
+                        <ui:Button name="add-turn" text="+ Turn" tooltip="An earlier exchange, staged in the agent's memory before the stimulus." />
+                    </ui:VisualElement>
+
+                    <Agenerela.Editor.UI.SectionTitle text="Expected answer" />
+                    <ui:VisualElement name="labelled-warning" />
+                    <ui:DropdownField name="expected-action" label="Action" />
+                    <ui:VisualElement name="target-rows" />
+                    <ui:VisualElement class="ps-row ps-end">
+                        <ui:Button name="open-choice" text="+ open choice" tooltip="Either target is right." />
+                    </ui:VisualElement>
+                    <ui:Toggle name="check-target" label="Check target" tooltip="Off only for a case that tests a decision with the grounding guard off (DR-016)." />
+                    <ui:TextField name="note" label="Note" multiline="true" class="ps-editor__text" tooltip="Why the answer is what it is." />
+                    <ui:TextField name="labelled-by" label="Labelled by" tooltip="Comma-separated." />
+                    <ui:Label name="settled-from" class="ag-muted ps-wrap ps-field-note" />
+
+                    <Agenerela.Editor.UI.SectionTitle text="Checks" />
+                    <ui:VisualElement name="checks" />
+                    <ui:VisualElement class="ps-row ps-end">
+                        <ui:Button name="remove-prompt" text="Remove" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:ScrollView>
+            <uie:Toolbar class="ps-savebar">
+                <ui:Label name="save-state" class="ag-muted ps-savebar__state" />
+                <ui:VisualElement class="ps-grow" />
+                <uie:ToolbarButton name="save" text="Save" tooltip="Writes each changed category's file." />
+            </uie:Toolbar>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

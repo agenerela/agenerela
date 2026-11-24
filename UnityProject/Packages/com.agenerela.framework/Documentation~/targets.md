@@ -89,13 +89,15 @@ var result = await agent.DecideAsync(line, new DecideOptions { PairTargetsWithAc
 ```
 
 It is **off by default and unmeasured**: it changes what the model is constrained to, and it stays
-off until an A/B on the evaluation set shows it helps (hard rule 2, #151). What it does:
+off until an A/B on the evaluation set shows it helps (hard rule 2, #151). One thing turns it on
+without the option: an offered action that declares a parameter, which only a branch can ask for
+([parameters.md](parameters.md)). What it does:
 
 - Each action offered takes the targets its `TargetCategories` name, or every target when it names
   none, and `no_target` only if it does not require a target. `none` takes `no_target` alone, and
   so does an action with `TakesNoTarget` (below).
-- Actions that take the same targets share one branch (`DecisionSchema.Pairs`, one `ActionTargets`
-  each).
+- Actions that take the same targets, and ask for the same parameters, share one branch
+  (`DecisionSchema.Pairs`, one `ActionTargets` each).
 - An action that requires a target and takes none of those registered is not offered at all, and
   its example is not shown, as an action that needs a target already is when nothing is registered.
 - The system prompt, the action and target list, the target rule and the examples are what they
@@ -199,6 +201,38 @@ when `ExampleTargetFallback` is on, or is left out. An action with no check is s
 before, a wrong-category preferred target included.
 
 One thing it does not do yet: `[Available]` gives no reason when it leaves a whole action out.
+
+## A group as one target
+
+A decision names one target. An event on "the north" or "orsk and kesh" names a **group**: a
+target of its own, registered in a category of its own, whose description lists its members
+(#266 item 1). GreyBoxStrategy's storyteller does this for events that strike several countries.
+
+```csharp
+// A group the game makes for this decision: its members, and a line saying who they are.
+sealed class CountryGroup : IDescribedTarget
+{
+    public readonly IReadOnlyList<string> Members;
+    public CountryGroup(IReadOnlyList<string> members) { Members = members; }
+    public string Description => "the countries " + string.Join(" and ", Members);
+}
+
+into.Offer("north", new CountryGroup(new[] { "orsk", "kesh" }), "group");
+```
+
+- **The model reads the description**, in the action and target list (`ListActionsAndTargets`) or
+  in an observation the game writes; it never reads the category. Name the members by their ids.
+- **The handler expands it.** `ctx.Targets.TryGet("north", out object g)` gives the group back, and
+  the handler applies the effect to each member, each with its own amount if the game wants one.
+- **An action that takes groups names the category** (`TargetCategories = new[] { "group" }`), and
+  one that takes single countries does not take groups, so the paired schema keeps them apart.
+- **Fairness is the game's**, when it builds the groups: leave out a member the rules protect
+  (struck last turn, at peace) rather than offering the group and refusing it afterwards.
+- **Keep groups few.** Each is a target in the enum. Offer the handful that make sense this turn,
+  not every combination.
+
+A target array beside `target` is not built; it would be a new field in the schema, and waits for
+the `also_targets`, DR-023's second step (accepted, not built), if groups prove clumsy.
 
 ## Facts told through an action
 

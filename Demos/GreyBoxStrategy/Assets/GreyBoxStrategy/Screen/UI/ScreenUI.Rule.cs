@@ -15,6 +15,7 @@ namespace GreyBoxStrategy.Realm
     public sealed partial class ScreenUI
     {
         private VisualElement orders, offerCard;
+        private Label ordersStatus, card;
         private string openAction;
         private bool showReport;
 
@@ -46,6 +47,7 @@ namespace GreyBoxStrategy.Realm
         public void ShowOrders(string status)
         {
             if (orders == null) { orders = new VisualElement(); orders.AddToClassList("panel"); orders.AddToClassList("orders"); Root.Add(orders); }
+            if (Writs && OrdersRequest != null) { ShowWritsOrders(status); return; }
             orders.Clear();
             var req = OrdersRequest;
             var head = new VisualElement(); head.AddToClassList("panel-head");
@@ -65,6 +67,7 @@ namespace GreyBoxStrategy.Realm
             if (req == null)
             {
                 var wait = new Label(status ?? ""); wait.AddToClassList("orders-status"); body.Add(wait);
+                ordersStatus = wait;
                 return;
             }
 
@@ -104,7 +107,8 @@ namespace GreyBoxStrategy.Realm
 
             var foot = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = Align.Center, marginTop = 8 } };
             var st = new Label(status ?? ""); st.AddToClassList("orders-status"); st.style.flexGrow = 1; st.style.flexShrink = 1; foot.Add(st);
-            var end = new Button(() => EndTurnPressed?.Invoke()) { text = "End turn", tooltip = "Send your order (Enter). The four rulers' moves and yours then land in the rules' order." };
+            ordersStatus = st;
+            var end = new Button(() => EndTurnPressed?.Invoke()) { text = "End turn", tooltip = "Send your order (Enter). The other rulers' moves and yours then land in the rules' order." };
             end.AddToClassList("menu-button"); end.AddToClassList("end-turn"); foot.Add(end);
             body.Add(foot);
         }
@@ -148,6 +152,19 @@ namespace GreyBoxStrategy.Realm
             return reasons.Count == 1 ? reasons[0] : string.Join("; ", reasons.Take(2)) + (reasons.Count > 2 ? "; …" : "");
         }
 
+        private static string Explain(string action, GameRules rules)
+        {
+            // The economy (#372, #374): a tax level, a building.
+            if (Actions.SetsTaxes(action) is TaxLevel level)
+                return $"Set taxes {ScreenModels.TaxName(level)} from now on: {ScreenModels.TaxEffect(rules, level)}. One tax order a turn.";
+            if (Actions.BuildsWhat(action) is Building b)
+                return $"Buy a {ScreenModels.BuildingName(b)} at once in a province of yours, for {WritLegality.BuildingCost(rules, b)} gold: "
+                       + (b == Building.Barracks ? $"+{rules.BarracksManpower} men a turn and +{rules.BarracksCap} to your manpower cap" : b == Building.Market
+                           ? $"+{rules.MarketYield} gold a turn there, +{rules.MarketCoastYield} on a coast"
+                           : $"+{rules.FarmYield} gold a turn there, +{rules.FarmPlainsYield} on plains; {rules.FarmsForStability} farms steady your stability") + ". One of each a province.";
+            return Explain(action);
+        }
+
         private static string Explain(string action)
         {
             switch (action)
@@ -166,13 +183,55 @@ namespace GreyBoxStrategy.Realm
             {
                 case Actions.None: return "Hold";
                 case Actions.Recruit: return "Recruit";
+                case Actions.RecruitPikes: return "Recruit pikes";
+                case Actions.RecruitRiders: return "Recruit riders";
+                case Actions.RecruitBows: return "Recruit bows";
                 case Actions.RaiseTaxes: return "Raise taxes";
+                case Actions.TaxesLow: return "Set taxes low";
+                case Actions.TaxesNormal: return "Set taxes normal";
+                case Actions.TaxesHigh: return "Set taxes high";
+                case Actions.BuildMarket: return "Build a market in " + Cap(m.Target);
+                case Actions.BuildBarracks: return "Build barracks in " + Cap(m.Target);
+                case Actions.BuildFarm: return "Build a farm in " + Cap(m.Target);
                 case Actions.Attack: return "Attack " + Cap(m.Target);
                 case Actions.Fortify: return "Fortify " + Cap(m.Target);
                 case Actions.DeclareWar: return "Declare war on " + CountryLook.NameOf(m.Target);
                 case Actions.OfferPeace: return "Offer peace to " + CountryLook.NameOf(m.Target);
                 default: return m.ToString();
             }
+        }
+
+        /// <summary>Changes only the orders panel's status line: the clock ticks without rebuilding its buttons.</summary>
+        public void SetOrdersStatus(string status)
+        {
+            if (ordersStatus != null) ordersStatus.text = status ?? "";
+        }
+
+        /// <summary>
+        /// The RTX 5080 in the top bar: "held" while this game holds the card, "waiting" while it
+        /// waits for it, null to hide it.
+        /// </summary>
+        public void SetCard(string state)
+        {
+            if (card == null)
+            {
+                card = new Label(); card.AddToClassList("card-chip");
+                turnLabel.parent.Insert(0, card);
+            }
+            card.style.display = state == null ? DisplayStyle.None : DisplayStyle.Flex;
+            card.EnableInClassList("waiting", state == "waiting");
+            card.text = state == "held" ? "RTX 5080 · held" : "RTX 5080 · waiting";
+            card.tooltip = state == "held"
+                ? "This game holds the RTX 5080's lock until it ends or you leave (Menu). Other sessions wait for it."
+                : "Another session holds the RTX 5080. The game takes it when it is free.";
+        }
+
+        /// <summary>A Menu button at the top bar's right end: back to the start menu, from any game.</summary>
+        public void AddMenuButton(Action pressed)
+        {
+            var b = new Button(pressed) { text = "Menu", tooltip = "The pause menu (Esc): resume, settings, or back to the main menu." };
+            b.AddToClassList("tbtn"); b.style.width = StyleKeyword.Auto; b.style.paddingLeft = 8; b.style.paddingRight = 8; b.style.marginLeft = 8;
+            playButton.parent.Add(b);
         }
 
         public void HideOrders() { orders?.RemoveFromHierarchy(); orders = null; openAction = null; }
@@ -200,9 +259,8 @@ namespace GreyBoxStrategy.Realm
                     b.AddToClassList("order-move"); b.AddToClassList("wide"); if (legal.Equals(Chosen)) b.AddToClassList("pick");
                     sec.Add(b);
                 }
-                else sec.Add(Note($"{Describe(m)}: {why}"));
+                else sec.Add(Note($"{Describe(m)}: {Words.Plain(why)}"));
             }
-            sec.Add(Src("Legality.WhyNot, the rule the models are offered moves by"));
         }
 
         /// <summary>Your orders towards a rival: war and peace, or why not.</summary>
@@ -222,9 +280,8 @@ namespace GreyBoxStrategy.Realm
                     b.AddToClassList("order-move"); b.AddToClassList("wide"); if (legal.Equals(Chosen)) b.AddToClassList("pick");
                     sec.Add(b);
                 }
-                else sec.Add(Note($"{Describe(m)}: {why}"));
+                else sec.Add(Note($"{Describe(m)}: {Words.Plain(why)}"));
             }
-            sec.Add(Src("Legality.WhyNot, the rule the models are offered moves by"));
         }
 
         // ---- the envoy card ----
@@ -241,7 +298,7 @@ namespace GreyBoxStrategy.Realm
             var t = new Label($"{look.Name.ToUpperInvariant()}'S ENVOY"); t.AddToClassList("panel-title"); head.Add(t);
             offerCard.Add(head);
             var row = new VisualElement { style = { flexDirection = FlexDirection.Row, paddingLeft = 12, paddingRight = 12, paddingTop = 10 } };
-            var face = new Image { image = portraits, uv = Faces.Uv(player?.Persona, look.Slot % 2), scaleMode = ScaleMode.ScaleAndCrop };
+            var face = RulerFace(from);
             face.AddToClassList("insp-face"); face.style.borderTopColor = face.style.borderBottomColor = face.style.borderLeftColor = face.style.borderRightColor = (Color)look.Colour;
             row.Add(face);
             var col = new VisualElement { style = { marginLeft = 12, flexShrink = 1 } };

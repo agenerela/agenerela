@@ -92,6 +92,7 @@ namespace Agenerela
 
             this.profile = profile;
             Identity = profile.Identity;
+            RequirePairedSchemaFor(provider, Definitions());
         }
 
         // A profile's agent that reads another identity instead of the profile's, so EvalRunner can
@@ -138,6 +139,7 @@ namespace Agenerela
             }
 
             Identity = identity;
+            RequirePairedSchemaFor(provider, definitions);
         }
 
         private Agent(ILLMProvider provider)
@@ -149,6 +151,8 @@ namespace Agenerela
 
             this.provider = provider;
             Actions = new ActionRegistry();
+            // Read at each registration, so it is the provider of that moment.
+            Actions.Accepting = definition => RequirePairedSchemaFor(this.provider, new[] { definition });
             Targets = new TargetRegistry();
             TargetSources = new List<ITargetSource>();
             ObservationSources = new List<IObservationSource>();
@@ -213,7 +217,40 @@ namespace Agenerela
         public ILLMProvider Provider
         {
             get => provider;
-            set => provider = value ?? throw new ArgumentNullException(nameof(value));
+            set
+            {
+                if (value == null)
+                {
+                    throw new ArgumentNullException(nameof(value));
+                }
+
+                // Before it replaces the old one, so a refused provider leaves the agent as it was.
+                RequirePairedSchemaFor(value, Definitions());
+                RequirePairedSchemaFor(value, Actions.Definitions);
+                provider = value;
+            }
+        }
+
+        // An action that declares a parameter is sent only in a paired schema (DR-023), so an agent
+        // on a provider that cannot take one refuses the action here, at setup, with the fix in the
+        // message, rather than failing at the first decision.
+        private void RequirePairedSchemaFor(ILLMProvider candidate, IEnumerable<ActionDefinition> actions)
+        {
+            if (candidate.Capabilities == null || candidate.Capabilities.SupportsPairedSchema)
+            {
+                return;
+            }
+
+            foreach (var definition in actions)
+            {
+                if (definition != null && definition.DeclaresParameters)
+                {
+                    throw new InvalidOperationException(
+                        $"{Who()}: the action '{definition.Id}' declares a parameter, which is sent only in a paired schema, " +
+                        $"and the provider '{candidate.Name}' says it cannot take one (ProviderCapabilities.SupportsPairedSchema). " +
+                        "Give the agent a provider that can, or remove the parameter.");
+                }
+            }
         }
 
         /// <summary>
@@ -333,6 +370,22 @@ namespace Agenerela
         }
 
         private int maxObservations = 8;
+
+        /// <summary>
+        /// How long this agent's prompts may grow, and what may be left out to keep them under it
+        /// (#151, <see cref="Agenerela.PromptBudget"/>). Null by default: no budget, and every request
+        /// is what it was before budgets existed. A call's own <see cref="DecideOptions.PromptBudget"/>
+        /// replaces it for that call; <see cref="Agenerela.PromptBudget.None"/> there turns it off.
+        /// </summary>
+        /// <remarks>
+        /// Read once per decision, when its request is prepared. The first decision that goes over
+        /// logs a warning; every one records it in <see cref="DecisionTelemetry.OverBudget"/>.
+        /// </remarks>
+        public PromptBudget PromptBudget { get; set; }
+
+        // Whether this agent has warned of a prompt over its budget: once, so a game whose prompts
+        // run long is told without its console filling (#151).
+        private bool warnedOverBudget;
 
         /// <summary>
         /// The game's own facts about this agent, such as <c>State["isFollowing"] = true</c>. Copied
@@ -676,6 +729,12 @@ namespace Agenerela
             // the guards read from them.
             options = options == null ? new DecideOptions() : options.Copy();
 
+            if (options.Choices != null)
+            {
+                // Built once here only to check them, so a bad list throws at the call (DR-022).
+                ChoiceRegistry(options.Choices);
+            }
+
             // Checked here, outside the async body, so the mistake throws at the call rather than
             // becoming a PipelineError.
             if (string.IsNullOrWhiteSpace(options.StimulusLabel))
@@ -689,6 +748,18 @@ namespace Agenerela
             {
                 throw new ArgumentOutOfRangeException(nameof(options), options.MaxListedTargets,
                     "DecideOptions.MaxListedTargets cannot be negative. 0 lists no targets.");
+            }
+
+            if (options.Temperature.HasValue && (!(options.Temperature.Value >= 0f) || float.IsInfinity(options.Temperature.Value)))
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), options.Temperature,
+                    "DecideOptions.Temperature must be 0 or above. Null uses the provider's own.");
+            }
+
+            if (options.MaxReplyTokens.HasValue && options.MaxReplyTokens.Value <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), options.MaxReplyTokens,
+                    "DecideOptions.MaxReplyTokens must be above 0. Null caps nothing.");
             }
 
             if (!(options.TargetGroundingThreshold >= 0f && options.TargetGroundingThreshold <= 1f))
@@ -709,9 +780,21 @@ namespace Agenerela
                     "DecideOptions.StatementRulesWording is not one of YourStatement, HowItShouldRead or InYourOwnWords.");
             }
 
+            // Null is the default name (DR-008); any other must be a field the reply can hold.
+            options.StatementFieldName = options.StatementFieldName ?? DecisionSchema.StatementFieldName;
+            string nameProblem = DecisionSchema.StatementNameProblem(options.StatementFieldName);
+            if (nameProblem != null)
+            {
+                throw new ArgumentException($"DecideOptions.StatementFieldName: {nameProblem}", nameof(options));
+            }
+
             // A list of the context's own, apart from the options' copy a guard may read. Blank
             // lines are not something the agent knows, so they take no place under the cap.
-            observations = new ReadOnlyCollection<string>(NotBlank(options.Observations));
+            // The optional lines after the rest, as more of the call's own, so a budget's trim takes
+            // them from the end (#151).
+            var lines = NotBlank(options.Observations);
+            lines.AddRange(NotBlank(options.OptionalObservations));
+            observations = new ReadOnlyCollection<string>(lines);
             idleExample = options.IdleExampleStimulus ?? IdleExampleStimulus ?? (profile != null ? profile.IdleExampleStimulus : null);
 
             // Its statement is looked up the same way, but never from further down than the stimulus
@@ -1059,6 +1142,12 @@ namespace Agenerela
                 return ActionResult.NoAction();
             }
 
+            // A choice the call offered: the game acts on the id, and there is no handler (DR-022).
+            if (result.FromChoices)
+            {
+                return ActionResult.Done();
+            }
+
             var verdict = Recheck(result, "@Execute", out var ctx);
             if (verdict.Kind != GuardVerdictKind.Pass)
             {
@@ -1085,6 +1174,12 @@ namespace Agenerela
             // No dropped targets to fill: this Collect overwrites a source's Dropped, but the result
             // already holds its own copy from the decision.
             ctx = Snapshot("", Array.Empty<string>(), dropped: null, result.Correlation);
+
+            // The choices were the call's, not the agent's, so there is nothing of now to check them against (DR-022).
+            if (result.FromChoices)
+            {
+                return GuardVerdict.Pass;
+            }
 
             // No request and no reply: only the agent as it is now. The options are the defaults
             // with the call's correlation, and no guard that runs here reads them.
@@ -1337,18 +1432,29 @@ namespace Agenerela
             telemetry.Model = reply.Model ?? "";
             telemetry.PromptTokens = reply.PromptTokens;
             telemetry.CompletionTokens = reply.CompletionTokens;
+            JudgeBudget(telemetry);
 
-            if (!DecisionParser.TryParse(reply.Text, request.Schema, out var decision, out string problem))
+            if (!DecisionParser.TryParse(reply.Text, request.Schema, out var decision, out string problem, out bool orderLost))
             {
                 return Failed(telemetry, PipelineErrorKind.UnreadableReply, $"{problem} The reply was: {Excerpt(reply.Text)}", call.Correlation, request, reply);
             }
 
             // Before the guards, so neither they nor a handler see a target the action never takes
             // (#244 item 2). The model's own answer stays in ModelDecision.
+            telemetry.OrderLost = orderLost;
             var answered = decision;
             decision = DropStrayTarget(decision, ctx, request, telemetry);
+            decision = DefaultArguments(decision, ctx, request, telemetry);
 
             var result = Guard(new GuardInput(ctx, request, reply, decision, call, telemetry) { AvailabilityAnswer = availability }, answered);
+            if (result.Decision != null)
+            {
+                foreach (var argument in result.Decision.Arguments)
+                {
+                    telemetry.Arguments[argument.Key] = argument.Value;
+                }
+            }
+
             if (result.Verdict.HasValue)
             {
                 result = await SayWhatWasStopped(provider, result, ctx, request, call, ct, reset);
@@ -1357,6 +1463,8 @@ namespace Agenerela
             // A reset from inside this decision, by a guard or RefusalStatement, cancels it as any
             // other reset does, so it is never remembered into the memory just cleared (G12).
             reset.ThrowIfCancellationRequested();
+
+            result.FromChoices = call.Choices != null;
 
             // After the guards and the line, so what is remembered is what the agent will do and
             // say (§2.9, rule 1). A guard that failed left no decision, and a pipeline error
@@ -1387,6 +1495,24 @@ namespace Agenerela
             out AvailabilityAnswer availability)
         {
             ctx = Observe(Snapshot(stimulus, observations, telemetry.TargetsDropped, call.Correlation, seen), telemetry.ObservationsDropped, seen);
+            if (call.Choices != null)
+            {
+                // The call's choices in place of the agent's actions, and no targets (DR-022).
+                ctx = new AgentContext(ctx.Identity, ctx.Stimulus, ctx.Observations, ctx.State, new TargetRegistry(),
+                    ChoiceRegistry(call.Choices), ctx.Correlation);
+                foreach (var choice in call.Choices)
+                {
+                    if (choice.Available.IsAvailable)
+                    {
+                        telemetry.ChoicesOffered.Add(choice.Id);
+                    }
+                    else
+                    {
+                        telemetry.ChoicesUnavailable.Add(new UnavailableChoice(choice.Id, choice.Available.Reason));
+                    }
+                }
+            }
+
             if (seen != null)
             {
                 seen.Context = ctx;
@@ -1397,14 +1523,19 @@ namespace Agenerela
                 StimulusLabel = call.StimulusLabel,
                 IdleExampleStimulus = idleExample,
                 TargetRule = call.CheckTarget && provider.Capabilities?.ReportsTokenProbabilities != true,
-                ListActionsAndTargets = call.ListActionsAndTargets,
+                // A choice's words reach a local model only through the list (DR-022).
+                ListActionsAndTargets = call.ListActionsAndTargets || call.Choices != null,
                 MaxListedTargets = call.MaxListedTargets,
                 LegalTargets = call.LegalTargets,
                 StatementRulesWording = call.StatementRulesWording,
                 CounterExamples = call.CounterExamples,
+                AddedExamples = call.AddedExamples == null ? null : new List<FewShotExample>(call.AddedExamples),
                 IdleExampleStatement = call.IdleExampleStatement,
-                ExampleStatements = call.ExampleStatements,
+                // A call that asks for no statement shows none in its examples either (#266).
+                ExampleStatements = call.ExampleStatements && call.AskForStatement,
+                StatementFieldName = call.StatementFieldName,
                 ExampleTargetFallback = call.ExampleTargetFallback,
+                ExampleObservations = call.ExampleObservations,
                 Stimulus = stimulus,
                 // Observe keeps the call's own lines last in ctx, after every source's.
                 ObservationPlacement = call.ObservationPlacement,
@@ -1416,19 +1547,61 @@ namespace Agenerela
             // function of the context, such as a cooldown.
             availability = ActionAvailability.Evaluate(ctx);
             telemetry.TargetsUnavailable.AddRange(availability.Unavailable);
+            telemetry.ValuesUnavailable.AddRange(availability.UnavailableValues);
             var offered = availability.Offered;
             var available = offered;
             bool paired = call.PairTargetsWithActions;
-            if (paired || call.LegalTargets != LegalTargetListing.Off)
+            var takeable = DecisionSchema.Takeable(available, ctx.Targets, availability);
+
+            // An action with a parameter is offered only in the paired schema, and its values reach
+            // a local model only through the prompt's list, as a choice's words do (DR-023). Decided
+            // here once, from the actions pairing can offer, and passed to the schema: an action
+            // with a parameter and no target it can take now is left out, never given an empty branch.
+            bool parameters = DecisionSchema.DeclaresParameters(takeable);
+            if (parameters)
+            {
+                paired = true;
+                options.ListActionsAndTargets = true;
+            }
+
+            if (paired || call.LegalTargets != LegalTargetListing.Off || DecisionSchema.DeclaresParameters(offered))
             {
                 // No example for an action the paired schema cannot offer (DR-020), and none offered
                 // at all when the prompt names the pairs and it has no legal target (#151).
-                available = DecisionSchema.Takeable(available, ctx.Targets, availability);
+                available = takeable;
             }
 
-            seen?.SetActions(ctx, Definitions(), availability, available);
+            seen?.SetActions(ctx, call.Choices != null ? ctx.Actions.Definitions : Definitions(), availability, available);
 
-            var schema = DecisionSchema.Build(ctx, available, paired, availability);
+            // A safety net behind the checks at setup, and the only check for a call that asks for
+            // pairing itself: a provider that says it cannot take a paired schema is never sent one.
+            if (paired && provider.Capabilities != null && !provider.Capabilities.SupportsPairedSchema &&
+                (ctx.Targets.Count > 0 || parameters))
+            {
+                throw new InvalidOperationException(
+                    $"The provider '{provider.Name}' says it cannot take a paired schema (ProviderCapabilities.SupportsPairedSchema), " +
+                    "and this call needs one: it asked for PairTargetsWithActions, or offers an action that declares a parameter.");
+            }
+
+            // A parameter named like the statement would be two fields of one name in the reply.
+            if (call.StatementFieldName != DecisionSchema.StatementFieldName)
+            {
+                foreach (var definition in available)
+                {
+                    if (!definition.DeclaresParameters) continue;
+                    foreach (var parameter in definition.Parameters)
+                    {
+                        if (parameter.Name == call.StatementFieldName)
+                        {
+                            throw new InvalidOperationException(
+                                $"DecideOptions.StatementFieldName is '{call.StatementFieldName}', which action '{definition.Id}' " +
+                                "declares as a parameter. Name the statement otherwise for this call.");
+                        }
+                    }
+                }
+            }
+
+            var schema = DecisionSchema.Build(ctx, available, paired, availability, call.AskForStatement, call.StatementFieldName);
             string fewShot = FewShotBuilder.Build(available, ctx.Targets, options, availability);
 
             var history = Recall(memory, ctx, telemetry);
@@ -1442,11 +1615,148 @@ namespace Agenerela
                 seen.HistoryTurnsForgotten = telemetry.HistoryTurnsForgotten;
             }
 
-            var request = PromptBuilder.Build(ctx, schema, fewShot, history, options, availability, telemetry.TargetsUnlisted);
+            var request = Fit(BudgetFor(call), call, ctx, schema, fewShot, history, options, availability, telemetry, out ctx, out history);
+            if (seen != null && telemetry.PromptTrims.Count > 0)
+            {
+                seen.Context = ctx;
+                seen.History = history == null ? null : new ReadOnlyCollection<string>(new List<string>(history));
+                seen.HistoryTurnsDropped = telemetry.HistoryTurnsDropped;
+            }
+
             seen?.SetUnlisted(telemetry.TargetsUnlisted);
             request.AgentId = Id;
+            request.Temperature = call.Temperature;
+            request.Seed = call.Seed;
+            request.MaxReplyTokens = call.MaxReplyTokens;
             telemetry.TargetRuleSent = PromptBuilder.SendsTargetRule(schema, options);
             return request;
+        }
+
+        // The budget a call is measured against: its own, else the agent's; null for none, None included.
+        private PromptBudget BudgetFor(DecideOptions call)
+        {
+            var budget = call.PromptBudget ?? PromptBudget;
+            return budget != null && budget.IsSet ? budget : null;
+        }
+
+        // The request, built, then trimmed to the budget as its trims allow, in their order, one step
+        // at a time while the estimate is over (#151). Each trim that left something out is recorded,
+        // with what it left out, in the fields that already say so. Without a budget, or under it, the
+        // request is built once, as it always was. The context and history come back as the request
+        // has them, so the guards, memory and a preview see what was sent.
+        private static DecisionRequest Fit(
+            PromptBudget budget, DecideOptions call, AgentContext ctx, DecisionSchema schema, string fewShot,
+            IReadOnlyList<string> history, PromptOptions options, AvailabilityAnswer availability, DecisionTelemetry telemetry,
+            out AgentContext sentCtx, out IReadOnlyList<string> sentHistory)
+        {
+            DecisionRequest Build(AgentContext c, IReadOnlyList<string> h)
+            {
+                // Each build lists afresh, so what was unlisted is this request's alone.
+                telemetry.TargetsUnlisted.Clear();
+                return PromptBuilder.Build(c, schema, fewShot, h, options, availability, telemetry.TargetsUnlisted);
+            }
+
+            var request = Build(ctx, history);
+            float perToken = budget?.CharsPerToken ?? PromptBudget.DefaultCharsPerToken;
+            telemetry.PromptBudget = budget?.Tokens ?? 0;
+
+            if (budget != null)
+            {
+                bool Over() => PromptBudget.Estimate(request, perToken) > budget.Tokens;
+
+                foreach (var trim in budget.Trims)
+                {
+                    if (!Over()) break;
+
+                    int left = 0;
+                    switch (trim)
+                    {
+                        case PromptTrim.OptionalObservations:
+                        {
+                            // The call's optional lines are the last of its own, so the last of the context's.
+                            int optional = Math.Min(NotBlank(call.OptionalObservations).Count,
+                                Math.Min(options.CallObservationCount, ctx.Observations.Count));
+                            while (optional > 0 && Over())
+                            {
+                                var lines = new List<string>(ctx.Observations);
+                                telemetry.ObservationsDropped.Add(lines[lines.Count - 1]);
+                                lines.RemoveAt(lines.Count - 1);
+                                ctx = new AgentContext(ctx.Identity, ctx.Stimulus, new ReadOnlyCollection<string>(lines),
+                                    ctx.State, ctx.Targets, ctx.Actions, ctx.Correlation);
+                                options.CallObservationCount--;
+                                optional--;
+                                left++;
+                                request = Build(ctx, history);
+                            }
+
+                            if (left > 0) telemetry.PromptTrims.Add($"{trim}: {left} {(left == 1 ? "line" : "lines")}");
+                            break;
+                        }
+
+                        case PromptTrim.UntakeableTargets:
+                        {
+                            // Only the flat list names untakeable targets; the legal pairs never do.
+                            if (!options.ListActionsAndTargets || options.LegalTargets == LegalTargetListing.PerTarget) break;
+
+                            int before = telemetry.TargetsUnlisted.Count;
+                            options.ListTakeableTargetsOnly = true;
+                            request = Build(ctx, history);
+                            left = telemetry.TargetsUnlisted.Count - before;
+                            if (left > 0) telemetry.PromptTrims.Add($"{trim}: {left} {(left == 1 ? "target" : "targets")}");
+                            break;
+                        }
+
+                        case PromptTrim.History:
+                        {
+                            while (history != null && history.Count >= 2 && Over())
+                            {
+                                var kept = new List<string>(history);
+                                kept.RemoveRange(0, 2);
+                                history = kept;
+                                telemetry.HistoryTurnsSent--;
+                                telemetry.HistoryTurnsDropped++;
+                                left++;
+                                request = Build(ctx, history);
+                            }
+
+                            if (left > 0) telemetry.PromptTrims.Add($"{trim}: {left} {(left == 1 ? "exchange" : "exchanges")}");
+                            break;
+                        }
+                    }
+                }
+            }
+
+            telemetry.PromptCharacters = PromptBudget.Characters(request);
+            telemetry.PromptTokensEstimated = PromptBudget.Estimate(request, perToken);
+            telemetry.OverBudget = budget != null && telemetry.PromptTokensEstimated > budget.Tokens;
+            sentCtx = ctx;
+            sentHistory = history;
+            return request;
+        }
+
+        // Once the provider has counted the prompt, its count decides; else the estimate stands. The
+        // first decision over the budget warns (#151).
+        private void JudgeBudget(DecisionTelemetry telemetry)
+        {
+            if (telemetry.PromptBudget <= 0)
+            {
+                return;
+            }
+
+            if (telemetry.PromptTokens > 0)
+            {
+                telemetry.OverBudget = telemetry.PromptTokens > telemetry.PromptBudget;
+            }
+
+            if (telemetry.OverBudget && !warnedOverBudget)
+            {
+                warnedOverBudget = true;
+                int tokens = telemetry.PromptTokens > 0 ? telemetry.PromptTokens : telemetry.PromptTokensEstimated;
+                string how = telemetry.PromptTokens > 0 ? "as the provider counted it" : "estimated";
+                string trims = telemetry.PromptTrims.Count > 0 ? $" after trimming ({string.Join("; ", telemetry.PromptTrims)})" : "";
+                Debug.LogWarning($"{Who()}: its prompt was {tokens} tokens, {how}, over its budget of {telemetry.PromptBudget}{trims}. " +
+                                 "Later decisions over it are recorded in DecisionTelemetry.OverBudget, without a warning.");
+            }
         }
 
         private static string PreparationFailed(Exception e)
@@ -1461,17 +1771,17 @@ namespace Agenerela
         {
             string running = null;
             GuardVerdict verdict;
+            AgentDecision decision;
             try
             {
-                verdict = GuardPipeline.Run(AllGuards(name => running = name), input);
+                // The decision as the guards left it: its statement replaced, if a guard replaced it (#266 item 4).
+                verdict = GuardPipeline.Run(AllGuards(name => running = name), input, "", out decision);
             }
             catch (Exception e)
             {
                 return Failed(input.Telemetry, PipelineErrorKind.GuardFailed,
                     $"The guard {running} failed. {e.GetType().Name}: {e.Message}", input.Context.Correlation, input.Request, input.Reply);
             }
-
-            var decision = input.Decision;
 
             if (verdict.Kind == GuardVerdictKind.Pass)
             {
@@ -1503,7 +1813,56 @@ namespace Agenerela
             }
 
             telemetry.TargetIgnored = decision.TargetId;
-            return new AgentDecision(decision.ActionId, TargetRegistry.NoTarget, decision.Statement);
+            return decision.WithTarget(TargetRegistry.NoTarget);
+        }
+
+        // A parameter the model left out takes its declared default when that default is offered
+        // now, and telemetry says which did (DR-023). Only a missing value: one the model wrote is
+        // kept as written, offered or not, and one left out with no default stays out, both for
+        // SchemaLegalityGuard to judge. The model's own answer stays in ModelDecision.
+        private static AgentDecision DefaultArguments(AgentDecision decision, AgentContext ctx, DecisionRequest request, DecisionTelemetry telemetry)
+        {
+            var asked = DecisionSchema.ParametersOf(request.Schema, decision.ActionId);
+            if (asked.Count == 0 || !ctx.Actions.TryGet(decision.ActionId, out var definition, out _))
+            {
+                return decision;
+            }
+
+            List<KeyValuePair<string, string>> arguments = null;
+            foreach (var field in asked)
+            {
+                bool has = decision.TryGetArgument(field.Name, out string value);
+                var parameter = definition.ParameterNamed(field.Name);
+                if (!has && parameter != null && parameter.HasDefault && Contains(field.AllowedValues, parameter.Default))
+                {
+                    value = parameter.Default;
+                    has = true;
+                    telemetry.ArgumentsDefaulted.Add(field.Name);
+                    arguments = arguments ?? new List<KeyValuePair<string, string>>();
+                }
+
+                if (has)
+                {
+                    (arguments = arguments ?? new List<KeyValuePair<string, string>>()).Add(new KeyValuePair<string, string>(field.Name, value));
+                }
+            }
+
+            return telemetry.ArgumentsDefaulted.Count == 0
+                ? decision
+                : new AgentDecision(decision.ActionId, decision.TargetId, decision.Statement, arguments);
+        }
+
+        private static bool Contains(IReadOnlyList<string> values, string value)
+        {
+            foreach (string candidate in values)
+            {
+                if (string.Equals(candidate, value, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         // The stopped decision with what the agent says about it: the developer's line, else the
@@ -1514,6 +1873,12 @@ namespace Agenerela
             CancellationToken ct, CancellationToken reset)
         {
             var verdict = stopped.Verdict.Value;
+
+            // A call that asked for no statement gets none here either (#266).
+            if (!call.AskForStatement)
+            {
+                return stopped;
+            }
 
             string line = DevelopersLine(verdict, ctx);
             if (line == null && call.AskForRefusalLine)
@@ -1581,7 +1946,7 @@ namespace Agenerela
             telemetry.RefusalLinePromptTokens = reply.PromptTokens;
             telemetry.RefusalLineCompletionTokens = reply.CompletionTokens;
 
-            if (!DecisionParser.TryParseStatement(reply.Text, out string line, out string problem))
+            if (!DecisionParser.TryParseStatement(reply.Text, decided.Schema?.StatementName, out string line, out string problem))
             {
                 return NoLine(telemetry, PipelineErrorKind.UnreadableReply, $"{problem} The reply was: {Excerpt(reply.Text)}");
             }
@@ -1806,6 +2171,63 @@ namespace Agenerela
         // order (DR-014). What a source reports dropping is copied into dropped, when given, right
         // after its Collect and before the next source runs, since its list lasts only until then.
         // A preview, when seen is given, gets each source's own share (#166).
+        // The registry a choice call offers (DR-022): one action per choice, taking no target, whose
+        // availability is the choice's own and whose handler does nothing. ActionRegistry's checks are
+        // the choices' checks, reworded for the option they came from.
+        private static ActionRegistry ChoiceRegistry(IList<Choice> choices)
+        {
+            if (choices.Count == 0)
+            {
+                throw new ArgumentException(
+                    "DecideOptions.Choices is empty: there is nothing to choose. Leave it null to offer the agent's actions.", "options");
+            }
+
+            var registry = new ActionRegistry();
+            for (int i = 0; i < choices.Count; i++)
+            {
+                var choice = choices[i];
+                if (choice == null)
+                {
+                    throw new ArgumentException($"DecideOptions.Choices[{i}] is null.", "options");
+                }
+
+                if (string.IsNullOrWhiteSpace(choice.Description))
+                {
+                    throw new ArgumentException(
+                        $"DecideOptions.Choices[{i}] ('{choice.Id}') has no description: it is all a local model reads of it.", "options");
+                }
+
+                try
+                {
+                    registry.Register(new ActionDefinition { Id = choice.Id, Description = choice.Description, TakesNoTarget = true },
+                        new ChoiceHandler(choice.Available.IsAvailable));
+                }
+                catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
+                {
+                    throw new ArgumentException($"DecideOptions.Choices[{i}] ('{choice.Id}') cannot be offered: {e.Message}", "options", e);
+                }
+            }
+
+            return registry;
+        }
+
+        // A choice's handler: available as the call said, and nothing to run (DR-022).
+        private sealed class ChoiceHandler : IActionHandler
+        {
+            private readonly bool available;
+
+            public ChoiceHandler(bool available)
+            {
+                this.available = available;
+            }
+
+            public bool IsAvailable(AgentContext ctx) => available;
+
+            public void Execute(AgentContext ctx, AgentDecision decision)
+            {
+            }
+        }
+
         private AgentContext Snapshot(string stimulus, IReadOnlyList<string> observations, List<string> dropped, object correlation,
             AgentPreview seen = null)
         {
@@ -2003,6 +2425,7 @@ namespace Agenerela
                 ProviderConfig = ProviderConfig.NameOf(provider),
                 FrameworkVersion = AgenerelaInfo.Version,
                 Priority = call.Priority,
+                StatementAsked = call.AskForStatement,
                 ChainId = call.Chain?.Id,
                 ChainHop = call.Chain?.Hop ?? 0,
                 ChainSource = call.Chain?.SourceAgentId,

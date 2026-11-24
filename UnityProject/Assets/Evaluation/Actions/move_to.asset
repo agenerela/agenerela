@@ -20,3 +20,5 @@ MonoBehaviour:
     PreferredExampleTargets:
     - well
     - bridge
+    TargetCategories:
+    - place

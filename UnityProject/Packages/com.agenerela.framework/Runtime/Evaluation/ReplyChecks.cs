@@ -71,7 +71,7 @@ namespace Agenerela.Evaluation
         /// </summary>
         internal sealed class Checker
         {
-            private readonly List<(string Text, string What)> examples = new List<(string Text, string What)>();
+            private readonly List<(string Text, string What, bool IsStatement)> examples = new List<(string Text, string What, bool IsStatement)>();
             private readonly List<(Regex Pattern, string Id)> ids = new List<(Regex Pattern, string Id)>();
             private readonly int maxLength;
 
@@ -94,16 +94,16 @@ namespace Agenerela.Evaluation
                         continue;
                     }
 
-                    examples.Add((action.ExampleStimulus, $"{action.Id}'s example"));
-                    examples.Add((action.ExampleStatement, $"{action.Id}'s example statement"));
-                    examples.Add((action.CounterExampleStimulus, $"{action.Id}'s counter-example"));
-                    examples.Add((action.CounterExampleStatement, $"{action.Id}'s counter-example statement"));
+                    examples.Add((action.ExampleStimulus, $"{action.Id}'s example", false));
+                    examples.Add((action.ExampleStatement, $"{action.Id}'s example statement", true));
+                    examples.Add((action.CounterExampleStimulus, $"{action.Id}'s counter-example", false));
+                    examples.Add((action.CounterExampleStatement, $"{action.Id}'s counter-example statement", true));
                 }
 
-                examples.Add((profile.IdleExampleStimulus, "the profile's idle example"));
-                examples.Add((profile.IdleExampleStatement, "the profile's idle example statement"));
-                examples.Add((arm.Options.IdleExampleStimulus, $"arm '{arm.Name}''s idle example"));
-                examples.Add((arm.Options.IdleExampleStatement, $"arm '{arm.Name}''s idle example statement"));
+                examples.Add((profile.IdleExampleStimulus, "the profile's idle example", false));
+                examples.Add((profile.IdleExampleStatement, "the profile's idle example statement", true));
+                examples.Add((arm.Options.IdleExampleStimulus, $"arm '{arm.Name}''s idle example", false));
+                examples.Add((arm.Options.IdleExampleStatement, $"arm '{arm.Name}''s idle example statement", true));
                 examples.RemoveAll(e => string.IsNullOrWhiteSpace(e.Text));
 
                 // An id is a leak only when it is not also a word: "move_to" and "no_target" are
@@ -134,13 +134,18 @@ namespace Agenerela.Evaluation
                     return findings;
                 }
 
-                var echoed = examples.Where(e => PromptSetChecks.MatchesExample(statement, e.Text))
-                    .Select(e => $"{e.What} \"{e.Text}\"")
-                    .Distinct()
-                    .ToList();
-                if (echoed.Count > 0)
+                // Every example line, each by PromptSetChecks.MatchesExample, told apart by what the
+                // line was: a stimulus echoed back, or a written statement parroted (#151, #218).
+                var matched = examples.Where(e => PromptSetChecks.MatchesExample(statement, e.Text)).ToList();
+                if (matched.Count > 0)
                 {
-                    findings.Add(new ReplyFinding { Flag = ReplyFlag.Echo, Detail = string.Join("; ", echoed) });
+                    findings.Add(new ReplyFinding
+                    {
+                        Flag = ReplyFlag.Echo,
+                        Detail = string.Join("; ", matched.Select(e => $"{e.What} \"{e.Text}\"").Distinct()),
+                        EchoesStimulus = matched.Any(e => !e.IsStatement),
+                        EchoesStatement = matched.Any(e => e.IsStatement),
+                    });
                 }
 
                 int length = statement.Trim().Length;

@@ -27,9 +27,10 @@ foreach (var line in DecisionLogReader.Read(path))
 
 ## What a line holds
 
-Each line is one JSON object, `DecisionLogLine`, with `"version": 2`. A later version only adds
+Each line is one JSON object, `DecisionLogLine`, with `"version": 3`. A later version only adds
 fields, and the reader ignores fields it does not know, so version 1 lines, written before the
-chain fields, still read, with no chain. A field that is null is left out.
+chain fields, still read, with no chain, and version 2 lines, written before the prompt budget, with
+no budget. A field that is null is left out.
 
 | Field | What it is |
 |---|---|
@@ -40,13 +41,19 @@ chain fields, still read, with no chain. A field that is null is left out.
 | `decision` | What the game got, after the guards: `action`, `target`, `statement`. Absent for a pipeline error |
 | `modelDecision` | What the model answered, only when a guard changed it or a stray target was dropped |
 | `verdict`, `guardsFired` | The guard, kind and reason that stopped the model's answer; every guard that did not pass it, `Execute`'s re-check included |
+| `statementsReplaced` | Each statement a guard replaced while keeping the move (`GuardVerdict.ReplaceStatement`): `guard`, `reason`, `replaced` and `statement`; the line has no such key when none was ([guards.md](guards.md#the-four-verdicts)) |
 | `execution` | For an `Executed` line, what `Execute` did: `status` and `reason` |
 | `error` | A pipeline error's `kind` and `message` |
 | `provider`, `providerConfig`, `modelName`, `frameworkVersion` | Who answered |
 | `latencySeconds`, `queueWaitSeconds`, `backlogWaitSeconds`, `queuedAhead` | How long it took, and how long it waited |
 | `promptTokens`, `completionTokens` | As the provider reported them |
+| `promptCharacters`, `promptTokensEstimated` | The request's text in characters, and its tokens estimated from them before sending, on every line ([prompt.md](prompt.md#a-budget-for-the-prompts-size)) |
+| `promptBudget`, `overBudget`, `promptTrims` | The prompt budget the call was measured against, whether the prompt went over it after every trim, and each trim that left something out; the line has no such keys with no budget, and no `promptTrims` when none fired |
 | `targetGrounding`, `targetGroundingStatus`, `historyTurnsSent`, `historyTurnsDropped`, `targetsDropped`, `observationsDropped` | From the telemetry; `observationsDropped` is a count |
 | `targetsUnavailable` | Each action and target pair a per-target check rejected, as `action`, `target` and `reason` (left out when the check gave none); the line has no such key when none was rejected ([targets.md](targets.md#conditions-per-target)) |
+| `choicesOffered`, `choicesUnavailable` | For a call that chose among `DecideOptions.Choices` (DR-022): the ids offered, and each one given as unavailable with its reason; the line has no such keys for an ordinary call ([prompt.md](prompt.md#a-choice-among-options-given-with-the-call)) |
+| `arguments` (inside `decision` and `modelDecision`), `argumentsDefaulted`, `valuesUnavailable` | For an action that declares parameters (DR-023): the value chosen for each, by name; the parameters that took their declared default because the model left them out or named a value not offered; and each value a per-value check rejected, as `action`, `parameter`, `value` and `reason`. Each is left out when empty ([parameters.md](parameters.md)) |
+| `orderLost` | `true` when the reply's fields came in another order than the schema's, such as `statement` before `target` or a parameter after the statement, which a provider that sorts the schema's keys produces (Ollama's native chat path). The decision is read and judged as any other; the line has no such key when the order held ([parameters.md](parameters.md#what-the-model-is-sent)) |
 | `targetIgnored` | The target the model named for an action that takes none (`TakesNoTarget`), dropped before the guards; the line has no such key when none was ([targets.md](targets.md#an-action-that-takes-no-target)) |
 | `reply` | The model's reply exactly as the provider returned it, which a replay scripts with `ScriptedReply.Raw` |
 | `request` | Only with `IncludePrompt` on: the system prompt, few-shot block, observations, history, stimulus turn, and the actions and targets offered |

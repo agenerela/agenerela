@@ -125,10 +125,10 @@ sampling noise. Source: findings, "First model A/B" (5 November 2026).
 **5. A new model may not write the fields in the schema's order.** In the same run, Ollama
 0.40.14 held `action`, `target`, `statement` for `qwen3.5:2b`, but `qwen3:4b-instruct-2507`
 wrote `action`, `statement`, `target` on every request, whatever order the schema gave. Writing
-the free text before the target breaks a settled rule (Appendix A), and the runner cannot see
-it, because the report keeps parsed fields, not the raw text. Before a model's first A/B, read
-the field order of a few raw responses (`/api/chat` with the framework's schema); if it differs,
-the A/B compares two designs, not two models. Source: findings, "First model A/B"
+the free text before the target breaks a settled rule (Appendix A); if it differs, the A/B
+compares two designs, not two models. The runner now checks it (#180): it refuses a run whose
+warm-ups come back out of order, and counts and flags each arm's replies out of order in the
+report's "Field order" table ([`evaluation.md`](../../UnityProject/Packages/com.agenerela.framework/Documentation~/evaluation.md#reading-the-report)). Source: findings, "First model A/B"
 (5 November 2026). The cause is in Ollama: a model served through its own GGUF chat template has
 the schema's keys sorted on the way to llama.cpp. The server log says which way a model went:
 a "template selection" line with `selected=gguf_chat_template` means the order is lost, and
@@ -162,9 +162,9 @@ why.
 | What the agent said, not only what it chose | Flags each answer's statement that repeats a few-shot line, is empty, is over the arm's `MaxStatementLength` (200 characters by default, unmeasured) or leaks an id, a field label, a JSON brace or an assistant's phrase, and counts them per arm beside the outcomes, never in them. A statement that contradicts its decision is not checked | Read the flagged answers; count contradictions ("I will stand guard here." with `none`) by hand until a judge model has been validated against people's labels |
 | Warm-up (rule 6) | 3 throwaway requests per arm, never in the report; refuses if none of them produced a decision | Warm up yourself for a probe or script |
 | Arms of two models run one after the other | `EvalArmOrder.Sequential` unloads the first arm's model (`keep_alive: 0`), waits until `/api/ps` drops it, and refuses if it stays. Interleaved arms on two Ollama models are refused | Choose it, and say so in the result |
-| The model writes the fields in the schema's order | Not checked: the report keeps parsed fields, not the raw text | For a model's first A/B, read a few raw `/api/chat` responses (point 5 above) |
+| The model writes the fields in the schema's order | Refuses to start when a warm-up reply's fields come out of the schema's order, naming the arm and model, unless `AllowOrderLost` is set, which the report records; counts each arm's replies in order, out of order and not checked, and warns about an arm with any out of order (#180) | For a model that loses it, read the server log's "template selection" line (point 5 above) |
 | How targets and state reached the prompt | Records the choice in the report, with the set's last commit and whether it has uncommitted changes | Compare only with results fed the same way |
-| Which prompt switches each arm ran with | Records each arm's options: `CheckTarget`, `AskForRefusalLine`, the idle example, `ListActionsAndTargets` with its cap, `CounterExamples`, `PairTargetsWithActions`, `ExampleTargetFallback`, priority and the arm's own observations | Name the switches that differ between arms when you quote a result; `ListActionsAndTargets`, `CounterExamples`, `PairTargetsWithActions` and `ExampleTargetFallback` are off by default, as are `StatementRulesWording` (other than the default `YourStatement`) and `LegalTargetListing.ObservationLine`; where an A/B has run, it is in findings. Example target names are spaced in every arm (#234) |
+| Which prompt switches each arm ran with | Records each arm's options: `CheckTarget`, `AskForRefusalLine`, the idle example, `ListActionsAndTargets` with its cap, `CounterExamples`, `PairTargetsWithActions`, `ExampleTargetFallback`, priority and the arm's own observations | Name the switches that differ between arms when you quote a result; an arm whose legality gives an action a parameter (`EvalLegality.ActionParameters`, DR-023) is paired and lists the actions whatever those two switches say, and its legality is in the report; `ListActionsAndTargets`, `CounterExamples`, `PairTargetsWithActions` and `ExampleTargetFallback` are off by default, as are `StatementRulesWording` (other than the default `YourStatement`) and `LegalTargetListing.ObservationLine`; where an A/B has run, it is in findings. Example target names are spaced in every arm (#234) |
 | `127.0.0.1`, not `localhost` | Not checked | Use `http://127.0.0.1:11434` everywhere |
 | Plugged in (a laptop) | Not checked | A battery run is not comparable with an AC one |
 | Nothing else heavy on the machine | Not checked | Another session's Unity batch tests ran on the CPU during the 3 November run, so its latencies are "not a latency measurement" (findings) |

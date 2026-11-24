@@ -8,7 +8,129 @@ While the version stays `0.x`, the public API may change in any release.
 
 ## [Unreleased]
 
+### Added
+
+- **A prompt-size budget** (#151, #392). `PromptBudget` and `PromptTrim` set a budget per agent
+  (`Agent.PromptBudget`) or per call (`DecideOptions.PromptBudget`). It is estimated before sending
+  from characters (3 a token by default) and judged on the provider's count after. Optional trims
+  run in the developer's order, and only while over: `DecideOptions.OptionalObservations` (new),
+  target lines no offered action may take, then the oldest history. `DecisionTelemetry` gains
+  `PromptCharacters`, `PromptTokensEstimated`, `PromptBudget`, `OverBudget` and `PromptTrims`;
+  Decision Log version 3. With no budget, every request is byte for byte what it was.
+
+- **`TargetSummarySource`** (#151, #384), a deterministic observation source that summarises the agent's
+  targets as one line per category, ids verbatim, with no model call; `EvalArm.SummariseTargets` tells an
+  arm's targets that way (§2.8). `DeclaredTarget.Category` gives a prompt set's targets categories, and
+  `CompareWithProfile` refuses a label they make illegal. `ReplyFinding.EchoesStimulus`/`EchoesStatement`
+  and `ReplyCounts.EchoStimulus`/`EchoStatement` tell an echoed stimulus from a parroted example
+  statement (#218).
+- **Label mode asks only the agreement cohort** (#148, with #147). With an `agreement-subset.json`
+  beside the set, `BlindPrompt.Queue` (its new `cohort` argument) and the progress count hold only
+  the cohort's prompts, a line says so, and a **Whole set** toggle asks every prompt instead.
+  `AgreementCohort` reads the file's prompt ids, and nothing else.
+- **Multi-turn prompts** (#147). A prompt's optional `history` (`EvalPrompt.History`, a list of
+  `HistoryTurn`: `label`, `stimulus`, `action`, `target`, optional `statement`) holds the turns it
+  is asked after, oldest first. `EvalRunner` stages them in a `RollingHistory` of the prompt's own
+  before the stimulus, written as a real turn is remembered, the statement only for an arm that
+  asks for one; a prompt without one is asked with no memory, as before. `PromptSetChecks` holds
+  each turn to the rules for an answer, the Prompt Set window edits the turns in Write and shows
+  them in Label (`BlindPrompt.History`), and a file without `history` round-trips unchanged (DR-017).
+
+- **A reply out of the schema's field order is flagged** (#266 item 2, DR-023).
+  `DecisionTelemetry.OrderLost`, and `orderLost` in the decision log, are true when the reply's
+  fields came in another order than the schema's: `statement` before `target`, or a parameter
+  after the statement, as Ollama's native chat path produces by sorting the schema's keys
+  (findings, 5 November 2026). Flagged, never refused: the decision is read and judged as any
+  other, and the log line has no such key when the order held. Nothing sent to a model changes.
+- **The evaluation runner checks the field order** (#180). Each arm's replies are counted in the
+  schema's order, out of it, and not checked when no reply was read (`EvalArmResult.OrderKept`,
+  `OrderLost`, `OrderNotChecked`, `OrderFlagged`; each answer's `EvalAnswer.OrderLost`, null when
+  not checked), shown in the report's new "Field order" table beside the noise check, with a
+  warning for an arm with any out of order. A run whose warm-up replies come back out of order
+  refuses to start, naming the arm and the model, unless `EvalRunner.AllowOrderLost` is set; the
+  report records it (`EvalConditions.AllowOrderLost`) and each arm's `WarmUpOrderLost`. Nothing
+  is rescored. A report written before reads back with every count 0.
+- **`ProviderCapabilities.SupportsPairedSchema`** (#266 item 2, DR-023), true by default and for
+  Ollama. On a provider that says false, an agent refuses an action that declares a parameter at
+  setup, with an `InvalidOperationException` naming the action and the provider: at construction,
+  when the action is registered or bound, and when `Agent.Provider` is set, which then keeps the
+  old provider. A call that asks for `PairTargetsWithActions` on such a provider ends as a
+  `RequestPreparation` pipeline error and sends nothing. No provider says false yet.
+
+- **Parameters: a closed choice beside the target** (#266 item 2, DR-023, first step). An action
+  declares them in `ActionDefinition.Parameters` (`ActionParameter`: a name, a description, the
+  values, an optional `Default` and `ExampleValue`), with `[AgentParameter]` on an `[AgentAction]`
+  method, or on an asset. Two kinds, both a list: a set of words (`minor`, `major`) and a number
+  list (`1`, `2`, `3`). The chosen values are in the new `AgentDecision.Arguments`
+  (`TryGetArgument`, `TryGetNumber`), and a method receives one with `[Argument("name")]` as a
+  `string`, or as an `int` for a number list.
+  - **Off unless declared.** An agent whose actions declare none sends exactly the request it sent
+    before; tests hold the evaluation set's schema and prompt to that.
+  - **What a call that offers one sends.** The paired schema (DR-020) whatever
+    `PairTargetsWithActions` says, with the parameters after `target` and before `statement`
+    (`ActionTargets.Parameters`): a value placed after the statement was written into it in 3
+    replies of 6 (findings, 14 November 2026). And the action and target list, with each
+    parameter's values on its action's line, whatever `ListActionsAndTargets` says, because a
+    local model never reads the schema. The action's example shows a value. With no target
+    registered the schema is paired and has no `target` field.
+  - **The framework checks the values, not the model.** A value left out takes the
+    parameter's `Default` when it has one (`DecisionTelemetry.ArgumentsDefaulted`); with none,
+    `SchemaLegalityGuard` rejects the decision. The default covers only a missing value: a string
+    the parameter does not declare or the request did not offer is rejected, and a value of
+    another type (a float, a boolean, an integer past 64 bits) makes the reply unreadable.
+    `Agent.Execute` runs the guard again before any handler: every argument a declared value of a
+    declared parameter, none missing, and no default applied.
+  - **Left out when it cannot be offered.** An action with a parameter that requires a target and
+    has none it can take right now is left out of the decision, since only a branch of its own
+    could offer it.
+  - **An asset wins over the method, parameters included.** `RegisterMethods` checks the method's
+    `[Argument]`s and `[AvailableValue]` checks against the asset's parameters and throws when
+    they disagree. A method parameter named like a declared parameter with no `[Argument]` is
+    refused, as it would receive the target.
+  - **Values per decision.** `IValueAvailability`, `[AvailableValue(action, parameter)]` or
+    `DelegateActionHandler.IsAvailableValue` leaves a value out of one decision's schema and
+    prompt, with its reason in `DecisionTelemetry.ValuesUnavailable`; an action with a parameter
+    that has no value left is left out; `Execute` asks again and refuses a stale value with the
+    reason in `ActionResult.AvailabilityReason`.
+  - **Recorded** in `DecisionTelemetry.Arguments`, `ArgumentsDefaulted` and `ValuesUnavailable`;
+    in the decision log as `arguments` inside `decision` and `modelDecision`, and
+    `argumentsDefaulted` and `valuesUnavailable` on the line, each left out when empty; in
+    `AgentPreview.ValuesUnavailable` and `LeftOut`; and in memory, where a remembered decision
+    keeps its arguments before the statement.
+  - **For an A/B**, `EvalLegality.ActionParameters` gives an evaluation arm's copy of an action a
+    parameter. The first run, one harmless parameter on the evaluation sets, is in findings,
+    16 November 2026. Nothing is recommended before the storyteller's A/B (DR-023).
+  - **Not built**: `target` plus `also_targets`, an open number range, free text, detecting a
+    lost key order on Ollama's native path, and a provider saying it cannot take a paired schema.
+  - `Documentation~/parameters.md` is the page. `DecisionSchema`'s remark that a later field goes
+    after `statement` is corrected. The serializer's error for pairs that name targets in a schema
+    with no target field has new wording.
+
 ### Changed
+
+- **The Prompt Set window is built in UI Toolkit on the #167 kit** (#160): a tree from
+  `PromptSetWindow.uxml` and one UXML for each mode, which UI Builder opens, laid out by
+  `PromptSetWindow.uss` on the kit's variables, so it reads in both editor skins. No IMGUI is
+  left. The toolbar wraps instead of clipping at the window's 640 px minimum, where #159 found
+  Reload cut off. **Open the project's evaluation set** is the start page's one primary button.
+  Write gains a search box and a **⚠** beside each prompt that breaks a rule; Label shows a
+  progress bar and takes keys (1 to 9 pick an action, T the next target, Enter saves, S skips);
+  Agreement shows its categories in a table with a bar for each, sortable by any column. Drafts
+  kept through a recompile, unsaved-changes handling, the remembered set, profile and name, and
+  the blind-labelling guarantee are as before, and so are the features added to the old window
+  meanwhile: #147's earlier turns, shown in Label and edited in Write, and #148's agreement
+  cohort line with its **Whole set** toggle, pairwise agreement and **Record agreed answers**. EditMode tests now build the window's trees and
+  check the gate, the tabs, the progress bar, the keys, that the Label view shows no word of an
+  answer, and that nothing in the toolbar clips at 640 px.
+
+## [0.4.0-preview.2] - 2026-11-16
+
+### Changed
+
+- **`LabelChoices.NeedsTarget` is removed; use `LabelChoices.TargetsFor(actionId)`** (#121, #319). It
+  returns the targets an annotator may give an action under DR-020's three states: every declared
+  target, `no_target` alone, or `no_target` then every declared target. Code that called
+  `NeedsTarget` to decide between the first two must call `TargetsFor` and read its list.
 
 - **Ollama reports 20 alternatives a token, not 5** (#244 item 1). `top_logprobs` is now 20 on
   every request unless `OllamaSettings.TokenAlternatives` says otherwise, so the grounding guard
@@ -60,6 +182,72 @@ While the version stays `0.x`, the public API may change in any release.
   both within noise (findings, 9 November). No switch: it is what `FewShotBuilder` does.
 
 ### Added
+
+- **Pairwise Cohen's kappa for prompt labels** (#148). `AgreementReport.Pairwise` gives each
+  named pair's overlap, raw agreement, chance agreement and `CohensKappa`, using original
+  complete `action/target` answers. Missing answers are excluded; constant identical answers
+  leave kappa undefined. The Prompt Set and Evaluation Report windows show the same per-pair
+  numbers, and the findings summary includes them with the current-label-files caveat.
+  **Record agreed answers** preserves both original answers on unanimous prompts too,
+  without changing the expected answer. Human blind labels and discussion of disagreements
+  are still required for #148.
+- **Examples that carry their situation** (#216 item 1). `ActionDefinition.ExampleObservations`
+  (the asset front door) and `[Example(..., Observations = ...)]` (the code front door) hold one or
+  two observation lines, rendered by `FewShotBuilder` above the example under the observations'
+  own heading, only on a call with the new `DecideOptions.ExampleObservations` (and
+  `PromptOptions.ExampleObservations`), off by default: off, the block is byte-identical. Hard rule
+  4 now treats such an example as its stimulus and situation together:
+  `PromptSetChecks.MatchesSituation` is new, and `EvalRunner` judges the bare stimulus for an arm
+  that shows examples without their situations. `EvalArmConditions.ExampleObservations` records the
+  arm's setting.
+
+- **Sampling and a reply cap per call** (#266 item 7, #244 item 11). `DecideOptions.Temperature`,
+  `Seed` and `MaxReplyTokens`, null by default, carried on the new `DecisionRequest.Temperature`,
+  `Seed` and `MaxReplyTokens` and sent by `OllamaProvider` as `options.temperature` (in place of
+  `OllamaSettings.Temperature`), `options.seed` and `options.num_predict`, the last two only when set.
+  A call that sets none sends exactly the request sent before. A refusal line is sampled as its
+  decision was. A negative or non-finite temperature, or a cap of 0 or less, throws at the call.
+
+- **A fact ledger** (#216 item 4, #266 item 5). `FactLedger`, an `IObservationSource`,
+  `IReportsDroppedObservations` and `IExportsMemory`: `Set(key, line, expiresAfter)`, `Word(key,
+  reader, line)` for one reader's own wording, `Remove`, `Tick()` counting expiry in the game's
+  units, `MaxLines` for a budget that keeps the newest lines and reports the oldest, and `For(reader)`
+  for one agent's `FactLedgerView`, so one ledger is read by many agents, each in its own words.
+  Lines come in the order facts were last set. `Export` and `Import` save it. An observation
+  source like any other: nothing new reaches the model, and no prompt changes unless a game adds it.
+
+- **A choice among options given with the call** (#266 item 2, DR-022). `DecideOptions.Choices`,
+  null by default, a list of the new `Choice` (id, description, `Available`): the call offers those
+  choices instead of the agent's registered actions, then `none`, with no `target` field, and the
+  system prompt lists them with their descriptions whatever `ListActionsAndTargets` says. An
+  unavailable choice is left out, its reason in the new `DecisionTelemetry.ChoicesUnavailable`
+  (`UnavailableChoice`); `DecisionTelemetry.ChoicesOffered` lists the rest, and the decision log
+  writes both (`choicesOffered`, `choicesUnavailable`) only for a choice call. The legality guard
+  holds the reply to what was offered; `Agent.Execute` runs no handler and no re-check for a chosen
+  option, records `Done` and settles memory. A bad list throws at the call. With `Choices` null
+  every request is what it was; a choice call's prompt is new and unmeasured (#151).
+
+- **A guard verdict that keeps the move and replaces only the statement** (#266 item 4).
+  `GuardVerdict.ReplaceStatement(reason, statement)`, with `GuardVerdictKind.ReplaceStatement` (at
+  the end of the enum) and `GuardVerdict.Statement`: the action and target stand, the statement is
+  the guard's (null or empty drops it), and the pipeline goes on, so later guards judge the same move
+  with the new line and may still stop it. Recorded in `GuardsFired`, the new
+  `DecisionTelemetry.StatementsReplaced` (a list of `ReplacedStatement`: guard, reason, the text
+  replaced and the new one), and the decision log's `statementsReplaced`; `DecisionResult.Verdict`
+  stays null and `ModelDecision` keeps the model's words. Passed over on a call with
+  `AskForStatement = false`. Every existing verdict behaves exactly as before.
+
+- **A decision that asks for no statement** (#266). `DecideOptions.AskForStatement`, on by default,
+  leaves the free-text field out of a call when false: the schema has `action` and `target` only
+  (or `action` alone with no target registered), flat and in every branch of a paired schema; the
+  identity's statement rules line is not sent; the examples show no statement; and the target rule,
+  when sent, no longer asks the agent to say that a thing is not here. The parsed decision's
+  `Statement` is empty, even if the provider sent one; memory remembers the reply without it; a
+  decision a guard stops asks neither `Agent.RefusalStatement` nor a refusal line. New:
+  `DecisionSchema.Build(ctx, pairTargets, askForStatement)`, `DecisionSchema.AsksForStatement`,
+  `DecisionTelemetry.StatementAsked` and the decision log's `statementAsked`, written only when
+  false. With the option on, every request is byte-identical to one sent before. It changes what
+  the model reads, so it is unmeasured as a default and owed an A/B run (#151).
 
 - **What a remembered decision holds, and what came of it** (#244 item 4, #216 item 3).
   `RollingHistory.Remembers` takes a `RememberedDecision`: `Whole`, the default, sends each past
@@ -665,6 +853,21 @@ While the version stays `0.x`, the public API may change in any release.
   reload off no longer carries them into the next session. A new EditMode test fails on any static
   field in the framework's runtime assembly that nothing resets; the three that need no reset
   (`ProviderConfig`'s provider names and built configs, and the queues) say why in it.
+
+- **A prompt set reads an optional target as optional** (#121, after #245/DR-020). `PromptSetChecks`
+  split an action's target two ways, so `needsTarget: false` meant "always `no_target`" and a prompt
+  that gave such an action a target broke `ActionTakesNoTarget`. Since DR-020 there are three
+  states, and that is the middle one: an action requires a target, never takes one, or leaves it
+  optional. `DeclaredAction.takesNoTarget` is new and says the second, mirroring
+  `ActionDefinition.TakesNoTarget`; absent, as it is in every set written so far, the target is
+  optional and either answer is correct. `PromptSet.CreateFor` carries it from the profile's
+  actions, and `CompareWithProfile` reports a set and profile that disagree on it. Label mode
+  offers the same three: every target, `no_target` alone, or `no_target` and every target, so a
+  blind labeller can give the answer the check allows; `LabelChoices.TargetsFor` returns them and
+  replaces `LabelChoices.NeedsTarget`. No set in the repository declares it yet,
+  so no set changes and no run changes: declaring it on an action that never takes a target is a
+  separate change, and one that moves a run's numbers, since the agent then drops a target the
+  model names rather than being scored wrong for it.
 
 ## [0.4.0-preview.1] - 2026-10-29
 

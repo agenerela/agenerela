@@ -1,6 +1,6 @@
 /* Painted Realm, the gilt style. The design is docs/demos/grey-box-strategy-screen.md, round 2. */
 .root { flex-grow: 1; color: rgb(234, 223, 198); font-size: 13px; }
-.panel { position: absolute; background-color: rgba(18, 15, 12, 0.93); border-width: 1px; border-color: rgba(201, 164, 90, 0.55); }
+.panel { position: absolute; background-color: rgb(18, 15, 12); border-width: 1px; border-color: rgba(201, 164, 90, 0.55); }
 .panel-head { flex-direction: row; align-items: center; height: 30px; padding-left: 10px; padding-right: 8px; background-color: rgba(44, 35, 25, 0.9); border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.22); }
 .panel-title { font-size: 14px; -unity-font-style: bold; letter-spacing: 1px; flex-grow: 1; color: rgb(234, 223, 198); }
 .muted { color: rgb(141, 127, 102); }
@@ -12,7 +12,10 @@
 /* top bar */
 .topbar { position: absolute; left: 0; right: 0; top: 0; height: 42px; flex-direction: row; align-items: stretch; background-color: rgb(30, 24, 17); border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.55); }
 .brand { flex-direction: row; align-items: center; padding-left: 12px; padding-right: 12px; border-right-width: 1px; border-right-color: rgba(201, 164, 90, 0.22); font-size: 15px; -unity-font-style: bold; letter-spacing: 2px; }
-.nations { flex-direction: row; flex-grow: 1; overflow: hidden; }
+.nations { flex-direction: row; flex-grow: 1; flex-shrink: 1; min-width: 0; overflow: hidden; }
+.time, .brand { flex-shrink: 0; }
+.tight .pips, .tight .stat-delta, .tight .gold-stat { display: none; }
+.tight .nation { padding-left: 6px; padding-right: 6px; }
 .nation { flex-direction: row; align-items: center; padding-left: 9px; padding-right: 9px; border-right-width: 1px; border-right-color: rgba(201, 164, 90, 0.22); }
 .nation:hover { background-color: rgba(210, 173, 98, 0.14); }
 .nation.out { opacity: 0.35; }
@@ -37,6 +40,8 @@
 .section-head { flex-direction: row; padding-left: 10px; padding-right: 10px; padding-top: 5px; padding-bottom: 5px; font-size: 10px; -unity-font-style: bold; letter-spacing: 2px; color: rgb(141, 127, 102); border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.22); background-color: rgba(0, 0, 0, 0.08); }
 .section-body { padding-left: 8px; padding-right: 8px; padding-top: 3px; padding-bottom: 6px; }
 .row { flex-direction: row; align-items: center; height: 24px; font-size: 12px; }
+/* A row whose text may wrap: as tall as its text. */
+.row.wraps { height: auto; min-height: 24px; padding-top: 2px; padding-bottom: 2px; align-items: flex-start; }
 .row:hover { background-color: rgba(210, 173, 98, 0.14); }
 .row-name { width: 54px; margin-left: 6px; }
 .bar { flex-grow: 1; height: 4px; background-color: rgba(127, 127, 127, 0.25); margin-left: 4px; margin-right: 6px; }
@@ -48,12 +53,17 @@
 .filters { flex-direction: row; flex-wrap: wrap; padding: 6px 8px; border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.22); }
 .chip { flex-direction: row; align-items: center; height: 20px; padding-left: 6px; padding-right: 6px; margin-right: 4px; margin-bottom: 4px; border-width: 1px; border-color: rgba(201, 164, 90, 0.22); background-color: rgba(210, 173, 98, 0.14); font-size: 11px; }
 .chip.off { opacity: 0.38; background-color: rgba(0, 0, 0, 0); }
+.list-more { font-size: 11.5px; -unity-font-style: italic; color: rgb(210, 173, 98); padding: 3px 0 2px 2px; }
+.list-more:hover { color: rgb(250, 232, 170); }
 .lg-turn { padding: 3px 10px; font-size: 11px; -unity-font-style: bold; letter-spacing: 2px; color: rgb(141, 127, 102); background-color: rgba(30, 24, 18, 0.96); border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.22); }
 .lg { flex-direction: row; padding: 5px 10px; border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.22); }
 .lg:hover { background-color: rgba(210, 173, 98, 0.14); }
 .lg.new { background-color: rgba(210, 173, 98, 0.32); transition-property: background-color; transition-duration: 1.6s; }
 .lg-body { flex-grow: 1; flex-shrink: 1; margin-left: 7px; }
 .lg-text { font-size: 12.5px; white-space: normal; -unity-font-style: bold; }
+.lg-item { font-size: 12.5px; white-space: normal; color: rgb(234, 223, 198); margin-top: 1px; }
+.lg-item:hover { color: rgb(250, 232, 170); }
+.lg-item-ref { color: rgb(214, 150, 130); }
 .lg-quote { font-size: 13px; white-space: normal; -unity-font-style: italic; color: rgb(194, 179, 147); margin-top: 2px; }
 .tag { font-size: 9px; -unity-font-style: bold; letter-spacing: 1px; padding: 1px 4px; border-width: 1px; border-color: rgba(201, 164, 90, 0.22); color: rgb(141, 127, 102); height: 16px; }
 .tag.land { color: rgb(143, 191, 122); border-color: rgb(143, 191, 122); }
@@ -63,6 +73,56 @@
 /* the map's own labels */
 .labels { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
 .plab { position: absolute; font-size: 12px; -unity-font-style: italic; color: rgb(243, 231, 200); -unity-text-outline-width: 0.25px; -unity-text-outline-color: rgb(20, 14, 8); text-shadow: 1px 1px 2px rgba(15, 10, 5, 0.95); translate: -50% -50%; }
+.rlab { position: absolute; font-size: 13px; -unity-font-style: italic; letter-spacing: 6px; color: rgba(246, 234, 204, 0.86); text-shadow: 1px 1px 3px rgba(15, 10, 5, 0.95); translate: -50% -50%; }
+/* R3's armies: the type mark on a piece, the mix bars, the general, the recruit orders. */
+.host-type { width: 10px; height: 12px; margin-left: 3px; }
+.mix-bars { flex-direction: row; height: 4px; width: 120px; margin-top: 2px; background-color: rgba(255, 255, 255, 0.08); }
+.mix-bar { height: 4px; }
+.mix-pikes { background-color: rgb(206, 196, 168); }
+.mix-riders { background-color: rgb(214, 150, 84); }
+.mix-bows { background-color: rgb(132, 168, 112); }
+.mix-counts { font-size: 10px; color: rgb(190, 176, 146); white-space: normal; }
+.stores-name { font-size: 10px; color: rgb(190, 176, 146); margin-right: 4px; }
+.council-note { color: rgb(200, 186, 152); }
+.council-note.bad { color: rgb(232, 112, 96); }
+.army-general { font-size: 11px; -unity-font-style: italic; color: rgb(196, 182, 150); white-space: normal; }
+/* The first-turn help: a veil, notes beside what they explain, an ink line to each. */
+.help-veil { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: rgba(8, 6, 4, 0.45); }
+.help-note { position: absolute; width: 260px; padding: 8px 11px 9px 11px; background-color: rgb(34, 27, 19); border-width: 1px; border-color: rgb(214, 180, 112); border-radius: 3px; }
+.help-title { -unity-font-style: bold; font-size: 13px; color: rgb(246, 232, 196); margin-bottom: 3px; }
+.help-text { font-size: 12.5px; white-space: normal; color: rgb(230, 218, 190); }
+.help-foot { position: absolute; left: 256px; bottom: 14px; flex-direction: row; align-items: center; padding: 6px 10px; background-color: rgb(26, 21, 15); border-width: 1px; border-color: rgba(201, 164, 90, 0.6); }
+.help-done { margin-left: 12px; }
+/* The end of a game: the land chart, the timeline, the rulers in their own words. */
+.menu.end-card { width: 720px; }
+.end-chart { height: 170px; margin: 4px 0 6px 0; background-color: rgb(16, 13, 10); border-width: 1px; border-color: rgba(201, 164, 90, 0.3); }
+.end-tick { font-size: 10px; color: rgb(160, 148, 124); }
+.end-moment { flex-direction: row; align-items: center; min-height: 20px; }
+.end-when { width: 64px; font-size: 11px; color: rgb(170, 156, 128); }
+.end-text { flex-shrink: 1; white-space: normal; font-size: 12.5px; color: rgb(234, 223, 198); }
+.end-moment.fall .end-text { -unity-font-style: bold; color: rgb(232, 150, 128); }
+.end-moment.peace .end-text { color: rgb(196, 220, 180); }
+.end-ruler { flex-direction: row; align-items: flex-start; margin-bottom: 7px; }
+.end-face { width: 46px; height: 46px; margin-right: 10px; border-width: 2px; border-radius: 3px; }
+.end-name { -unity-font-style: bold; font-size: 14px; color: rgb(240, 228, 200); margin-right: 8px; }
+.end-who { font-size: 11.5px; -unity-font-style: italic; color: rgb(176, 162, 134); }
+.end-line { font-size: 12.5px; -unity-font-style: italic; white-space: normal; color: rgb(222, 206, 170); margin-top: 2px; }
+/* The advisor in the council: its counsel, then each suggestion with Take and Why. */
+.advice-counsel { -unity-font-style: italic; font-size: 12.5px; color: rgb(222, 206, 170); white-space: normal; margin: 2px 0 6px 0; }
+.advice-row { flex-direction: row; align-items: center; margin-bottom: 3px; }
+.advice-text { flex-grow: 1; flex-shrink: 1; font-size: 12.5px; white-space: normal; color: rgb(234, 223, 198); }
+.advice-take { margin-left: 6px; }
+.advice-why { width: auto; padding-left: 6px; padding-right: 6px; margin-left: 4px; }
+.advice-all { margin-top: 2px; margin-bottom: 6px; }
+/* A realm's name, zoomed out: widely spaced capitals along its land (rules v2 2.6), turned by the screen. */
+/* A marker at the map area's edge pointing to an off-screen battle or your capital (rule mode). */
+.edge-mark { position: absolute; flex-direction: row; align-items: center; translate: -50% -50%; padding: 2px 7px 2px 3px; background-color: rgb(26, 21, 15); border-width: 1px; border-color: rgba(201, 164, 90, 0.75); border-radius: 3px; }
+.edge-mark:hover { border-color: rgb(236, 205, 140); background-color: rgb(44, 35, 25); }
+.edge-mark.battle { border-color: rgb(196, 70, 52); }
+.edge-arrow { width: 16px; height: 12px; margin-right: 5px; }
+.edge-text { font-size: 12px; -unity-font-style: italic; color: rgb(240, 228, 200); }
+.next-army { align-self: flex-start; margin-top: 2px; margin-bottom: 4px; }
+.realmlab { position: absolute; font-size: 20px; -unity-font-style: bold; letter-spacing: 9px; color: rgba(255, 246, 222, 0.9); -unity-text-outline-width: 0.4px; -unity-text-outline-color: rgb(20, 14, 8); text-shadow: 1px 2px 4px rgba(10, 6, 3, 0.95); translate: -50% -50%; white-space: nowrap; }
 .clab { position: absolute; font-size: 14px; -unity-font-style: bold; letter-spacing: 2px; color: rgb(255, 244, 214); text-shadow: 1px 1px 2px rgba(15, 10, 5, 0.95); translate: -50% 0; }
 .forts { position: absolute; flex-direction: row; translate: -50% 0; }
 
@@ -144,15 +204,21 @@
 /* the top bar below 1600 px: crest, name, provinces, army, wars; gold and stability in the tooltip */
 .compact .gold-stat, .compact .pips, .compact .stat-delta, .compact .phase { display: none; }
 .compact .nation { padding-left: 6px; padding-right: 6px; }
+.crowded .nation-name, .crowded .gold-stat, .crowded .pips, .crowded .stat-delta { display: none; }
+/* Your own realm's name stays, however many realms share the bar. */
+.crowded .nation-name.my-name { display: flex; }
+.crowded .nation { padding-left: 5px; padding-right: 5px; }
+.crowded.compact .army-stat { display: none; }
 .compact .nation-name { font-size: 12px; margin-right: 4px; letter-spacing: 0; }
 .compact .brand { font-size: 13px; padding-left: 8px; padding-right: 8px; letter-spacing: 1px; }
 .compact .time { padding-left: 6px; padding-right: 6px; }
 .compact .turn { font-size: 13px; margin-right: 6px; }
 
 /* the side panel: a province or a country, over the realm list's right edge */
-.side { left: 248px; top: 50px; width: 310px; max-height: 80%; display: none; background-color: rgb(20, 16, 12); }
+.side { left: 8px; top: 50px; width: 310px; bottom: 8px; display: none; background-color: rgb(20, 16, 12); }
+.side-open .realm { display: none; }
 .side.on { display: flex; }
-.compact .side { left: 50px; }
+.compact .side { left: 8px; }
 
 /* the diplomacy view */
 .diplomacy { left: 50%; top: 18%; width: 640px; translate: -50% 0; display: none; background-color: rgb(20, 16, 12); }
@@ -174,6 +240,31 @@
 /* the followed country's own bar */
 .follow-bar { flex-direction: row; flex-grow: 1; align-items: stretch; display: none; overflow: hidden; }
 .nation.me { border-top-width: 2px; border-top-color: rgb(210, 173, 98); }
+/* The UI draft (#20): the top bar's stats, the left panel as one place, the chronicle's kinds. */
+#my-crest { margin-right: 2px; }
+.bstat { flex-direction: row; align-items: center; padding-left: 10px; padding-right: 10px; border-right-width: 1px; border-right-color: rgba(201, 164, 90, 0.22); }
+.bstat:hover { background-color: rgba(210, 173, 98, 0.12); }
+.bstat-icon { margin-right: 6px; }
+.bstat-value { font-size: 15px; -unity-font-style: bold; color: rgb(236, 224, 196); }
+.bstat-sub { font-size: 10px; margin-left: 4px; color: rgb(160, 146, 118); }
+.bstat-sub.good { color: rgb(150, 200, 120); }
+.bstat-sub.bad { color: rgb(232, 112, 96); }
+.st-gold .bstat-icon { color: rgb(232, 196, 92); }
+.st-army .bstat-icon { color: rgb(196, 204, 214); }
+.st-land .bstat-icon { color: rgb(150, 200, 120); }
+.st-writ .bstat-icon { color: rgb(214, 120, 90); }
+.st-stab .bstat-icon { color: rgb(170, 190, 220); }
+.st-stab .pips { margin-left: 6px; }
+.st-war .bstat-icon { color: rgb(226, 110, 90); }
+.st-truce .bstat-icon { color: rgb(150, 190, 225); }
+/* The economy (#372, #374): manpower and the tax level on the bar */
+.st-men .bstat-icon { color: rgb(200, 170, 150); }
+.st-tax .bstat-icon { color: rgb(232, 196, 92); }
+.riv-war { color: rgb(226, 110, 90); margin-left: 2px; }
+.insp-btn { flex-direction: row; align-items: center; width: auto; padding-left: 8px; padding-right: 8px; margin-left: 4px; }
+.insp-btn > Label { margin-left: 5px; font-size: 12px; }
+.lg-kind { margin-left: 4px; margin-right: 2px; margin-top: 2px; }
+.side-back { width: auto; min-width: 64px; padding-left: 6px; padding-right: 6px; margin-right: 8px; }
 .seg2 { justify-content: center; padding-left: 9px; padding-right: 9px; border-right-width: 1px; border-right-color: rgba(201, 164, 90, 0.22); }
 .seg2-label { font-size: 9px; -unity-font-style: bold; letter-spacing: 1px; color: rgb(141, 127, 102); }
 .seg2-value { font-size: 12.5px; -unity-font-style: bold; }
@@ -187,7 +278,7 @@
 .riv.truce { color: rgb(216, 162, 74); }
 
 /* an open side panel pushes the map-mode bar and its legend to its right: panels and bars never overlap */
-.side-open .modes, .side-open .legend { left: 568px; }
+.side-open .modes, .side-open .legend { left: 326px; }
 .compact.side-open .modes, .compact.side-open .legend { left: 370px; }
 
 /* the start menu */
@@ -208,6 +299,9 @@
 /* rule mode: the orders panel, bottom centre, ending in End turn */
 .orders { right: 364px; bottom: 8px; width: 520px; background-color: rgb(20, 16, 12); }
 .compact .orders { width: 470px; }
+/* A wider panel on the right (the inspector, the tales) never covers the council panel: it moves to the panel's left edge. */
+.tales-open .orders { right: 416px; }
+.insp-open .orders { right: 536px; }
 .order-line { flex-direction: row; align-items: center; height: 26px; }
 .order-chosen { font-size: 16px; -unity-font-style: bold; color: rgb(210, 173, 98); }
 .order-moves { flex-direction: row; flex-wrap: wrap; margin-top: 4px; }
@@ -215,8 +309,21 @@
 .order-move:hover { background-color: rgb(70, 55, 34); }
 .order-move.on { background-color: rgb(70, 55, 34); border-color: rgb(210, 173, 98); }
 .order-move.pick { background-color: rgb(107, 82, 40); border-color: rgb(210, 173, 98); }
-.order-move.off { opacity: 0.4; }
+.order-move.off { opacity: 0.4; border-color: rgba(201, 164, 90, 0.2); color: rgb(160, 148, 124); }
+.order-move.pick { -unity-font-style: bold; color: rgb(250, 232, 170); }
 .order-move.off:hover { background-color: rgb(46, 36, 25); }
+/* R3: a recruit order shows its cost and what it beats on a second line, so it is a row taller. */
+.order-move.recruit-type { height: 36px; flex-direction: column; align-items: flex-start; justify-content: center; padding-top: 2px; padding-bottom: 2px; }
+.recruit-type > Label { margin: 0; padding: 0; }
+.recruit-note { font-size: 10px; color: rgb(190, 176, 146); }
+/* R3: a siege beside the province's forts, an army's stores, and an army out of them. */
+.siege-tag { margin-left: 3px; padding: 0 3px; font-size: 10px; -unity-font-style: bold; color: rgb(40, 28, 16); background-color: rgba(240, 226, 192, 0.9); border-width: 1px; border-radius: 2px; }
+.stores { flex-direction: row; align-items: center; margin-top: 2px; }
+.store-pip { width: 7px; height: 7px; margin-right: 2px; border-width: 1px; border-color: rgba(214, 190, 140, 0.7); background-color: rgba(0, 0, 0, 0); }
+.store-pip.full { background-color: rgb(196, 168, 102); }
+.store-pip.half { background-color: rgba(196, 168, 102, 0.45); }
+.hungry-note { margin-left: 4px; font-size: 10px; -unity-font-style: bold; color: rgb(232, 112, 96); }
+.host.host-hungry { border-color: rgb(226, 84, 66); border-width: 2px; }
 .order-move.wide { align-self: stretch; -unity-text-align: middle-left; margin-right: 0; }
 .target-chip { height: 22px; margin: 0 4px 4px 0; padding-left: 7px; padding-right: 7px; font-size: 12px; background-color: rgba(210, 173, 98, 0.1); border-width: 1px; border-color: rgba(201, 164, 90, 0.35); border-radius: 0; color: rgb(234, 223, 198); }
 .target-chip:hover { border-color: rgb(210, 173, 98); }
@@ -242,3 +349,511 @@
 /* rule mode: the orders panel holds the bottom centre, so the map-mode bar and its legend move to the top of the map */
 .rule .modes { top: 50px; bottom: auto; }
 .rule .legend { top: 88px; bottom: auto; }
+/* the RTX 5080 in the top bar while a game holds it or waits for it */
+.card-chip { font-size: 11px; -unity-font-style: bold; padding: 2px 7px; margin-right: 10px; border-width: 1px; border-color: rgb(143, 191, 122); color: rgb(143, 191, 122); }
+.card-chip.waiting { border-color: rgb(216, 162, 74); color: rgb(216, 162, 74); }
+/* each country's army, at its capital, in every map mode */
+.army-piece { position: absolute; flex-direction: row; align-items: center; padding: 1px 6px 1px 4px; border-width: 1px; border-color: rgb(210, 173, 98); border-radius: 3px; translate: -50% -100%; }
+/* The writs turn: an army as a piece (rules v2 3.9), its march, occupation, battles and treaties. */
+.host { position: absolute; flex-direction: row; align-items: center; padding: 1px 5px 1px 2px; border-width: 1px; border-color: rgb(210, 173, 98); border-radius: 3px; translate: -50% -100%; }
+.host-n { font-size: 12px; -unity-font-style: bold; color: rgb(243, 231, 200); margin-left: 3px; }
+.host-g { font-size: 10px; color: rgb(214, 196, 156); margin-left: 3px; -unity-font-style: italic; }
+.host-wait { position: absolute; right: -6px; top: -6px; width: 10px; height: 10px; border-radius: 5px; border-width: 2px; border-color: rgb(196, 58, 40); background-color: rgb(246, 231, 196); }
+.host.chosen { border-color: rgb(250, 232, 170); border-width: 2px; scale: 1.15 1.15; }
+.writs-row { flex-direction: row; align-items: center; margin: 2px 0 4px 0; }
+.writ-pip { width: 13px; height: 13px; border-radius: 7px; border-width: 1px; border-color: rgb(201, 164, 90); margin-right: 4px; }
+.writ-pip.on { background-color: rgb(201, 164, 90); }
+.army-row { flex-direction: row; align-items: center; padding: 3px 4px; margin: 1px 0; border-left-width: 3px; border-color: rgba(0, 0, 0, 0); }
+.army-row:hover { background-color: rgba(255, 240, 200, 0.06); }
+.army-row.pick { background-color: rgba(201, 164, 90, 0.18); }
+.army-row.needs { border-left-color: rgb(222, 178, 80); }
+.army-row.ordered { border-left-color: rgb(110, 160, 90); }
+.army-row.no-writ { border-left-color: rgb(196, 58, 40); color: rgb(220, 160, 150); }
+.pennant { position: absolute; width: 18px; height: 22px; translate: 0 -100%; }
+.march-turns { position: absolute; translate: -50% 0; font-size: 11px; -unity-font-style: bold-and-italic; color: rgb(40, 28, 16); background-color: rgba(240, 226, 192, 0.85); padding: 0 3px; border-radius: 2px; }
+.battle-card { width: 520px; }
+.battle-bar { flex-direction: row; align-items: center; margin: 2px 0; }
+.battle-bar.total { margin-top: 6px; }
+.battle-bar-label { width: 150px; font-size: 12px; color: rgb(214, 198, 160); white-space: normal; }
+.battle-track { flex-grow: 1; flex-direction: row; height: 10px; background-color: rgb(40, 32, 24); margin: 0 6px; }
+.battle-half { flex-grow: 1; flex-basis: 0; }
+.battle-fill { height: 100%; }
+.battle-bar-value { width: 74px; font-size: 12px; color: rgb(234, 223, 198); -unity-text-align: middle-right; }
+.seal { position: absolute; width: 44px; height: 44px; border-radius: 22px; background-color: rgb(146, 30, 24); border-width: 3px; border-color: rgb(96, 16, 12); align-items: center; justify-content: center; translate: -50% -50%; scale: 0.3 0.3; opacity: 0; transition-property: scale, opacity; transition-duration: 0.25s, 0.25s; }
+.seal.on { scale: 1 1; opacity: 1; }
+.army-piece-n { font-size: 12px; -unity-font-style: bold; color: rgb(243, 231, 200); margin-left: 3px; }
+/* the menus: main, New game, Settings, pause */
+.menu { max-height: 94%; }
+.menu-scroll { flex-shrink: 1; }
+.menu.main { width: 500px; padding: 22px 30px; }
+.menu.newgame, .menu.settings { width: 720px; }
+.menu.pause { width: 380px; }
+.menu-sub { font-size: 14px; -unity-font-style: italic; color: rgb(194, 179, 147); white-space: normal; -unity-text-align: middle-center; margin-bottom: 4px; }
+.menu.main .menu-title { -unity-text-align: middle-center; font-size: 34px; }
+.menu-head { font-size: 20px; -unity-font-style: bold; letter-spacing: 4px; color: rgb(210, 173, 98); margin-bottom: 4px; }
+.menu-big { flex-direction: column; align-items: flex-start; margin: 0 0 8px 0; padding: 9px 16px; background-color: rgba(210, 173, 98, 0.06); border-width: 1px; border-color: rgba(201, 164, 90, 0.4); border-radius: 0; color: rgb(234, 223, 198); font-size: 17px; -unity-font-style: bold; letter-spacing: 1px; }
+.menu-big:hover { background-color: rgba(210, 173, 98, 0.18); border-color: rgb(210, 173, 98); }
+.menu-big.pick { background-color: rgba(107, 82, 40, 0.85); border-color: rgb(210, 173, 98); }
+.menu-big-note { font-size: 12px; -unity-font-style: italic; letter-spacing: 0; color: rgb(194, 179, 147); white-space: normal; margin-top: 2px; }
+.menu-row { flex-direction: row; align-items: center; flex-wrap: wrap; }
+.menu-modes > .menu-big { flex-grow: 1; flex-basis: 0; margin-right: 8px; }
+.menu-coming { flex-direction: row; align-items: center; padding: 4px 6px; margin-bottom: 3px; opacity: 0.55; border-left-width: 2px; border-left-color: rgba(201, 164, 90, 0.35); font-size: 12.5px; }
+.set-row { flex-direction: row; align-items: center; min-height: 30px; font-size: 13px; }
+.set-steps { flex-direction: row; flex-wrap: wrap; flex-grow: 1; }
+.set-slider { flex-grow: 1; margin-left: 0; }
+.set-slider .unity-base-slider__tracker { background-color: rgba(0, 0, 0, 0.35); border-color: rgba(201, 164, 90, 0.35); height: 4px; margin-top: -2px; }
+.set-slider .unity-base-slider__dragger { background-color: rgb(210, 173, 98); border-width: 0; border-radius: 6px; width: 12px; height: 12px; margin-top: -6px; }
+.set-slider .unity-base-slider__dragger-border { display: none; }
+.compact .menu.main { padding: 12px 22px; }
+.compact .menu-big { padding: 6px 12px; margin-bottom: 5px; font-size: 15px; }
+/* the dev menu: a plain tool, not part of the look */
+.dev { position: absolute; left: 8px; top: 50px; width: 470px; max-height: 92%; background-color: rgba(8, 8, 10, 0.95); border-width: 1px; border-color: rgb(120, 180, 220); font-size: 11.5px; color: rgb(220, 225, 230); }
+.dev-head { flex-direction: row; align-items: center; padding: 3px 6px; background-color: rgb(25, 45, 60); color: rgb(160, 210, 240); }
+.dev-sec { font-size: 10px; -unity-font-style: bold; color: rgb(120, 180, 220); margin: 6px 6px 2px 6px; }
+.dev-row { flex-direction: row; flex-wrap: wrap; padding: 0 4px; }
+.dev-b { height: 20px; margin: 1px; padding: 0 6px; font-size: 11px; background-color: rgb(30, 36, 42); border-width: 1px; border-color: rgb(70, 90, 105); border-radius: 0; color: rgb(220, 225, 230); }
+.dev-b:hover { background-color: rgb(45, 60, 72); }
+.dev-b.fill { border-color: rgb(110, 100, 60); }
+.dev-mono { white-space: normal; font-size: 11px; padding: 4px 6px; color: rgb(190, 220, 200); }
+.dev-out { color: rgb(230, 210, 150); background-color: rgba(255, 255, 255, 0.04); margin: 0 4px; }
+.dev-line { flex-grow: 1; margin: 1px; }
+.dev-line .unity-text-field__input { background-color: rgb(20, 24, 28); color: rgb(230, 230, 230); border-color: rgb(70, 90, 105); font-size: 12px; }
+.dev-mark { font-size: 11px; -unity-font-style: bold; padding: 2px 7px; margin-right: 10px; color: rgb(255, 255, 255); background-color: rgb(170, 40, 40); }
+
+/* ---- the storyteller: its own voice, parchment rather than the rulers' dark speech ---- */
+.tale-banner { background-color: rgba(226, 210, 168, 0.97); border-color: rgb(120, 86, 44); border-left-width: 1px; border-width: 2px; max-width: 360px; padding: 7px 12px 7px 8px; }
+.tale-who { color: rgb(110, 70, 30); font-size: 11px; letter-spacing: 1px; }
+.tale-line { color: rgb(46, 32, 18); font-size: 14px; }
+.tale-hit { color: rgb(110, 70, 30); font-size: 11px; margin-top: 3px; white-space: normal; }
+.lg-tale { background-color: rgba(201, 164, 90, 0.10); border-left-width: 2px; border-left-color: rgb(201, 164, 90); }
+.lg-tale .lg-quote { color: rgb(226, 206, 160); }
+.tbtn.wide { width: auto; height: auto; padding: 4px 8px; margin: 3px 0; -unity-text-align: middle-left; white-space: normal; }
+.tales-button { padding: 0 8px; margin-right: 4px; font-size: 11px; letter-spacing: 1px; }
+
+.event-card { left: 50%; top: 60px; width: 480px; max-height: 80%; translate: -50% 0; background-color: rgb(24, 19, 14); border-color: rgb(201, 164, 90); }
+.event-body { padding: 10px 14px 12px 14px; }
+.event-title { font-size: 20px; -unity-font-style: bold; color: rgb(240, 222, 178); white-space: normal; }
+.event-story { font-size: 15px; -unity-font-style: italic; color: rgb(226, 212, 180); white-space: normal; margin: 8px 0 6px 0; }
+.event-row { flex-direction: row; align-items: center; flex-wrap: wrap; margin: 3px 0; }
+.event-name { font-size: 13px; -unity-font-style: bold; margin: 0 8px 0 6px; color: rgb(234, 223, 198); }
+.event-chose { font-size: 12px; color: rgb(216, 192, 140); margin-right: 8px; white-space: normal; }
+.event-effect { font-size: 12px; color: rgb(194, 179, 147); white-space: normal; }
+.event-replaced { font-size: 12px; color: rgb(216, 162, 74); }
+
+.choice-veil { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: rgba(8, 6, 4, 0.72); align-items: center; justify-content: center; }
+.choice-card { position: relative; width: 560px; max-width: 92%; padding: 16px 18px; background-color: rgb(226, 210, 168); border-width: 3px; border-color: rgb(120, 86, 44); }
+.choice-card .event-title { color: rgb(46, 32, 18); font-size: 24px; }
+.choice-card .event-story { color: rgb(60, 42, 24); font-size: 16px; }
+.choice-card .src { color: rgb(110, 70, 30); }
+.choice-head { flex-direction: row; align-items: center; }
+.choice-kicker { font-size: 11px; -unity-font-style: bold; letter-spacing: 2px; color: rgb(140, 50, 30); }
+.choice-option { margin-top: 8px; padding: 9px 12px; border-width: 2px; border-color: rgba(120, 86, 44, 0.45); background-color: rgba(255, 248, 228, 0.55); }
+.choice-option:hover { border-color: rgb(120, 86, 44); background-color: rgba(255, 248, 228, 0.85); }
+.choice-option.pick { border-color: rgb(140, 50, 30); background-color: rgb(255, 246, 222); }
+.choice-label { font-size: 16px; -unity-font-style: bold; color: rgb(46, 32, 18); flex-grow: 1; }
+.choice-option .tag { color: rgb(110, 70, 30); border-color: rgba(120, 86, 44, 0.6); }
+.choice-effect { font-size: 13px; color: rgb(80, 60, 36); margin-top: 2px; white-space: normal; }
+.choice-effect.gain { color: rgb(46, 100, 40); }
+.choice-effect.cost { color: rgb(140, 50, 30); }
+.choice-go { min-width: 220px; }
+
+.tales { right: 8px; top: 50px; width: 400px; bottom: 8px; display: none; background-color: rgb(22, 18, 13); }
+.tales.on { display: flex; }
+.tale { padding: 10px 12px; border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.3); }
+.tale.focus { background-color: rgba(201, 164, 90, 0.10); }
+.tale-title { font-size: 16px; -unity-font-style: bold; color: rgb(240, 222, 178); flex-grow: 1; white-space: normal; }
+.tale-stage { margin: 6px 0 0 6px; padding-left: 8px; border-left-width: 2px; border-left-color: rgba(201, 164, 90, 0.5); }
+.tale-stage:hover { background-color: rgba(201, 164, 90, 0.08); }
+.tale-stage-title { font-size: 12px; -unity-font-style: bold; color: rgb(216, 192, 140); }
+.tale-story { font-size: 13px; -unity-font-style: italic; color: rgb(214, 200, 170); }
+.tale-end { font-size: 12px; -unity-font-style: italic; color: rgb(141, 127, 102); margin-top: 6px; }
+
+/* the loading card while a generated world is made and drawn */
+.loading-card { position: relative; width: 520px; padding: 18px 22px; }
+.loading-bar { height: 8px; margin-top: 12px; background-color: rgba(201, 164, 90, 0.18); border-width: 1px; border-color: rgba(201, 164, 90, 0.55); }
+.loading-fill { height: 100%; width: 0; background-color: rgb(201, 164, 90); }
+
+/* ==== Variant B (#20, the lead's choice on 16 November): a tall top bar with the realm's banner hanging below it,
+   framed panels, an outliner top right, the chronicle as a narrow feed bottom left, the left side empty until a
+   click opens something there. These rules come last and override the ones above. ==== */
+.topbar { height: 74px; border-bottom-width: 2px; border-bottom-color: rgb(138, 106, 56); background-color: rgb(32, 24, 15); }
+.follow-bar { overflow: visible; align-items: center; }
+.panel { border-width: 2px; border-color: rgb(110, 86, 49); background-color: rgb(20, 15, 10); }
+.panel-head { height: 34px; background-color: rgb(52, 39, 24); border-bottom-color: rgb(110, 86, 49); }
+.panel-title { font-size: 15px; letter-spacing: 2px; color: rgb(226, 194, 122); }
+.corner { position: absolute; width: 14px; height: 14px; border-color: rgb(201, 164, 90); }
+.corner.tl { left: -3px; top: -3px; border-left-width: 2px; border-top-width: 2px; }
+.corner.tr { right: -3px; top: -3px; border-right-width: 2px; border-top-width: 2px; }
+.corner.bl { left: -3px; bottom: -3px; border-left-width: 2px; border-bottom-width: 2px; }
+.corner.br { right: -3px; bottom: -3px; border-right-width: 2px; border-bottom-width: 2px; }
+
+/* the banner and portrait */
+.realm-banner { position: absolute; left: 8px; top: 0; align-items: center; justify-content: flex-start; }
+.realm-banner-crest { margin-top: 18px; }
+.realm-banner-name { position: absolute; bottom: 30px; left: 0; right: 0; -unity-text-align: middle-center; font-size: 11px; -unity-font-style: bold; letter-spacing: 2px; color: rgb(240, 227, 194); }
+#my-portrait { position: absolute; left: 118px; top: 6px; }
+.portrait-slot { border-width: 2px; border-color: rgb(201, 164, 90); background-color: rgb(35, 26, 16); }
+.bstat.first { margin-left: 186px; }
+.following .brand { display: none; }
+.bstat { height: 72px; padding-left: 9px; padding-right: 9px; }
+.bstat-icon { margin-right: 8px; }
+.bstat-col { justify-content: center; }
+.bstat-line { flex-direction: row; align-items: flex-end; }
+.bstat-value { font-size: 23px; }
+.bstat-sub { font-size: 12px; margin-left: 5px; margin-bottom: 3px; -unity-font-style: bold; }
+.bstat-cap { font-size: 10px; letter-spacing: 1px; color: rgb(160, 146, 118); margin-top: 1px; }
+.riv { flex-direction: column; padding: 2px 4px; font-size: 13px; }
+.time { margin: 7px 8px 7px 0; padding-left: 12px; border-width: 2px; border-color: rgb(110, 86, 49); background-color: rgb(22, 16, 10); }
+.turn { font-size: 20px; color: rgb(226, 194, 122); }
+.tbtn { height: 28px; width: 30px; }
+.insp-btn { height: 28px; }
+
+/* the outliner, top right */
+.outliner { right: 8px; top: 84px; width: 286px; max-height: 44%; }
+.ol-head { flex-direction: row; align-items: center; padding: 6px 10px 3px 10px; font-size: 11px; -unity-font-style: bold; letter-spacing: 2px; color: rgb(226, 194, 122); border-top-width: 1px; border-top-color: rgba(201, 164, 90, 0.18); }
+.ol-row { padding: 3px 10px 4px 10px; }
+.ol-row:hover { background-color: rgba(226, 194, 122, 0.1); }
+.ol-row.pick { background-color: rgba(226, 194, 122, 0.2); border-left-width: 2px; border-left-color: rgb(226, 194, 122); } /* chosen on the map */
+.ol-row.hungry { border-left-width: 3px; border-left-color: rgb(226, 84, 66); }
+.ol-top { flex-direction: row; align-items: center; }
+#ol-name { margin-left: 6px; font-size: 13px; -unity-font-style: bold; flex-shrink: 1; overflow: hidden; }
+.ol-loaves { flex-direction: row; margin-left: 6px; }
+.ol-loaves > .icon { margin-right: 1px; }
+.ol-n { margin-left: auto; font-size: 13px; -unity-font-style: bold; padding-left: 6px; }
+.ol-sub { font-size: 11px; color: rgb(160, 146, 118); margin-left: 20px; }
+.ol-note { font-size: 11.5px; color: rgb(141, 127, 102); padding: 1px 10px 4px 26px; -unity-font-style: italic; }
+.ol-buttons { flex-direction: row; padding: 4px 10px 8px 10px; }
+.ol-btn { width: auto; padding-left: 10px; padding-right: 10px; margin-right: 6px; }
+
+/* the left side: empty until a click; the ledger and a province, army or rival open there */
+.realm { display: none; left: 8px; top: 160px; width: 300px; bottom: 290px; }
+.ledger-open .realm { display: flex; }
+.side { top: 160px; bottom: 290px; }
+
+/* the chronicle: a narrow feed, bottom left, one line an entry */
+.chronicle { left: 8px; right: auto; top: auto; bottom: 8px; width: 440px; height: 272px; }
+.feed .filters { padding: 4px 8px 2px 8px; }
+.feed .lg { padding: 3px 8px; align-items: center; }
+.feed .lg-body { flex-shrink: 1; min-width: 0; }
+.feed .lg-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12.5px; }
+.feed .lg.open { align-items: flex-start; background-color: rgba(226, 194, 122, 0.1); }
+.feed .lg.open .lg-text { white-space: normal; }
+.feed .lg-quote, .feed .lg-item, .feed .lg-link, .feed .tag { display: none; }
+.feed .lg.open .lg-quote, .feed .lg.open .lg-item, .feed .lg.open .lg-link { display: flex; }
+.lg-link { font-size: 11.5px; -unity-font-style: italic; color: rgb(226, 194, 122); margin-top: 2px; }
+.lg-link:hover { color: rgb(250, 232, 170); }
+.feed .lg-turn { padding: 2px 8px; font-size: 10px; }
+
+/* the council and the rest, around them */
+.orders { right: 8px; bottom: 8px; max-height: 56%; }
+.tales-open .orders { right: 416px; }
+.tales { top: 84px; }
+.inspector { top: 84px; }
+.modes, .rule .modes { left: 196px; top: 84px; bottom: auto; }
+.legend, .rule .legend { left: 196px; top: 120px; bottom: auto; }
+.side-open .modes, .side-open .legend, .compact .modes, .compact .legend, .compact.side-open .modes, .compact.side-open .legend { left: 196px; }
+.notice { top: 84px; }
+
+/* smaller windows */
+.compact .chronicle { width: 380px; height: 220px; }
+.compact .outliner { width: 250px; }
+.compact .realm, .compact .side { bottom: 236px; }
+.compact .bstat { padding-left: 7px; padding-right: 7px; }
+.compact .bstat-value { font-size: 19px; }
+.compact .bstat-sub { display: none; }
+.compact .bstat-icon { scale: 0.75 0.75; margin-right: 2px; }
+.compact .riv { padding: 2px 2px; }
+.compact .riv > Crest, .compact .riv > .crest { scale: 0.8 0.8; }
+.compact .bstat.first { margin-left: 180px; }
+.tbtn.insp-btn { width: auto; padding-left: 8px; padding-right: 8px; }
+
+/* Slice 1 review (#340): the date block never shrinks its buttons (the rivals and the orders note give way); the
+   outliner ends above the council at every size and scrolls inside; the map-mode legend keeps one line. */
+.time > * { flex-shrink: 0; }
+.time > .phase { flex-shrink: 1; min-width: 0; overflow: hidden; }
+.follow-bar { flex-shrink: 1; min-width: 0; }
+.rivals { flex-shrink: 1; min-width: 0; overflow: hidden; }
+.outliner { max-height: 34%; }
+.orders { max-height: 50%; }
+.legend, .rule .legend { flex-wrap: nowrap; max-width: 62%; overflow: hidden; }
+.legend > * { flex-shrink: 0; }
+.panel-head { flex-shrink: 0; }
+/* ==== Variant B, slice 2: the panels' kit (#20) ==== */
+.khead { flex-direction: row; align-items: center; padding: 10px 12px; background-color: rgb(40, 30, 18); border-bottom-width: 1px; border-bottom-color: rgb(110, 86, 49); }
+.khead > .crest { flex-shrink: 0; }
+.khead-portrait { margin-left: 10px; flex-shrink: 0; }
+.khead-text { margin-left: 12px; flex-shrink: 1; }
+.khead-title { font-size: 18px; -unity-font-style: bold; letter-spacing: 1px; color: rgb(236, 224, 196); white-space: normal; }
+.khead-sub { font-size: 12px; -unity-font-style: italic; color: rgb(168, 151, 122); white-space: normal; }
+.ktabs { flex-direction: row; padding: 6px 8px 0 8px; border-bottom-width: 1px; border-bottom-color: rgb(110, 86, 49); }
+.ktab { flex-direction: row; align-items: center; padding: 4px 9px; margin-right: 3px; border-width: 1px; border-bottom-width: 0; border-color: rgb(90, 70, 40); background-color: rgb(33, 24, 14); color: rgb(168, 151, 122); font-size: 12px; }
+.ktab > Label { margin-left: 5px; }
+.ktab:hover { color: rgb(236, 224, 196); }
+.ktab.on { background-color: rgb(58, 43, 24); color: rgb(226, 194, 122); border-color: rgb(138, 106, 56); }
+.kpage { padding: 4px 0 8px 0; }
+.krow { flex-direction: row; align-items: center; min-height: 28px; padding: 3px 12px; border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.08); }
+.krow:hover { background-color: rgba(226, 194, 122, 0.08); }
+.krow-label { margin-left: 9px; font-size: 13px; flex-shrink: 1; }
+.krow-bar { flex-grow: 1; height: 9px; margin-left: 10px; margin-right: 8px; background-color: rgb(40, 31, 21); border-width: 1px; border-color: rgb(90, 70, 40); min-width: 60px; }
+.krow-fill { height: 100%; background-color: rgb(196, 204, 214); }
+.krow-pips { flex-direction: row; margin-left: 10px; }
+.krow-pips > .icon { margin-right: 2px; }
+.krow-value { margin-left: auto; padding-left: 8px; font-size: 14px; -unity-font-style: bold; -unity-text-align: middle-right; white-space: normal; flex-shrink: 1; }
+.kgen { flex-direction: row; align-items: center; padding: 8px 12px; }
+.kgen > .khead-title { margin-left: 12px; font-size: 15px; }
+
+/* Slice 2 review: the outliner's foot (its ledger buttons) outside the scroll; its headers fold; the legend keeps
+   every entry on one line at 1366 by tightening, not by dropping. */
+.ol-foot { flex-shrink: 0; border-top-width: 1px; border-top-color: rgba(201, 164, 90, 0.25); }
+.ol-head:hover { background-color: rgba(226, 194, 122, 0.08); }
+.ol-head.folded { color: rgb(160, 146, 118); }
+.legend, .rule .legend { max-width: 1000px; }
+.compact .legend, .rule.compact .legend { padding: 4px 6px; font-size: 11px; max-width: 1000px; }
+.compact .legend > * { margin-right: 6px; }
+
+/* ==== Variant B, slice 3: the inspector as a framed window, the council's polish (#20) ==== */
+.inspector { left: 50%; right: auto; translate: -50% 0; top: 84px; bottom: auto; width: 760px; min-height: 420px; max-height: 88%; border-width: 2px; border-color: rgb(138, 106, 56); }
+.compact .inspector { width: 640px; min-height: 360px; max-height: 90%; }
+.insp-open .orders { right: 8px; }
+.insp-open.tales-open .orders { right: 416px; }
+.inspector .ktabs { padding-top: 8px; }
+.inspector .sec { margin-top: 2px; flex-shrink: 0; }
+.inspector .sec > * { flex-shrink: 0; }
+.advice-row, .advice-all { margin-right: 8px; } /* clear of the council's scrollbar */
+.advice-take, .advice-why { flex-shrink: 0; }
+.timebar-part { margin: 0; padding: 0 4px; } /* a label's default margins left the fill 8 px of the bar's 14 */
+.writ-seal { margin-right: 3px; }
+.end-turn { font-size: 17px; height: 40px; padding-left: 22px; padding-right: 22px; -unity-font-style: bold; border-width: 2px; border-color: rgb(201, 164, 90); background-color: rgb(92, 66, 30); }
+.end-turn:hover { background-color: rgb(120, 88, 40); }
+.orders .end-turn { align-self: center; flex-shrink: 0; margin-top: 0; }
+.compact .orders .end-turn { height: 34px; font-size: 15px; }
+.orders .panel-head { height: 38px; }
+
+/* ==== The start menu (#20, 16 November): the title screen over the living map, New game's tabbed window, Load a
+   replay, Credits, and the keys' mark on every menu's big buttons. Appended by the start-menu work; nothing above
+   is changed. ==== */
+.hud-off { visibility: hidden; }
+.title-screen { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+.title-veil { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+.title-col { position: absolute; left: 7%; top: 0; bottom: 44px; width: 480px; justify-content: center; }
+.title-name { white-space: nowrap; font-size: 58px; -unity-font-style: bold; letter-spacing: 9px; color: rgb(226, 194, 122); text-shadow: 2px 3px 6px rgba(0, 0, 0, 0.9); margin: 0; padding: 0; }
+.title-sub { width: 440px; font-size: 17px; -unity-font-style: italic; color: rgb(214, 200, 170); white-space: normal; margin-top: 2px; margin-bottom: 4px; padding: 0; }
+.title-list { margin-top: 6px; width: 440px; }
+.title-btn { flex-direction: row; align-items: center; height: 46px; margin: 0 0 7px 0; padding: 0 16px 0 12px; background-color: rgba(24, 18, 12, 0.82); border-width: 1px; border-color: rgba(201, 164, 90, 0.4); border-radius: 0; color: rgb(234, 223, 198); font-size: 20px; -unity-font-style: bold; letter-spacing: 2px; -unity-text-align: middle-left; transition-property: background-color, border-color, translate; transition-duration: 0.12s; }
+.title-btn > Label { padding: 0; margin: 0; }
+.title-mark { width: 9px; height: 9px; margin-right: 12px; rotate: 45deg; background-color: rgba(201, 164, 90, 0.25); }
+.title-btn.sel { background-color: rgba(92, 66, 30, 0.95); border-color: rgb(226, 194, 122); color: rgb(250, 236, 196); translate: 6px 0; }
+.title-btn.sel > .title-mark { background-color: rgb(226, 194, 122); }
+.title-btn:active { background-color: rgb(120, 88, 40); }
+.title-hint { width: 440px; min-height: 38px; margin-top: 4px; font-size: 13.5px; -unity-font-style: italic; color: rgb(194, 179, 147); white-space: normal; }
+.title-foot { position: absolute; left: 0; right: 0; bottom: 0; height: 40px; flex-direction: row; align-items: center; padding-left: 7%; padding-right: 22px; background-color: rgba(14, 10, 7, 0.92); border-top-width: 2px; border-top-color: rgb(110, 86, 49); }
+.title-dot { width: 10px; height: 10px; border-radius: 5px; margin-right: 10px; flex-shrink: 0; background-color: rgb(141, 127, 102); }
+.title-dot.good { background-color: rgb(143, 191, 122); }
+.title-dot.warn { background-color: rgb(216, 162, 74); }
+.title-status { flex-grow: 1; flex-shrink: 1; font-size: 13.5px; color: rgb(214, 200, 170); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.title-version { flex-shrink: 0; margin-left: 16px; font-size: 12px; color: rgb(141, 127, 102); letter-spacing: 1px; }
+.compact .title-col { width: 420px; left: 6%; }
+.compact .title-sub, .compact .title-list, .compact .title-hint { width: 400px; }
+.compact .title-name { font-size: 46px; letter-spacing: 7px; }
+.compact .title-sub { font-size: 15px; }
+.compact .title-btn { height: 40px; font-size: 18px; margin-bottom: 5px; }
+.compact .title-foot { padding-left: 6%; }
+
+/* the keys' mark on the older menus' big buttons, the same as the mouse's */
+.menu-big.sel { background-color: rgba(210, 173, 98, 0.18); border-color: rgb(210, 173, 98); }
+
+/* the menus' windows: a framed card, wider veil */
+.menu-veil { background-color: rgba(9, 7, 5, 0.62); }
+.menu { border-width: 2px; border-color: rgb(138, 106, 56); }
+.menu.replays { width: 760px; }
+.menu.credits { width: 640px; }
+
+/* New game: four groups behind tabs */
+.ng-tabs { margin-top: 8px; padding-left: 0; }
+.ng-tab { height: 30px; margin-top: 0; margin-bottom: 0; margin-left: 0; padding-left: 18px; padding-right: 18px; border-radius: 0; font-size: 13px; -unity-font-style: bold; letter-spacing: 1px; }
+.ng-group { min-height: 318px; padding: 4px 10px 8px 10px; border-width: 1px; border-top-width: 0; border-color: rgb(110, 86, 49); background-color: rgba(0, 0, 0, 0.16); }
+.compact .ng-group { min-height: 268px; }
+.ng-status { margin-top: 6px; font-size: 13px; white-space: normal; color: rgb(194, 179, 147); }
+.ng-status.good { color: rgb(143, 191, 122); }
+.ng-status.warn { color: rgb(216, 162, 74); }
+
+/* Load a replay */
+.replay-list { margin-top: 2px; }
+.replay-row { flex-direction: row; align-items: center; margin: 0 0 6px 0; padding: 8px 14px; background-color: rgba(210, 173, 98, 0.06); border-width: 1px; border-color: rgba(201, 164, 90, 0.4); border-radius: 0; color: rgb(234, 223, 198); }
+.replay-row.sel, .replay-row:hover { background-color: rgba(210, 173, 98, 0.18); border-color: rgb(210, 173, 98); }
+.replay-text { flex-grow: 1; flex-shrink: 1; align-items: flex-start; }
+.replay-side { flex-shrink: 0; align-items: flex-end; margin-left: 14px; max-width: 42%; }
+.replay-title { font-size: 16px; -unity-font-style: bold; white-space: normal; -unity-text-align: middle-left; padding: 0; margin: 0; }
+.replay-line { font-size: 12px; -unity-font-style: italic; color: rgb(194, 179, 147); padding: 0; margin: 2px 0 0 0; white-space: normal; }
+.replay-world { font-size: 12.5px; color: rgb(226, 194, 122); padding: 0; margin: 0; white-space: normal; -unity-text-align: middle-right; }
+
+/* Credits, and New game's personas: a name and what it is */
+.credit-row { flex-direction: row; align-items: flex-start; padding: 3px 0; border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.1); }
+.credit-name { width: 170px; flex-shrink: 0; font-size: 13.5px; -unity-font-style: bold; color: rgb(236, 224, 196); padding: 0; margin: 0; }
+.credit-part { flex-grow: 1; flex-shrink: 1; font-size: 12.5px; color: rgb(194, 179, 147); white-space: normal; padding: 0; margin: 0; }
+/* New game: your face, the art pack's four neutral portraits */
+.face-row { min-height: 70px; }
+.face-pick { width: 52px; height: 64px; margin: 2px 8px 2px 0; padding: 0; border-width: 2px; border-color: rgba(201, 164, 90, 0.35); border-radius: 0; background-color: rgb(35, 26, 16); -unity-background-scale-mode: scale-and-crop; color: rgb(234, 223, 198); }
+.face-pick:hover { border-color: rgb(210, 173, 98); }
+.face-pick.pick { border-color: rgb(226, 194, 122); border-width: 3px; }
+/* Settings: the sound test */
+.sound-row { min-height: 26px; }
+.sound-when { flex-grow: 1; flex-shrink: 1; font-size: 12px; -unity-font-style: italic; color: rgb(194, 179, 147); white-space: normal; }
+.sound-row > .order-move { margin: 0; }
+/* ==== Nothing is cut off at the bottom (#20, the lead on 16 November). Nothing is ever half shown: a list ends on a
+   whole row or scrolls with its scrollbar (and a fade at its foot while more lies below); every panel keeps its bottom
+   padding; a panel never runs under another or off the window. The rules no line here can say (a window no taller
+   than the room below its own top, the fade) are in ScreenUI.Layout.cs. ==== */
+.panel .unity-scroll-view__content-container { padding-bottom: 6px; }
+.panel > .unity-scroll-view, .window > .unity-scroll-view { flex-shrink: 1; min-height: 0; }
+.panel-head, .orders-foot, .ol-foot, .ktabs { flex-shrink: 0; }
+/* windows open under the top bar, never over it */
+.event-card { top: 84px; max-height: none; }
+.inspector, .compact .inspector { max-height: none; }
+/* the tales take the outliner's place while open, as the ledger takes the left */
+.tales-open .outliner { display: none; }
+/* a model's free text in a panel: three whole lines, then "more" */
+.fold { flex-shrink: 0; margin: 2px 0 6px 0; }
+.fold-clip { overflow: hidden; flex-shrink: 0; }
+.fold > .fold-clip > Label { margin: 0; }
+.fold-more { padding: 1px 0 0 0; align-self: flex-start; }
+
+/* ==== The storyteller, impossible to miss (#20, the lead on 16 November) ==== */
+/* the event window: a picture, the title large, the story, each realm struck with what it did */
+.story-window { width: 560px; border-width: 3px; border-color: rgb(201, 164, 90); background-color: rgb(26, 20, 13); }
+.compact .story-window { width: 500px; }
+.story-window.mine { border-width: 4px; }
+.story-picture { height: 150px; margin: 2px 0 10px 0; border-width: 2px; border-color: rgb(138, 106, 56); background-color: rgb(40, 31, 21); align-items: center; justify-content: center; -unity-background-scale-mode: scale-and-crop; flex-shrink: 0; }
+.compact .story-picture { height: 110px; }
+.story-picture-hint { font-size: 12px; -unity-font-style: italic; color: rgb(120, 104, 78); }
+.story-kicker { font-size: 11px; -unity-font-style: bold; letter-spacing: 2px; color: rgb(201, 164, 90); -unity-text-align: middle-center; }
+.story-window.mine .story-kicker { color: rgb(240, 214, 150); }
+.story-title { font-size: 26px; -unity-font-style: bold; color: rgb(244, 228, 186); white-space: normal; -unity-text-align: middle-center; margin: 2px 0 6px 0; }
+.story-text { font-size: 16px; -unity-font-style: italic; color: rgb(230, 216, 184); white-space: normal; margin: 0 6px 10px 6px; -unity-text-align: middle-center; }
+.story-struck { flex-direction: row; align-items: flex-start; padding: 7px 8px; margin-bottom: 4px; background-color: rgba(201, 164, 90, 0.06); border-left-width: 3px; border-left-color: rgba(201, 164, 90, 0.35); }
+.story-struck.mine { background-color: rgba(201, 164, 90, 0.14); border-left-color: rgb(226, 194, 122); }
+.story-struck-col { margin-left: 10px; flex-shrink: 1; flex-grow: 1; }
+.story-who { font-size: 15px; -unity-font-style: bold; color: rgb(240, 228, 200); }
+.story-effects { flex-direction: row; flex-wrap: wrap; margin-top: 4px; }
+.story-effect { flex-direction: row; align-items: center; padding: 2px 8px 2px 5px; margin: 0 6px 4px 0; border-width: 1px; border-color: rgba(201, 164, 90, 0.35); background-color: rgba(0, 0, 0, 0.25); }
+.story-effect > Label { margin-left: 5px; font-size: 14px; -unity-font-style: bold; }
+.story-effect.gain > Label { color: rgb(150, 200, 120); }
+.story-effect.loss > Label { color: rgb(232, 112, 96); }
+.story-ok { align-self: center; min-width: 200px; height: 36px; font-size: 16px; margin: 10px 0 4px 0; }
+/* a tale: a parchment strip under the top bar, never stopping the turn */
+.tale-strip { position: absolute; left: 50%; top: 84px; translate: -50% 0; width: 560px; flex-direction: row; align-items: flex-start; padding: 8px 14px 8px 10px; background-color: rgba(226, 210, 168, 0.97); border-width: 2px; border-color: rgb(120, 86, 44); }
+.tale-strip:hover { border-color: rgb(160, 110, 50); }
+.tale-strip-col { margin-left: 10px; flex-shrink: 1; flex-grow: 1; }
+.tale-strip-title { font-size: 17px; -unity-font-style: bold; color: rgb(46, 32, 18); white-space: normal; }
+.tale-strip .list-more { color: rgb(110, 70, 30); }
+/* the chronicle: the storyteller's entries in gilt, apart from the orders */
+.feed .lg.lg-tale { background-color: rgba(201, 164, 90, 0.16); border-left-width: 3px; border-left-color: rgb(226, 194, 122); }
+.feed .lg.lg-tale .lg-text { color: rgb(244, 222, 168); }
+.story-foot { flex-shrink: 0; align-items: center; padding: 6px 0 8px 0; border-top-width: 1px; border-top-color: rgba(201, 164, 90, 0.3); background-color: rgb(30, 23, 15); }
+.story-foot > .story-ok { margin: 0; }
+.tale-strip .fold-more { margin-top: 3px; color: rgb(110, 60, 20); -unity-font-style: bold-and-italic; }
+/* 17 November: the art pack's pictures get room; the window is wider and the picture taller */
+.story-window { width: 680px; }
+.compact .story-window { width: 560px; }
+.story-picture { height: 280px; }
+.compact .story-picture { height: 170px; }
+/* reserved slots, empty until built: the speaker button in the head, the choice buttons above So be it */
+.story-speaker { flex-direction: row; flex-shrink: 0; }
+.story-choices { flex-direction: row; justify-content: center; flex-wrap: wrap; }
+
+/* The top bar never overlaps (#20, 17 November): a stat is never squeezed into its neighbour; between the full form and
+   the compact one, the sub-labels go when the measured stats do not fit ("bare", ScreenUI.FitStats). */
+.bstat { flex-shrink: 0; }
+.bare .bstat-sub { display: none; }
+.bare .bstat { padding-left: 7px; padding-right: 7px; }
+.squeezed .bstat { padding-left: 5px; padding-right: 5px; }
+.squeezed .bstat-value { font-size: 19px; }
+.squeezed .bstat-icon { scale: 0.75 0.75; margin-right: 2px; }
+.squeezed .bstat.first { margin-left: 180px; }
+.squeezed .riv { padding: 2px 2px; }
+.rivals > * { flex-shrink: 0; }
+.narrow .bstat-icon { display: none; }
+.narrow .bstat.first { margin-left: 176px; }
+
+/* Free orders (17 November): the council without writs. The court as a list you build, the gold line, the rulers still deciding. */
+.court-list { margin: 2px 0 4px 0; }
+.court-row { flex-direction: row; align-items: center; min-height: 24px; padding: 1px 4px; border-left-width: 3px; border-left-color: rgb(110, 160, 90); background-color: rgba(201, 164, 90, 0.07); margin-bottom: 2px; }
+.court-n { width: 18px; font-size: 11px; color: rgb(160, 146, 118); }
+.court-what { flex-grow: 1; flex-shrink: 1; font-size: 13px; -unity-font-style: bold; color: rgb(234, 223, 198); white-space: normal; }
+.court-cost { font-size: 12px; color: rgb(232, 112, 96); margin-left: 6px; }
+.court-x { width: 22px; height: 20px; margin-left: 6px; }
+.court-gold { flex-direction: row; align-items: center; margin: 2px 0 6px 0; font-size: 12.5px; }
+.court-gold > Label { margin-left: 5px; color: rgb(222, 206, 170); }
+.court-gold > Label.good { color: rgb(150, 200, 120); }
+.court-gold > Label.bad { color: rgb(232, 112, 96); }
+.deciding { flex-direction: row; align-items: center; margin-right: 8px; flex-shrink: 0; }
+.deciding > .crest { margin-right: 2px; }
+.deciding > Label { margin-left: 4px; font-size: 12px; -unity-font-style: italic; color: rgb(226, 194, 122); }
+.end-turn.waiting { background-color: rgb(60, 46, 26); color: rgb(226, 194, 122); }
+/* the first-turn hints: one line at the top of a panel, until closed once */
+.hint-line { flex-direction: row; align-items: center; margin: 0 0 6px 0; padding: 5px 6px 5px 9px; background-color: rgba(226, 194, 122, 0.14); border-left-width: 3px; border-left-color: rgb(226, 194, 122); flex-shrink: 0; }
+.hint-text { flex-grow: 1; flex-shrink: 1; white-space: normal; font-size: 12.5px; color: rgb(240, 224, 186); }
+.hint-x { width: 22px; height: 20px; margin-left: 6px; flex-shrink: 0; }
+
+/* ==== The turn strip (#20, the lead's turn summary): one row a realm above the chronicle, a card beside it on a click ==== */
+.turn-strip { left: 8px; bottom: 288px; width: 440px; max-height: 150px; padding: 2px 0; }
+.compact .turn-strip { bottom: 236px; width: 380px; }
+.strip-on .realm, .strip-on .side { bottom: 448px; }
+.compact.strip-on .realm, .compact.strip-on .side { bottom: 394px; }
+.turn-strip-body { flex-shrink: 1; }
+.turn-strip-head { font-size: 10px; -unity-font-style: bold; letter-spacing: 2px; color: rgb(160, 146, 118); padding: 2px 8px 1px 8px; }
+.turn-row { flex-direction: row; align-items: center; height: 22px; padding: 0 8px; border-left-width: 3px; border-left-color: rgba(0, 0, 0, 0); }
+.turn-row:hover { background-color: rgba(226, 194, 122, 0.08); }
+.turn-row.mine { background-color: rgba(226, 194, 122, 0.10); border-left-color: rgb(226, 194, 122); }
+.turn-row.open { background-color: rgba(226, 194, 122, 0.2); }
+.turn-row-name { margin-left: 6px; font-size: 12.5px; -unity-font-style: bold; color: rgb(236, 224, 196); flex-shrink: 0; }
+.turn-row-persona { margin-left: 5px; font-size: 11px; -unity-font-style: italic; color: rgb(168, 151, 122); flex-shrink: 1; overflow: hidden; }
+.compact .turn-row-persona { display: none; }
+.turn-row-icons { flex-direction: row; align-items: center; margin-left: auto; padding-left: 6px; flex-shrink: 0; }
+.turn-row-kind { flex-direction: row; align-items: center; margin-left: 5px; }
+.turn-row-count { font-size: 10px; -unity-font-style: bold; color: rgb(236, 224, 196); margin-left: 1px; }
+.turn-row-none { font-size: 11px; -unity-font-style: italic; color: rgb(141, 127, 102); }
+.turn-row-shield { margin-left: 6px; flex-shrink: 0; }
+.turn-card { left: 456px; bottom: 288px; width: 400px; max-height: 60%; background-color: rgb(20, 15, 10); }
+.compact .turn-card { left: 396px; bottom: 236px; width: 360px; }
+.turn-card-body { padding: 6px 10px 8px 10px; flex-shrink: 1; }
+.tc-line { flex-direction: row; align-items: flex-start; padding: 4px 0; border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.12); }
+.tc-col { margin-left: 7px; flex-grow: 1; flex-shrink: 1; }
+.tc-text { font-size: 12.5px; color: rgb(234, 223, 198); }
+.tc-why { width: auto; padding-left: 7px; padding-right: 7px; margin-left: 6px; flex-shrink: 0; }
+.tc-guard { flex-direction: row; align-items: flex-start; margin-top: 3px; padding: 4px 6px; background-color: rgba(226, 194, 122, 0.12); border-left-width: 2px; border-left-color: rgb(226, 194, 122); }
+.tc-guard-text { margin-left: 5px; flex-shrink: 1; font-size: 12px; color: rgb(240, 224, 186); }
+
+/* The watch bar never overlaps either (#20): a country's chip and what is in it never shrink into the next; the
+   measured steps (ScreenUI.FitTopBar) drop the lesser stats, then the names. */
+.nation, .nation > *, .stat > * { flex-shrink: 0; }
+.tight-names .nation-name { display: none; }
+.tight-names .nation { padding-left: 5px; padding-right: 5px; }
+/* the turn strip, 18 November: icons that read, a header that folds */
+.turn-row { height: 26px; }
+.turn-row-kind { margin-left: 7px; }
+.turn-row-count { font-size: 11px; margin-left: 2px; }
+.turn-strip-head { flex-direction: row; align-items: center; }
+.turn-strip-head:hover { color: rgb(236, 224, 196); background-color: rgba(226, 194, 122, 0.08); }
+.turn-strip { max-height: 170px; }
+.strip-on .realm, .strip-on .side { bottom: 468px; }
+.compact.strip-on .realm, .compact.strip-on .side { bottom: 414px; }
+.strip-on.strip-folded .realm, .strip-on.strip-folded .side { bottom: 316px; }
+.compact.strip-on.strip-folded .realm, .compact.strip-on.strip-folded .side { bottom: 264px; }
+
+/* The economy in the council and the province panel (#372, #374) */
+.building-marks Icon, .building-marks .icon { margin-right: 3px; }
+.order-move.econ { height: 36px; flex-direction: column; align-items: flex-start; justify-content: center; padding-top: 2px; padding-bottom: 2px; }
+.order-move.econ > Label { margin: 0; padding: 0; }
+.econ-head { flex-direction: row; align-items: center; }
+.econ-head > .icon { margin-right: 4px; }
+.econ-note { font-size: 10px; color: rgb(190, 176, 146); }
+.order-move.off .econ-note { color: rgb(140, 128, 104); }
+.order-move.current { border-color: rgb(150, 200, 120); }
+.build-choices { margin-top: 6px; }
+.build-choice { flex-direction: row; align-items: center; height: 24px; margin: 0 0 3px 0; padding-left: 7px; padding-right: 7px; font-size: 12px; background-color: rgba(210, 173, 98, 0.1); border-width: 1px; border-color: rgba(201, 164, 90, 0.35); border-radius: 0; color: rgb(234, 223, 198); -unity-text-align: middle-left; }
+.build-choice:hover { border-color: rgb(210, 173, 98); }
+.build-choice > Label { margin: 0; padding: 0; }
+.build-choice > .build-choice-name { flex-grow: 1; flex-shrink: 1; }
+.build-choice > .build-choice-land { color: rgb(170, 158, 130); font-size: 11px; margin-right: 8px; }
+.build-choice-gain { color: rgb(150, 200, 120); -unity-font-style: bold; }

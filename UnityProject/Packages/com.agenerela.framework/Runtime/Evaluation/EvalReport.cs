@@ -164,6 +164,29 @@ namespace Agenerela.Evaluation
                    + $"| {Guard(arm)} | {arm.WarmUpRequests} | {Cell(resident)} |");
             }
 
+            // Only when an arm renamed the free-text field (DR-008), so a default report reads as before.
+            foreach (var arm in c.Arms)
+            {
+                if (arm.StatementFieldName != null && arm.StatementFieldName != DecisionSchema.StatementFieldName)
+                {
+                    Line();
+                    Line($"Arm {Cell(arm.Name)} named the free-text field `{arm.StatementFieldName}`.");
+                }
+
+                // Likewise only when an arm ignored the prompts' history or added examples (#151).
+                if (arm.IgnoreHistory)
+                {
+                    Line();
+                    Line($"Arm {Cell(arm.Name)} ignored each prompt's history: every prompt was asked alone.");
+                }
+
+                if (arm.AddedExamples != null && arm.AddedExamples.Count > 0)
+                {
+                    Line();
+                    Line($"Arm {Cell(arm.Name)} added {arm.AddedExamples.Count} few-shot example(s): {Cell(string.Join("; ", arm.AddedExamples))}.");
+                }
+            }
+
             Line();
             Line("## Outcomes");
             Line();
@@ -188,6 +211,8 @@ namespace Agenerela.Evaluation
                 Line($"| {Cell(check.Scope)} | {check.N} | {Points(check.AccuracyA)} | {Points(check.AccuracyB)} | {Signed(check.DifferencePoints)} "
                    + $"| {Points(check.NoiseFloorPoints)} | {(check.WithinNoise ? "within noise" : "**beyond noise**")} |");
             }
+
+            FieldOrder(Line);
 
             Line();
             Line("## Per category");
@@ -235,6 +260,32 @@ namespace Agenerela.Evaluation
             return md.ToString();
         }
 
+        // Beside the noise check (#180): whether each arm's replies kept the schema's field order, so a
+        // comparison under another order is not read as a model result.
+        private void FieldOrder(Action<string> line)
+        {
+            line("");
+            line("## Field order");
+            line("");
+            line("Whether each reply's fields came in the schema's order, action, then target, then statement. An arm with any out of "
+               + "order measures the order as well as the model.");
+            if (Conditions.AllowOrderLost)
+            {
+                line("");
+                line("**AllowOrderLost was on**: the run started whatever order its warm-ups came in.");
+            }
+
+            line("");
+            line("| | " + string.Join(" | ", Arms.Select(a => Cell(a.Name))) + " |");
+            line("|---|" + string.Concat(Arms.Select(_ => "---:|")));
+            line("| In order | " + string.Join(" | ", Arms.Select(a => a.OrderKept.ToString(CultureInfo.InvariantCulture))) + " |");
+            line("| Out of order | " + string.Join(" | ", Arms.Select(a => a.OrderFlagged ? $"**{a.OrderLost}**" : "0")) + " |");
+            line("| Not checked | " + string.Join(" | ", Arms.Select(a => a.OrderNotChecked.ToString(CultureInfo.InvariantCulture))) + " |");
+            line("| Warm-ups out of order | " + string.Join(" | ", Arms.Select(a =>
+                (Conditions.Arms.FirstOrDefault(c => c.Name == a.Name)?.WarmUpOrderLost ?? 0).ToString(CultureInfo.InvariantCulture))) + " |");
+            line("| | " + string.Join(" | ", Arms.Select(a => a.OrderFlagged ? "**order lost**" : a.OrderKept > 0 ? "order kept" : "not checked")) + " |");
+        }
+
         // The second score: what the reply checks found in the statements, apart from the outcomes.
         private void Replies(Action<string> line)
         {
@@ -263,6 +314,12 @@ namespace Agenerela.Evaluation
                 }
 
                 line($"| {name} | " + string.Join(" | ", Arms.Select(a => a.Replies[flag].ToString(CultureInfo.InvariantCulture))) + " |");
+                if (flag == ReplyFlag.Echo)
+                {
+                    // Told apart (#151, #218): the request's kind of line echoed, or a written statement parroted.
+                    line("| of a stimulus | " + string.Join(" | ", Arms.Select(a => a.Replies.EchoStimulus.ToString(CultureInfo.InvariantCulture))) + " |");
+                    line("| of a statement | " + string.Join(" | ", Arms.Select(a => a.Replies.EchoStatement.ToString(CultureInfo.InvariantCulture))) + " |");
+                }
             }
 
             line("| **Any flag** | " + string.Join(" | ", Arms.Select(a => $"**{a.Replies.Flagged}**")) + " |");
@@ -308,6 +365,12 @@ namespace Agenerela.Evaluation
             if (arm.TargetGroundingThreshold.HasValue && arm.TargetGroundingThreshold.Value != TargetGroundingGuard.DefaultThreshold)
             {
                 changed.Add("threshold " + arm.TargetGroundingThreshold.Value.ToString("0.###", CultureInfo.InvariantCulture));
+            }
+
+            if (arm.TokenProbabilities == false)
+            {
+                // The guard has nothing to read; the target rule was sent instead (#107).
+                changed.Add("no probabilities");
             }
 
             if (arm.TokenAlternatives.HasValue && arm.TokenAlternatives.Value != Providers.OllamaSettings.DefaultTokenAlternatives)

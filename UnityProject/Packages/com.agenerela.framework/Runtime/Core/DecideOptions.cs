@@ -53,6 +53,15 @@ namespace Agenerela
         public bool ExampleStatements = true;
 
         /// <summary>
+        /// Whether this call's examples show their situation: each action's
+        /// <see cref="ActionDefinition.ExampleObservations"/>, rendered above its example as a real
+        /// call's observations are (#216 item 1). Off by default: it changes the examples, and is owed
+        /// an A/B run (#151). With it off, or with no example observations written, the block is
+        /// byte-identical to one built before it existed.
+        /// </summary>
+        public bool ExampleObservations;
+
+        /// <summary>
         /// Whether an example whose action has no registered target among its
         /// <see cref="ActionDefinition.PreferredExampleTargets"/> names the first offered target the
         /// action takes, rather than being left out (#190, Living Vale #20). Off by default: it changes
@@ -88,6 +97,11 @@ namespace Agenerela
         /// (<see cref="PromptOptions.MaxListedTargets"/>). A negative value is a mistake the call
         /// throws for.
         /// </summary>
+        /// <remarks>
+        /// The cut is silent: the prompt says nothing of the targets left out, which are always the
+        /// last in schema order, whatever the game would rather keep (#244 item 5).
+        /// <see cref="DecisionTelemetry.TargetsUnlisted"/> records them.
+        /// </remarks>
         public int MaxListedTargets = PromptOptions.DefaultMaxListedTargets;
 
         /// <summary>
@@ -122,12 +136,83 @@ namespace Agenerela
         public StatementRulesWording StatementRulesWording = StatementRulesWording.YourStatement;
 
         /// <summary>
+        /// Whether this call asks for the free-text <c>statement</c> at all (#266). On by default,
+        /// the request every call sent before this option, byte for byte. False leaves the field out
+        /// of the schema, flat, without targets and paired alike, and out of what the prompt says
+        /// about it, so the reply is <c>action</c> and <c>target</c> alone.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// For a call whose move is all the game needs, such as a marshal ordering ten armies a turn:
+        /// asked to speak on each, a model repeats itself (GreyBoxStrategy, findings 13 November
+        /// 2026). The field order stays <c>action</c>, <c>target</c> (DR-004).
+        /// </para>
+        /// <para>
+        /// Off, the examples show no statement, the identity's <see cref="AgentIdentity.StatementRules"/>
+        /// line is not sent, and the target rule, when it is sent, no longer asks the agent to say
+        /// that a thing is not here. The decision's <see cref="AgentDecision.Statement"/> is empty,
+        /// even if the provider answered with one anyway; memory remembers the reply without it, as
+        /// the schema asked. A decision a guard stops keeps its empty statement:
+        /// <see cref="Agent.RefusalStatement"/> is not asked, and <see cref="AskForRefusalLine"/>
+        /// sends nothing. <see cref="DecisionTelemetry.StatementAsked"/> records the choice. A guard
+        /// of your own that judges the statement should pass a call that asked for none, by
+        /// reading this option on <see cref="GuardInput.Options"/>.
+        /// </para>
+        /// <para>
+        /// It changes what the model reads, so it is a choice per call, never a default, until an
+        /// A/B run says otherwise (#151). Nothing here classifies the call (DR-008).
+        /// </para>
+        /// </remarks>
+        public bool AskForStatement = true;
+
+        /// <summary>
+        /// What this call's free-text field is named: <see cref="DecisionSchema.StatementFieldName"/>,
+        /// <c>statement</c>, by default, and null means the same. Set
+        /// <see cref="DecisionSchema.DialogueFieldName"/> to ask under the prototype's name (DR-008),
+        /// for the A/B run of the rename (#151). Only the name changes: the field still comes after
+        /// <c>action</c>, <c>target</c> and any parameters, and the decision's
+        /// <see cref="AgentDecision.Statement"/> holds what the model wrote in it.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The schema carries the name (<see cref="DecisionSchema.StatementName"/>), so everything
+        /// that reads the field reads it under the name that was sent: the parser, the order check
+        /// (<see cref="DecisionTelemetry.OrderLost"/>), the serializer, the examples
+        /// (<c>dialogue: "…"</c>), the identity's statement rules line ("Your dialogue: "), memory,
+        /// and a refusal line's request (#109). Telemetry, the Decision Log and the evaluation report
+        /// keep their own key, <c>statement</c>, whatever the call named the field.
+        /// </para>
+        /// <para>
+        /// Any lowercase snake_case name other than <c>action</c>, <c>target</c>, <c>also_targets</c>
+        /// and <c>outcome</c>, and none of the offered actions' parameter names; another fails the call
+        /// before anything is sent. The rename is unmeasured (DR-008), so this is a choice per call,
+        /// never a default, until the run says otherwise. A memory snapshot does not record the name:
+        /// a remembered decision imported from one is read as if its statement were
+        /// <c>statement</c>.
+        /// </para>
+        /// </remarks>
+        public string StatementFieldName = DecisionSchema.StatementFieldName;
+
+        /// <summary>
         /// Whether this call's examples show each action's
         /// <see cref="ActionDefinition.CounterExampleStimulus"/>, answered with <c>none</c> (#190). On
         /// by default, which shows only what a developer wrote. False leaves them out of this call, as
         /// the control arm of an A/B run does.
         /// </summary>
         public bool CounterExamples = true;
+
+        /// <summary>
+        /// Few-shot examples this call adds to the ones its actions and profile give (#151); null or
+        /// empty, the default, adds none and leaves the block exactly as it was.
+        /// </summary>
+        /// <remarks>
+        /// Each comes after the actions' own examples and counter-examples, before the idle example,
+        /// and is left out of a call that could not give its answer (<see cref="FewShotExample"/> says
+        /// when). Its statement is shown only when <see cref="ExampleStatements"/> is on and the call
+        /// asks for one. Unmeasured: for an A/B run of one example in one arm, such as a free choice
+        /// answered with an action, never a default until that run says otherwise.
+        /// </remarks>
+        public List<FewShotExample> AddedExamples;
 
         /// <summary>
         /// Whether this call's schema pairs each action with the targets it takes, so the grammar
@@ -160,6 +245,64 @@ namespace Agenerela
         /// not: it stays with the developer's handlers and never reaches the prompt.
         /// </remarks>
         public IList<string> Observations = new List<string>();
+
+        /// <summary>
+        /// Lines the agent may be told, most worth keeping first: sent after <see cref="Observations"/>
+        /// as more of the call's own, unless this call's <see cref="PromptBudget"/> lists
+        /// <see cref="PromptTrim.OptionalObservations"/> and the prompt is over it, when they are left
+        /// out from the last, one at a time, until it fits or none is left (#151). Null or empty by
+        /// default. Copied when the call starts.
+        /// </summary>
+        /// <remarks>
+        /// Sent, they are the call's lines like any other: they go where
+        /// <see cref="ObservationPlacement"/> puts the call's own, count against
+        /// <see cref="Agent.MaxObservations"/> the same way, and the context every guard, source and
+        /// handler reads holds them. One left out is left out of that context too, and recorded in
+        /// <see cref="DecisionTelemetry.ObservationsDropped"/>.
+        /// </remarks>
+        public IList<string> OptionalObservations;
+
+        /// <summary>
+        /// This call's prompt budget (#151): null, the default, uses <see cref="Agent.PromptBudget"/>,
+        /// and <see cref="Agenerela.PromptBudget.None"/> turns the agent's off for this call.
+        /// </summary>
+        /// <remarks>
+        /// With no budget either way the request is byte-identical to one sent before budgets existed,
+        /// and the telemetry still records its estimate. <see cref="Agenerela.PromptBudget"/> says how
+        /// it is measured and what each trim leaves out.
+        /// </remarks>
+        public PromptBudget PromptBudget;
+
+        /// <summary>
+        /// Options to choose among on this call, instead of the agent's registered actions (DR-022,
+        /// #266 item 2). Null by default: the call offers the agent's actions, as every call did before.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// With any choices, the reply's <c>action</c> is one of the available choices' ids, or
+        /// <see cref="ActionRegistry.None"/>, offered last as on every call; the schema has no
+        /// <c>target</c> field, since a choice takes none. The system prompt lists the offered choices
+        /// with their descriptions whatever <see cref="ListActionsAndTargets"/> says, because a model
+        /// served through Ollama never reads the schema. A choice that is not
+        /// <see cref="Choice.Available"/> is left out of both, its reason in
+        /// <see cref="DecisionTelemetry.ChoicesUnavailable"/>; <see cref="DecisionTelemetry.ChoicesOffered"/>
+        /// lists the rest. The agent's identity, observations, memory and guards are those of any
+        /// other call. Its registered actions and targets are not offered, and none of their
+        /// examples is shown; the idle example is.
+        /// </para>
+        /// <para>
+        /// The game acts on the chosen id, <see cref="AgentDecision.ActionId"/>. <see cref="Agent.Execute(DecisionResult)"/>
+        /// runs no handler and no re-check for it, records <see cref="ExecutionStatus.Done"/> and
+        /// settles memory held by <see cref="MemoryCommit.OnExecute"/>. A remembered choice is replayed
+        /// to later calls like any decision.
+        /// </para>
+        /// <para>
+        /// An empty list, a null choice, an id an action could not have (<see cref="ActionDefinition.ValidateId"/>),
+        /// <c>none</c>, an id given twice or an empty description is a mistake the call throws for. The
+        /// list is copied when the call starts. The prompt a choice call sends is new and unmeasured (#151).
+        /// </para>
+        /// </remarks>
+        public IList<Choice> Choices;
 
         /// <summary>
         /// Where this call's own <see cref="Observations"/> go in the request (#151):
@@ -246,6 +389,41 @@ namespace Agenerela
         public bool AskForRefusalLine;
 
         /// <summary>
+        /// The sampling temperature for this call, or null, the default, for the provider's own
+        /// (<see cref="Providers.OllamaSettings.Temperature"/>, 0) (#266 item 7). Sent by Ollama as
+        /// <c>options.temperature</c>. A negative, NaN or infinite value is a mistake the call throws for.
+        /// </summary>
+        /// <remarks>
+        /// For an agent that should vary beside agents that should not, such as a storyteller at 0.8
+        /// beside rulers at 0, on one provider and so one queue (N10), rather than a second provider.
+        /// It changes the reply, so it is the caller's choice per call; every number in the build
+        /// plan's Appendix A was measured at 0. Null sends exactly the request sent before it existed.
+        /// A provider that cannot set a temperature ignores it.
+        /// </remarks>
+        public float? Temperature;
+
+        /// <summary>
+        /// The sampling seed for this call, or null, the default, for none (#266 item 7). Sent by
+        /// Ollama as <c>options.seed</c>, so a call at a temperature above 0 can be repeated. Null
+        /// sends exactly the request sent before it existed.
+        /// </summary>
+        public int? Seed;
+
+        /// <summary>
+        /// The most tokens the reply may run to, or null, the default, for no cap (#244 item 11).
+        /// Sent by Ollama as <c>options.num_predict</c>. Zero or less is a mistake the call throws for.
+        /// </summary>
+        /// <remarks>
+        /// For a reply that runs away: a storyteller call once took 20 s and came back unreadable,
+        /// holding the queue meanwhile. Nothing the model reads changes; a reply cut at the cap is
+        /// not one JSON object, so it ends as a <see cref="PipelineErrorKind.UnreadableReply"/>, as the
+        /// runaway did, only sooner. Set it generously: a decision's reply is a few dozen tokens, a
+        /// storyteller's story a hundred or two, so 400 binds only a runaway. Null sends exactly the
+        /// request sent before it existed.
+        /// </remarks>
+        public int? MaxReplyTokens;
+
+        /// <summary>
         /// The caller's own object for this call, which the framework carries and never reads
         /// (DR-018): the conversation a reply belongs to, a turn number, a request id. Null by
         /// default.
@@ -286,6 +464,9 @@ namespace Agenerela
         {
             var copy = (DecideOptions)MemberwiseClone();
             copy.Observations = Observations == null ? null : new List<string>(Observations);
+            copy.OptionalObservations = OptionalObservations == null ? null : new List<string>(OptionalObservations);
+            copy.Choices = Choices == null ? null : new List<Choice>(Choices);
+            copy.AddedExamples = AddedExamples == null ? null : new List<FewShotExample>(AddedExamples);
             return copy;
         }
     }

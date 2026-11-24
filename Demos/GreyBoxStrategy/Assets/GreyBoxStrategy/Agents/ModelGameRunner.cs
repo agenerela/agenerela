@@ -108,6 +108,13 @@ namespace GreyBoxStrategy
         {
             var rounds = new List<DecisionRound>();
             if (storyteller != null) await storyteller.TellAsync(ct);
+            // S2: the rulers an event asks to choose answer before the upkeep it lands at, in a round of their own.
+            if (game.PendingChoices.Count > 0)
+            {
+                var asks = game.ChoiceRequests();
+                var picks = await AnswerAll(asks, players, seats, $"seed-{game.Seed}-turn-{game.NextTurn}-choices", rounds, ct);
+                game.SubmitChoices(picks);
+            }
             var council = game.BeginTurn();
             var answers = await AnswerAll(council, players, seats, $"seed-{game.Seed}-turn-{game.World.Turn}-council", rounds, ct);
             var envoys = game.SubmitCouncil(answers);
@@ -275,11 +282,11 @@ namespace GreyBoxStrategy
         public string ToCsv()
         {
             var sb = new StringBuilder();
-            sb.AppendLine("seed,turn,country,moment,model_action,model_target,action,target,move,offered,model_answer_legal,target_ignored,latency_s,prompt_tokens,guard,verdict,error,execution,statement");
+            sb.AppendLine("seed,turn,country,moment,model_action,model_target,action,target,move,offered,model_answer_legal,target_ignored,latency_s,prompt_tokens,guard,verdict,error,execution,statement,army,unspoken");
             foreach (var d in Games.SelectMany(g => g.Decisions))
                 sb.AppendLine(string.Join(",", d.Seed, d.Turn, d.Country, d.Moment, d.ModelAction, d.ModelTarget, d.Action, d.Target,
                     d.Move, d.Offered, d.ModelAnswerLegal, d.TargetIgnored, d.LatencySeconds.ToString("0.000", Inv), d.PromptTokens, d.Guard, d.Verdict, d.Error, d.Execution,
-                    Csv(d.Statement)));
+                    Csv(d.Statement), d.Moment == Moment.Army ? d.Round : "", Csv(d.Unspoken)));
             return sb.ToString();
         }
 

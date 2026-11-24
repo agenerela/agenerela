@@ -54,6 +54,12 @@ choice violates game policy. Reserve `Reject` for broken contracts. Keep the rea
 in telemetry and supply a player-facing line through `Agent.RefusalStatement` where needed.
 `ModelDecision` preserves what the model chose; the final `Decision` holds the refusal.
 
+**Keep a fair move whose line is wrong.** When the move is right and only the statement is
+not (a story that invents a battle), return `ReplaceStatement(reason, statement)` rather than
+containing the move or patching the line in the handler (#266 item 4). The move stands, later
+guards still judge it, and `DecisionTelemetry.StatementsReplaced` and the decision log record the
+replacement where every other verdict is recorded.
+
 **Do not treat inspection as execution.** `DecideAsync` may be called without `Execute`, and
 a later guard may stop a decision that an earlier guard passed. A stateful guard must not
 start a cooldown or consume a repetition allowance just because it inspected a candidate.

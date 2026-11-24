@@ -20,7 +20,214 @@ phase table and the open issues, not here.
 
 ## [Unreleased]
 
+### Tools
+
+- **The run queue's tray app** (`tools/live-runs/runner/tray.cmd`): runs the runner on the RTX 5080 machine only while it is open, with a coloured dot for its state, a menu to pause after the block, stop now (the GPU free within seconds; the block replays later), resume and quit, a queue window, and game mode, which stops the block in hand while a game runs and resumes after. The runner gains Stop now, stops when the tray closes (`--parent-pid`), reads a local queue for trials (`--local`), and unloads only its own model.
+- **A run queue on the RTX 5080 machine** (`tools/live-runs/runner/`, designed in its `DESIGN.md`): live runs played on that machine beside Ollama, resumable block by block, with a queue on `test` (`docs/run-requests/QUEUE.json`) that can be paused, reordered and switched. `runq.py` serves the queue, plays one request anywhere, checks a request's `run.json`, and reports status; results come back on branches `runs/<request id>`, the only branches it pushes. A block still running at twice its estimate is killed, the model unloaded, and tried once more. `check` refuses a flag given twice, since the game reads only its first copy. Standard-library tests prove resume after a hard kill, the timeout, pause and switch.
+
 ### Framework
+
+- **DR-024, accepted 17 November:** speech and images as two more provider kinds beside the language model (`ISpeechProvider`, `IImageProvider`), reached only through an agent's statement and through actions. Nothing is built; GreyBoxStrategy builds both in its own code first. Issues #358 and #359.
+
+### Added
+
+- **Painted Realm: free orders' prompt arms and the live-run reports** (#20, #380). Two A/B arms, both off:
+  `CourtTurnFacts` (a court's later request reads what its earlier orders settled) and `CourtNoneWording` (it is asked for
+  "the next order, or none"); a live-check harness; and `tools/live-runs/free-orders/report.py` and
+  `tools/live-runs/economy/report.py`.
+
+- **Painted Realm: the economy on screen** (#20, #379). When `GameRules.Economy` is on: manpower and the tax level on the
+  top bar, a province's yield and buildings, tax levels and buildings as council orders with their cost, gain and the
+  rules' reason when shut (a building picks its province from a list), and buildings and tax changes in the turn strip
+  and chronicle. Off, the screen is unchanged.
+
+- **Painted Realm: the economy's rules after its first game** (#20, #378). With `GameRules.Economy`, a tax change locks the
+  tax orders for `TaxLockTurns` (5) turns, and the court's moves line names each building with its price, places and gain:
+  run request 002's courts toggled taxes 79 times and built twice in 40 turns.
+
+- **Painted Realm: the economy, part 2** (#20). Under `GameRules.Economy`: a market (+5 gold, +8 on a coast), a
+  barracks (+3 manpower a turn, +10 to the cap) and a farm (+3 gold, +5 on plains; three farms steady the realm),
+  each bought at once with gold by a court order on one of our held provinces, one of each a province and one building
+  order a province a turn. The fort stays the fortify order. A court reads its provinces' land, gold and buildings.
+
+- **Painted Realm: the economy, part 1** (#20, the turn rework's second slice). `GameRules.Economy` (off; with free
+  orders only): manpower limits recruiting (2 a turn a province, starting full), provinces yield by terrain (plains,
+  hills and mountains, coast), and taxes are a standing level (low, normal, high) set by a court order in place of
+  `raise_taxes`. A model court is offered the same. Off, nothing a model reads changes.
+
+
+- **Painted Realm: the turn strip** (#20). After each turn, one row a realm above the chronicle: what it did as icons with
+  counts, its persona, and a shield where a guard of the framework stopped one of its decisions; a click opens a card
+  of its decisions with Why? for the inspector and the guard's line in plain words. Fog counts a rival's army orders out
+  of sight without telling them. From the recorded events only. `TurnSummary`, `TurnSummaryTests`.
+- **Painted Realm: the advisor's advice into the free court list, and the first first-turn hint** (#20). With free
+  orders, Take and Take the advice add the advisor's court orders to the court list (each once; one no longer offered
+  is named). The council opens with a one-line hint on what free orders change, closed once for good (`HintsSeen` in
+  the settings). `CourtListTests`.
+- **Painted Realm: Merge and Split on the screen** (#20). With two or more of your armies chosen, the group view
+  offers Merge (and M); with one, Split… (and S) opens a slider at half its soldiers. Each is disabled with the rules'
+  reason when they say no, and the merged or new army is chosen after. A ruler's words no longer fall under the map's
+  mode row and legend.
+
+- **Painted Realm: the council for free orders** (#20), behind `GameRules.FreeOrders`, off by default, with a New game
+  switch (Rules, "Free orders (new turn, in testing)") so the lead can play it. No writs: the court is a list you build,
+  as many orders as gold allows, with each order's cost, gold committed and left, and the reason a button is shut;
+  every army may be ordered; End turn shows the rulers still deciding and waits for them visibly. The top bar drops
+  its writs stat. Two rule queries the screen needed, `WritLegality.CourtOrderCost` and `CourtMovesAfter`, are
+  extracted from the free turn's own code, which now calls them. `CourtList`, `CourtListTests`.
+- **Painted Realm: the first sounds** (#20). A small audio layer: `SoundManager.Play("<cue>")` plays a cue from one
+  table, `SoundCues`, on one of four buses (music, effects, interface, voice). Each bus has its volume in Settings,
+  saved with the rest (Interface is new). Nothing plays while the window has no focus, and headless runs and tests make
+  no sound. Six cues were made on the asset server and picked from three candidates each: click, hover, panel open and
+  close, end turn and turn resolves. They play in the menus, the side panels, End turn and a ruled turn's playback. The
+  rest of the list (battle, siege, treaties, events, victory, the ambient loops and more) is named in the table and
+  silent until its sounds come. Settings has a sound test that plays each cue.
+- **Painted Realm: a start menu** (#20). The game opens on a title screen in its own look: the title and large
+  buttons for the keyboard and the mouse (New game, Watch a game, Load a replay, Settings, Credits, Quit) over the
+  Classic painting, which drifts and changes hands behind a veil. A line at the foot says which model the game will
+  use and whether its server answers, asked through the framework's `IModelLifecycle` without holding the menu up;
+  while another session holds the RTX 5080's lock the server is not asked. New game is a framed window with four
+  groups behind tabs (World, Rivals, Rules, Model). A game played or watched to its end is kept for Load a replay,
+  newest first with the date, the turns and who won. New game has a "Your face" picker from the art pack's four
+  neutral faces, and Settings a Voices section for what is coming. The pause menu gained Quit and asks before a game
+  under way is left. Continue shows only when a saved game exists; nothing writes one yet.
+- **Painted Realm: box selection, right-click orders, edge scrolling** (#20). A left-drag on the map chooses every
+  army of yours inside the box, Shift-click adds or removes one, and the left panel shows the group. A right click on
+  a province orders every chosen army there and names those that cannot go; a left click only selects (it used to
+  order the march, and a left-drag used to pan). The map pans at the window's edges, a setting on by default.
+
+- **Painted Realm: free orders in rule mode, the rulers deciding while you plan** (#20, the turn rework's first
+  slice, second part). With `FreeOrders` on, the model rulers decide from the moment the council opens, and End turn
+  waits only for what is left. Your court gives as many orders as gold allows. `Game.Answer` takes one ruler's
+  answer at a time; `RuleSession.RulersDeciding`, `RulersStillDeciding` and `EndTurnWaitSeconds` are for the screen.
+  Recordings say `freeOrders` and replay so.
+
+- **Painted Realm: free orders, the rules** (#20, the turn rework's first slice). `GameRules.FreeOrders` (off) plays the
+  writs turn without writs: a court gives orders until it answers none (three at most, a realm's own number by
+  override), its gold held back as it goes; an army is asked when woken or after holding three turns unasked. Off, the game and what
+  every model reads are unchanged. The rulers deciding while you plan, and the screen's side, follow.
+
+- **Painted Realm: the first art pack** (#20). Every ruler, general and storyteller event has a picture, made ahead of
+  time on the team's asset server in one style, like an illuminated chronicle, and shipped with the game: 19 ruler
+  portraits (three a persona, four neutral faces you click through for your own realm), 12 generals and 27 event
+  pictures. A realm keeps its face for the whole game and in its replay, and no two realms of one game share a
+  face; the portraits hang in the top bar, the realm and army panels, the inspector, the envoy's card and the end
+  screen. `ArtCatalogue` chooses them, and the event window can ask it for its picture. Flags stay the crests drawn
+  in code: a generated emblem did not read at the top bar's 14 px.
+
+### Changed
+
+- **The evaluation set's guard has no example statements or counter-examples again** (#151). #384 wrote them on `VillageGuard.asset`; on `qwen3.5:4b` the counter-examples cost 10 answers and with the statements 68 of 209 replies copied one, so the default prompt on the set is the one from before #384. The targets' categories stay.
+- **The evaluation set's targets carry categories** (`place`, `creature`), and `VillageGuard.asset`'s `move_to` and `attack_target` take them. Its actions and idle example have example statements, and its actions counter-examples, so the default prompt on the set now shows them (#151, #384).
+- **Painted Realm: the chronicle keeps the fog, and the strip and the watch bar read** (#20). A rival's army order beyond
+  your sight is no longer printed in the chronicle or spoken on the map (it was a leak); the strip counts it. The watch
+  mode's top bar no longer overlaps: its chips keep their width and measured steps drop the lesser stats, then the
+  names. The turn strip's icons are larger and name themselves, the shield gives the guard's reason, the header folds
+  (kept in settings), and opening a card plays the panel cue. `TurnSummaryTests`.
+- **Painted Realm: the advisor advises a free turn as a model court plays one** (#20). With free orders, the advisor
+  gives court orders one at a time on the moves left after the earlier ones, until none or the model seats' pacing
+  cap (`MaxCourtOrders`), then an order for every army a model realm would be asked about. `Advice.Courts` lists them
+  all, and "Take the advice" takes every one. On the writs turn the advisor is unchanged.
+
+- **Painted Realm: the top bar never overlaps, and an opened feed entry shows whole** (#20). At 1707 × 1067 the
+  stats' sub-labels ran into the next stat's icon. Stats no longer shrink into each other; between the full and the
+  compact form the bar takes measured steps (sub-labels go, then smaller numbers and icons, then the icons), decided by
+  the stats' width against the bar's, never by a breakpoint. An entry opened at the feed's foot now scrolls into view
+  whole. `LayoutTests`.
+- **Painted Realm: the storyteller's events and tales are impossible to miss** (#20). Every event now opens a window in
+  the middle of the screen, in the style of a grand strategy game's: the art pack's picture, the title, the story, each
+  realm struck with its effect as icons, and So be it. Every event, tales too, stops the turn until dismissed, ruling or
+  watching. A rival's event under fog shows the news, not its cost. The feed marks the storyteller's entries in gilt. A
+  new setting, Event windows: all (each stops the turn), mine only, off. Slots for choice buttons and a speaker button
+  are marked, not built. `StoryCards`, `StoryCardsTests`.
+- **Painted Realm: nothing is cut off at the bottom** (#20). An audit at six game-view sizes, 1280 × 720 to 2560 × 1440,
+  found windows opening over the top bar, the tales panel over the outliner, the diplomacy table running off small
+  screens and lists ending on half a row with nothing to say more lay below. Windows now open under the top bar, fit
+  the room below them and scroll inside; every scrolling list fades at its foot while more lies below; every panel
+  keeps its bottom padding; the tales take the outliner's place; the advisor's counsel folds after three lines behind
+  **more**. `ScreenUI.Layout.cs`, `LayoutTests`.
+- **Painted Realm: the mouse wheel zooms in clear steps** (#20). A notch zoomed 0.15%: the code read the wheel in
+  Windows' units (120 a notch) while the Input System reports 1 a notch by default. A notch is now a 20% step toward
+  the cursor, eased over about a tenth of a second, and either unit reads as the same notch; a trackpad's small
+  readings are fractions of one.
+
+- **Painted Realm: the senior general leads a merged army, and a split-off army gets a general** (#20). A merge now
+  keeps the army of the general longest in command (`General.CommandSince`; ties to the larger army, then the lower
+  id), not the largest, so splitting off the majority and merging back never rerolls a general. A split-off army is
+  given a general at once, as a newly raised army is. Human orders only; nothing a model reads changes.
+
+- **Painted Realm: the inspector window and the council's foot** (#20). With the decision inspector open, a click
+  on the map outside it only closes it, as Esc does, so dismissing it never also orders a march. End turn stays
+  inside the council's frame at every size: the council's foot no longer shrinks when the panel reaches its height.
+  A ruler's words never fall under the chronicle, the council or a side panel, nor off the bottom of the screen.
+  The Model tab's timing bar is full height, and the advisor's buttons clear the council's scrollbar.
+
+- **Painted Realm: an army sees the forts where it stands** (#20). Under the screen's fog, a province beyond your
+  borders showed its garrison and forts as "not known" even with your army besieging it or passing through.
+  `Fog.KnowsProvince` now knows a province where one of your armies stands. The rulers' facts never hid forts.
+
+### Added
+
+- **Painted Realm: merging and splitting armies, the rules** (#20). The human player's council can merge two or more
+  armies standing together into the largest (types add up, stores the soldier-weighted average, the largest's
+  general leads and the others are dismissed) and split an army in two (types in proportion, the same stores, no
+  general for the new one), each at once and for no writ. `RuleSession.CanMerge`, `Merge`, `CanSplit` and `Split`
+  are the screen's calls; the buttons follow. Recorded and replayed; older recordings replay as before. No model is
+  offered either, and a test pins that every request a model reads is byte for byte as before.
+- **Painted Realm: research on how a turn is played** (#20). `docs/demos/painted-realm-turn-flow.md` describes a Rule
+  mode turn step by step from the code, a real model game's log and games played for it, with timings (about 5 s of
+  waiting after End turn, about 37 s of playback at 1×, of which about 5 s is your own realm); ranks what is likely
+  to feel strange; and proposes three options with timelines, from the same turn told in order to a clock with
+  pause. No game code changed.
+
+- **Land traditions measured on generated worlds** (#20). Twelve paired games on `qwen3.5:4b`: a court buys 8 points
+  more of its land's type with the rule on ([+2.4, +13.4]), as on Classic, and the counter 8 points less often
+  ([−13.5, −3.5]), which Classic did not show (findings, 16 November). `LandTraditions` stays off.
+
+- **GreyBoxStrategy's storyteller can choose an event's strength, in two forms, for DR-023's A/B** (#20).
+  `GameRules.EventStrength` (off by default; the default game is unchanged) lets four events strike `minor`
+  (about half) or `major` (about one and a half times), never two majors in a row. `+strength-bundled` registers
+  two actions an event (`windfall_major`); `+strength-param` one action with a `strength` parameter and a
+  per-value check, through the framework's public API. Measured on `qwen3.5:4b`, 20 games an arm: both forms
+  equally legal, neither ties strength to the game's state, the parameter form puts its majors on blows rather
+  than gifts and costs 0.09 s and 5.5 completion tokens more a decision (findings, 16 November). Arms only;
+  DR-023 records that a per-value check cannot see the target.
+
+- **Painted Realm UI, variant B: the inspector and the council** (#20). The decision inspector is a framed window in
+  the middle of the screen with five tabs: Answer, Offered, Told, Guards, Model. A click on a ruler's words opens
+  their decision there, and the words keep clear of the window. The council's writs are seals, and End turn is
+  larger.
+
+- **Painted Realm UI, variant B: the panels** (#20). The province, army and realm views on the left share one kit: a
+  header band with crest and portrait frame, tabs with icons, and rows of icon, bar or pips, and value, with the
+  explaining sentence as a tooltip. Fog decides what a rival's rows show. An icon's own tint now wins over the
+  stylesheet's colour.
+
+- **Painted Realm UI, variant B: the layout** (#20), the lead's choice of 16 November. The top bar is taller, with
+  the realm's banner hanging below it, an empty portrait frame, and each number with a large icon and a breakdown in
+  its tooltip. An outliner top right lists your armies (stores as loaves), sieges and wars, and opens the ledgers. The
+  left side stays empty until a province, an army, a rival or a ledger opens there. The chronicle is a one-line feed
+  bottom left, with All, Me, War and Land, each entry opening in place. Panels are framed; a click orders a chosen
+  army's march, I opens the decisions. Diplomacy no longer fails to open during a rule game's council.
+
+- **Painted Realm: one fog rounding for the court and the screen** (#20). `ArmySight.Short` gives a rival army's
+  short label, "~40", and "<5" under 5 soldiers, so an army that exists never reads "~0"; it rounds halves up, as
+  the rulers' facts (`ArmySight.About`) always have. The map piece still uses its own rounding until the screen
+  calls it.
+
+### Fixed
+
+- **Painted Realm: a court is never offered an order it already gave this turn** (#20). With free orders, a court's
+  later request still listed `raise_taxes` among its actions after taxes were raised, though the rules no longer
+  offered it, and `qwen3.5:4b` took it: 72 of 1,190 answers in the first live check were held as not offered. A court
+  action is now offered only when the request offers it. On the writs turn the two lists always agree, so nothing a
+  model reads there changes (the request hash test holds).
+
+## [0.4.0-preview.2] - 2026-11-16
+
+### Framework
+
+- The second preview of 0.4.0, cut while Phase 4 (Evaluation harness) is under way, due 7 December. Notes for a developer are in `docs/releases/v0.4.0-preview.2.md`; the package's section of the same name has the API.
 
 - **Phase 3 (Validation pipeline) closed** on 3 November when its gate (#110) passed: the
   guard pipeline and `SchemaLegalityGuard` (#106), target grounding (#105), its one-line
@@ -28,6 +235,369 @@ phase table and the open issues, not here.
   an agent from saying what it will not do. See the package's `[Unreleased]` section.
 
 ### Added
+
+- **Painted Realm R3: the land traditions live A/B** (#20), 12 pairs on Classic with `qwen3.5:4b`: with
+  `LandTraditions` on, a seat buys 7 points more of the type its starting land favours (paired 95% +3 to +12), the
+  persona still explains most of which types it buys, and nothing else moved outside noise. The rule stays off.
+
+- **Painted Realm R3: land traditions** (#20), behind `GameRules.LandTraditions`, off. The share of a realm's held
+  land that leans to a type (hills and mountains pikes, plains riders, forest bows) makes that type up to 15%
+  stronger in battle, and the court reads it in one line. Scripted only so far.
+
+- **Painted Realm: marches as coloured arrows** (#20). A march under way is a solid arrow in its owner's colour along
+  its path; one ordered this council is the same arrow, pale. Both read the same at every zoom.
+
+- **Painted Realm R3: hunger first** (#20), behind `GameRules.HungerFirst`, off. With supply on, a starving army
+  and then one about to run out are asked first within the writs, and read what hunger costs and the nearest land
+  that feeds them. Scripted only so far.
+
+- **Painted Realm: give new orders to any army** (#20). On #327's recall, a holding or marching army's row offers new
+  orders for a writ, the council counts the army writs left and shows orders the rules did not take, and New game's
+  section hints are in a player's words.
+
+- **Painted Realm R3: every army rule on, run again with the hunger wake and the siege floor** (#20). Sieges now
+  last and are relieved; armies woken as they starve mostly attack on rather than go home, and half the starving
+  army-turns get no writ. No default changes. Results in `findings.md`, 15 November.
+
+- **Painted Realm: you may order any of your armies in the council, woken or not** (#20). `Game.Recall` asks the
+  rules for a holding army's orders ("recalled by the court", for a writ); the rule game recalls every army your
+  plan orders, refuses a plan with more army orders than the writs with the reason, and says any order not taken in
+  `RuleSession.PlanRefusals`. Model rulers never recall, and every recording replays as before.
+
+- **Painted Realm R3: the counters line, on whenever unit types are** (#20). The court's facts say what beats what
+  and what each rival is mostly, and a march names the largest type it would meet. Twelve pairs on `qwen3.5:4b`:
+  recruits that counter the type seen 20% → 67%, no illegal answers, nothing else measured worse beyond noise; the
+  personas no longer differ in which types they buy. `GameRules.CountersLine`, on by default; unit types stay off.
+  Results in `findings.md`, 15 November.
+
+- **Painted Realm rule mode in plain words** (#20). The war score has one sign and a label; every number on the bar and
+  army rows has a unit; the writs counter says "used"; the council warns before the treasury runs dry and says when no
+  army awaits orders; a planned march is drawn at once; a holding army is not offered as orderable; menus lose ids,
+  model names and "R3"; battle reports read each side's mix and commander from the rules' record.
+
+- **Painted Realm rule mode, ready for a playtest with R3 on** (#20). Fixes from a pass with all four R3 settings on:
+  typed recruits read as names in the chronicle, an army's row says why it waits and when it besieges, the siege tag
+  shows beyond your borders, the battle report and the end card lose a stray sentence and comma.
+
+- **Painted Realm R3: a fort holds the road, and a siege stops income** (#20), each behind its own switch, off by
+  default (`GameRules.FortsHoldTheRoad`, `SiegeStopsIncome`). A march stops beside an enemy fort no one besieges,
+  and from there may only besiege it or go back; a besieged province gives its owner nothing. A battle record now
+  keeps each side's unit mix and commander as the battle began, for the replay. Scripted only.
+
+- **Painted Realm R3: every army rule on at once, a first live look** (#20). Six pairs on `qwen3.5:4b`: no illegal
+  answers and no extra model time, more battles and fewer treaties; every siege but one ended the turn it began, and
+  armies left holding abroad starved where they stood, a rule bug fixed in its own PR. No default changes. Results in
+  `findings.md`, 15 November.
+
+- **Painted Realm replay: the council as the live game had it** (#20). `ArmySnapshot` now carries each army's mix,
+  general, traits and stores, and `TurnSnapshot` each siege, so a replay's council shows the same pieces, generals,
+  stores and siege tags as the live game did, and the turn's battle reports start from the exact mixes.
+
+- **Painted Realm: a stalemate counter that reads war score and land by treaty** (#20), behind
+  `GameRules.StalemateByWarScore`, off by default. Land taken or freed by force no longer restarts it; a treaty,
+  free land, a broken realm, a new war or a 10-point swing does. Scripted only; no live run yet.
+
+- **Painted Realm R3 sieges and supply on screen** (#20). New game has "Sieges" and "Supply" switches, off by
+  default. A besieged province carries "Siege 2 of 4" beside its forts; your army rows show their stores as pips
+  and a red "No stores" when there are none; the chronicle tells sieges begun, broken and ended, and hunger. A
+  replay with sieges on no longer stops at the first siege that ends. With both off the screen is unchanged.
+
+- **Painted Realm R3 armies on screen** (#20). New game has "Unit types" and "Generals" switches, off by default,
+  for every way of playing the writs turn. With them on, pieces show their largest type, your army rows and
+  tooltips the mix, a rival's piece only what it mostly is; the council offers the three recruit orders with cost
+  and counter; army rows name their general; the chronicle tells a general's new trait or fall; the battle report
+  shows both mixes and the counters' and generals' effect in words. With both off the screen is unchanged.
+
+- **Painted Realm R3: unit types, a first live look** (#20). Six pairs on `qwen3.5:4b`: no illegal answers and no
+  extra model time with unit types on, but the courts recruit mostly pikes and counter the type they see only 22% of
+  the time. `UnitTypes` stays off. Results in `findings.md`, 14 November.
+
+- **Painted Realm R3, part six: what a country sees of a rival army** (#20), behind `GameRules.Fog`, off by
+  default. `ArmySight` holds the rules: rival armies near our land and armies show position, general and size
+  rounded to 10, nothing in forest but presence, their mix only to our riders. The rulers' facts follow it;
+  scripted players do not yet.
+
+- **Painted Realm R3, part five: supply, model B** (#20), behind `GameRules.Supply`, off by default. Armies
+  carry 0 to 4 turns of stores, refilled at home and eaten abroad, twice as fast in poor land; with none they
+  lose 10% a turn and fight 15% weaker; a forager eats half. The rulers read each army's stores; scripted
+  armies go home to refill. The rules page records the three models considered and why B.
+
+- **Painted Realm pacing settings, measured live** (#20). On two pairs of uncapped `qwen3.5:4b` games, ownership
+  after 8 turns with the break rule made games longer (249 turns against 101): each province that passes resets
+  the stalemate counter. Both stay off; the rules v2 page lists what to try instead. Results in `findings.md`.
+
+- **Painted Realm R3, part four: sieges at forts** (#20), behind `GameRules.Sieges`, off by default. Enemy
+  land with forts is besieged over 2 turns a fort (less with a siegewright or three to one, a 10% breach a turn)
+  and occupied one fort fewer; the siege breaks when the besiegers leave or lose. Both sides read it.
+
+- **Painted Realm R3, part three: generals with traits** (#20), behind `GameRules.Generals`, off by default.
+  Every army has a general with one of seven traits (bold, wary, horse-born, bowmaster, swift, stubborn,
+  inspiring); a side's commander counts in strength, losses and marches, wins a second trait after three
+  victories, and falls 5% of the time in a lost battle. The report and the rulers' facts name them.
+
+- **Painted Realm R3, part two: the model rulers recruit by type and read the mix** (#20), only with
+  `GameRules.UnitTypes`, still off. The court registers `recruit_pikes`, `recruit_riders` and `recruit_bows`
+  in place of `recruit`; the facts give each army's mix and what a rival's armies mostly are. Off, every prompt
+  is as before. Headless table runs take `-strategyRules "Field=value;..."` for rule settings.
+
+- **Painted Realm: the storyteller's history check is a guard** (#20). With `+history`, a story that tells
+  of a fight that never happened is replaced through `GuardVerdict.ReplaceStatement` (#292) before the event
+  is queued, and the event stands. `Game.HistoryVerdict` runs the event's own checks in the same order, so
+  the verdicts, stories and the record of the model's words are the same as before, which a test checks
+  against `+history-in-game` (the check at the queue, kept for comparison).
+
+- **Painted Realm: the storyteller caps its replies, and dilemmas can come with the call** (#20).
+  - The storyteller's event and title calls send `MaxReplyTokens` 400 (#244 item 11), which binds only a
+    runaway; `+no-reply-cap` sends none, as before.
+  - `+call-choices` gives a dilemma's options with the call as `DecideOptions.Choices` (#293, DR-022) in place
+    of registering them as the seat's actions. It is an arm, unmeasured, until its A/B; the default is unchanged.
+
+- **Painted Realm: the end of a game, and a first look** (#20). An end screen in every way of playing: who won
+  and how, provinces per realm over the turns, wars and treaties, each ruler in its own words, and "watch the
+  replay" or "new game". A first-turn help layer for rule mode, six notes at most, which opens once and stays in
+  the pause menu.
+
+- **Painted Realm: the advisor in rule mode** (#20). A model on your own seat proposes each writs turn's plan in
+  the council: its counsel, each order with Take and Why, and "Take the advice". It is on by default with model
+  rulers and can be switched in New game and the pause menu. It is asked alongside the rulers, its orders always
+  map to legal moves, and only advice you take is recorded as yours.
+
+- **Painted Realm R3, part one: pikes, riders and bows with the counter rule** (#20), behind
+  `GameRules.UnitTypes`, off by default.
+  - Armies keep soldiers by type; losses keep the mix; `Army.Soldiers` stays the total.
+  - `recruit_pikes`, `recruit_riders` and `recruit_bows` replace `recruit`; riders cost twice a pike to raise and keep.
+  - Battles weigh each type by the counter rule, and the report names the largest effect.
+  - Scripted players recruit what counters their strongest rival. Scripted numbers in `findings.md`, 14 November.
+
+- **Painted Realm: two pacing settings for the writs turn, both off** (#20).
+  `GameRules.OccupationBecomesOwnership` makes a province held N turns the occupier's, and
+  `GameRules.BreakWhenAllOccupied` breaks a fully occupied realm with armies left. Scripted they leave the pace
+  as it was; the models' stall waits for a live run. Numbers in `findings.md`, 14 November.
+
+- **`tools/benchmarks/closed_choice_grammar_probe.py`** (#266 item 2): asks Ollama, with no framework code,
+  whether its grammar keeps an enum field beside `action` and `target` and an array of target ids with
+  `minItems`/`maxItems`, and in which key order. First run on `qwen3.5:4b`, RTX 5080: every constraint held on
+  `/api/chat`, and a strength placed after `statement` was written into the statement 3 times in 6. The
+  gateway refuses `/v1/chat/completions`, so that half is unmeasured. Results in `findings.md`, 14 November.
+- **Painted Realm: silent armies, an arm for the writs turn** (#20). `+silent-armies` asks the marshal's army
+  orders without a statement (`DecideOptions.AskForStatement`, #266). On `qwen3.5:4b`, 15 games an arm, it saves
+  0.59 s a turn with repeats and legality unchanged, but treaties fell from 4.7 to 3.5 a game within noise, so
+  `default` keeps every line. Results in `findings.md`, 14 November.
+
+- **Painted Realm: detail up close, fields that show, rule mode on a big map** (#20).
+  - Zoomed in, the visible part of the chart is drawn again at screen scale (trees, fields, settlements, roads),
+    not magnified.
+  - Farms and settlements grow visibly with development.
+  - Rule mode has a "next army awaiting orders" jump, and markers at the map's edge for off-screen battles and
+    your capital.
+  - The province panel speaks to a player.
+  - New game: "Your writs: unlimited" for rule mode, off by default; the council reads "no limit".
+
+- **Painted Realm: a ruler's own last lines, the writs turn's default, and a country's own writ count** (#20).
+  - Two voice arms for the writs turn: `+one-voice` (only the first court decision of a turn speaks) and
+    `+own-lines` (a decision that speaks reads the ruler's last four lines and is asked to say something new).
+  - Measured on `qwen3.5:4b`, 15 games an arm: own lines cut word-for-word repeats from 36% to 22% with
+    legality, model time and persona unchanged, so the demo's `default` has it now (`+no-own-lines` for the
+    old one). One voice made repeats worse and halved the treaties. Results in `findings.md`, 13–14 November.
+  - `GameRules.WritsOverride` gives one country its own writs a turn, or `UnlimitedWrits`, for the person's
+    unlimited writs on screen.
+  - `model.csv` gains an `unspoken` column: a line written where none was asked.
+  - With own lines on, the rulers keep 13 observation lines, not 12, so the extra line no longer pushes out
+    "Ordered this turn" (cut from 43% of later orders in the arm as measured) or an army's moves line.
+
+- **Painted Realm: a sharp chart and names that never collide** (#20).
+  - Borders and occupation hatching stay sharp at any zoom: the shader takes each pixel's province from the
+    world's cell grid, by the CPU raster's own vote.
+  - Pieces, march tags, realm, region, capital and province names are kept clear of each other at every zoom.
+  - Realm names appear zoomed out.
+  - The province panel shows the land: terrain, region, settlement and development, population, goods, and a
+    special place's story.
+  - Panels are opaque.
+
+- **Painted Realm: the writs turn on generated worlds** (#20). New game plays a generated world of any size
+  and number of countries in all three ways: a scripted replay, model rulers live, or ruling a realm.
+  - The camera zooms and pans comfortably on any size, and opens on your realm.
+  - Pieces scale with how close provinces stand on screen.
+  - Long realm lists and the chronicle fold.
+  - A huge world plays at about 6 ms a frame.
+  - The lit destinations no longer fill solid red on the chart's west side.
+
+- **Painted Realm: the writs turn polished** (#20).
+  - The council's buttons read as offered, chosen or not offered, with the reason.
+  - The chronicle and the panel use names, never ids.
+  - A ruler's orders of a turn are one entry with its line once.
+  - Refused destinations are the nearest three.
+  - Pieces in neighbouring provinces no longer overlap, and a treaty's seal shows above them.
+
+- **Painted Realm rules v2, R1c: the writs turn measured live on `qwen3.5:4b`** (#20). Tables can play the
+  writs turn (`-strategyTurn writs`, with `-strategyCap`, `-strategyMap`, `-strategyMapSeed` and
+  `-strategyVictory`), and a writs run writes `writs-turns.csv`. 20 writs games on Classic against 20 one-move
+  games, then 5 uncapped and 5 on a medium world: 7.1 s of model time a turn, no capped game finished, armies
+  used, treaties made, personas distinct, statements repeated far more. Results in `findings.md`, 13 November.
+
+- **Painted Realm: rule mode on the writs turn** (#20). You rule one country against four model rulers
+  with a plan a turn: a court order, an order for each army with a writ, a second court order.
+  - Your writs are counted, and armies waiting for want of a writ are marked.
+  - An army chosen on the map lights its legal destinations; the others say why not.
+  - A treaty term put to you is a card with the war score.
+  - Rival armies show only where your court sees.
+  - The storyteller plays the writs turn.
+  - A ruler's line said again shows once.
+
+- **Painted Realm: model rulers play the writs turn live on screen** (#20). Each country has a court
+  and a marshal with its persona, on the RTX 5080.
+  - Every decision is recorded as the game asked it, with the army a marshal's order is for.
+  - The inspector opens each decision with its prompt and facts.
+  - The RTX 5080's lock is not taken while its pause file is set.
+  - Wars with a country out of the game no longer show.
+  - Province names stay above the army plates.
+
+- **Painted Realm: the writs turn on screen, watch and replay** (#20). New game offers the writs
+  turn with stand-in rulers, on Classic or a generated world.
+  - Every army is a piece on the map at all times, with its march line and the turns left, and it
+    steps when the turn's armies march.
+  - A battle clashes where it happens; its report card shows each term from the rules' record.
+  - Occupation is the occupier's inked hatching over the owner's wash, with a pennant. A treaty
+    turns it into the new owner's wash under a seal.
+  - War scores show beside each war.
+  - The dev menu can raise, order and fight armies, occupy and free land, set a war score and land a
+    treaty. A generated chart is drawn again when the window's size needs it.
+
+- **Painted Realm: the drawn chart shows development, rivers, roads and bridges, drawn on the GPU** (#20).
+  - Each province's development decides its settlement (hamlet to large town, a capital walled, forts
+    as towers) and how much farmland lies around it.
+  - Forests and mountains are massed, plains carry trees and hedgerows, scenery islands are drawn as
+    land the rules never see, and special places have their own marks.
+  - Rivers and roads come from the generator's `MapGeometry`, with a bridge at every crossing.
+  - The ground is a shader and the marks one atlas, so a medium world at 3840 × 2400 draws in about
+    0.1 s instead of 7.3 s; a loading card shows the generator's progress.
+  - An open side panel no longer covers the council panel's buttons.
+
+- **Painted Realm rules v2, R1b's second part: model rulers for the writs turn** (#20). `WritRuler` is two
+  framework agents with one persona: a court for court orders, treaties and dilemmas, and a marshal for
+  army orders, the army carried in the decision's correlation. Each keeps a memory of four decisions.
+  They read local facts (at most eight lines on any map, rivals limited to those at war or bordering),
+  a moves line of what is offered, and the orders already given this turn. A fake model playing like
+  the script plays exactly the scripted game through them. A `domination_75` victory preset sits beside
+  conquest, which stays the default until the lead chooses.
+- **Painted Realm: the storyteller on screen** (#20). New game → Storyteller: off, or one of its
+  five presets, for watch live and rule games.
+  - Its events land as the chronicler's banner where they strike and as lines in the chronicle,
+    with its own crest.
+  - Each opens into an event card: who it struck and how, what each chose and said, and its tale.
+    From the card, the storyteller's decision and the title call open in the inspector.
+  - In rule mode, a dilemma that reaches you stops the turn behind a choice card that only a choice
+    closes.
+  - A Tales panel follows each tale from start to end.
+  - The dev menu fires any event, dilemma or tale.
+  - The replay rebuilds a storyteller game exactly from its recording.
+- **Painted Realm rules v2, R1b's first part: the writs turn's pace, battle reports, armies in snapshots**
+  (#20). A Classic game with scripted rulers now takes 78 turns, down from 123; a medium world takes
+  about 180 (median 152), down from 226. The levers: two march steps a turn over open ground, three writs, a weaker militia,
+  shorter truces and stalemates, demands enforced at 80, and scripted rulers who fight wars out. Every
+  battle is recorded with its terms and a sentence on why it went as it did (`TurnReport.BattleRecords`).
+  Each turn's snapshot holds the armies and occupations, so any past turn can be shown.
+- **Painted Realm's generated worlds look like land, not figures** (#20). Coasts have bays and
+  headlands, inland seas are irregular, lobes are uneven, and no land meets the frame. Small scenery
+  islands lie offshore. When a world's starts are unfair, the generator searches again on the same
+  geometry before making a new one. Worlds now have rivers, roads with bridges, and a development
+  value per province, all drawn on the contact sheet; no rule reads them yet. The generator reports its
+  progress and stops at a time budget with the best world found. Every seed now makes a different
+  world than before.
+- **Painted Realm rules v2, slice R1a: the writs turn and armies as pieces, headless** (#20). The turn
+  of rules v2 is a setting, `GameSetup.Writs`, beside today's one-move game, which stays the default
+  and unchanged. Each ruler has a few writs a turn: a court order, orders for its armies awaiting them,
+  and a second court order. Armies stand on the map and march with terrain costs, all stepping at
+  once. They fight with today's battle formula, retreat or are routed, occupy enemy land and take
+  neutral land. Wars end in treaties: white peace, demanding what is occupied, ceding it. A demand at
+  a war score of 90 is enforced, and broken realms fall to their occupiers. Conquest has a stalemate
+  ending. The scripted and random players play it. Model rulers come in R1b.
+- **Painted Realm: a generated world drawn as a sea chart by code** (#20, the screen half of R2).
+  New game → Map: Generated, or the dev menu's `generated` command. Scripted rulers play a world
+  of any size and shape, and the screen replays it over a chart drawn at the screen's size: sea,
+  coast, terrain glyphs, ridges and passes, settlements, ports, special places, a compass rose, and
+  names placed to fit. The owner wash, the borders and the capture work as on the Classic board,
+  with ten owner colours checked to stay apart. The Classic board and its painting are unchanged.
+- **Painted Realm rules v2, slice R2: the map generator, headless** (#20). GreyBoxStrategy generates
+  worlds from a seed: small to huge (30 to 150 provinces), five land shapes, terrain, coasts and
+  ports, ridges with passes, regions, fair capitals and starting realms, goods, population, names from
+  tables and special places. Each world is checked for connectivity, shape and fairness, and made again
+  from the next sub-seed when it fails. A world comes out the same on every machine, and its geometry
+  is plain data for the screen to draw. The world-maker agent, the Cartographer and model-written names
+  plug in through checked hooks. Today's rules play on any generated world headless.
+  `ArtSource/world_sheet.py` draws exported worlds on one sheet.
+- **The RTX 5080 gateway passes `/v1/systemone`**, the route Ollama (0.35 and later) serves decision
+  models on, and `ollama_remote.py systemone <model>` checks it. The lead applies the Caddyfile on the
+  machine with the steps in `docs/llm-wiki/non-llm-deciders.md`, "What to change on the RTX 5080 for
+  decision models". No other `/v1` route opens.
+- **Decision models researched** (Gemini Decision 1, Jev and the open-weight ones in the Ollama
+  library), with their question format measured on `qwen3.5:4b`: 272/389 and 62/76 against 330 and 70,
+  3.2 times faster. Both named models are hosted only. The open ones ran on `/v1/systemone` once
+  the lead opened it: `tev1:4b` 248/389, `strands-decider:2b` 231, `d1:3b` 228, all beyond noise below
+  the 4B, refusing commands. No decision-model provider recommended. They lead the page below.
+- **Non-generative deciders researched and measured against `qwen3.5:4b`**, on the RTX 5080 with the
+  control re-run in the same session: a new wiki page, `docs/llm-wiki/non-llm-deciders.md`, with a
+  survey and the results, an entry in `findings.md` and a row in `live-runs.md`. The probe is
+  `tools/benchmarks/non_llm_decider_probe.py`; its reference and tuning examples, written new and
+  checked against both sets, are in `non_llm_examples.json`.
+  - The best engine, `bge-m3` embeddings with a trained head, scores 271/389 and 63/76 against the
+    4B's 330 and 70, beyond noise on both sets.
+  - A cascade that lets the engine answer only when it is confident kept the 4B's score within noise
+    while answering 28% of interim decisions itself: the one idea left to A/B.
+  - No reranker runs on Ollama 0.40.14.
+  - Five small models pulled onto the server: three embedders and two reranker GGUFs. No framework
+    code changed.
+
+- **Painted Realm rules v2, slice R0: settings and the map as data** (#20). GreyBoxStrategy's map is
+  now data (`WorldMap`, JSON, with terrain, coasts, ports and population no rule reads yet), and
+  today's board is the Classic preset, loaded from it. `GameSetup` holds a new game's settings (seed,
+  map, countries, victory mode, storyteller preset, advisor) with a saved form that refuses invalid
+  settings with a message. Conquest and turn-limit victory modes join today's domination, which stays
+  the default until R1. A test pins today's 200-game series byte for byte. `GreyBoxStrategy.Sim` now
+  references Newtonsoft JSON.
+- **Painted Realm rules v2: the design for the deeper game** (#20),
+  `docs/demos/painted-realm-rules-v2.md`. Design only, no game code. It records the lead's
+  34 answers of 12 November and his answers to its own eight questions, and settles, for build sessions to take one slice at a time:
+  - **The turn:** writs (2 to 5 orders a turn), standing orders, and a model ruler asked only about
+    the court and the armies awaiting orders. About 7 s of model time a turn for six `qwen3.5:4b`
+    rulers, 14 s at worst; five ways compared.
+  - **A seeded map generator** with fairness and connectivity checks, special places named and told
+    by a model, and a sea chart drawn by code at any resolution. Today's board stays as the Classic
+    preset.
+  - **Armies:** three unit types with counters, generals with traits, sieges, supply as stores, fog
+    of war, and a survey of what gives army play depth.
+  - **The rest:** population, food, goods and buildings shown as development; agreements and opinions
+    with reasons; conquest with no turn limit; the settings and presets; what each decision asks of
+    the models and the framework; the A/B each slice owes.
+  - **Conquest by treaty:** armies occupy land, shown as hatching, and a peace treaty transfers it.
+    The treaty is a closed set of terms bounded by a war score, answered by the other ruler.
+  - **Later stages:** orders without a cap (automation, groups, a decision budget), a world shaped
+    by a model through the framework, and names and histories written by a model, each with its
+    A/B. Research on making the unit roster our own.
+  - **The build:** eleven slices with issue-ready checklists. The lead's answers to the first
+    draft's eight questions are recorded beside his other 12 November answers.
+
+- **Painted Realm: a dev menu** (#20). F1 opens it, in the editor and in development builds.
+  - Play with stand-in rulers and no card. Jump, step, autoplay and set any speed.
+  - Change gold, soldiers, stability, forts, owners, wars and eliminations, and fire any of the
+    storyteller's event templates. Edits are recorded and replayed at the same turn.
+  - Pretend the card is held, the server is down, a round times out, or a reply is unreadable,
+    without touching the real lock.
+  - Readouts, screenshots, save and load a recording, and window sizes.
+  - Everything runs through `DevTools.Run("…")` too. A game it touches is marked DEV on screen
+    and in its recording.
+
+- **Painted Realm: a main menu, New game, Settings and a pause menu** (#20).
+  - The game opens on a main menu: New game, Replay, Settings, Quit.
+  - New game chooses watch or rule, your country, the model and the seed. It lists the map,
+    persona mix, storyteller and advisor as coming.
+  - Settings: display mode, resolution, UI scale, VSync, frame cap, playback speed and sound
+    volumes. They are saved in `settings.json` and applied at once. A display change reverts
+    unless kept.
+  - Esc opens a pause menu in a game.
+  - In rule mode, rivals' decisions and words open as they happen; only their court's report
+    stays private until the game ends.
+  - Every country's army stands on the map at its capital, with its size, in every map mode.
 
 - **Two 4B-class candidates measured against `qwen3.5:4b`** (#252's first arms), on the RTX 5080
   with the control re-run in the same session. The candidates are `gemma4:e4b-it-qat` and
@@ -43,6 +613,23 @@ phase table and the open issues, not here.
   - `/api/ps` under-reports Bolt: 950 MB, about 2.8 GB real.
   - No default changed.
 
+- **GreyBoxStrategy: the storyteller's stage S2** (#20, demo only, no framework change). Each piece
+  is a modifier on `+storyteller`, off in `default`:
+  - `+choices`: six dilemmas whose options the struck ruler chooses, as one more decision (`Moment.Choice`);
+    a person's seat answers through `Game.PendingChoices` and `Game.Choose`.
+  - `+multi`: group events that leave out the members the fairness rules protect, each member with its
+    own amount or choice.
+  - `+chains-free` and `+chains-skeleton`: tales over several turns, held by the game (`Game.Chains`),
+    written freely by the model or on four skeletons the game registers.
+  - `+history`: a recent-happenings line, and a story check that replaces an invented battle.
+  - `+traits`: a terrain, a landmark and a resource for every province, and three events that need one.
+  - `+title-call`: the title from a second, short call.
+  - `+preset-<name>`: five storyteller presets (`StorytellerSettings.Presets`); `+s2` is every piece but
+    the chains.
+  - The game deals each turn's kind (a tale, a dilemma or an ordinary event) by the preset's chances.
+    Effects, dilemmas, skeletons and traits are data, with no province or country named.
+  - `-strategyIndex` lets one block of a longer series seat everyone as the series would.
+  - Measured against S1: findings, 12 November, "The storyteller's stage S2".
 - **GreyBoxStrategy: a storyteller that invents the game's events** (#20, stage S1 of
   `docs/demos/painted-realm-research.md`, demo only, no framework change). One more `Agent` with no
   body, asked before each upkeep from turn 3, picks one of eight effect templates and a country,
@@ -432,6 +1019,11 @@ phase table and the open issues, not here.
 
 ### Changed
 
+- **Painted Realm: R3's army rules on by default, a generated world first** (#20, the lead's call). `UnitTypes`, `Generals`,
+  `Sieges`, `Supply`, `Fog` and `HungerFirst` are on for the writs turn; the one-move game carries them off. New game
+  starts on a generated world on the writs turn; Classic and each rule's Off stay choices. Headless runs keep Classic;
+  an arm repeats an earlier run with `-strategyRules "Supply=false"` and so on.
+
 - **GreyBoxStrategy marks the moves that take no target** (#244 item 2): recruit, raise_taxes and
   the two envoy answers set `ActionDefinition.TakesNoTarget`, so the framework drops a target the
   model names for one and records it, and the seat's `TargetIgnored` reads the framework's
@@ -452,6 +1044,39 @@ phase table and the open issues, not here.
   (findings, 10 November) found one regression, on the route examples, fixed in the branch.
 
 ### Fixed
+
+- **Painted Realm R3: an army starving abroad is asked for orders again, and a siege lasts two turns at least**
+  (#20). The first live look with every army rule on found armies starving where a hold had left them (nothing woke
+  them as their stores ran out) and sieges falling the turn they began. With supply on, an army abroad is woken when
+  a turn's food is left and each turn it starves; with sieges on, a siege never falls the turn it begins. An army's
+  facts no longer read "led by Maren the Wary,, stores 4 of 4".
+
+- **GreyBoxStrategy's map generator speed test no longer fails when the machine is busy** (#20). It timed one
+  Huge try in wall time, which doubled when other Unity runs shared the CPU (two failures on 14 November, both passing
+  alone). It now takes the cheapest of three tries in this process's CPU time, under the same 3 s; a generator made
+  about three times slower still fails it.
+
+- **Painted Realm: a writs ruler's targets are the decision's own list** (#20). The court's and the marshal's
+  availability followed the rules alone, so a model could name a march or fortify target the capped list left
+  out and the game held it as "not offered" (61 army orders in R1c's main run). The scorecard also counted a
+  second court order as a second council move in the same turn.
+
+- **Painted Realm: two offers of peace to you in one turn** were answered only once. The
+  replay then stopped at that turn. Each envoy now waits for its own answer. A replay that
+  cannot rebuild a turn that resolved now says so on screen.
+
+- **Painted Realm: sharp on large screens, and never silent while the card is busy** (#20).
+  - **Large screens.** The UI now grows with the screen: 1.33× at 1440 and 2× at 2160. Before,
+    it stayed 1080p-sized below 2000 pixels tall.
+    - In the editor, a notice says when the Game view draws the game at a fixed size such as
+      1920 × 1080 and stretches it. That is what the lead saw.
+  - **The RTX 5080 in rule mode.** A rule game now holds the card for the whole game, as the
+    lead decided, and the top bar says so.
+    - It waits with the holder and a clock while another session has the card.
+    - It says when the server is slow, and stops a round with no answer in 150 s.
+    - Menu returns to the start menu from any game.
+    - The lock records the Unity that took it, and is let go, with the model unloaded, on every
+      way out: the end, Menu, stopping Play mode, quitting, a script reload, or an error.
 
 - **Painted Realm: fixes from the night's play-through** (#20).
   - A move that is not offered shows its reason on hover again: disabled buttons got no hover,

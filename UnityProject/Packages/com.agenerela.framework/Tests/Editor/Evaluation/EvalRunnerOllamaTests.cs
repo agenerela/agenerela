@@ -62,6 +62,34 @@ namespace Agenerela.Tests.Evaluation
         }
 
         [Test]
+        public async Task AnArmAskingWithoutProbabilitiesSendsTheTargetRuleAndTheReportSaysSo()
+        {
+            // The #107 run's two arms: A asks for probabilities, B asks without them.
+            var runner = new EvalRunner(fixtures.Set(new[] { Bridge }), Fixtures.VillageGuardProfile(),
+                new EvalArm("A", fixtures.Ollama(server, Model2B, "OllamaA")),
+                new EvalArm("B", fixtures.Ollama(server, Model2B, "OllamaB", tokenProbabilities: false)));
+            runner.WarmUpRequests = 0;
+
+            var report = await Fixtures.NotCancelled(runner.RunAsync());
+
+            // Whichever order the arms were asked in.
+            Assert.That(server.ChatBodies, Has.Count.EqualTo(2));
+            var withProbabilities = server.ChatBodies.Single(body => body["logprobs"] != null);
+            var without = server.ChatBodies.Single(body => body["logprobs"] == null);
+            Assert.That((bool)withProbabilities["logprobs"], Is.True);
+            Assert.That(without["top_logprobs"], Is.Null);
+            string System(Newtonsoft.Json.Linq.JObject body) => (string)body["messages"][0]["content"];
+            Assert.That(System(withProbabilities), Does.Not.Contain("Only these things are here:"));
+            Assert.That(System(without), Does.Contain("Only these things are here:"));
+
+            var arms = report.Conditions.Arms;
+            Assert.That(arms.Select(a => a.TokenProbabilities), Is.EqualTo(new bool?[] { true, false }));
+            Assert.That(arms.Select(a => a.TokenAlternatives), Is.EqualTo(new int?[] { 20, null }), "None are asked for without probabilities.");
+            Assert.That(report.ToMarkdown(), Does.Contain("| on, no probabilities |"));
+            Assert.That(EvalReport.FromJson(report.ToJson()).Conditions.Arms[1].TokenProbabilities, Is.False);
+        }
+
+        [Test]
         public async Task AModelNotFullyOnTheGpuIsFlagged()
         {
             server.SizeVram = server.Size / 2;

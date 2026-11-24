@@ -25,6 +25,20 @@ namespace GreyBoxStrategy
         /// <summary>Raise taxes only at this stability or more.</summary>
         public int TaxMinStability;
 
+        // The writs turn (rules v2, R1): when to settle a war. Each is a war score from our side.
+        /// <summary>Demand what we occupy at this war score or more.</summary>
+        public int DemandAtScore;
+        /// <summary>Cede what they occupy at this score or less.</summary>
+        public int CedeAtScore;
+        /// <summary>Offer white peace at this score or less.</summary>
+        public int WhitePeaceAtScore;
+        /// <summary>Accept white peace at this score or less.</summary>
+        public int AcceptWhitePeaceAtScore;
+        /// <summary>Accept a demand at this score or less.</summary>
+        public int AcceptDemandAtScore;
+        /// <summary>A war this many turns old with a score near 0 is settled with white peace; one we lead, with a demand.</summary>
+        public int StuckWarTurns;
+
         /// <summary>Attacks and declares war at narrower odds, never builds forts, and rarely makes peace.</summary>
         public static Temperament Expansionist => new Temperament
         {
@@ -37,6 +51,12 @@ namespace GreyBoxStrategy
             ArmyPerThreat = 1.2,
             FortifyAtWar = false,
             TaxMinStability = 3,
+            DemandAtScore = 80,
+            CedeAtScore = -80,
+            WhitePeaceAtScore = -60,
+            AcceptWhitePeaceAtScore = -20,
+            AcceptDemandAtScore = -40,
+            StuckWarTurns = 30,
         };
 
         /// <summary>Attacks only with a wide margin, fortifies the front while at war, and makes peace readily.</summary>
@@ -51,6 +71,12 @@ namespace GreyBoxStrategy
             ArmyPerThreat = 1.2,
             FortifyAtWar = true,
             TaxMinStability = 4,
+            DemandAtScore = 70,
+            CedeAtScore = -70,
+            WhitePeaceAtScore = -45,
+            AcceptWhitePeaceAtScore = -10,
+            AcceptDemandAtScore = -25,
+            StuckWarTurns = 30,
         };
     }
 
@@ -84,7 +110,9 @@ namespace GreyBoxStrategy
         private readonly Dictionary<string, int> lastOffer = new Dictionary<string, int>(StringComparer.Ordinal);
 
         public Move Decide(CountryRequest request) =>
-            request.Moment == Moment.Envoy ? AnswerPeace(request) : Council(request);
+            request.World.Rules.Turn == TurnStyle.Writs ? WritScripted.Decide(Temperament, request)
+            : request.Moment == Moment.Choice ? request.DefaultMove ?? request.Legal[0]
+            : request.Moment == Moment.Envoy ? AnswerPeace(request) : Council(request);
 
         private Move Council(CountryRequest req)
         {
@@ -203,7 +231,9 @@ namespace GreyBoxStrategy
         public static string Leader(World w)
         {
             var best = w.Alive.OrderByDescending(c => w.ProvinceCount(c.Id)).ThenBy(c => c.Id, StringComparer.Ordinal).FirstOrDefault();
-            return best != null && w.ProvinceCount(best.Id) >= w.Rules.ProvincesToWin - 4 ? best.Id : null;
+            // Outside domination nothing wins early, so "near winning" is near holding everything.
+            int toWin = w.Rules.Victory == VictoryMode.Domination ? w.Rules.ProvincesToWin : w.ProvinceList.Count;
+            return best != null && w.ProvinceCount(best.Id) >= toWin - 4 ? best.Id : null;
         }
     }
 }

@@ -81,7 +81,7 @@ namespace GreyBoxStrategy.Editor
         /// For <c>-executeMethod</c>: several arms of one table on the same seeds, interleaved in blocks
         /// (<see cref="StrategyTableRuns.RunInterleavedAsync"/>). <c>-strategyArms</c> lists the arms and
         /// <c>-strategyArmNames</c> their folder names, both separated by <c>;</c>; <c>-strategyBlock</c>
-        /// is the block size (5). Writes each arm to <c>-strategyOut/&lt;name&gt;</c> and exits when done.
+        /// is the block size (5), <c>-strategyIndex</c> the series index of the first seed (0). Writes each arm to <c>-strategyOut/&lt;name&gt;</c> and exits when done.
         /// </summary>
         /// <example>
         /// <code>
@@ -101,11 +101,21 @@ namespace GreyBoxStrategy.Editor
             int games = int.TryParse(Arg("-strategyGames"), out int g) ? g : 20;
             int seed = int.TryParse(Arg("-strategySeed"), out int s0) ? s0 : 1;
             int block = int.TryParse(Arg("-strategyBlock"), out int b) ? b : 5;
+            // The series index of the first seed, when this run is one block of a longer series (seats rotate by it).
+            int index = int.TryParse(Arg("-strategyIndex"), out int i0) ? i0 : 0;
+            // Rules v2 (R1c): -strategyTurn writs plays the writs turn, with -strategyCap (headless turn cap,
+            // default 40), -strategyMap (classic or medium) and -strategyVictory (conquest or domination_75).
+            var setup = WritsSetup();
             var defined = new List<(string, TableDefinition)>();
             try
             {
                 if (names.Length != arms.Length) throw new ArgumentException("-strategyArmNames needs one name per arm.");
-                for (int i = 0; i < arms.Length; i++) defined.Add((names[i], Define(table, model, model2, arms[i], personas)));
+                for (int i = 0; i < arms.Length; i++)
+                {
+                    var t = Define(table, model, model2, arms[i], personas);
+                    t.Setup = setup;
+                    defined.Add((names[i], t));
+                }
             }
             catch (Exception e)
             {
@@ -114,17 +124,17 @@ namespace GreyBoxStrategy.Editor
                 return;
             }
             string folder = Arg("-strategyOut") ?? StrategyRuns.NewFolder(StrategyRunMenu.Root, "interleaved-" + table);
-            RunInterleaved(defined, games, seed, block, folder);
+            RunInterleaved(defined, games, seed, block, folder, index);
         }
 
-        private static async void RunInterleaved(List<(string, TableDefinition)> arms, int games, int firstSeed, int block, string folder)
+        private static async void RunInterleaved(List<(string, TableDefinition)> arms, int games, int firstSeed, int block, string folder, int index = 0)
         {
             int code = 0;
             try
             {
                 Debug.Log($"GreyBoxStrategy: {arms.Count} arms interleaved in blocks of {block}, {games} games, seeds from {firstSeed}, into {folder}");
                 await StrategyTableRuns.RunInterleavedAsync(folder, arms, ProviderCache(), games, firstSeed, block,
-                    line => Debug.Log("GreyBoxStrategy: " + line));
+                    line => Debug.Log("GreyBoxStrategy: " + line), default, index);
                 Debug.Log($"GreyBoxStrategy: done. {folder}");
             }
             catch (Exception e)
@@ -133,6 +143,40 @@ namespace GreyBoxStrategy.Editor
                 code = 1;
             }
             EditorApplication.Exit(code);
+        }
+
+        private static GameSetup WritsSetup()
+        {
+            if (Arg("-strategyTurn") != "writs") return null;
+            string map = Arg("-strategyMap") ?? "classic";
+            var setup = GameSetup.Writs(1, map == "medium" ? GameSetup.GeneratedMapId : GameSetup.ClassicMapId, Arg("-strategyVictory") ?? GameSetup.ConquestPreset);
+            if (map == "medium")
+            {
+                setup.Countries = 5; // the tables seat five
+                setup.Generator = new MapSettings { Size = MapSize.Medium };
+                setup.MapSeed = int.TryParse(Arg("-strategyMapSeed"), out int ms) ? ms : 1;
+            }
+            int cap = int.TryParse(Arg("-strategyCap"), out int c) ? c : 40;
+            setup.TurnCap = cap;
+            if (setup.Victory != VictoryMode.Conquest) setup.TurnLimit = cap;
+            // -strategyRules "OccupationBecomesOwnership=8;BreakWhenAllOccupied=true": rule settings by field name.
+            if (Arg("-strategyRules") is string settings) setup.Numbers = RulesWith(settings);
+            return setup;
+        }
+
+        /// <summary>Today's rules with the named fields set, from "Field=value;Field=value"; an unknown field throws.</summary>
+        public static GameRules RulesWith(string settings)
+        {
+            var rules = GameRules.Standard;
+            foreach (string part in settings.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                int eq = part.IndexOf('=');
+                if (eq <= 0) throw new ArgumentException($"-strategyRules: \"{part}\" is not Field=value.");
+                string name = part.Substring(0, eq).Trim();
+                var field = typeof(GameRules).GetField(name) ?? throw new ArgumentException($"-strategyRules: GameRules has no field {name}.");
+                field.SetValue(rules, Convert.ChangeType(part.Substring(eq + 1).Trim(), field.FieldType, System.Globalization.CultureInfo.InvariantCulture));
+            }
+            return rules;
         }
 
         // One provider per model for the whole run, so every seat and the storyteller share its queue.

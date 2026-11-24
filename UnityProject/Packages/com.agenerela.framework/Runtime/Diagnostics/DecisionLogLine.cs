@@ -30,9 +30,11 @@ namespace Agenerela
     {
         /// <summary>
         /// The format version this package writes. Raised only when a field is added: 2 added
-        /// <see cref="ChainId"/>, <see cref="ChainHop"/> and <see cref="ChainSource"/> (#190, G4).
+        /// <see cref="ChainId"/>, <see cref="ChainHop"/> and <see cref="ChainSource"/> (#190, G4); 3 added
+        /// <see cref="PromptCharacters"/>, <see cref="PromptTokensEstimated"/>, <see cref="PromptBudget"/>,
+        /// <see cref="OverBudget"/> and <see cref="PromptTrims"/> (#151).
         /// </summary>
-        public const int CurrentVersion = 2;
+        public const int CurrentVersion = 3;
 
         /// <summary>
         /// The format version of this line, <see cref="CurrentVersion"/> when this package wrote it. Every
@@ -109,6 +111,13 @@ namespace Agenerela
         [JsonProperty("guardsFired")] public List<string> GuardsFired;
 
         /// <summary>
+        /// Each statement a guard replaced while keeping the move, with the guard, its reason, the text
+        /// replaced and the new one (<see cref="DecisionTelemetry.StatementsReplaced"/>, #266 item 4);
+        /// left out when none was.
+        /// </summary>
+        [JsonProperty("statementsReplaced")] public List<ReplacedStatement> StatementsReplaced;
+
+        /// <summary>
         /// For <see cref="DecisionStage.Executed"/>, what that <c>Execute</c> did
         /// (<see cref="DecisionFeedEntry.Execution"/>); left out for <see cref="DecisionStage.Decided"/>.
         /// </summary>
@@ -143,6 +152,21 @@ namespace Agenerela
 
         /// <summary>Prompt tokens, as the provider reported them; 0 when it did not.</summary>
         [JsonProperty("promptTokens")] public int PromptTokens;
+
+        /// <summary>The characters of the request's text (<see cref="DecisionTelemetry.PromptCharacters"/>, #151).</summary>
+        [JsonProperty("promptCharacters")] public int PromptCharacters;
+
+        /// <summary>The prompt's tokens, estimated before sending (<see cref="DecisionTelemetry.PromptTokensEstimated"/>, #151).</summary>
+        [JsonProperty("promptTokensEstimated")] public int PromptTokensEstimated;
+
+        /// <summary>The prompt budget the call was measured against (<see cref="DecisionTelemetry.PromptBudget"/>, #151); left out with none.</summary>
+        [JsonProperty("promptBudget")] public int? PromptBudget;
+
+        /// <summary>Whether the prompt went over its budget (<see cref="DecisionTelemetry.OverBudget"/>, #151); left out with no budget.</summary>
+        [JsonProperty("overBudget")] public bool? OverBudget;
+
+        /// <summary>Each trim taken to fit the budget (<see cref="DecisionTelemetry.PromptTrims"/>, #151); left out when none was.</summary>
+        [JsonProperty("promptTrims")] public List<string> PromptTrims;
 
         /// <summary>Completion tokens, as the provider reported them; 0 when it did not.</summary>
         [JsonProperty("completionTokens")] public int CompletionTokens;
@@ -179,6 +203,43 @@ namespace Agenerela
         /// (<see cref="DecisionTelemetry.TargetIgnored"/>, #244 item 2); left out when none was.
         /// </summary>
         [JsonProperty("targetIgnored")] public string TargetIgnored;
+
+        /// <summary>
+        /// True when the reply's fields came in an order other than the schema's
+        /// (<see cref="DecisionTelemetry.OrderLost"/>, DR-023); left out when the order held.
+        /// </summary>
+        [JsonProperty("orderLost")] public bool? OrderLost;
+
+        /// <summary>
+        /// The parameters that took their declared default because the model left them out or gave a
+        /// value not offered (<see cref="DecisionTelemetry.ArgumentsDefaulted"/>, DR-023); left out
+        /// when none did. The values themselves are in each decision's <c>arguments</c>.
+        /// </summary>
+        [JsonProperty("argumentsDefaulted")] public List<string> ArgumentsDefaulted;
+
+        /// <summary>
+        /// Each value of an action's parameter a per-value check rejected, with its reason
+        /// (<see cref="DecisionTelemetry.ValuesUnavailable"/>, DR-023); left out when none was.
+        /// </summary>
+        [JsonProperty("valuesUnavailable")] public List<UnavailableValue> ValuesUnavailable;
+
+        /// <summary>
+        /// The choices the call offered (<see cref="DecisionTelemetry.ChoicesOffered"/>, DR-022); left out
+        /// for a call that gave none.
+        /// </summary>
+        [JsonProperty("choicesOffered")] public List<string> ChoicesOffered;
+
+        /// <summary>
+        /// The choices the call gave as unavailable, with their reasons
+        /// (<see cref="DecisionTelemetry.ChoicesUnavailable"/>, DR-022); left out when none was.
+        /// </summary>
+        [JsonProperty("choicesUnavailable")] public List<UnavailableChoice> ChoicesUnavailable;
+
+        /// <summary>
+        /// False when the call asked for no statement (<see cref="DecisionTelemetry.StatementAsked"/>,
+        /// #266); left out when it asked for one, as every call did before.
+        /// </summary>
+        [JsonProperty("statementAsked")] public bool? StatementAsked;
 
         /// <summary>
         /// How many observation lines the request does not carry
@@ -244,6 +305,10 @@ namespace Agenerela
                 QueuedAhead = telemetry.QueuedAhead,
                 PromptTokens = telemetry.PromptTokens,
                 CompletionTokens = telemetry.CompletionTokens,
+                PromptCharacters = telemetry.PromptCharacters,
+                PromptTokensEstimated = telemetry.PromptTokensEstimated,
+                PromptBudget = telemetry.PromptBudget > 0 ? telemetry.PromptBudget : (int?)null,
+                OverBudget = telemetry.PromptBudget > 0 ? telemetry.OverBudget : (bool?)null,
                 TargetGrounding = telemetry.TargetGrounding,
                 TargetGroundingStatus = telemetry.TargetGroundingStatus,
                 HistoryTurnsSent = telemetry.HistoryTurnsSent,
@@ -269,6 +334,15 @@ namespace Agenerela
                 line.GuardsFired = new List<string>(telemetry.GuardsFired);
             }
 
+            if (telemetry.StatementsReplaced != null && telemetry.StatementsReplaced.Count > 0)
+            {
+                line.StatementsReplaced = new List<ReplacedStatement>();
+                foreach (var replaced in telemetry.StatementsReplaced)
+                {
+                    line.StatementsReplaced.Add(new ReplacedStatement(replaced.Guard, Mask(replaced.Reason), Mask(replaced.Replaced), Mask(replaced.Statement)));
+                }
+            }
+
             if (telemetry.TargetsDropped != null && telemetry.TargetsDropped.Count > 0)
             {
                 line.TargetsDropped = new List<string>(telemetry.TargetsDropped);
@@ -279,7 +353,42 @@ namespace Agenerela
                 line.TargetsUnlisted = new List<string>(telemetry.TargetsUnlisted);
             }
 
+            if (telemetry.PromptTrims != null && telemetry.PromptTrims.Count > 0)
+            {
+                line.PromptTrims = new List<string>(telemetry.PromptTrims);
+            }
+
             line.TargetIgnored = telemetry.TargetIgnored;
+            line.OrderLost = telemetry.OrderLost ? true : (bool?)null;
+
+            if (telemetry.ChoicesOffered != null && telemetry.ChoicesOffered.Count > 0)
+            {
+                line.ChoicesOffered = new List<string>(telemetry.ChoicesOffered);
+            }
+
+            if (telemetry.ChoicesUnavailable != null && telemetry.ChoicesUnavailable.Count > 0)
+            {
+                line.ChoicesUnavailable = new List<UnavailableChoice>();
+                foreach (var choice in telemetry.ChoicesUnavailable)
+                {
+                    line.ChoicesUnavailable.Add(new UnavailableChoice(choice.Choice, Mask(choice.Reason)));
+                }
+            }
+            line.StatementAsked = telemetry.StatementAsked ? (bool?)null : false;
+
+            if (telemetry.ArgumentsDefaulted != null && telemetry.ArgumentsDefaulted.Count > 0)
+            {
+                line.ArgumentsDefaulted = new List<string>(telemetry.ArgumentsDefaulted);
+            }
+
+            if (telemetry.ValuesUnavailable != null && telemetry.ValuesUnavailable.Count > 0)
+            {
+                line.ValuesUnavailable = new List<UnavailableValue>();
+                foreach (var value in telemetry.ValuesUnavailable)
+                {
+                    line.ValuesUnavailable.Add(new UnavailableValue(value.Action, value.Parameter, value.Value, Mask(value.Reason)));
+                }
+            }
 
             if (telemetry.TargetsUnavailable != null && telemetry.TargetsUnavailable.Count > 0)
             {
@@ -435,7 +544,10 @@ namespace Agenerela
         }
     }
 
-    /// <summary>An action, a target and a statement, as a <see cref="DecisionLogLine"/> holds a decision.</summary>
+    /// <summary>
+    /// An action, a target, a statement and the action's arguments, if any, as a
+    /// <see cref="DecisionLogLine"/> holds a decision.
+    /// </summary>
     [Serializable]
     public sealed class DecisionLogDecision
     {
@@ -448,16 +560,60 @@ namespace Agenerela
         /// <summary>The statement, possibly empty.</summary>
         [JsonProperty("statement")] public string Statement;
 
+        /// <summary>
+        /// The value chosen for each of the action's parameters, by name
+        /// (<see cref="AgentDecision.Arguments"/>, DR-023); left out for a decision with none.
+        /// </summary>
+        [JsonProperty("arguments", NullValueHandling = NullValueHandling.Ignore)] public Dictionary<string, string> Arguments;
+
         internal static DecisionLogDecision From(AgentDecision decision)
         {
-            return decision == null
-                ? null
-                : new DecisionLogDecision { Action = decision.ActionId, Target = decision.TargetId, Statement = DecisionLogLine.Mask(decision.Statement) };
+            if (decision == null)
+            {
+                return null;
+            }
+
+            var logged = new DecisionLogDecision { Action = decision.ActionId, Target = decision.TargetId, Statement = DecisionLogLine.Mask(decision.Statement) };
+            if (decision.Arguments.Count > 0)
+            {
+                logged.Arguments = new Dictionary<string, string>();
+                foreach (var argument in decision.Arguments)
+                {
+                    logged.Arguments[argument.Key] = DecisionLogLine.Mask(argument.Value);
+                }
+            }
+
+            return logged;
         }
 
         internal bool SameAs(DecisionLogDecision other)
         {
-            return other != null && Action == other.Action && Target == other.Target && Statement == other.Statement;
+            return other != null && Action == other.Action && Target == other.Target && Statement == other.Statement &&
+                   SameArguments(Arguments, other.Arguments);
+        }
+
+        private static bool SameArguments(Dictionary<string, string> a, Dictionary<string, string> b)
+        {
+            int count = a == null ? 0 : a.Count;
+            if (count != (b == null ? 0 : b.Count))
+            {
+                return false;
+            }
+
+            if (count == 0)
+            {
+                return true;
+            }
+
+            foreach (var argument in a)
+            {
+                if (!b.TryGetValue(argument.Key, out string value) || value != argument.Value)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
     }
 

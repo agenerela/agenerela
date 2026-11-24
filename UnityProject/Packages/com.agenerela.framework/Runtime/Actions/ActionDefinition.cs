@@ -69,6 +69,22 @@ namespace Agenerela
         public string ExampleStatement;
 
         /// <summary>
+        /// The situation of this action's example: one or two observation lines, rendered above the
+        /// example the way a real call's observations are (#216 item 1). Empty by default, and shown
+        /// only on a call with <see cref="DecideOptions.ExampleObservations"/> on, which is off.
+        /// </summary>
+        /// <remarks>
+        /// For an agent the game asks the same thing every time ("Choose this turn's move."), where the
+        /// situation lives only in the observations, so no example could otherwise show when to pick
+        /// the action. A <c>{0}</c> is filled with the example's target, as in the stimulus. Never an
+        /// evaluation prompt's stimulus and observations together (hard rule 4); <c>PromptSetChecks</c>
+        /// flags one.
+        /// </remarks>
+        [Tooltip("Optional. One or two observation lines that make the example's situation, shown " +
+                 "only when a call turns on example observations. Use {0} for the target.")]
+        public string[] ExampleObservations;
+
+        /// <summary>
         /// A stimulus that touches this action's subject but asks for nothing, shown to the model
         /// answered with <c>none</c> beside the action's own example (#190, Living Vale #9). Empty
         /// by default, which adds nothing to the prompt.
@@ -119,6 +135,40 @@ namespace Agenerela
         [Tooltip("Optional. The target categories this action takes, such as 'quest'. A target in " +
                  "another category, or in none, is refused for it. Leave empty for any target.")]
         public string[] TargetCategories;
+
+        /// <summary>
+        /// The closed choices this action asks for beside its target, such as a strength or a count
+        /// (DR-023, first step). Null or empty, the default, asks for none, and the action is sent
+        /// exactly as before.
+        /// </summary>
+        /// <remarks>
+        /// Declaring one changes what the model is sent for every call that offers this action: the
+        /// schema is paired (<see cref="DecideOptions.PairTargetsWithActions"/>), with the parameters
+        /// after <c>target</c> and before <c>statement</c>, and the prompt's action list is sent with
+        /// their values. Measured once: one harmless parameter cost 5.7 points on the interim set on
+        /// <c>qwen3.5:4b</c> and nothing on the curated one (findings, 16 November 2026). The A/B
+        /// against bundled ids in GreyBoxStrategy's storyteller is still owed (#151). The chosen values
+        /// are in <see cref="AgentDecision.Arguments"/>. <see cref="ActionParameter.Validate"/> is the
+        /// rule each must pass at registration, and two may not share a name.
+        /// </remarks>
+        [Tooltip("Optional. Closed choices this action asks for beside its target, such as a strength. " +
+                 "Each is offered in the schema and listed with its values in the prompt.")]
+        public ActionParameter[] Parameters;
+
+        /// <summary>Whether <see cref="Parameters"/> holds at least one parameter.</summary>
+        public bool DeclaresParameters => Parameters != null && Parameters.Length > 0;
+
+        /// <summary>The declared parameter named <paramref name="name"/>, or null.</summary>
+        public ActionParameter ParameterNamed(string name)
+        {
+            if (Parameters == null) return null;
+            foreach (var parameter in Parameters)
+            {
+                if (parameter != null && string.Equals(parameter.Name, name, StringComparison.Ordinal)) return parameter;
+            }
+
+            return null;
+        }
 
         /// <summary>
         /// Whether this action takes a target registered in <paramref name="category"/>: always when

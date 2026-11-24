@@ -15,8 +15,19 @@ namespace Agenerela.Evaluation
         /// <summary>The action id. <c>none</c> is declared like any other.</summary>
         [JsonProperty("id")] public string Id;
 
-        /// <summary>True when the action takes a registered target, false when it always takes <c>no_target</c>.</summary>
+        /// <summary>
+        /// True when the action requires a registered target. False leaves the target optional
+        /// (DR-020): either a registered target or <c>no_target</c> is a correct answer, unless
+        /// <see cref="TakesNoTarget"/> says it never takes one.
+        /// </summary>
         [JsonProperty("needsTarget")] public bool NeedsTarget;
+
+        /// <summary>
+        /// True when the action never takes a target, so <c>no_target</c> is its only correct
+        /// answer (<see cref="ActionDefinition.TakesNoTarget"/>). Absent, like every other
+        /// unset field, means false: the target is optional.
+        /// </summary>
+        [JsonProperty("takesNoTarget", DefaultValueHandling = DefaultValueHandling.Ignore)] public bool TakesNoTarget;
 
         /// <summary>
         /// Optional. The state in which the action is available, in the same shape as a prompt's
