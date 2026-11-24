@@ -4786,3 +4786,100 @@ playback before it, is where a player waits.
 
 **Would change it.** A slower turn-1 start on longer games or other maps, or treaty terms that grow with the number of
 wars, would move the figure.
+
+### The Phase 4 gate's live A/B: on the 209 set the guards change no score beyond noise on `qwen3.5:2b`, and the answers they stop are mostly wrong ones (23 November 2026)
+
+**What.** #150's live A/B: the guards on (the defaults) against `CheckTarget = false`, which turns
+off the grounding guard; `EvalRunner` adds no developer guards, so that is the whole difference.
+The schema legality check runs in both arms. All 209 prompts of the evaluation set (#147, set
+commit `1a940f4`), `VillageGuard`, `qwen3.5:2b`, interleaved prompt by prompt, temperature 0,
+framework 0.4.0-preview.2 at `1f12636`, the 9 November state wording ("You are following the
+player."), the set's targets as observation lines.
+
+**Conditions.** The home server: RTX 4070 SUPER 12 GB, Docker Ollama 0.40.14 behind the gate
+(commit `5728506a6d6b`), over the home network, under clean lease #10061 (23 November,
+15:48 to 15:52 local), every model unloaded inside the lease before Unity started, `qwen3.5:2b`
+alone resident (2254 of 2254 MB in VRAM), 3 warm-ups an arm, field order kept on all 418 replies,
+no warnings, no pipeline errors. Unity batch mode on the lead's laptop, on mains, from a detached
+copy. A third machine: never compared with the RTX 5080 or the laptop's Ollama. Report and every
+answer: [`runs/2026-11-23-phase4/gate/`](runs/2026-11-23-phase4/README.md).
+
+| Outcome | guards on | guards off |
+|---|---:|---:|
+| Correct | 138 | 142 |
+| Wrong but legal | 52 | 66 |
+| Contained by a guard | 5 | 0 |
+| Rejected when an action was expected | 14 | 1 |
+| Pipeline error | 0 | 0 |
+| **Accuracy** | **66.0%** | **67.9%** |
+
+Noise check: +1.9 points, floor 4.9 at n = 209, **within noise**; every category within its floor.
+
+- **The model gave the same answer to every prompt in both arms** (209 of 209), so the arms
+  differ only in what the guard did with it. The grounding guard stopped 18 answers: 5 where the
+  label was `none` (contained: "Attack the bandit.", "attack the dragon!", the unattended
+  watchtower and two more), 9 wrong answers where an action was wanted (an attack on the wolf for
+  "go to the bridge"), and 4 right ones whose grounding sat just under 0.8 (0.778 to 0.796). The
+  one rejection in both arms is the legality check: an attack with no target.
+- **So the guard costs 4 correct answers and turns 14 wrong-but-legal ones into `none`**
+  (66 → 52 wrong but legal). Those counts are the same answers sorted twice, not two samples; the
+  accuracy difference is what hard rule 2 lets us claim, and it is within noise.
+- **Latency:** median 0.50 s with the guard, 0.48 s without.
+- **Repeat check.** The guards-on arm's settings are the defaults, and four more runs the same
+  hour had a defaults arm (the next entry): the model's 209 answers were identical in all five,
+  and only one guard verdict changed once (`situation_021`, grounding 0.778, scored correct in one
+  run). Run to run, this setup moves by about one answer.
+- **Would change it.** A larger set of impossible requests (15 here) is where the guard earns its
+  keep; the 4B, which the next entry shows answering differently, may also differ. No default
+  changes.
+
+### #151's first runs on the 209 set: without the idle example the 2B gains 5.3 points, just beyond noise; the 4B beats it by 16.7 (23 November 2026)
+
+Four of #151's runs, straight after the gate A/B above and in the same conditions: the 209 set,
+`VillageGuard`, guards on in both arms, the home server under one clean lease a run, gate
+`5728506a6d6b`, every model unloaded inside each lease first, field order kept on every reply, no
+warnings, no pipeline errors. Arm A is the defaults in each, and its answers matched the gate's
+guards-on arm on all 209 prompts each time. Reports: [`runs/2026-11-23-phase4/`](runs/2026-11-23-phase4/README.md).
+
+| Run | Lease | A | B | B − A | Floor | | Same answer |
+|---|---|---:|---:|---:|---:|---|---:|
+| Idle example: profile's against `IdleExampleStimulus = ""` | #10488 | 138 (66.0%) | 149 (71.3%) | +5.3 | 4.9 | beyond noise | 185 |
+| `ListActionsAndTargets` off against on | #10915 | 139 (66.5%) | 149 (71.3%) | +4.8 | 4.9 | within noise | 168 |
+| Grounding threshold 0.8 against 0.6 | #11342 | 138 (66.0%) | 142 (67.9%) | +1.9 | 4.9 | within noise | 209 |
+| `qwen3.5:2b` against `qwen3.5:4b`, sequential arms | #11769 | 138 (66.0%) | 173 (82.8%) | +16.7 | 4.9 | beyond noise | 137 |
+
+**Idle example.** Without it the 2B answers `none` 43 times against 60, and `stop_following`
+23 times against 13: 10 prompts like "Wait here.", "Hold position." and "The player has sat down
+by the fire" go from `none` to a correct `stop_following`, and 3 more from `none` to a correct move. simple_command +16.7 (floor 14.4) is the only category
+beyond its floor. Unasked actions barely move (9 wrong but legal and 5 contained, against 10 and
+8). This is the 9 November finding on the curated 76 and the interim 389 again (the 2B loses
+`stop_following` to the idle example), now beyond the floor on the 209 set, by 0.4 points. Two
+echoed example lines against four. **What it suggests:** the idle example costs the 2B more than
+it saves on this set. Whether to drop it for small models is the lead's call; the other models of
+the 9 November sweep gained from it.
+
+**`ListActionsAndTargets`.** +4.8 against a floor of 4.9: within noise. 41 answers changed, both
+ways (16 wrong to right, 9 right to wrong); it fixed names ("the first place I said", the
+docks) and cost a few `stop_following`. Echoed example lines rose 5 → 11. The curated-76 run on
+9 November was also within noise (58 against 56).
+
+**Grounding threshold.** The model's answers are the same in both arms, so this is the guard
+alone: 0.6 frees the 4 correct answers that sat between 0.778 and 0.796, and lets through 5 wrong
+ones 0.8 stopped: 3 where the label was `none` ("attack the dragon!" at 0.653, the unattended
+watchtower at 0.683, an event at 0.741) and 2 wrong actions where one was wanted (0.609, 0.687).
+Within noise; 10 stops hold at both thresholds (grounding 0.51 and below, and the legality check).
+**What it suggests:** every freed answer sat above 0.77 and every wrong one let through below
+0.75, so a threshold near 0.76 would have kept all 5 stops and freed all 4. That is read off one
+run's numbers on one model, not measured, and 0.8 stays the default.
+
+**Models.** `qwen3.5:4b` 173 against the 2B's 138, beyond noise overall and in conversation
+(+23.5), situations (+15.5), events (+23.3) and simple commands (+16.7). It ran the 2B's arm
+first, unloaded it, then the 4B's (`EvalArmOrder.Sequential`), so drift over the run is not
+shared; the 2B's arm matched the four interleaved runs exactly. The 4B attacks half as often
+(18 against 39), says nothing it was not asked less often (5 against 9 wrong but legal), and is
+slower: median 0.62 s against 0.50 s (2995 MB against 2254 MB in VRAM).
+
+**Not run, and why** (in the run queue): counter-examples (the evaluation profile's actions have
+none, so both arms would send one prompt), a free-choice example (no place in the profile for an
+example whose answer is a free choice, and one profile serves both arms), history on against off
+(`EvalRunner` always stages a prompt's history; no per-arm switch).

@@ -1,0 +1,120 @@
+#if UNITY_EDITOR
+// Phase 4's A/B runs (#150, #151) on the home server. NOT a committed test: copied into the
+// detached copy C:/Unity_Projects/wt-p4 as Tests/Runtime/Phase4Run.cs. Built on
+// tools/live-runs/model-sweep/ModelSweepRun.cs.txt.
+//
+// Environment:
+//   AGENERELA_P4_RUN        gate | idle | list | grounding | models
+//   AGENERELA_OLLAMA_URL / AGENERELA_OLLAMA_API_KEY  the server (LiveOllama)
+//   AGENERELA_OLLAMA_MODEL  arm model (qwen3.5:2b when unset); "models" uses 2b then 4b
+//   AGENERELA_P4_LOW        the lower grounding threshold for "grounding" (0.6 when unset)
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using Agenerela.Evaluation;
+using Agenerela.Providers;
+using NUnit.Framework;
+using UnityEditor;
+using UnityEngine;
+using Object = UnityEngine.Object;
+
+namespace Agenerela.Tests
+{
+    public sealed class Phase4Run
+    {
+        private readonly List<Object> created = new List<Object>();
+
+        [TearDown]
+        public void TearDown()
+        {
+            foreach (var obj in created)
+            {
+                Object.DestroyImmediate(obj);
+            }
+
+            created.Clear();
+        }
+
+        [Test]
+        [Category(LiveOllama.Category)]
+        [Timeout(14400000)]
+        public async Task RunOne()
+        {
+            LiveOllama.Reset();
+            LiveOllama.RequireReachable();
+
+            string run = Environment.GetEnvironmentVariable("AGENERELA_P4_RUN") ?? "";
+            var set = PromptSet.Load(Path.GetFullPath(Path.Combine(Application.dataPath, "Evaluation/agent.json")));
+            var profile = AssetDatabase.LoadAssetAtPath<AgentProfile>("Assets/Evaluation/VillageGuard.asset");
+            Assert.That(profile, Is.Not.Null);
+
+            EvalArm a, b;
+            var order = EvalArmOrder.Interleaved;
+            string model = LiveOllama.Model;
+            switch (run)
+            {
+                case "gate":
+                    // Guards on (the defaults) against CheckTarget = false; the runner adds no developer guards.
+                    a = new EvalArm("guards-on", Config("p4-A", model), new DecideOptions());
+                    b = new EvalArm("guards-off", Config("p4-B", model), new DecideOptions { CheckTarget = false });
+                    break;
+                case "idle":
+                    a = new EvalArm("idle-profile", Config("p4-A", model), new DecideOptions());
+                    b = new EvalArm("idle-none", Config("p4-B", model), new DecideOptions { IdleExampleStimulus = "" });
+                    break;
+                case "list":
+                    a = new EvalArm("list-off", Config("p4-A", model), new DecideOptions());
+                    b = new EvalArm("list-on", Config("p4-B", model), new DecideOptions { ListActionsAndTargets = true });
+                    break;
+                case "grounding":
+                    float low = float.Parse(Environment.GetEnvironmentVariable("AGENERELA_P4_LOW") ?? "0.6", CultureInfo.InvariantCulture);
+                    a = new EvalArm("ground-0.8", Config("p4-A", model), new DecideOptions());
+                    b = new EvalArm("ground-" + low.ToString(CultureInfo.InvariantCulture), Config("p4-B", model),
+                        new DecideOptions { TargetGroundingThreshold = low });
+                    break;
+                case "models":
+                    a = new EvalArm("qwen3.5-2b", Config("p4-A", "qwen3.5:2b"), new DecideOptions());
+                    b = new EvalArm("qwen3.5-4b", Config("p4-B", "qwen3.5:4b"), new DecideOptions());
+                    order = EvalArmOrder.Sequential;
+                    break;
+                default:
+                    Assert.Fail($"AGENERELA_P4_RUN '{run}' is not one of gate, idle, list, grounding, models");
+                    return;
+            }
+
+            var runner = new EvalRunner(set, profile, a, b)
+            {
+                Order = order,
+                // The wording every evaluation-set run since 9 November 2026 used.
+                DescribeState = state => new[] { (bool)state["isFollowing"] ? "You are following the player." : "You are not following the player." },
+            };
+
+            var started = DateTime.Now;
+            var report = await LiveOllama.NotCancelled(runner.RunAsync());
+            var took = DateTime.Now - started;
+            string saved = report.Save(Path.Combine(Application.dataPath, "..", "Logs", "Evaluation"));
+            string line = $"EVAL-REPORT {saved}\nEVAL-TOOK {took.TotalSeconds:F0}s for {set.Prompts.Count()} prompts per arm";
+            TestContext.Out.WriteLine(line);
+            Debug.Log(line);
+        }
+
+        private ProviderConfig Config(string name, string model)
+        {
+            var config = ScriptableObject.CreateInstance<OllamaProviderConfig>();
+            config.name = name;
+            config.Endpoint = LiveOllama.Endpoint;
+            config.Model = model;
+            if (LiveOllama.ApiKey.Length > 0)
+            {
+                config.ApiKeyVariable = LiveOllama.ApiKeyVariable;
+            }
+
+            created.Add(config);
+            return config;
+        }
+    }
+}
+#endif
