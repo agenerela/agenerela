@@ -202,6 +202,19 @@ namespace Agenerela
         public bool CounterExamples = true;
 
         /// <summary>
+        /// Few-shot examples this call adds to the ones its actions and profile give (#151); null or
+        /// empty, the default, adds none and leaves the block exactly as it was.
+        /// </summary>
+        /// <remarks>
+        /// Each comes after the actions' own examples and counter-examples, before the idle example,
+        /// and is left out of a call that could not give its answer (<see cref="FewShotExample"/> says
+        /// when). Its statement is shown only when <see cref="ExampleStatements"/> is on and the call
+        /// asks for one. Unmeasured: for an A/B run of one example in one arm, such as a free choice
+        /// answered with an action, never a default until that run says otherwise.
+        /// </remarks>
+        public List<FewShotExample> AddedExamples;
+
+        /// <summary>
         /// Whether this call's schema pairs each action with the targets it takes, so the grammar
         /// cannot sample an action with a target of another kind (#190 B, DR-020). Off by default:
         /// unmeasured, and owed an A/B run before it becomes the default (#151).
@@ -425,6 +438,7 @@ namespace Agenerela
             var copy = (DecideOptions)MemberwiseClone();
             copy.Observations = Observations == null ? null : new List<string>(Observations);
             copy.Choices = Choices == null ? null : new List<Choice>(Choices);
+            copy.AddedExamples = AddedExamples == null ? null : new List<FewShotExample>(AddedExamples);
             return copy;
         }
     }

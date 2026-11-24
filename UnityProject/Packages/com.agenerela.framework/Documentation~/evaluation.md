@@ -390,6 +390,17 @@ ran one after the other; repeat a close result.
   and its guard reads nothing; the conditions record `tokenProbabilities: false`, no
   `tokenAlternatives`, and the arms table's checkTarget cell reads "on, no probabilities"
   ([providers.md](providers.md)).
+- Two more change what an arm shows. History on against off: an arm with `IgnoreHistory` asks
+  every prompt alone, its `history` left out of memory, and scores it against the same label, so
+  the run measures what the earlier turns add; the conditions record `ignoreHistory`, and a line
+  under the arms table names the arm. One extra example: an arm's `DecideOptions.AddedExamples`
+  (`FewShotExample`: a stimulus, an action, a target, a statement) adds examples to that arm's
+  few-shot block, after the actions' own and before the idle example, such as a free choice
+  answered with an action for a model that answers `none` to most open choices. An example whose
+  action or target a prompt does not offer is left out of that prompt
+  ([prompt.md](prompt.md#examples-a-call-adds)). The conditions list them (`addedExamples`), with a
+  line under the arms table, and the run is refused when one's stimulus or statement matches a
+  prompt's stimulus (hard rule 4).
 - An arm's `Legality` (`EvalLegality`) gives its own copies of the profile's actions categories
   or **parameters** (`ActionParameters`, DR-023), and its targets categories, without changing the
   set, its labels or the profile. An arm that gives an action a parameter sends the paired schema

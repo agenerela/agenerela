@@ -172,6 +172,19 @@ namespace Agenerela.Evaluation
                     Line();
                     Line($"Arm {Cell(arm.Name)} named the free-text field `{arm.StatementFieldName}`.");
                 }
+
+                // Likewise only when an arm ignored the prompts' history or added examples (#151).
+                if (arm.IgnoreHistory)
+                {
+                    Line();
+                    Line($"Arm {Cell(arm.Name)} ignored each prompt's history: every prompt was asked alone.");
+                }
+
+                if (arm.AddedExamples != null && arm.AddedExamples.Count > 0)
+                {
+                    Line();
+                    Line($"Arm {Cell(arm.Name)} added {arm.AddedExamples.Count} few-shot example(s): {Cell(string.Join("; ", arm.AddedExamples))}.");
+                }
             }
 
             Line();

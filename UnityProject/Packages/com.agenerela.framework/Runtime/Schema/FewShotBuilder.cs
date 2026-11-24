@@ -124,6 +124,18 @@ namespace Agenerela
                 }
             }
 
+            if (options.AddedExamples != null)
+            {
+                foreach (FewShotExample added in options.AddedExamples)
+                {
+                    if (added != null && CanAnswer(added, available, targets, availability))
+                    {
+                        lines.Add(Example(label, added.Stimulus, added.ActionId, added.TargetId,
+                                          statements ? added.Statement : null, field: field));
+                    }
+                }
+            }
+
             if (!string.IsNullOrWhiteSpace(options.IdleExampleStimulus))
             {
                 lines.Add(Example(label, options.IdleExampleStimulus, "none", TargetRegistry.NoTarget,
@@ -415,6 +427,31 @@ namespace Agenerela
             }
 
             return null;
+        }
+
+        // Whether the call could give an added example's answer (#151): its action offered, or none,
+        // and its target one that action may name now, or no_target where the action needs none.
+        private static bool CanAnswer(FewShotExample example, IReadOnlyList<ActionDefinition> available,
+                                      TargetRegistry targets, AvailabilityAnswer availability)
+        {
+            bool noTarget = example.TargetId == TargetRegistry.NoTarget;
+            if (example.ActionId == ActionRegistry.None) return noTarget;
+
+            ActionDefinition action = null;
+            foreach (ActionDefinition offered in available)
+            {
+                if (offered.Id == example.ActionId)
+                {
+                    action = offered;
+                    break;
+                }
+            }
+
+            if (action == null) return false;
+            if (noTarget) return !action.RequiresTarget;
+            if (action.TakesNoTarget || targets == null || !targets.Contains(example.TargetId)) return false;
+
+            return action.AcceptsCategory(targets.CategoryOf(example.TargetId)) && MayName(action, example.TargetId, targets, availability);
         }
 
         private static bool MayName(ActionDefinition action, string id, TargetRegistry targets, AvailabilityAnswer availability)

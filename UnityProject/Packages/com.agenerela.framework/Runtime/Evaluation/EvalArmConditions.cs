@@ -90,6 +90,17 @@ namespace Agenerela.Evaluation
         /// before it existed.
         /// </summary>
         [JsonProperty("standingLinesAsCallObservations")] public bool StandingLinesAsCallObservations;
+        /// <summary>
+        /// Whether the arm ignored each prompt's history (<see cref="EvalArm.IgnoreHistory"/>, #151);
+        /// false in a report written before it existed, which staged it.
+        /// </summary>
+        [JsonProperty("ignoreHistory")] public bool IgnoreHistory;
+        /// <summary>
+        /// The arm's added few-shot examples (<see cref="DecideOptions.AddedExamples"/>, #151), each as
+        /// "stimulus -&gt; action, target"; empty when it added none, and in a report written before
+        /// they existed.
+        /// </summary>
+        [JsonProperty("addedExamples")] public List<string> AddedExamples = new List<string>();
         [JsonProperty("priority")] public string Priority;
         [JsonProperty("observations")] public List<string> Observations = new List<string>();
         /// <summary>The arm's <see cref="EvalArm.Knowledge"/>, added to the profile's; empty in a report written before it existed.</summary>

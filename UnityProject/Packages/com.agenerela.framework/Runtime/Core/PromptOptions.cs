@@ -150,6 +150,13 @@ namespace Agenerela
         public bool CounterExamples = true;
 
         /// <summary>
+        /// The few-shot examples the call adds (#151); null adds none. <c>Agent</c> copies it from
+        /// <see cref="DecideOptions.AddedExamples"/>. Read by <see cref="FewShotBuilder.Build"/>, not by
+        /// <see cref="PromptBuilder"/>.
+        /// </summary>
+        public System.Collections.Generic.IReadOnlyList<FewShotExample> AddedExamples;
+
+        /// <summary>
         /// What the agent says in the idle example (#190, G14). <c>Agent</c> fills it from the call,
         /// the agent or the profile, never from further down than the idle stimulus came from
         /// (<see cref="DecideOptions.IdleExampleStatement"/>). Null or empty gives no statement. Read by

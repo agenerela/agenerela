@@ -360,6 +360,8 @@ namespace Agenerela.Evaluation
                 .Concat(PromptSetChecks.CompareWithProfile(Set, Profile))
                 .Concat(IdleExampleProblems(ArmA, prompts))
                 .Concat(IdleExampleProblems(ArmB, prompts))
+                .Concat(AddedExampleProblems(ArmA, prompts))
+                .Concat(AddedExampleProblems(ArmB, prompts))
                 .Concat(BareExampleProblems(ArmA, prompts))
                 .Concat(BareExampleProblems(ArmB, prompts))
                 .Concat(LegalityProblems(ArmA, prompts))
@@ -498,6 +500,40 @@ namespace Agenerela.Evaluation
                     if (PromptSetChecks.MatchesExample(prompt.Stimulus, text))
                     {
                         yield return $"{prompt.Id}: the stimulus is arm '{arm.Name}''s {what} \"{text}\": never score on a few-shot example (hard rule 4)";
+                    }
+                }
+            }
+        }
+
+        // An arm's added examples (DecideOptions.AddedExamples, #151) are the arm's own, which
+        // PromptSetChecks never sees, so they are checked here as its idle example is (hard rule 4).
+        private IEnumerable<string> AddedExampleProblems(EvalArm arm, List<(string Category, EvalPrompt Prompt)> prompts)
+        {
+            if (arm.Options.AddedExamples == null)
+            {
+                yield break;
+            }
+
+            foreach (var example in arm.Options.AddedExamples)
+            {
+                if (example == null)
+                {
+                    continue;
+                }
+
+                foreach (var (text, what) in new[] { (example.Stimulus, "added example"), (example.Statement, "added example's statement") })
+                {
+                    if (string.IsNullOrWhiteSpace(text))
+                    {
+                        continue;
+                    }
+
+                    foreach (var (_, prompt) in prompts)
+                    {
+                        if (PromptSetChecks.MatchesExample(prompt.Stimulus, text))
+                        {
+                            yield return $"{prompt.Id}: the stimulus is arm '{arm.Name}''s {what} \"{text}\": never score on a few-shot example (hard rule 4)";
+                        }
                     }
                 }
             }
@@ -761,7 +797,10 @@ namespace Agenerela.Evaluation
             options.StimulusLabel = prompt.Label;
             options.CheckTarget = run.Arm.Options.CheckTarget && prompt.ChecksTarget;
             var agent = Build(run, state, Standing(run, stateLines), prompt.Observations ?? new List<string>(), options);
-            StageHistory(agent, prompt, options);
+            if (!run.Arm.IgnoreHistory)
+            {
+                StageHistory(agent, prompt, options);
+            }
 
             var result = await agent.DecideAsync(prompt.Stimulus, options, ct);
             var outcome = Classify(prompt, result);
@@ -1161,6 +1200,8 @@ namespace Agenerela.Evaluation
                     Legality = arm.Legality?.Copy(),
                     ObservationPlacement = arm.Options.ObservationPlacement.ToString(),
                     StandingLinesAsCallObservations = arm.StandingLinesAsCallObservations,
+                    IgnoreHistory = arm.IgnoreHistory,
+                    AddedExamples = (arm.Options.AddedExamples ?? new List<FewShotExample>()).Where(e => e != null).Select(e => e.ToString()).ToList(),
                     Priority = arm.Options.Priority.ToString(),
                     Observations = new List<string>(arm.Options.Observations ?? new List<string>()),
                     Knowledge = new List<string>(arm.Knowledge),

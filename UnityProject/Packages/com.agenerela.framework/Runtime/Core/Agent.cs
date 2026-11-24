@@ -1508,6 +1508,7 @@ namespace Agenerela
                 LegalTargets = call.LegalTargets,
                 StatementRulesWording = call.StatementRulesWording,
                 CounterExamples = call.CounterExamples,
+                AddedExamples = call.AddedExamples == null ? null : new List<FewShotExample>(call.AddedExamples),
                 IdleExampleStatement = call.IdleExampleStatement,
                 // A call that asks for no statement shows none in its examples either (#266).
                 ExampleStatements = call.ExampleStatements && call.AskForStatement,
