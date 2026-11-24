@@ -4,7 +4,8 @@
 // tools/live-runs/model-sweep/ModelSweepRun.cs.txt.
 //
 // Environment:
-//   AGENERELA_P4_RUN        gate | idle | list | grounding | models | rename | targetrule | history
+//   AGENERELA_P4_RUN        gate | idle | list | grounding | models | rename | targetrule | history |
+//                           freechoice | summarise | pair | statements | counters
 //   AGENERELA_OLLAMA_URL / AGENERELA_OLLAMA_API_KEY  the server (LiveOllama)
 //   AGENERELA_OLLAMA_MODEL  arm model (qwen3.5:2b when unset); "models" uses 2b then 4b
 //   AGENERELA_P4_LOW        the lower grounding threshold for "grounding" (0.6 when unset)
@@ -96,8 +97,33 @@ namespace Agenerela.Tests
                     a = new EvalArm("history", Config("p4-A", model), new DecideOptions());
                     b = new EvalArm("no-history", Config("p4-B", model), new DecideOptions()) { IgnoreHistory = true };
                     break;
+                case "freechoice":
+                    // §2.5: one added example of a free choice (wording approved by the tech lead, 23 November).
+                    a = new EvalArm("plain", Config("p4-A", model), new DecideOptions());
+                    b = new EvalArm("free-choice", Config("p4-B", model), new DecideOptions
+                    {
+                        AddedExamples = new List<FewShotExample> { new FewShotExample("Go wherever you think you're needed.", "move_to", "north_tower", "To the tower, then.") },
+                    });
+                    break;
+                // The four runs #384 made possible (live-runs.md, "Ready to run now"); test after 4485e83.
+                case "summarise":
+                    a = new EvalArm("templated", Config("p4-A", model), new DecideOptions());
+                    b = new EvalArm("summarised", Config("p4-B", model), new DecideOptions()) { SummariseTargets = true };
+                    break;
+                case "pair":
+                    a = new EvalArm("flat", Config("p4-A", model), new DecideOptions());
+                    b = new EvalArm("paired", Config("p4-B", model), new DecideOptions { PairTargetsWithActions = true });
+                    break;
+                case "statements":
+                    a = new EvalArm("no-statements", Config("p4-A", model), new DecideOptions { ExampleStatements = false });
+                    b = new EvalArm("statements", Config("p4-B", model), new DecideOptions());
+                    break;
+                case "counters":
+                    a = new EvalArm("no-counters", Config("p4-A", model), new DecideOptions { CounterExamples = false });
+                    b = new EvalArm("counters", Config("p4-B", model), new DecideOptions());
+                    break;
                 default:
-                    Assert.Fail($"AGENERELA_P4_RUN '{run}' is not one of gate, idle, list, grounding, models, rename, targetrule, history");
+                    Assert.Fail($"AGENERELA_P4_RUN '{run}' is not one of gate, idle, list, grounding, models, rename, targetrule, history, freechoice, summarise, pair, statements, counters");
                     return;
             }
 
