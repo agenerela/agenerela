@@ -2,8 +2,8 @@
 
 COMP 490 final group presentation, in the week of **7 to 11 December 2026**. This page is the
 assignment as the course gives it, reformatted but not reworded, so every session and teammate
-works from the same text. The deck, its figures and who presents what go in this folder once
-they exist.
+works from the same text. The deck, its figures and who presents what are in this folder,
+described in [The deck](#the-deck-first-draft-24-november) below.
 
 **Our own notes so far** (not the course's):
 
@@ -12,6 +12,92 @@ they exist.
 - What the demo should show: **how the framework serves the game**, every decision and tool in it
   that goes through the framework (rulers, personas, storyteller, advisor, guards, memory,
   observations, the decision inspector), not the game for its own sake.
+
+## The deck (first draft, 24 November)
+
+| File | What it is |
+|---|---|
+| `Agenerela-Final-Presentation.pptx` | The deck, 23 slides with speaker notes. Import this into Google Slides |
+| `Agenerela-Final-Presentation.pdf` | A preview exported from PowerPoint. Submit the PDF you export after the team's edits, not this one |
+| `contact-sheet.png` | All 23 slides on one page |
+| `build-deck.js` | Builds the .pptx. Every figure and chart is drawn here as shapes, so it stays editable after the import |
+| `figures/painted-realm-council.jpg` | The one image: Painted Realm at turn 1, from the 17 November playtest pass |
+| `numbers.md` | Every number on the slides and the command or page it came from |
+| `numbers/` | `fetch_gh.py` and `stats.py`, which pull and count the GitHub data |
+| `render-deck.ps1`, `contact_sheet.py` | Export the .pptx to PDF and slide PNGs with PowerPoint, and draw the contact sheet |
+
+**Template.** The course template's `/export/pptx` URL downloaded without signing in (24 November),
+so the deck keeps its layout and section order: white slides, the title at the top left, the
+presenter at the top right, a source line at the bottom, and Introduction → Requirements → Design →
+Demo → GitHub → Group management → Acknowledgement → References → Q & A. The template's own type
+is Arial 28 pt for titles and 18 pt for body text. The deck uses Arial and Courier New only, as in
+October, with one scale throughout: titles 28 pt, body 14 pt, tables 11 to 12 pt, captions and
+sources 10 to 11 pt. That is smaller than the template's 18 pt body, because tables of numbers
+need the room; the October deck used 11.5 pt body text.
+
+**What the rubric asks for, and where it is.**
+
+| Rubric line | Slides |
+|---|---|
+| Title and acknowledgement slides | 1, 21 |
+| Introduction (2 pts) | 3–5: the problem for Unity developers, one decision through the framework, goals |
+| Requirements and design updates (5 pts) | 6 the six initial requirements, 7 the ones added since, 8 what was measured; 9 design then and now, 10 decision records, 11 phase plan |
+| Demo (5 pts), about 5 minutes | 12 what to watch for, 13 the video (placeholder), 14 what is still open and the plan |
+| GitHub (4 pts) | 15 branches and merge rules, 16 pull requests and commits, 17 git problems and fixes |
+| Group management (4 pts) | 18 tools (GitHub Projects, no Jira), 19 contribution table and two pie charts, 20 group-work problems |
+| Figures captioned and cited | Every figure has a caption and a source line; References on slide 22 |
+| Accuracy | Every number is in `numbers.md`; measured results give n, the control and the noise floor (hard rule 2) |
+
+### Who presents what
+
+Not decided yet. Six parts, one each; fill in the names here, on slide 2, and in the
+"Presenter: TBD" pill on each slide. Times are the speaker notes' spoken parts at about 140 words
+a minute; the "If asked" lines under them are for questions, not for the talk.
+
+| Part | Slides | Section | Time | Presenter |
+|---|---|---|---|---|
+| A | 1–5 | Introduction | ≈ 3:10 | TBD |
+| B | 6–8 | Requirements: then and now | ≈ 2:50 | TBD |
+| C | 9–11 | Design updates | ≈ 2:45 | TBD |
+| D | 12–14 | Demo: about 70 s of speaking plus the 5-minute video | ≈ 6:10 | TBD |
+| E | 15–17 | GitHub repository | ≈ 2:15 | TBD |
+| F | 18–21 | Group management, acknowledgement | ≈ 2:40 | TBD |
+| Everyone | 23 | Questions | 3:00 | |
+
+The estimate is about **19 minutes 50 seconds**, inside the 15 to 21 the course allows but near
+its top. If a rehearsal runs long, cut slide 14 to one line and shorten slide 3's notes first.
+
+### Still to do before presenting
+
+- **Presenters.** The table above, slide 2 and every slide's pill.
+- **The demo video** (slides 12–13) is being made in another session. Insert it on slide 13
+  (Insert → Video in Google Slides), update slide 12's list to match its order, and keep a
+  backup `.mp4`.
+- **Re-check slide 7's statuses** the day before: provider retry and settings profiles (an
+  unmerged branch on 24 November), image generation (PR #394, open), and **map naming and
+  backstory, for which no issue, branch or commit existed on 24 November**. It is shown as
+  Planned; drop the row if it is not going to be filed.
+- **Re-run the numbers** (`numbers.md` says how) if more merges land, and change the slides with them.
+- **Phase 4** closes on 7 December, the first presentation day. If the second annotator's
+  agreement (#148) lands, slides 5, 7, 11 and 14 change from In work.
+
+### Rebuilding
+
+```powershell
+# in any scratch folder, once
+npm install pptxgenjs react react-dom react-icons sharp
+```
+
+```powershell
+$env:NODE_PATH = "<that folder>\node_modules"; node build-deck.js
+```
+
+```powershell
+.\render-deck.ps1 -Pptx Agenerela-Final-Presentation.pptx -OutDir <scratch>\png -Pdf "$PWD\Agenerela-Final-Presentation.pdf"
+```
+
+The render script drives PowerPoint through COM, so it needs PowerPoint installed;
+`python contact_sheet.py <scratch>\png contact-sheet.png` draws the contact sheet.
 
 ## The assignment
 
