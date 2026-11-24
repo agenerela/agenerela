@@ -32,9 +32,9 @@ namespace Agenerela
         /// The format version this package writes. Raised only when a field is added: 2 added
         /// <see cref="ChainId"/>, <see cref="ChainHop"/> and <see cref="ChainSource"/> (#190, G4); 3 added
         /// <see cref="PromptCharacters"/>, <see cref="PromptTokensEstimated"/>, <see cref="PromptBudget"/>,
-        /// <see cref="OverBudget"/> and <see cref="PromptTrims"/> (#151).
+        /// <see cref="OverBudget"/> and <see cref="PromptTrims"/> (#151); 4 added <see cref="Guards"/> (#172).
         /// </summary>
-        public const int CurrentVersion = 3;
+        public const int CurrentVersion = 4;
 
         /// <summary>
         /// The format version of this line, <see cref="CurrentVersion"/> when this package wrote it. Every
@@ -109,6 +109,14 @@ namespace Agenerela
         /// included (<see cref="DecisionTelemetry.GuardsFired"/>); left out when none did.
         /// </summary>
         [JsonProperty("guardsFired")] public List<string> GuardsFired;
+
+        /// <summary>
+        /// Every guard <c>DecideAsync</c>'s pipeline held, in the order they run
+        /// (<see cref="DecisionTelemetry.GuardOrder"/>, #172): those before the one in
+        /// <see cref="Verdict"/> passed, and those after it never ran. Left out when the decision never
+        /// reached the guards, and on every line before version 4.
+        /// </summary>
+        [JsonProperty("guards")] public List<string> Guards;
 
         /// <summary>
         /// Each statement a guard replaced while keeping the move, with the guard, its reason, the text
@@ -332,6 +340,11 @@ namespace Agenerela
             if (telemetry.GuardsFired != null && telemetry.GuardsFired.Count > 0)
             {
                 line.GuardsFired = new List<string>(telemetry.GuardsFired);
+            }
+
+            if (telemetry.GuardOrder != null && telemetry.GuardOrder.Count > 0)
+            {
+                line.Guards = new List<string>(telemetry.GuardOrder);
             }
 
             if (telemetry.StatementsReplaced != null && telemetry.StatementsReplaced.Count > 0)

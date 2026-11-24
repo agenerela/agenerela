@@ -3,8 +3,8 @@
 `DecisionLog` writes every decision every agent makes to a JSON-lines file, one line per
 [decision feed](agents-in-a-scene.md#watching-an-agent-from-a-tool) entry: one when `DecideAsync`
 returns, and one each time `Execute` returns (#190, G7). It is plain C#, so it logs an agent with no
-GameObject as well as one with. `DecisionLogReader` reads a file back, and is what the Decision Log
-window and a replay read through, so the format has one definition.
+GameObject as well as one with. `DecisionLogReader` reads a file back, and is what the
+[Decision Log window](decision-log.md) and a replay read through, so the format has one definition.
 
 ```csharp
 using Agenerela;
@@ -27,10 +27,10 @@ foreach (var line in DecisionLogReader.Read(path))
 
 ## What a line holds
 
-Each line is one JSON object, `DecisionLogLine`, with `"version": 3`. A later version only adds
+Each line is one JSON object, `DecisionLogLine`, with `"version": 4`. A later version only adds
 fields, and the reader ignores fields it does not know, so version 1 lines, written before the
-chain fields, still read, with no chain, and version 2 lines, written before the prompt budget, with
-no budget. A field that is null is left out.
+chain fields, still read, with no chain, version 2 lines, written before the prompt budget, with
+no budget, and version 3 lines with no `guards`. A field that is null is left out.
 
 | Field | What it is |
 |---|---|
@@ -41,6 +41,7 @@ no budget. A field that is null is left out.
 | `decision` | What the game got, after the guards: `action`, `target`, `statement`. Absent for a pipeline error |
 | `modelDecision` | What the model answered, only when a guard changed it or a stray target was dropped |
 | `verdict`, `guardsFired` | The guard, kind and reason that stopped the model's answer; every guard that did not pass it, `Execute`'s re-check included |
+| `guards` | Every guard `DecideAsync`'s pipeline held for the decision, in the order they run: those before the one in `verdict` passed, those after it never ran. Absent when the decision never reached the guards (#172) |
 | `statementsReplaced` | Each statement a guard replaced while keeping the move (`GuardVerdict.ReplaceStatement`): `guard`, `reason`, `replaced` and `statement`; the line has no such key when none was ([guards.md](guards.md#the-four-verdicts)) |
 | `execution` | For an `Executed` line, what `Execute` did: `status` and `reason` |
 | `error` | A pipeline error's `kind` and `message` |
