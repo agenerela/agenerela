@@ -213,9 +213,13 @@ namespace GreyBoxStrategy.Screen.Tests
             if (recruit != null) plan.Courts.Add(recruit);
             var taxes = court.Legal.FirstOrDefault(m => m.Action == Actions.RaiseTaxes);
             if (taxes != null) plan.Courts.Add(taxes);
+            // An order that holds gold back at once (Country.Reserved), the one change your court makes before resolution.
+            var paid = court.Legal.FirstOrDefault(m => m.Action != Actions.None && !plan.Courts.Contains(m) && WritLegality.CourtOrderCost(court.World, You, m) > 0);
+            if (paid != null) plan.Courts.Insert(0, paid);
             foreach (var a in court.World.ArmiesOf(You).Where(a => !a.Marching).OrderBy(a => a.Id))
                 if (WritLegality.ArmyMoves(court.World, You, a.Id).FirstOrDefault(m => m.Action == Actions.March) is Move march) plan.Armies[a.Id] = march;
-            Assert.That(plan.Courts.Count + plan.Armies.Count, Is.GreaterThan(0), "your plan gives orders the rulers could see");
+            Assert.That(paid, Is.Not.Null, "your plan holds gold back, which the rulers could see if your orders reached them");
+            Assert.That(plan.Armies.Count, Is.GreaterThan(0), "and marches");
             s.Plan(plan);
             for (int i = 0; i < 8000 && s.Resolved < 1 && s.Error == null; i++)
             {
