@@ -104,6 +104,56 @@ namespace Agenerela
             return grammar.ToString();
         }
 
+        private static void ValidatePairs(IReadOnlyList<SchemaField> fields,
+            IReadOnlyList<ActionTargets> pairs)
+        {
+            SchemaField action = null;
+            SchemaField target = null;
+            foreach (var field in fields)
+            {
+                if (field.Name == DecisionSchema.ActionFieldName) action = field;
+                if (field.Name == DecisionSchema.TargetFieldName) target = field;
+            }
+
+            if (action?.AllowedValues == null || target?.AllowedValues == null)
+            {
+                throw new ArgumentException(
+                    "A schema with pairs needs an action field and a target field, each with allowed values.",
+                    "schema");
+            }
+
+            if (pairs.Count == 0)
+            {
+                throw new ArgumentException(
+                    "The schema has an empty list of pairs, which no answer can satisfy.", "schema");
+            }
+
+            var pairedActions = new HashSet<string>(StringComparer.Ordinal);
+            for (var i = 0; i < pairs.Count; i++)
+            {
+                ValidatePairValues(pairs[i].Actions, action.AllowedValues, $"Pair {i}'s actions");
+                ValidatePairValues(pairs[i].Targets, target.AllowedValues, $"Pair {i}'s targets");
+
+                foreach (var id in pairs[i].Actions)
+                {
+                    if (!pairedActions.Add(id))
+                    {
+                        throw new ArgumentException(
+                            $"The action '{id}' is in two pairs, so its targets are ambiguous.", "schema");
+                    }
+                }
+            }
+
+            foreach (var id in action.AllowedValues)
+            {
+                if (!pairedActions.Contains(id))
+                {
+                    throw new ArgumentException(
+                        $"The action '{id}' is offered but in no pair, so no answer could choose it.", "schema");
+                }
+            }
+        }
+
         private static void AppendPairObjectRules(StringBuilder grammar,
             IReadOnlyList<SchemaField> fields, ActionTargets pair, int pairIndex)
         {
