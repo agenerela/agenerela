@@ -9,11 +9,16 @@ namespace Agenerela
     /// </summary>
  public sealed class GbnfSerializer
     {
+        
         /// <summary>
-        /// Returnsy a grammar that accepts JSON objects matching <paramref name="schema"/>.
-        /// Fields stay in schema order; enum fileds accpet only their listed values --> if {"action" : "talk} is the only listed, then {"action" : "run"} rejected.
-        /// A field is null, unnamed or duplicated, or its allowed values are empty --> null, empty strings or duplicated 
-        /// </summary>     
+        /// Returns a grammar that accepts JSON objects matching <paramref name="schema"/>.
+        /// Fields stay in schema order; enum fields accept only their listed values.
+        /// </summary>
+        /// <exception cref="ArgumentNullException"><paramref name="schema"/> is null.</exception>
+        /// <exception cref="ArgumentException">
+        /// A field is null, unnamed or duplicated, or its allowed values are empty,
+        /// null, empty strings or duplicated.
+        /// </exception>
         public String Serialize(DecisionSchema schema)
         {
             if (schema == null)
@@ -74,6 +79,8 @@ namespace Agenerela
             return grammar.ToString();
         }
 
+        // Builds grammar rules that control how field appear in the JSON object.
+        // Keeps fields in thier original order.
         private static void AppendFieldSequenceRules(StringBuilder grammar, IReadOnlyList<SchemaField> fields)
         {
             var hasRequiredFieldAtOrAfter = new bool[fields.Count];
@@ -113,6 +120,8 @@ namespace Agenerela
             }
         }
         
+        // Validate checks that the field and their allowed values are usable
+        // before the serializer builds the grammar.
         private static void Validate(IReadOnlyList<SchemaField> fields)
         {
             if (fields == null)
@@ -181,6 +190,8 @@ namespace Agenerela
         {
              grammar.Append(name).Append(" ::= ").Append(expression).Append('\n');
         }
+
+        // Encodes a string as JSON text, then as a GBNF terminal that mathces that text.
         private static string JsonQuote(string value)
         {
              var json = new StringBuilder();
@@ -245,6 +256,10 @@ namespace Agenerela
         {
             output.Append("\\u");
         }
+
+        // GBNF terminals are quoted strings.
+        // Escape grammar meta-characters and write non-ASCII
+        // as exploit Unicode escapes.
         private static string GbnfTerminal(string value)
         {
             var terminal = new StringBuilder();
