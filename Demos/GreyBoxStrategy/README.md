@@ -912,9 +912,13 @@ first, because a rule game unloads its model when it ends. Two changes, with no 
   provider's own settings. A different context size would load it again at the first decision. Nothing is sent
   while another session holds the card or it is paused. The framework already had the call, so there is no
   framework gap.
-- **A generated world's rulers start behind the loading card.** The session begins as soon as the world's map and
-  rules exist (`BeginRuleEarly`), before the chart is drawn and the screen built, and the screen takes it over.
-  The Classic board already started the session as soon as the game began. The console says how long the rulers had
+- **A generated world's rulers start behind the loading card.** The session is made as soon as the world's map and
+  rules exist (`BeginRuleEarly`), because the court's painting reads its personas. Its rulers begin once the court is
+  painted (`StartEarlyRulers`), while the chart is laid out and the screen built, and the screen takes the session
+  over. They wait for the painting because a picture unloads the decision model on the shared card (DR-025), so
+  rulers and painter would take turns loading it. When the painting made a picture, the model is warmed again before
+  they begin; a court read from the cache paints in no time, so the head start barely shrinks. The Classic board
+  already started the session as soon as the game began. The console says how long the rulers had
   before your first council was shown, and how many were still deciding.
 
 The rulers still decide on the same snapshot. Guarding test:
@@ -924,6 +928,11 @@ your plan is in. Both games must produce the same ruler inputs and the same rule
 and show you the same council. Two deliberate breaks each made it fail once: a court order that raised the realm's
 soldiers at once failed the council check, and a facts line with every realm's held-back gold failed the rulers'
 check.
+
+`FreeOrderSessionTests.A_session_made_for_the_court_painting_asks_no_ruler_until_it_runs` guards the wait for the
+painting: a session made but not run gives the opening and every ruler's persona, and makes no provider and no call
+until it runs. A session that made its provider at once failed it. Nothing tests the director's own order, painting
+then `StartEarlyRulers`, which needs a scene.
 
 `FreeOrdersLiveCheck` measures it: `-coldStart 1` unloads the model first, as the last game leaves it, `-warm 1`
 warms it as New game does, and `-headStartSeconds S` begins the session S seconds before the player sees turn 1.
