@@ -101,6 +101,21 @@ namespace Agenerela.Providers
         /// </summary>
         public float RetryWaitSeconds;
 
+        /// <summary>
+        /// How many characters of thinking came back before the reply, for a provider asked to
+        /// let its model think (<c>OllamaSettings.Think</c>, DR-029). 0 when there was none or the
+        /// provider does not think. A length, not the text, so it can be kept and compared freely.
+        /// </summary>
+        public int ThinkingCharacters;
+
+        /// <summary>
+        /// The model's thinking before the reply, exactly as received, or null. A provider fills it
+        /// only when asked to keep it (<c>OllamaSettings.KeepThinking</c>), so by default the text
+        /// never reaches a result, a log or telemetry. Never parsed: the decision is
+        /// <see cref="Text"/> alone.
+        /// </summary>
+        public string Thinking;
+
         // Extension point, not now: provider-specific extras (Ollama's eval_duration,
         // a cloud vendor's request id) belong in a string-keyed bag rather than as vendor
         // fields on this type or on DecisionTelemetry (#3). Add one when a provider

@@ -3157,3 +3157,38 @@ player executable runs decisions with no Ollama and no network, and until the ac
 findings above are re-measured through that provider rather than through Ollama's HTTP
 API. Treat every number in this appendix as measured against Ollama specifically until
 that comparison exists.
+
+### DR-029 — Native thinking is an Ollama setting, off by default, and the guards read the reply's tokens alone
+
+**Status:** Accepted, 24 November 2026, by the framework tech lead, for the lead's question that day:
+"Taking more time but maybe it would improve smth". Built in the pull request that adds this record.
+
+**Context.** `OllamaProvider` has always sent `think: false`, so letting a model think before it
+answers was never measured. Thinking here means the **model's own thinking channel**: Ollama returns
+it in `message.thinking`, and the reply after it is still constrained to the schema, `action` first.
+It is **not** a reasoning field in the schema before `action`, which the prototype measured as the
+worst of five variants (Appendix A) and the settled rules forbid; the schema does not change. A probe
+on `qwen3.5:4b` (findings, 24 November) found that thinking almost never ends at the context a
+decision uses, that Ollama 0.40.14 has no per-request thinking budget, and that `logprobs` then
+covers the thinking's tokens as well as the reply's.
+
+**Decision.**
+
+| Question | Decision | Why |
+|---|---|---|
+| The switch | `OllamaSettings.Think` and `OllamaProviderConfig.Think`, a bool, false unless set. False sends `think: false`, so the default request is byte for byte the one before (the golden-body test pins it) | Hard rule 2: no default changes without an A/B, and the probe gives no reason to expect one |
+| Where it lives | On the provider, not `DecideOptions` | It is Ollama's field; a cloud provider's thinking is shaped differently. A per-call switch can follow if a game wants some calls to think |
+| The guards | With `Think` on, `ProviderResult.TokenProbabilities` is cut to the shortest tail of tokens whose join is the reply. When none joins to it exactly, no probabilities: the grounding guard records `NoProbabilities` | The guard must never read thinking as the reply; reading the reply's own tokens keeps it working as measured. A dropped split character, the one known mismatch, costs that decision its check rather than giving it a wrong one |
+| Telemetry | `ProviderResult.ThinkingCharacters`, a length. `CompletionTokens` stays Ollama's `eval_count`, thinking included. The evaluation report's arm conditions record `think` | Ollama counts thinking and reply together; the length is enough to see that a decision thought and how much, without the text |
+| The thinking text | Dropped unless `OllamaSettings.KeepThinking`, which fills `ProviderResult.Thinking`. Nothing in the framework logs it | It is long (15,000 characters a decision on the 4B), may repeat the prompt, and is not the decision |
+| A thinking budget | None. `DecideOptions.MaxReplyTokens` caps thinking and reply together, and the timeout bounds the call | Ollama 0.40.14 has none per request; a cap cuts the thinking before the reply |
+
+**Not in this decision.** A default of on, for any model; a per-call switch on `DecideOptions`;
+passing thinking into telemetry or the decision log (an `Agent` change); thinking levels, which
+`qwen3.5:4b` accepts and ignores.
+
+**Consequences.** None for a game that does not set it. An arm with `Think` on needs a larger
+`ContextSize` and `TimeoutSeconds`, and on `qwen3.5:4b` would still answer rarely.
+
+**What would change this.** An A/B with a control arm showing thinking helps a model at a cost a
+game can pay; a model whose thinking ends in a few hundred tokens; an Ollama thinking budget.

@@ -160,7 +160,7 @@ namespace Agenerela.Evaluation
                 string resident = reading == null || !reading.Checked
                     ? "not checked"
                     : string.Join(", ", reading.Models.Select(m => $"{m.Name} {Megabytes(m.SizeVram)}/{Megabytes(m.Size)} MB in VRAM"));
-                Line($"| {Cell(arm.Name)} | {Cell(arm.ProviderConfig)} | {Cell(arm.Provider)} | {Cell(arm.Model)} | {Cell(arm.ProviderVersion)} "
+                Line($"| {Cell(arm.Name)} | {Cell(arm.ProviderConfig)} | {Cell(arm.Provider)} | {Cell(arm.Model)}{(arm.Think == true ? ", thinking" : "")} | {Cell(arm.ProviderVersion)} "
                    + $"| {Guard(arm)} | {arm.WarmUpRequests} | {Cell(resident)} |");
             }
 
