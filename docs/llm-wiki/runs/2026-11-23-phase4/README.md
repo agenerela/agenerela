@@ -5,7 +5,7 @@ another on the home server (RTX 4070 SUPER 12 GB, Docker Ollama 0.40.14 behind t
 `5728506a6d6b`, over the home network), each under its own clean lease. What they show is in
 [`findings.md`](../../findings.md), 23 November: "The Phase 4 gate's live A/B", "#151's first
 runs on the 209 set", "#151's switch runs on the 209 set" and "#151 after #384". The `-4b` folders ran `qwen3.5:4b` in both arms;
-the rest `qwen3.5:2b`. The first five rows ran at test `1f12636`; every run below them at `60e435c` (#385), except the four rows after it, at `4485e83` (#384) on set `ab2d30b`, whose controls are not comparable with the rest, and `list-4b-timing/`, at `6056863` on 24 November.
+the rest `qwen3.5:2b`. The first five rows ran at test `1f12636`; every run below them at `60e435c` (#385), except the four rows after it, at `4485e83` (#384) on set `ab2d30b`, whose controls are not comparable with the rest, `list-4b-timing/`, at `6056863` on 24 November, and `think-t1-pilot/`, at `0666d68` the same day.
 
 | Folder | Run | Lease | Arms |
 |---|---|---|---|
@@ -26,6 +26,7 @@ the rest `qwen3.5:2b`. The first five rows ran at test `1f12636`; every run belo
 | [`statements/`](statements/report.md), [`statements-4b/`](statements-4b/report.md) | Example statements, #151 | #32019, #33727 | `no-statements` (`ExampleStatements = false`) against `statements` (defaults) |
 | [`counters/`](counters/report.md), [`counters-4b/`](counters-4b/report.md) | Counter-examples, #151 | #32446, #34154 | `no-counters` (`CounterExamples = false`) against `counters` (defaults) |
 | [`list-4b-timing/`](list-4b-timing/report.md) | `ListActionsAndTargets` timed on `qwen3.5:4b`, 24 November, with `decisions.csv` (each decision's prompt and completion tokens and latency) | #73451 (`agenerela-runs`) | as `list/` |
+| [`think-t1-pilot/`](think-t1-pilot/report.md) | Native thinking off against on (T1 pilot, DR-029), `qwen3.5:4b`, 33 prompts (slice 0), both arms at `num_ctx` 16384, 24 November, with `report.json` and `decisions.csv` | #73923 (`agenerela-runs`) | `think-off` against `think-on` (`OllamaProviderConfig.Think`) |
 
 `Phase4Run.cs.txt` is the entry point that ran them: one test, the run picked by
 `AGENERELA_P4_RUN`, built on the model-sweep kit's `ModelSweepRun.cs.txt`
@@ -37,5 +38,5 @@ mode with `-runTests -testPlatform PlayMode -testFilter Agenerela.Tests.Phase4Ru
 23 November a clean lease once still had another session's model resident, and the runner refused.
 Never commit the copied file.
 
-Only `gate/` keeps its `report.json` (and `list-4b-timing/` its `decisions.csv`) (about 425 KB); the others are in the run session's
+Only `gate/` and `think-t1-pilot/` keep their `report.json` (and `list-4b-timing/` and `think-t1-pilot/` their `decisions.csv`) (about 425 KB); the others are in the run session's
 `.scratch/phase4-runs/out/` on the lead's laptop.
