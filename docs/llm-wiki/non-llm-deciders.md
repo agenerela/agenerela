@@ -814,7 +814,7 @@ or one that embeds and compares, would fit behind it without the rest of the fra
   `ILLMProvider` nothing else in the framework would know.
 - **The candidates arrive as prompt text.** A provider gets the action and target ids from the
   schema's enums, and the stimulus and its label as fields (`StimulusText`, `StimulusLabel`). The
-  action descriptions arrive only inside the system prompt, and only with `ListActionsAndTargets` on;
+  action descriptions arrive only inside the system prompt, and only with `ListActionsAndTargets` on (the default since DR-027);
   the target descriptions only as observation lines. A non-generative provider would want them as
   data on `DecisionRequest`: each offered action's id, description and examples, and each offered
   target's id and description.

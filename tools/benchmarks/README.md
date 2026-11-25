@@ -175,7 +175,7 @@ and the control took 7 minutes. The result of 12 November 2026 is in `docs/llm-w
 ## `think_probe.py` and `think_end_probe.py`
 
 What `think: true` does to `OllamaProvider`'s own evaluation-set request
-(`tools/live-runs/model-sweep/framework_request.json`), with six stimuli of their own (DR-028).
+(`tools/live-runs/model-sweep/framework_request.json`), with six stimuli of their own (DR-029).
 `think_probe.py` sends each under five arms (off, on, on with `num_predict` 256, `think: "low"`, on
 without logprobs) and records whether the reply is schema JSON, the thinking's length, the tokens
 and seconds, and whether `logprobs` spells the reply or the thinking too. `think_end_probe.py` keeps

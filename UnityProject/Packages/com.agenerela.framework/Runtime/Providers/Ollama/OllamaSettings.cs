@@ -109,7 +109,7 @@ namespace Agenerela.Providers
 
         /// <summary>
         /// Whether the model may think before it answers, sent as <c>think: true</c>: false unless
-        /// set, which sends <c>think: false</c>, every request's value before DR-028 (#151).
+        /// set, which sends <c>think: false</c>, every request's value before DR-029 (#151).
         /// </summary>
         /// <remarks>
         /// <para>

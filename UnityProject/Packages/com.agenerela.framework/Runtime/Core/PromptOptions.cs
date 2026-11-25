@@ -62,8 +62,10 @@ namespace Agenerela
 
         /// <summary>
         /// Whether the system prompt lists the actions offered, each with its description, and the
-        /// targets offered, each with its own line when it has one (#190, Living Vale #1). Off by
-        /// default. <c>Agent</c> copies it from <see cref="DecideOptions.ListActionsAndTargets"/>.
+        /// targets offered, each with its own line when it has one (#190, Living Vale #1). Off here,
+        /// so the builder adds the list only when asked; <c>Agent</c> copies it from
+        /// <see cref="DecideOptions.ListActionsAndTargets"/>, which is on by default since 24 November
+        /// 2026 (DR-027), so every agent's request carries it unless the call turns it off.
         /// </summary>
         /// <remarks>
         /// <para>
@@ -93,9 +95,13 @@ namespace Agenerela
         /// listed by id. With no target field in the schema there is no target list.
         /// </para>
         /// <para>
-        /// <b>Unmeasured.</b> Its form follows the "Around you" list of the probe DR-016 measured, which
-        /// listed targets the same way, but no actions, and was never measured on its own. It stays
-        /// off until the evaluation A/B shows it helps (#151, hard rule 2).
+        /// <b>Measured.</b> Its form follows the "Around you" list of the probe DR-016 measured. On the
+        /// 209-prompt evaluation set (findings, 23 November 2026, "ListActionsAndTargets off / on,
+        /// again") <c>qwen3.5:4b</c> went from 170 to 184 right, +6.7 points against a floor of 4.9,
+        /// the same answers on a repeat; almost all of it in situations (+15.5), with wrong
+        /// <c>none</c> answers falling from 14 to 3. <c>qwen3.5:2b</c> gained 4.8, within noise. So it
+        /// is on by default for an agent's calls (DR-027); with it off the prompt is the one from
+        /// before it, byte for byte.
         /// </para>
         /// </remarks>
         public bool ListActionsAndTargets;

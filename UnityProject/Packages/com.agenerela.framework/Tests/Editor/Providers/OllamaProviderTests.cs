@@ -88,7 +88,9 @@ namespace Agenerela.Tests
             var handler = ScriptedHandler.Replying(Envelope(GoToTheTower));
             var agent = Fixtures.VillageGuard(Provider(handler));
 
-            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+            // The wire format is this test's subject, not the prompt: #88's body has no action list,
+            // which every call has sent by default since DR-027, so the call turns it off.
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", new DecideOptions { ListActionsAndTargets = false }));
 
             Assert.That(result.Decision, Is.Not.Null, result.Telemetry.ErrorMessage);
             Assert.That(handler.Requests, Has.Count.EqualTo(1));
@@ -114,7 +116,7 @@ namespace Agenerela.Tests
             Assert.That(provider.TokenAlternatives, Is.EqualTo(alternatives));
         }
 
-        // ---- Native thinking (DR-028) ------------------------------------------------------------
+        // ---- Native thinking (DR-029) ------------------------------------------------------------
 
         [Test]
         public async Task ThinkIsOffUnlessSetAndOnChangesOnlyTheThinkField()
@@ -183,7 +185,7 @@ namespace Agenerela.Tests
                 .RequestAsync(Request(), CancellationToken.None));
             Assert.That(on.TokenProbabilities.Select(t => t.Text), Is.EqualTo(reply), "The thinking's tokens are cut away.");
 
-            // Thinking off, the list is what Ollama sent, as before DR-028.
+            // Thinking off, the list is what Ollama sent, as before DR-029.
             var off = await NotCancelled(Provider(ScriptedHandler.Replying(envelope))
                 .RequestAsync(Request(), CancellationToken.None));
             Assert.That(off.TokenProbabilities, Has.Count.EqualTo(thinking.Length + reply.Length));

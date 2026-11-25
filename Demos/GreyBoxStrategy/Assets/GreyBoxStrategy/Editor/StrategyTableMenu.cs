@@ -164,20 +164,8 @@ namespace GreyBoxStrategy.Editor
             return setup;
         }
 
-        /// <summary>Today's rules with the named fields set, from "Field=value;Field=value"; an unknown field throws.</summary>
-        public static GameRules RulesWith(string settings)
-        {
-            var rules = GameRules.Standard;
-            foreach (string part in settings.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
-            {
-                int eq = part.IndexOf('=');
-                if (eq <= 0) throw new ArgumentException($"-strategyRules: \"{part}\" is not Field=value.");
-                string name = part.Substring(0, eq).Trim();
-                var field = typeof(GameRules).GetField(name) ?? throw new ArgumentException($"-strategyRules: GameRules has no field {name}.");
-                field.SetValue(rules, Convert.ChangeType(part.Substring(eq + 1).Trim(), field.FieldType, System.Globalization.CultureInfo.InvariantCulture));
-            }
-            return rules;
-        }
+        /// <summary>Today's rules with the named fields set, from "Field=value;Field=value"; an unknown field throws (<see cref="GameRules.With"/>).</summary>
+        public static GameRules RulesWith(string settings) => GameRules.With(settings);
 
         // One provider per model for the whole run, so every seat and the storyteller share its queue.
         private static Func<string, World, ILLMProvider> ProviderCache()

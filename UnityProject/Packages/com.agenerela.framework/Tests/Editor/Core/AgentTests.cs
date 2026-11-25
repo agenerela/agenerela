@@ -85,11 +85,20 @@ namespace Agenerela.Tests
             await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
             var request = fake.LastRequest;
 
-            // #16's golden text, now produced by the agent rather than by calling the builders by hand.
+            // #16's golden text, now produced by the agent rather than by calling the builders by hand,
+            // with the action and target list every call has carried by default since DR-027.
             Assert.That(request.SystemPrompt, Is.EqualTo(string.Join("\n",
                 "You are Village Guard, a guard at the town gate. Loyal, brief, a little suspicious of strangers.",
                 "Your goals: keep the gate safe; help the player when asked.",
-                "Choose exactly one action from the allowed list. Use no_target when none of the listed targets applies.")));
+                "Choose exactly one action from the allowed list. Use no_target when none of the listed targets applies.",
+                "Allowed actions:",
+                "- follow_player: Walk alongside the player.",
+                "- move_to: Walk to a named place.",
+                "- attack_target: Attack a named target.",
+                "- none: Take no action.",
+                "Targets:",
+                "- tower",
+                "- training_dummy")));
             Assert.That(request.FewShotBlock, Is.EqualTo(string.Join("\n",
                 "Examples of correct decisions:",
                 "Player: \"Accompany me on my rounds.\" -> action: follow_player, target: no_target",
@@ -104,6 +113,21 @@ namespace Agenerela.Tests
             Assert.That(request.Schema.Fields[0].AllowedValues,
                 Is.EqualTo(new[] { "follow_player", "move_to", "attack_target", "none" }));
             Assert.That(request.Schema.Fields[1].AllowedValues, Is.EqualTo(new[] { "no_target", "tower", "training_dummy" }));
+        }
+
+        [Test]
+        public async Task WithTheListOffTheRequestIsTheGoldenTextFromBeforeDR027()
+        {
+            // The control arm of every A/B run before DR-027, byte for byte: #16's golden text.
+            var fake = new FakeProvider(GoToTheTower);
+            var agent = Fixtures.VillageGuard(fake);
+
+            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", new DecideOptions { ListActionsAndTargets = false }));
+
+            Assert.That(fake.LastRequest.SystemPrompt, Is.EqualTo(string.Join("\n",
+                "You are Village Guard, a guard at the town gate. Loyal, brief, a little suspicious of strangers.",
+                "Your goals: keep the gate safe; help the player when asked.",
+                "Choose exactly one action from the allowed list. Use no_target when none of the listed targets applies.")));
         }
 
         [Test]

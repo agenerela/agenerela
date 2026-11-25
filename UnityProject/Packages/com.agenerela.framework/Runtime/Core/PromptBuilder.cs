@@ -37,9 +37,10 @@ namespace Agenerela
     /// Two additions are made only on request. The target rule is one line, the fallback for a
     /// provider that cannot report token probabilities, without which <see cref="TargetGroundingGuard"/>
     /// cannot run (build plan §2.5, DR-016). The action and target list is for a provider that never
-    /// reads the schema (#190). With <see cref="PromptOptions.TargetRule"/> and
-    /// <see cref="PromptOptions.ListActionsAndTargets"/> off, the defaults and what <c>Agent</c> sends
-    /// to Ollama, the prompt is exactly what it was without them.
+    /// reads the schema (#190); <c>Agent</c> asks for it on every call unless the call turns
+    /// <see cref="DecideOptions.ListActionsAndTargets"/> off (DR-027). With <see cref="PromptOptions.TargetRule"/>
+    /// and <see cref="PromptOptions.ListActionsAndTargets"/> off, the builder's own defaults, the prompt
+    /// is exactly what it was without them, which is what the golden file pins.
     /// </para>
     /// </remarks>
     public static class PromptBuilder

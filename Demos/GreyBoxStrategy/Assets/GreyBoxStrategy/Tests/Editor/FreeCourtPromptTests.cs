@@ -15,7 +15,7 @@ namespace GreyBoxStrategy.Tests
     public sealed class FreeCourtPromptTests
     {
         // A fake model that raises taxes whenever the call lists it, and otherwise answers the first action listed.
-        private static async Task<(WritModelRecord record, List<ScriptedRequest> seen)> Play(bool facts = false, bool wording = false)
+        private static async Task<(WritModelRecord record, List<ScriptedRequest> seen)> Play(bool facts = true, bool wording = false)
         {
             var seen = new List<ScriptedRequest>();
             var provider = new ScriptedProvider
@@ -58,10 +58,19 @@ namespace GreyBoxStrategy.Tests
         }
 
         [Test]
+        public void CourtTurnFacts_IsOnByDefault_AndCourtNoneWordingOff()
+        {
+            // The lead's call on 24 November, after request 003.
+            Assert.That(GameRules.Standard.CourtTurnFacts, Is.True);
+            Assert.That(GameRules.Standard.CourtNoneWording, Is.False);
+            Assert.That(GameRules.With("FreeOrders=true;CourtTurnFacts=false").CourtTurnFacts, Is.False, "request 003's control arm");
+        }
+
+        [Test]
         public async Task CourtTurnFacts_TellsALaterRequestThatTaxesAreRaised_AndTheGoldHeld()
         {
-            var (_, off) = await Play();
-            var (_, on) = await Play(facts: true);
+            var (_, off) = await Play(facts: false);
+            var (_, on) = await Play();
             string Read(ScriptedRequest r) => r.Request.Observations + " " + r.Request.Stimulus;
             Assert.That(off.Any(r => Read(r).Contains("Taxes are raised this turn")), Is.False, "off: no new fact");
             Assert.That(on.Any(r => Read(r).Contains("Taxes are raised this turn")), Is.True);

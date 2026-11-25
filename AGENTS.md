@@ -72,7 +72,9 @@ Neither changelog nor the wiki is loaded into every session; read the one you ne
   schema rather than forbidden in prose.
 - A model served through Ollama never reads the response schema: it only constrains
   sampling, so field and action descriptions in it reach no local model (findings,
-  10 October 2026). Anything a local model must read goes in the prompt. Re-run
+  10 October 2026). Anything a local model must read goes in the prompt, which is why the
+  prompt lists the offered actions and targets by default (`DecideOptions.ListActionsAndTargets`,
+  DR-027: +6.7 points on `qwen3.5:4b`, beyond noise). Re-run
   `tools/benchmarks/schema_visibility_probe.py` after an Ollama upgrade.
 
 ## Repo layout

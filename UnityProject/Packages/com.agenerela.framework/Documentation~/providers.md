@@ -178,7 +178,7 @@ in messages without them.
 ### Thinking before answering
 
 `OllamaSettings.Think` (and an `OllamaProviderConfig`'s **Think**) sends `think: true`, so the model
-may think before it answers (DR-028). Off unless set, and the request is then exactly the one sent
+may think before it answers (DR-029). Off unless set, and the request is then exactly the one sent
 before it existed. This is the model's own thinking channel, which Ollama returns in
 `message.thinking` beside the reply; the reply is still the schema's JSON, `action` first. It is not a
 reasoning field in the schema, which the prototype measured as the worst of five variants (build plan
@@ -782,7 +782,7 @@ them is a change to `ILLMProvider`, which is the test this design has to keep pa
 - **`ProviderHealth` from lifecycle calls.** A warm-up that succeeds could mark a provider up.
   Left out so health follows decisions alone; add it if a game warms up to recover.
 - **A setting for a model that rejects `think`**, when one is adopted. `OllamaProvider` sends
-  `think: false` unless `OllamaSettings.Think` is on (DR-028).
+  `think: false` unless `OllamaSettings.Think` is on (DR-029).
 - **Thinking per call**, a `DecideOptions` switch beside the provider's, and the thinking's length in
   `DecisionTelemetry`. Both are `Agent` changes; add them when a game wants some calls to think.
 - **A provider conformance suite** every vendor must pass. Phase 6 deliverable, shaped from
