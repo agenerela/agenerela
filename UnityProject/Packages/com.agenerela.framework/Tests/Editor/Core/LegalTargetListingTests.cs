@@ -190,7 +190,8 @@ namespace Agenerela.Tests
         [Test]
         public void ObservationLineSaysTheLegalPairsAsOneSentenceByAction()
         {
-            var preview = Mill().Preview("What now?", new DecideOptions { LegalTargets = LegalTargetListing.ObservationLine });
+            // The list off, so the system prompt shows what ObservationLine alone adds to it: nothing.
+            var preview = Mill().Preview("What now?", new DecideOptions { LegalTargets = LegalTargetListing.ObservationLine, ListActionsAndTargets = false });
             var request = preview.Request;
 
             // wave takes only no_target here, so it names nothing; fetch may take nothing, so it is
@@ -345,7 +346,7 @@ namespace Agenerela.Tests
             var listedAll = await Fixtures.NotCancelled(Mill(new FakeProvider(Reply("none", "no_target")))
                 .DecideAsync("What now?", new DecideOptions { ListActionsAndTargets = true }));
             var notListed = await Fixtures.NotCancelled(Mill(new FakeProvider(Reply("none", "no_target")))
-                .DecideAsync("What now?", new DecideOptions { MaxListedTargets = 1 }));
+                .DecideAsync("What now?", new DecideOptions { ListActionsAndTargets = false, MaxListedTargets = 1 }));
 
             Assert.That(listedAll.Telemetry.TargetsUnlisted, Is.Empty);
             Assert.That(notListed.Telemetry.TargetsUnlisted, Is.Empty, "With no list, the cap cuts nothing from it.");

@@ -81,16 +81,19 @@ namespace Agenerela
 
         /// <summary>
         /// Whether this call's system prompt lists the actions offered with their descriptions, and
-        /// the targets offered with their own lines (#190). Off by default: unmeasured, and owed an
-        /// A/B run before it becomes the default (#151). <see cref="PromptOptions.ListActionsAndTargets"/>
-        /// says what it adds.
+        /// the targets offered with their own lines (#190). On by default since 24 November 2026
+        /// (DR-027): on the evaluation set it made <c>qwen3.5:4b</c> 6.7 points more accurate, beyond
+        /// the noise floor, and cost <c>qwen3.5:2b</c> nothing. False sends the prompt every call sent
+        /// before, byte for byte, as an A/B run's control arm does.
+        /// <see cref="PromptOptions.ListActionsAndTargets"/> says what it adds.
         /// </summary>
         /// <remarks>
         /// For a provider that never reads the schema, such as Ollama, where a model otherwise learns
-        /// the actions only from the few-shot examples. A target object says what it is by
-        /// implementing <see cref="IDescribedTarget"/>.
+        /// the actions only from the few-shot examples, and so never sees their descriptions. A target
+        /// object says what it is by implementing <see cref="IDescribedTarget"/>. The list makes every
+        /// prompt longer by a line an action and a line a target, up to <see cref="MaxListedTargets"/>.
         /// </remarks>
-        public bool ListActionsAndTargets;
+        public bool ListActionsAndTargets = true;
 
         /// <summary>
         /// The most targets <see cref="ListActionsAndTargets"/> lists, 12 by default

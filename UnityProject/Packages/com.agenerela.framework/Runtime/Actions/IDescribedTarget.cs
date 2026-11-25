@@ -4,7 +4,7 @@ namespace Agenerela
     /// A target object that says what it is, in one short line the model can read beside its id.
     /// Optional: implement it on the object a game registers as a target, such as a stock entry
     /// or a quest offer. Read only when a call lists its actions and targets
-    /// (<see cref="DecideOptions.ListActionsAndTargets"/>, #190), which is off by default.
+    /// (<see cref="DecideOptions.ListActionsAndTargets"/>, #190), which is on by default (DR-027).
     /// </summary>
     /// <remarks>
     /// A target that does not implement it is listed by its id alone. A scene target is registered

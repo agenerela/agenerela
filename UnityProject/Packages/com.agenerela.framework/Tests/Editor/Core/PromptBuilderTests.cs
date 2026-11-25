@@ -633,7 +633,7 @@ namespace Agenerela.Tests
             var fake = new FakeProvider(MoveToTheTower) { Capabilities = WithoutProbabilities() };
             var agent = Fixtures.VillageGuard(fake);
 
-            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", new DecideOptions { ListActionsAndTargets = false }));
 
             Assert.That(fake.LastRequest.SystemPrompt, Is.EqualTo(GoldenSystemPromptWithTargetRule));
             Assert.That(result.Telemetry.TargetRuleSent, Is.True);
@@ -649,7 +649,7 @@ namespace Agenerela.Tests
             var fake = new FakeProvider(MoveToTheTower) { Capabilities = null };
             var agent = Fixtures.VillageGuard(fake);
 
-            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", new DecideOptions { ListActionsAndTargets = false }));
 
             Assert.That(fake.LastRequest.SystemPrompt, Is.EqualTo(GoldenSystemPromptWithTargetRule));
             Assert.That(result.Telemetry.TargetRuleSent, Is.True);
@@ -661,7 +661,7 @@ namespace Agenerela.Tests
             var fake = new FakeProvider(MoveToTheTower) { Capabilities = WithoutProbabilities() };
             var agent = Fixtures.VillageGuard(fake);
 
-            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", new DecideOptions { CheckTarget = false }));
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", new DecideOptions { CheckTarget = false, ListActionsAndTargets = false }));
 
             Assert.That(fake.LastRequest.SystemPrompt, Is.EqualTo(GoldenSystemPrompt));
             Assert.That(result.Telemetry.TargetRuleSent, Is.False);
@@ -694,7 +694,7 @@ namespace Agenerela.Tests
             Assert.That(fake.TokenProbabilities, Is.Null);
             var agent = Fixtures.VillageGuard(fake);
 
-            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", new DecideOptions { ListActionsAndTargets = false }));
 
             Assert.That(fake.LastRequest.SystemPrompt, Is.EqualTo(GoldenSystemPrompt), "No rule: byte for byte the prompt Ollama is sent.");
             Assert.That(result.Telemetry.TargetRuleSent, Is.False);
@@ -723,13 +723,15 @@ namespace Agenerela.Tests
         }
 
         [Test]
-        public void TheActionAndTargetListIsOffByDefault()
+        public void TheListIsOnForAnAgentsCallsAndOnlyOnRequestInTheBuilder()
         {
             var ctx = ListedGuard();
             var schema = DecisionSchema.Build(ctx);
 
+            // DR-027: on for every call an agent makes; the builder itself adds it only when asked,
+            // so its golden files keep pinning the base prompt.
+            Assert.That(new DecideOptions().ListActionsAndTargets, Is.True);
             Assert.That(new PromptOptions().ListActionsAndTargets, Is.False);
-            Assert.That(new DecideOptions().ListActionsAndTargets, Is.False);
             Assert.That(PromptBuilder.Build(ctx, schema, null).SystemPrompt, Is.EqualTo(GoldenSystemPrompt));
             Assert.That(PromptBuilder.Build(ctx, schema, null, null, new PromptOptions()).SystemPrompt, Is.EqualTo(GoldenSystemPrompt));
         }
@@ -865,14 +867,17 @@ namespace Agenerela.Tests
             var fake = new FakeProvider(MoveToTheTower);
             var agent = Fixtures.VillageGuard(fake);
 
-            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", new DecideOptions { ListActionsAndTargets = false }));
             string off = fake.LastRequest.SystemPrompt;
             await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", new DecideOptions { ListActionsAndTargets = true }));
             string on = fake.LastRequest.SystemPrompt;
+            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+            string byDefault = fake.LastRequest.SystemPrompt;
             await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", new DecideOptions { ListActionsAndTargets = true, MaxListedTargets = 1 }));
             string capped = fake.LastRequest.SystemPrompt;
 
-            Assert.That(off, Is.EqualTo(GoldenSystemPrompt), "Off by default: byte for byte what Ollama is sent today.");
+            Assert.That(off, Is.EqualTo(GoldenSystemPrompt), "Off: byte for byte what Ollama was sent before DR-027.");
+            Assert.That(byDefault, Is.EqualTo(on), "On by default since DR-027.");
             Assert.That(on, Is.EqualTo(string.Join("\n", GoldenSystemPrompt,
                 "Allowed actions:",
                 "- follow_player: Walk alongside the player.",
