@@ -241,7 +241,7 @@ namespace GreyBoxStrategy.Realm
                 TimeoutSeconds = 90f,
             };
             settings.Model = model;
-            return ThinkSwitch.Apply(settings); // AGENERELA_OLLAMA_THINK, the thinking A/B (DR-028)
+            return ThinkSwitch.Apply(settings); // AGENERELA_OLLAMA_THINK, the thinking A/B (DR-029)
         }
 
         private static string warming;

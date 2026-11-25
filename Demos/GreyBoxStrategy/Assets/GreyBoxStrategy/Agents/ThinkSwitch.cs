@@ -5,7 +5,7 @@ using Agenerela.Providers;
 namespace GreyBoxStrategy
 {
     /// <summary>
-    /// The run switch for the framework's native thinking (DR-028): with <c>AGENERELA_OLLAMA_THINK=1</c> in the
+    /// The run switch for the framework's native thinking (DR-029): with <c>AGENERELA_OLLAMA_THINK=1</c> in the
     /// environment, every provider the game builds for a model seat sends <c>think: true</c>, for the off-vs-on
     /// game-table A/B. Unset, nothing changes. Per process, so the two arms run as separate blocks.
     /// </summary>
