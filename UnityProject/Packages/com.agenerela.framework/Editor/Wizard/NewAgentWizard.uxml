@@ -28,6 +28,8 @@
 
         <ui:Toggle name="asAssets" text="Also save every action as an Action asset" class="na-as-assets" tooltip="The script is written either way. An Action asset holds an action's wording outside the code, so it can change without a recompile. The script still runs it." />
 
+        <ui:Toggle name="addToScene" value="true" tooltip="Adds the script and Agent Behaviour once Unity has compiled the script, a few seconds after Create." />
+
         <ui:Label name="model" class="na-hint ag-muted" />
         <ui:HelpBox name="problem" message-type="Error" class="na-hidden" />
         <ui:Button name="create" text="Create agent" class="na-create" />

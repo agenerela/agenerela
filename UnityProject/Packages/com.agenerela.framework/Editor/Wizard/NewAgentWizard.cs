@@ -6,6 +6,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Agenerela.Providers;
 using UnityEditor;
+using UnityEditor.Callbacks;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 
 namespace Agenerela.Editor
@@ -16,7 +18,9 @@ namespace Agenerela.Editor
     /// <see cref="Answers.AsAssets"/>, also an action asset for each, listed on the profile; the
     /// script still runs them, because an asset wins on its id (DR-011). When the project has no
     /// provider for an agent to fall back on, also an <c>OllamaLocal</c> provider, made the project
-    /// default. Every file is ordinary and editable afterwards.
+    /// default. With <see cref="Answers.AddToScene"/>, the script and <see cref="AgentBehaviour"/>
+    /// then go on a GameObject, once Unity has compiled the script. Every file is ordinary and
+    /// editable afterwards.
     /// </summary>
     internal static class NewAgentWizard
     {
@@ -52,6 +56,15 @@ namespace Agenerela.Editor
 
             public List<ActionChoice> Actions = new List<ActionChoice>();
             public bool AsAssets;
+
+            /// <summary>
+            /// Put the agent in the open scene: <see cref="AgentBehaviour"/>, with the new profile, and
+            /// the new script, on <see cref="AddTo"/>, or on a new GameObject named after the agent
+            /// when that is null.
+            /// </summary>
+            public bool AddToScene;
+
+            public GameObject AddTo;
         }
 
         /// <summary>
@@ -67,8 +80,9 @@ namespace Agenerela.Editor
         };
 
         /// <summary>
-        /// Writes every file in <see cref="Paths"/>. Returns the script's path: Unity compiles it
-        /// after this returns, so adding it to a GameObject has to wait for that domain reload.
+        /// Writes every file in <see cref="Paths"/>. Returns the script's path. Unity compiles the
+        /// script after this returns, so with <see cref="Answers.AddToScene"/> the GameObject's
+        /// components are added by <see cref="FinishAfterReload"/>, after that domain reload.
         /// </summary>
         internal static string Create(Answers answers)
         {
@@ -79,9 +93,59 @@ namespace Agenerela.Editor
             File.WriteAllText(scriptPath, Script(answers));
             AssetDatabase.ImportAsset(scriptPath);
 
-            WriteAssets(answers);
+            AgentProfile profile = WriteAssets(answers);
             EnsureDefaultProvider(answers.Folder.TrimEnd('/'), AgenerelaSettingsPage.AssetPath);
+
+            if (answers.AddToScene)
+            {
+                NewAgentPending pending = NewAgentPending.instance;
+                pending.ScriptPath = scriptPath;
+                pending.Profile = profile;
+                pending.Target = answers.AddTo != null ? answers.AddTo : NewGameObject(answers.Name.Trim());
+            }
+
             return scriptPath;
+        }
+
+        /// <summary>
+        /// After a domain reload, adds the script <see cref="Create"/> wrote and
+        /// <see cref="AgentBehaviour"/>, with the new profile, to the GameObject it was asked for.
+        /// Both go on together, so the agent is never checked half-built. Does nothing when nothing
+        /// is waiting.
+        /// </summary>
+        [DidReloadScripts]
+        private static void FinishAfterReload()
+        {
+            NewAgentPending pending = NewAgentPending.instance;
+            if (string.IsNullOrEmpty(pending.ScriptPath))
+            {
+                return;
+            }
+
+            string scriptPath = pending.ScriptPath;
+            AgentProfile profile = pending.Profile;
+            GameObject target = pending.Target;
+
+            // Cleared first, so a problem below is reported once rather than after every reload.
+            pending.Clear();
+
+            MonoScript script = AssetDatabase.LoadAssetAtPath<MonoScript>(scriptPath);
+            if (script == null || script.GetClass() == null)
+            {
+                throw new InvalidOperationException($"{scriptPath} did not compile into a class, so the agent was not added to a GameObject. " +
+                                                    "Fix the errors above, then add AgentBehaviour and the script by hand.");
+            }
+
+            if (target == null)
+            {
+                throw new InvalidOperationException($"The GameObject for {script.name} is gone. Add AgentBehaviour and {script.name} to one by hand.");
+            }
+
+            Undo.AddComponent(target, script.GetClass());
+            AgentBehaviour behaviour = Undo.AddComponent<AgentBehaviour>(target);
+            behaviour.Profile = profile;
+            EditorSceneManager.MarkSceneDirty(target.scene);
+            Selection.activeGameObject = target;
         }
 
         /// <summary>
@@ -179,6 +243,11 @@ namespace Agenerela.Editor
                 }
             }
 
+            if (answers.AddToScene && answers.AddTo != null && answers.AddTo.GetComponent<AgentBehaviour>() != null)
+            {
+                throw new InvalidOperationException($"{answers.AddTo.name} already has an agent. Select another GameObject, or none for a new one.");
+            }
+
             foreach (string path in Paths(answers))
             {
                 if (File.Exists(path))
@@ -262,6 +331,14 @@ namespace Agenerela.Editor
             }
 
             return name;
+        }
+
+        // A new, empty GameObject in the open scene, which Undo removes again.
+        private static GameObject NewGameObject(string name)
+        {
+            GameObject made = new GameObject(name);
+            Undo.RegisterCreatedObjectUndo(made, "New Agent");
+            return made;
         }
 
         // move_to → MoveTo, "gate guard" → GateGuard: words split on anything but a letter or digit.

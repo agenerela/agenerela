@@ -70,11 +70,18 @@ namespace Agenerela.Editor
             }
 
             tree.Q<Label>("model").text = ModelLine();
+            ShowWhereTheAgentGoes();
 
             Button addAction = AgenerelaButtons.MakeDashed(tree.Q<Button>("addAction"));
             addAction.clicked += () => AddRow(tree.Q("ownActions"));
             tree.Q<Button>("browse").clicked += () => Browse(tree.Q<TextField>("folder"));
             AgenerelaButtons.MakePrimary(tree.Q<Button>("create")).clicked += () => Create(tree);
+        }
+
+        // Unity calls this when the Hierarchy selection changes, so the tick box names the right object.
+        private void OnSelectionChange()
+        {
+            ShowWhereTheAgentGoes();
         }
 
         // Hands the answers to the wizard. A problem it finds is shown in the form, and nothing has
@@ -87,6 +94,8 @@ namespace Agenerela.Editor
                 Role = tree.Q<TextField>("role").value,
                 Folder = tree.Q<TextField>("folder").value.Trim(),
                 AsAssets = tree.Q<Toggle>("asAssets").value,
+                AddToScene = tree.Q<Toggle>("addToScene").value,
+                AddTo = SelectedSceneObject(),
             };
             answers.Actions.AddRange(NewAgentWizard.Starters.Where(starter => ticked.Contains(starter.Id)));
             answers.Actions.AddRange(ownActions);
@@ -144,6 +153,27 @@ namespace Agenerela.Editor
             card.Add(example);
             card.Add(remove);
             rows.Add(card);
+        }
+
+        // Before CreateGUI there is no tick box to name it on.
+        private void ShowWhereTheAgentGoes()
+        {
+            Toggle addToScene = rootVisualElement.Q<Toggle>("addToScene");
+            if (addToScene == null)
+            {
+                return;
+            }
+
+            GameObject selected = SelectedSceneObject();
+            addToScene.text = selected != null ? $"Add the agent to {selected.name} (selected)" : "Add the agent to a new GameObject in the scene";
+        }
+
+        // The GameObject selected in the Hierarchy, or null. One in the Project window is a prefab
+        // asset, not a thing in the scene, so it does not count.
+        private static GameObject SelectedSceneObject()
+        {
+            GameObject selected = Selection.activeGameObject;
+            return selected != null && selected.scene.IsValid() ? selected : null;
         }
 
         // What the agents will talk to, said before Create so that a new asset and a changed project
