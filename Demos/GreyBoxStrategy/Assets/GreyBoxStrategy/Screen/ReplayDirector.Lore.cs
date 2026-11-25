@@ -53,7 +53,8 @@ namespace GreyBoxStrategy.Realm
             float seconds = 0;
             if (proposal == null)
             {
-                why = Gateway.WhyNotSet() ?? (DevFaults.ServerDown ? "the server is down (dev)" : null);
+                why = Gateway.WhyNotSet() ?? (DevFaults.ServerDown ? "the server is down (dev)" : null)
+                      ?? (Gateway.Paused ? "the card is paused for a measurement" : null); // as WarmUp: nothing sent while paused
                 if (why == null)
                 {
                     from = "the model";
