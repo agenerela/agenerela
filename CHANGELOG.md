@@ -31,6 +31,7 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **The Phase 4 gate's checks** (#150, #416). `Phase4GateTests`, six EditMode checks with no model: the set's size and declared states, game-triggered share, the runner's five outcomes in both arms, the report's conditions read back from disk, two-annotator agreement, and the methodology page. The agreement check waits for the second annotator's labels (#381, #148) behind an `[Ignore]` that names them.
 - **Painted Realm: a thinking switch for runs** (#20, #410). `AGENERELA_OLLAMA_THINK=1` turns on the framework's native thinking (DR-029) for every model seat, with a 16384 context and 300 s tries, and `AGENERELA_OLLAMA_CTX` sets the context for both arms of the A/B.
 - **Painted Realm: turn 1 without the long wait** (#20, #401): the model is warmed at New game, and a generated world's rulers start behind the loading card once its court is painted, so the first End turn no longer waits for a cold model (qwen3.5:4b, 3 seeds an arm: 5.71 s to 2.73 s).
 - **Painted Realm paints its court (DR-025)** (#20, #402): at New game, each ruler's portrait and banner come from the image server behind the loading card, cached per world seed. On any failure they fall back to the art pack.
