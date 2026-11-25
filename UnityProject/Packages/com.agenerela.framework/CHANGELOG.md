@@ -10,6 +10,7 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **Native thinking for Ollama, off by default** (DR-029, #409). `OllamaSettings.Think` and `OllamaProviderConfig.Think` let the model think in its own channel before the schema-constrained reply. With it on, `ProviderResult.TokenProbabilities` holds the reply's tokens alone, `ProviderResult.ThinkingCharacters` reports the thinking's length, and `KeepThinking` keeps its text in `ProviderResult.Thinking`. Evaluation reports record each arm's `think`.
 - **Providers wait out a busy server** (DR-026, #395). `RetryPolicy` on `OllamaSettings` and
   `OllamaProviderConfig`: HTTP 429 and 503 are sent again after `Retry-After` or a jittered
   back-off, within attempts, a total pause and a deadline. `ProviderErrorKind.RateLimited` and
