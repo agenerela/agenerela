@@ -141,7 +141,7 @@ namespace Agenerela.Providers.ComfyUI
         /// <summary><c>"comfyui"</c>.</summary>
         public string Name => "comfyui";
 
-        /// <summary>Sides a multiple of 16 up to 2048; a seed honoured when the workflow has a <c>seed</c> param.</summary>
+        /// <summary>Sides a multiple of 16 up to 2048; a seed honoured when the workflow has a <c>seed</c> param; no edits.</summary>
         public ImageCapabilities Capabilities { get; }
 
         /// <summary>The server's address as messages name it: scheme, host, port and path, nothing else.</summary>
@@ -159,7 +159,17 @@ namespace Agenerela.Providers.ComfyUI
                 throw new ArgumentNullException(nameof(request));
             }
 
-            string why = Capabilities.WhyNotSize(request.Width, request.Height);
+            if (request.IsEdit || request.Mask != null)
+            {
+                // DR-028: no workflow here takes an input picture yet. One with a LoadImage param,
+                // the picture sent through /upload/image, is how ComfyUI would edit.
+                throw new ArgumentException(
+                    "ComfyUIProvider does not edit pictures: the request has Images or a Mask, and the workflow it runs takes no " +
+                    "input picture (ImageCapabilities.Edits is false). Send it with no Images for a new picture, or use a backend " +
+                    "that edits, such as OpenAIImagesProvider on sd-server.", nameof(request));
+            }
+
+            string why = Capabilities.WhyNot(request);
             if (why != null)
             {
                 throw new ArgumentException(why, nameof(request));
@@ -224,7 +234,8 @@ namespace Agenerela.Providers.ComfyUI
 
         /// <summary>Runs the workflow for <paramref name="request"/> and downloads its picture.</summary>
         /// <exception cref="ArgumentException">
-        /// The size is not a multiple of 16 or is over 2048, or a parameter names no param or
+        /// The request is an edit, which ComfyUI does not do here (DR-028), the size is not a multiple
+        /// of 16 or is over 2048, or a parameter names no param or
         /// <c>node.input</c> of the workflow, names an input wired to another node, or has a value
         /// that input cannot take.
         /// </exception>
