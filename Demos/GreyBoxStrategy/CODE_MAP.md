@@ -43,6 +43,7 @@ A rule belongs in `Sim/`; a number the screen shows belongs in `Screen/Replay/` 
 | `Rules/Requests.cs`, `TurnSnapshot.cs`, `Dice.cs`, `MapDefinition.cs` | Request moments, the snapshot a council decides on, seeded dice, map data |
 | `Map/MapGenerator.cs` (largest), `MapChecks.cs` | Generated worlds and the checks each must pass |
 | `Map/ClassicMap.cs` | The 25-province board, the control for every A/B run |
+| `Map/WorldLore.cs` | A generated world's lore (#20): the loremaster's `LoreProposal`, the checks in `LoreRules` that keep or refuse each name and line, and `Apply`, which renames through `WorldMap.Rename` |
 | `Map/` (the rest) | Geometry, names, rivers and roads, special places, terrain, settings, seeded noise |
 | `Players/` | Non-model players: `ScriptedPlayer`, `WritScripted` (the yardstick), `RandomPlayer`, `IPlayer` |
 | `Runner/` | Headless series: `GameRunner`, `Scorecard`, `SeriesSummary`, logs |
@@ -58,13 +59,14 @@ A rule belongs in `Sim/`; a number the screen shows belongs in `Screen/Replay/` 
 | `ThinkSwitch.cs` | `AGENERELA_OLLAMA_THINK` and `AGENERELA_OLLAMA_CTX`: every model seat's provider thinking, for the thinking A/B (DR-029) |
 | `Personas.cs` | The rulers' characters, through the framework's identity fields |
 | `Storyteller.cs` | The storyteller agent |
+| `WorldLoremaster.cs` | The loremaster: one decision at New game names the world, its realms and rulers and writes its backstory, through free-text parameters (DR-030) |
 | `Advisor.cs` | The advisor in rule mode |
 
 ## Screen: the running game
 
 | File | Owns |
 |---|---|
-| `ReplayDirector.cs` and its partials | The scene's driver. `.cs` watch mode; `.Rule` rule mode; `.Writs` the writs turn on the map; `.Chart` generated worlds; `.Story` the storyteller; `.Menu` and `.StartMenu` menus and settings; `.Dev` the F1 dev menu; `.Demo` what the demo director asks of it; `.Armies` R3 settings; `.Detail` zoomed detail |
+| `ReplayDirector.cs` and its partials | The scene's driver. `.cs` watch mode; `.Rule` rule mode; `.Writs` the writs turn on the map; `.Chart` generated worlds; `.Story` the storyteller; `.Menu` and `.StartMenu` menus and settings; `.Dev` the F1 dev menu; `.Demo` what the demo director asks of it; `.Armies` R3 settings; `.Detail` zoomed detail; `.Lore` the world's lore behind the loading card, and `WorldLoreCache` |
 | `RuleSession.cs`, `LiveSession.cs`, `LiveWritsSession.cs`, `LiveGame.cs` | Games without a scene, played by models; `RuleSession` is the person against four rulers |
 | `Demo/DemoDirector.cs`, `DemoOverlay.cs`, `DemoTree.cs` | The demo video: plays a timeline over a replay (off unless the dev menu's `demo` or `-demo <timeline>` starts it), draws the cursor, callouts, dim and titles, finds elements by selector. Timelines in `Demo/Timelines/` |
 | `Gateway.cs` | The server address, the key from the environment, and the RTX 5080's lock; `Provider(model)` builds on the active profile's config |
@@ -96,7 +98,8 @@ A rule belongs in `Sim/`; a number the screen shows belongs in `Screen/Replay/` 
 part, named by its file: `.Panels` (province and country panels, map modes), `.Rows` (the panel
 kit), `.Inspector`, `.Rule` and `.WritsRule` (orders panels), `.FreeCouncil`, `.Advisor`,
 `.TurnStrip`, `.Story`, `.Writs` (army pieces and marches), `.Group` (box select), `.Armies`,
-`.Labels` with `MapDeclutter.cs`, `.EdgeMarks`, `.Layout` (nothing cut at the bottom), `.Help`,
+`.Labels` with `MapDeclutter.cs`, `.EdgeMarks`, `.Layout` (nothing cut at the bottom), `.Help`, `.World` (the world's
+name and backstory at the head of the chronicle),
 `.EndScreen`, `.Menu` (New game, settings), `.StartMenu`, `.Art`, `.Dev`. Styles are in
 `PaintedRealm.uss`; `UiScale.cs` sizes it for the screen, `CountryLook.cs` draws crests,
 `LoadingCard.cs` the loading veil.

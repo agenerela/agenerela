@@ -169,6 +169,16 @@ namespace Agenerela
             var text = new System.Text.StringBuilder();
             foreach (var parameter in action.Parameters)
             {
+                if (parameter.IsFreeText)
+                {
+                    // A free text shows its ExampleValue, else its Default, quoted as a statement is (DR-030); with
+                    // neither, the example leaves it out rather than invent one.
+                    string shown = !string.IsNullOrEmpty(parameter.ExampleValue) ? parameter.ExampleValue : parameter.Default;
+                    if (string.IsNullOrEmpty(shown)) continue;
+                    text.Append(", ").Append(parameter.Name).Append(": \"").Append(shown.Replace("\r", " ").Replace("\n", " ")).Append('"');
+                    continue;
+                }
+
                 var offered = availability != null ? availability.ValuesOf(action, parameter) : new List<string>(parameter.Values);
                 if (offered.Count == 0) continue;
 

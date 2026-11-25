@@ -114,6 +114,11 @@ namespace Agenerela
                 {
                     members.Add("\"enum\": " + Array(field.AllowedValues));
                 }
+                else if (field.MaxLength > 0)
+                {
+                    // A free text's cap (DR-030): Ollama's grammar holds it (findings, 24 November 2026).
+                    members.Add("\"maxLength\": " + field.MaxLength.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                }
 
                 Line(json, depth + 1, Quote(field.Name) + ": {");
                 for (var m = 0; m < members.Count; m++)
@@ -220,10 +225,10 @@ namespace Agenerela
                 {
                     foreach (var parameter in pairs[p].Parameters)
                     {
-                        if (parameter.AllowedValues == null)
+                        if (parameter.AllowedValues == null && parameter.MaxLength <= 0)
                         {
                             throw new ArgumentException(
-                                $"Pair {p}'s parameter '{parameter.Name}' has no allowed values. A parameter is a closed choice.", "schema");
+                                $"Pair {p}'s parameter '{parameter.Name}' has no allowed values and no MaxLength. A parameter is a closed choice or a capped free text (DR-030).", "schema");
                         }
                     }
 

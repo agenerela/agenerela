@@ -834,6 +834,50 @@ a hungry one none from its hunger line.
   tag, every turn's end tags each siege with the game's own turns, every army has its stores at every moment, and a
   hungry army shows the warning to you and not to a rival (broken by not reading the line of a siege that ended).
 
+### A world named by a model, with its backstory (24 November; DR-030)
+
+At New game, a generated world's names and story come from a model, through the framework. The loremaster
+(`Agents/WorldLoremaster.cs`) is an ordinary Agenerela agent with one action, `found_world`, which takes no target and
+asks for free-text parameters (DR-030): `world_name`, then `realm_N` and `ruler_N` for each realm in seat order. The
+backstory is its free-text field, named `backstory`. One decision names the whole world: about 400 reply tokens on
+`qwen3.5:4b`.
+- **What it reads:** each realm by seat, never by its table name, so a new name is not a copy: where it lies, its two
+  commonest terrains, coast or inland, the naming style of its capital's region, and who rules it ("realm 2: the
+  south, mostly marsh and plains, on the coast, its old names in the soft river manner; ruled by a builder.").
+- **What code keeps** (`Sim/Map/WorldLore.cs`, `LoreRules`), each piece on its own, so one bad name costs only that
+  name and the rest stands:
+  - a realm's name: one word of plain letters, 4 to 11, passing the same `NameRules.WhyNot` as every table name (no
+    real place, no reserved word, no clash or near-clash with another realm, region or province). The schema lets
+    the model write 20 characters, so a name the grammar would cut is refused rather than kept cut;
+  - the world's name: up to four words of letters, 24 characters, no real place, not a realm's or province's name;
+  - a ruler's line (140 characters) and the backstory (480, at least 40): one line, ordinary punctuation, cut back
+    to the last whole sentence, no unsuitable word. A refused realm name the prose used is replaced there by the
+    name the realm keeps.
+  Anything refused keeps what the seeded tables gave: the world always starts, with no server too.
+- **When:** right after the world is made, before its rules' map, the court's painting and the early rulers read any
+  name (`ReplayDirector.Lore.cs`, `NameWorld`). The card says "The loremaster names the world and its realms...
+  Esc: skip"; Esc, or 45 s with no answer, keeps the table names. A renamed realm is renamed everywhere an id is
+  kept (`WorldMap.Rename`, which the generator now names through too).
+- **Kept:** the proposal as written, per world, model and prompt version, beside the court's pictures
+  (`WorldLoreCache`); the checks run again on every read. A saved game carries its world's proposal
+  (`GameSetup.Lore`), so Load a replay names the world as it was played, with no model.
+- **Shown:** the loading card takes the world's name as its title and the backstory beneath it while the court is
+  painted; the chronicle opens with a line for the world, its name and the story's start, that a click opens in
+  full (`ScreenUI.World.cs`). Each ruler's line goes to their portrait prompt (`RulerSubject.Backstory`), capped and
+  cleaned by `ImagePromptBuilder`.
+- **The rulers:** `+world-lore` (`ModelSeatOptions.WorldLore`) gives a writs ruler two more knowledge lines, the
+  world's name and history and what is said of itself. Off: no A/B has measured it (hard rule 2).
+- **Only a model game asks:** a rule game with model rulers, or a live watch game; a scripted game keeps its table
+  names. The Classic board is never renamed.
+
+`CourtArtCheck -courtLore <model>` names the world before painting it, as New game does, and writes the world's name,
+backstory and lines into `court.json`.
+
+**Tests.** `WorldLoreTests` (rules and agent) and `WorldLoreCacheTests` (screen); the framework's part is
+`FreeTextParameterTests`. Seen failing against deliberate breaks: accepting any realm name failed the bad-name and two-realm tests; not swapping a refused name in the story failed its test; not cutting prose back failed the prose test; not renaming special places failed the rename test; and in the framework, no length check, no `maxLength` and the old action-list wording failed five of `FreeTextParameterTests`.
+
+**Live, 24 November** (`qwen3.5:4b` on the home server, untimed, no lease; contact sheet in the PR): seed 7 kept the world's name, all five realm names, five ruler lines and the story; seed 21 three of five realm names (two hyphenated ones refused, and the story mended to the kept names). About 8 s and 400 reply tokens a world. With only the parameters' own descriptions the 4B wrote every realm name as two words ("Gilded Shore"); one knowledge line saying "one invented word" fixed most of it, which is why it is there (`WorldLoremaster.NamesRule`).
+
 ### A painted court for every new world (24 November; DR-025)
 
 At New game, behind the loading card, each ruler of a generated world gets a portrait and a banner made for that
@@ -3211,6 +3255,12 @@ Found by stage 2, from the runs above:
   workaround, and a reply that runs away. They are in
   [the storyteller's gap list](#what-the-framework-lacked-by-the-research-pages-numbers), beside the
   research page's gaps 1, 3, 4, 6, 8 and 9 that it hit.
+- **N13. Several free texts in one answer** (24 November, world lore). Naming a world means a name for the world,
+  each realm and each ruler, and a story: one answer with many short texts. A decision had one free-text field, and
+  DR-023 left free strings out. Built as DR-030 (free-text parameters, capped by `maxLength`), accepted in the pull
+  request that uses it. Two smaller gaps it leaves: the statement itself has no length cap in the schema (the game
+  cuts the backstory back to a whole sentence), and a list of texts of one kind is one parameter each
+  (`realm_1` ... `realm_5`), declared per world.
 - **Item 1 (examples with their situation), still confirmed:** stage 2 registers no examples,
   because with the same question every turn no stimulus-only example could show when to choose an
   action.

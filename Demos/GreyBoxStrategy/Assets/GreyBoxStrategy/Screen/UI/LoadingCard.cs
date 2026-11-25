@@ -10,7 +10,7 @@ namespace GreyBoxStrategy.Realm
     public sealed class LoadingCard
     {
         private GameObject host;
-        private Label line;
+        private Label line, head, story;
         private VisualElement fill;
 
         public static LoadingCard Show(ThemeStyleSheet theme, StyleSheet style, string title)
@@ -29,6 +29,7 @@ namespace GreyBoxStrategy.Realm
             var veil = new VisualElement(); veil.AddToClassList("menu-veil"); veil.style.backgroundColor = new Color(0.04f, 0.03f, 0.02f, 0.92f);
             var box = new VisualElement(); box.AddToClassList("panel"); box.AddToClassList("loading-card");
             var t = new Label(title); t.AddToClassList("menu-head"); box.Add(t);
+            card.head = t;
             card.line = new Label("..."); card.line.AddToClassList("menu-sub"); box.Add(card.line);
             var bar = new VisualElement(); bar.AddToClassList("loading-bar");
             card.fill = new VisualElement(); card.fill.AddToClassList("loading-fill"); bar.Add(card.fill);
@@ -45,10 +46,28 @@ namespace GreyBoxStrategy.Realm
             fill.style.width = Length.Percent(Mathf.Clamp01(progress) * 100);
         }
 
+        /// <summary>
+        /// The world's name as the card's title and its backstory beneath it (#20, world lore), read while the court is
+        /// painted and the chart laid out. Null or blank leaves each as it is.
+        /// </summary>
+        public void Tell(string worldName, string backstory)
+        {
+            if (head == null) return;
+            if (!string.IsNullOrWhiteSpace(worldName)) head.text = worldName;
+            if (string.IsNullOrWhiteSpace(backstory)) return;
+            if (story == null)
+            {
+                story = new Label { name = "loading-story" };
+                story.AddToClassList("loading-story");
+                head.parent.Insert(head.parent.IndexOf(head) + 1, story);
+            }
+            story.text = backstory;
+        }
+
         public void Close()
         {
             if (host != null) Object.Destroy(host);
-            host = null; line = null;
+            host = null; line = null; head = null; story = null;
         }
     }
 }

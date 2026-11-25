@@ -86,6 +86,19 @@ namespace GreyBoxStrategy
         /// <summary>The request being decided now: what the facts source and a test's fake model read.</summary>
         public CountryRequest Asking { get; private set; }
 
+        /// <summary>
+        /// <c>+world-lore</c> (#20): the world's name and backstory, and the loremaster's line about this ruler, as knowledge,
+        /// where the world has them. Checked text (<see cref="LoreRules"/>), never an instruction to the ruler.
+        /// </summary>
+        public static void AddWorldLore(AgentIdentity identity, WorldMap source, string countryId)
+        {
+            if (source == null) return;
+            identity.Knowledge = identity.Knowledge ?? new List<string>();
+            if (!string.IsNullOrEmpty(source.Backstory)) identity.Knowledge.Add($"The world is {source.Name}. Its history: {source.Backstory}");
+            string line = source.Countries.FirstOrDefault(c => c.Id == countryId)?.RulerLine;
+            if (!string.IsNullOrEmpty(line)) identity.Knowledge.Add("Of you it is said: " + line);
+        }
+
         private Agent NewAgent(ILLMProvider provider, string id, string office)
         {
             var info = world.Country(CountryId).Info;
@@ -97,6 +110,7 @@ namespace GreyBoxStrategy
                 Goals = CountryAgent.GoalsFor(world.Rules),
             };
             Persona?.ApplyTo(identity);
+            if (Options.WorldLore) AddWorldLore(identity, world.Map.Source, CountryId);
             return new Agent(identity, Array.Empty<ActionDefinition>(), provider)
             {
                 Id = id,
