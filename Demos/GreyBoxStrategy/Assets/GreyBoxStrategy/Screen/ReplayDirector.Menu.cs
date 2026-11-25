@@ -183,7 +183,7 @@ namespace GreyBoxStrategy.Realm
 
         private void StartNewGame(NewGameChoice c)
         {
-            string arm = StoryArms.For(c.Storyteller);
+            string arm = (settings ?? new GameSettings()).CourtArm(StoryArms.For(c.Storyteller)); // the court's budget: Settings, Game
             yourWritsUnlimited = c.YourWritsUnlimited;
             advisorNext = c.AdvisorFor;
             nextUnitTypes = c.UnitTypes;

@@ -5175,6 +5175,10 @@ headroom under `num_ctx` 4,096 as the court prompt grows (CourtTurnFacts, #405, 
 cost. It is not a speed change. No default was changed here. Six games an arm on one map and model is an anecdote
 (hard rule 2), and it is never compared with requests 002 or 005.
 
+**Decided, 24 November:** the lead made it the default, with an option: `default` trims the court to 1,600 tokens
+(economy on or off), `+budget-0` or the game's Settings → Court prompts → Full turns it off, and replaying arm b now
+takes `default+budget-2048+no-trim` (request 006's `request.md`).
+
 ### `ListActionsAndTargets` on the 4B, timed: +89 prompt tokens a decision, no measurable second, 170 against 184 for the third time (24 November 2026)
 
 **What.** The timing behind DR-027, which #404 made the default. The tech lead asked for it for the slides and the

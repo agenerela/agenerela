@@ -518,7 +518,9 @@ namespace GreyBoxStrategy.Realm
             var ew = Steps("Event windows", new[] { "All", "Mine only", "Off" }, (int)s.EventWindows, i => { s.EventWindows = (EventWindows)i; Changed(); });
             ew.tooltip = "All: every storyteller event opens a window in the middle of the screen. Mine only: those striking your realm. Off: the chronicle and the map's bubble only.";
             card.Add(ew);
-
+            var trim = Steps("Court prompts", new[] { "Full", "Trimmed" }, s.TrimCourtPrompts ? 1 : 0, i => { s.TrimCourtPrompts = i == 1; Changed(); });
+            trim.tooltip = "Trimmed: a model court's prompt is kept under 1,600 tokens, dropping targets no order can take and then its oldest memories. Full: it reads every line. Applies to the next new game.";
+            card.Add(trim);
 
             card.Add(Section2("SOUND", "the first sounds; more come with the next set"));
             card.Add(Volume("Master", s.MasterVolume, v => { s.MasterVolume = v; Changed(); }));

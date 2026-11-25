@@ -175,18 +175,23 @@ namespace GreyBoxStrategy
         public const int OwnLinesShown = 4;
 
         /// <summary>
-        /// The court's prompt budget in tokens (the framework's <see cref="PromptBudget"/>, #151), or 0, the default,
-        /// for none, which sends every request as before. Set by the <c>+budget-&lt;n&gt;</c> modifier. Only the
-        /// court's own requests (<c>Moment.Council</c>) carry it.
+        /// The court's prompt budget in tokens (the framework's <see cref="PromptBudget"/>, #151), or 0 for none, which
+        /// sends every request untouched. 0 in the field, so <see cref="Control"/> and the other stage 2 arms stay as
+        /// measured; <see cref="Default"/> sets <see cref="DefaultCourtBudget"/>. Set by the <c>+budget-&lt;n&gt;</c>
+        /// modifier, and <c>+budget-0</c> takes it away. Only the court's own requests (<c>Moment.Council</c>) carry it.
         /// </summary>
         public int CourtBudget;
 
         /// <summary>
-        /// Whether the court's budget may trim (<c>+trim</c>): the target lines no court order may take, then the
-        /// oldest remembered exchange, only while a request is over. Off, the budget only measures. An A/B arm,
-        /// never a default without the tech lead.
+        /// Whether the court's budget may trim (<c>+trim</c>, off with <c>+no-trim</c>): the target lines no court order
+        /// may take, then the oldest remembered exchange, only while a request is over. Off, the budget only measures.
+        /// On in <see cref="Default"/> since 24 November 2026 (request 006: court prompts 1,339 tokens mean, none over
+        /// 1,600, against 1,547 and 834 over; no illegal answers in either arm, play within noise, no time saved).
         /// </summary>
         public bool CourtTrims;
+
+        /// <summary>The court's budget in <see cref="Default"/>: request 006's trimmed arm.</summary>
+        public const int DefaultCourtBudget = 1600;
 
         /// <summary>The court's budget as the framework takes it, or null for none.</summary>
         public PromptBudget CourtPromptBudget() => CourtBudget <= 0 ? null
@@ -204,9 +209,14 @@ namespace GreyBoxStrategy
         /// 30 games (README, gap N4), and in the writs turn the ruler's own last lines (<see cref="OwnLines"/>,
         /// measured 13–14 November). The arm measured as <c>default</c> on 10 November is
         /// <c>control+paired+alternatives-5</c> now; the writs turn's <c>default</c> before 14 November is
-        /// <c>default+no-own-lines</c>.
+        /// <c>default+no-own-lines</c>. Since 24 November the court's prompt is trimmed to <see cref="DefaultCourtBudget"/>
+        /// (<see cref="CourtTrims"/>); the <c>default</c> before is <c>default+budget-0</c>.
         /// </summary>
-        public static ModelSeatOptions Default => new ModelSeatOptions { PairTargets = true, GroundingThreshold = 0.6f, OwnLines = true, Arm = "default" };
+        public static ModelSeatOptions Default => new ModelSeatOptions
+        {
+            PairTargets = true, GroundingThreshold = 0.6f, OwnLines = true,
+            CourtBudget = DefaultCourtBudget, CourtTrims = true, Arm = "default",
+        };
 
         /// <summary>Stage 2's control arm: the moves line, a flat schema, grounding on.</summary>
         public static ModelSeatOptions Control => new ModelSeatOptions();
@@ -235,8 +245,8 @@ namespace GreyBoxStrategy
         /// line (<see cref="LegalTargetListing.ObservationLine"/>), and <c>+how-it-reads</c> and
         /// <c>+own-words</c> word the statement rules (<see cref="StatementRulesWording"/>)
         /// ("default+no-moves-line+moves-sentence", "default+how-it-reads"), <c>+one-voice</c>, <c>+own-lines</c> and
-        /// <c>+no-own-lines</c> and <c>+silent-armies</c> for the writs turn's statements, <c>+budget-&lt;n&gt;</c> and
-        /// <c>+trim</c> for the court's prompt budget (<see cref="CourtBudget"/>, #151), and <c>+memory-move</c>
+        /// <c>+no-own-lines</c> and <c>+silent-armies</c> for the writs turn's statements, <c>+budget-&lt;n&gt;</c>
+        /// (<c>+budget-0</c> for none), <c>+trim</c> and <c>+no-trim</c> for the court's prompt budget (<see cref="CourtBudget"/>, #151), and <c>+memory-move</c>
         /// and <c>+memory-outcome</c> what a remembered move holds (<see cref="Remembers"/>, #244 item 4).
         /// For the storyteller: <c>+storyteller</c> (<see cref="Storyteller"/>), <c>+no-inspiration</c> and
         /// <c>+inspiration-&lt;n&gt;</c> ("default+storyteller+inspiration-1"); stage S2's <c>+choices</c>,
@@ -294,9 +304,10 @@ namespace GreyBoxStrategy
                         options.Choices = options.Multi = options.History = options.Traits = options.TitleCall = true;
                         options.Preset = options.Preset ?? StorytellerSettings.EvenHand.Name;
                     }
-                    else if (modifier.StartsWith("budget-") && int.TryParse(modifier.Substring("budget-".Length), out int budget) && budget > 0)
+                    else if (modifier.StartsWith("budget-") && int.TryParse(modifier.Substring("budget-".Length), out int budget) && budget >= 0)
                         options.CourtBudget = budget;
                     else if (modifier == "trim") options.CourtTrims = true;
+                    else if (modifier == "no-trim") options.CourtTrims = false;
                     else if (modifier == "no-inspiration") options.Inspiration = false;
                     else if (modifier == "history-in-game") options.HistoryGuard = false;
                     else if (modifier == "no-reply-cap") options.StorytellerMaxReplyTokens = null;
