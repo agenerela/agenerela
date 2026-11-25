@@ -3330,7 +3330,16 @@ in the middle of the screen; see [variant B: the inspector and the council](#the
 - **Diplomacy** (D) is a 5 × 5 matrix of war, truce and peace, with borders and this turn's envoys.
 - `RealmQueries` answers these from `GameRules` and the map, and a test checks its reach against every attack the game offered in the recorded game.
 
-**The map** is a 4096 × 2304 master with open sea on every side (`ArtSource/sea-chart-map.png`). It is codex-image's 1672 × 941 painting upscaled, so its detail is still the 1672 px original's. The province maps are baked at 2048 × 1152, and `provinces.json` records the land's bounds, which the camera frames.
+**The map** is a 4096 × 2304 master with open sea on every side (`ArtSource/sea-chart-map.png`), painted at that size
+since 25 November. Codex-image's 1672 × 941 painting was first upscaled (`ArtSource/sea-chart-map-upscale.png`); then
+`ArtSource/repaint_4k.py` painted real 4K detail over the upscale on the asset server: fifteen overlapping 1024 px
+tiles through Z-Image Turbo img2img at denoise 0.22, stitched with feathered overlaps, with the upscale's low frequencies
+(a 6 px Gaussian) put back so colour and coarse shapes, coasts included, stay the upscale's. It checks the bake's land
+mask against `province-ids.png` and writes nothing if the coasts moved: IoU 0.9629 against the upscale's own 0.9663,
+and no shift at four places across the island. Denoise 0.35 and above redrew villages and moved rivers. Only the Classic
+board has a painting; generated worlds stay drawn by code. The province maps are baked at 2048 × 1152 from the upscale
+(`bake_map.py` reads it, so the committed maps stay reproducible), and `provinces.json` records the land's bounds, which
+the camera frames.
 
 **A live game** (slice 3): the Watch object's `LiveGame` component, off by default, plays five
 `qwen3.5:4b` persona seats on the default arm, through the game's own `TableRunner`. The

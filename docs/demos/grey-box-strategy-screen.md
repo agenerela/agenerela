@@ -711,8 +711,8 @@ soft.
   Text and the drawn icons are then sharp at every size checked: 1366 × 768, 1920 × 1080,
   2560 × 1440 and 3840 × 2160.
 - **What is still soft at 1440 and above, and why.** At 2160 the map fills about 3000 pixels.
-  - **The painting.** Its 4096-wide master is an upscale of a 1672-pixel painting, so it carries
-    1672 pixels of real detail.
+  - **The painting.** Fixed on 25 November: the 4096-wide master now has 4K detail painted over the
+    upscale of the 1672-pixel original (`ArtSource/repaint_4k.py`, the GreyBoxStrategy README's map section).
   - **The ink borders.** They are traced from 2048-wide province ID and edge maps, so they show
     small steps at 4K.
   - Sharp at 4K needs a painting made at 4096 and the province maps baked at 4096. That is art
@@ -944,7 +944,7 @@ row with "check" must be cleared before the game is sold.**
 
 | Asset | Where | How it was made | Licence |
 |---|---|---|---|
-| The sea-chart painting | `Assets/GreyBoxStrategy/Screen/Art/sea-chart-map.jpg` (4096 × 2304), master `ArtSource/sea-chart-map.png`, source `ArtSource/sea-chart-map-source.png` | OpenAI's image model through the `codex-image` skill, 11 November 2026, with open sea on every side, then upscaled by Lanczos with light sharpening: its detail is the 1672 × 941 source's. A real 4K pass needs an upscaling model, such as the asset server's, when its card is free | Generated; OpenAI's terms assign the output to the user, but whether it can be used commercially has to be **checked** before shipping. A 4K master replaces it |
+| The sea-chart painting | `Assets/GreyBoxStrategy/Screen/Art/sea-chart-map.jpg` (4096 × 2304), master `ArtSource/sea-chart-map.png`, source `ArtSource/sea-chart-map-source.png` | OpenAI's image model through the `codex-image` skill, 11 November 2026, with open sea on every side, then upscaled by Lanczos with light sharpening (`ArtSource/sea-chart-map-upscale.png`, which the province maps are baked from). On 25 November `ArtSource/repaint_4k.py` painted 4K detail over the upscale with Z-Image Turbo img2img on the asset server, keeping its coasts | Generated; OpenAI's terms assign the output to the user, but whether it can be used commercially has to be **checked** before shipping. The 4K detail is Z-Image Turbo's (Apache 2.0) |
 | Ten persona faces | `Screen/Art/persona-portraits.jpg`, source `ArtSource/persona-portraits.png` | The same, one 5 × 2 sheet | The same: **check** |
 | The open sea beyond the painting | `Screen/Art/sea-tile.jpg` | Cut by `ArtSource/bake_map.py` from the painting's calmest open sea and mirrored into a seamless tile | The painting's: **check** |
 | Province id map, edge field, label points | `Screen/Art/province-*.png`, `provinces.json` | Baked by `ArtSource/bake_map.py` from the painting and the rule graph | Ours |
