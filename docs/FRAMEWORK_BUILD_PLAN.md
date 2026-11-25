@@ -576,7 +576,9 @@ failure with its `ProviderErrorKind`, never an exception for the backend's failu
 own store. `ComfyUIProvider` is in its own assembly, `Agenerela.ComfyUI`. A request with
 `Images` and an optional `Mask` is an edit (DR-028); `ImageCapabilities.WhyNot` says what a backend
 refuses, and `OpenAIImagesProvider`, in `Agenerela.OpenAIImages`, makes and edits pictures on any
-server that speaks OpenAI's images API, `sd-server` included. Nothing in a decision changes.
+server that speaks OpenAI's images API, `sd-server` included. A second package,
+`com.agenerela.sdcpp`, runs the image model inside the game with no server: `SdCppImageProvider` calls
+stable-diffusion.cpp in-process (DR-028; its `README.md`). Nothing in a decision changes.
 `Documentation~/images.md`.
 
 An action may declare **parameters** (#266 item 2; DR-023, first step): closed choices beside its

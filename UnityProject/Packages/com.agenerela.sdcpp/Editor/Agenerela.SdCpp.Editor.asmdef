@@ -1,0 +1,19 @@
+{
+    "name": "Agenerela.SdCpp.Editor",
+    "rootNamespace": "Agenerela.Providers.SdCpp.Editor",
+    "references": [
+        "Agenerela",
+        "Agenerela.SdCpp"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
