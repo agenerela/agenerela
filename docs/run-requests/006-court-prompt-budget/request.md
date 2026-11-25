@@ -39,6 +39,10 @@ Method `GreyBoxStrategy.Editor.StrategyTableMenu.RunInterleavedFromCommandLine` 
 
 If the kit's `watch` already passes `-strategyArms default`, replace that argument rather than adding a second.
 
+**Replaying it after 24 November.** `default` has trimmed the court to 1,600 since then (the lead's decision on this
+run), so arm a, `default+budget-1600+trim`, is the same as `default`, and arm b must turn the trimming off to stay
+the control: `default+budget-2048+no-trim`. `default+budget-0` is the `default` before 24 November, with no budget.
+
 **Code.** test at or after the merge of the framework pull request that adds `PromptBudget` and GreyBoxStrategy's
 `+budget-<n>` and `+trim` modifiers (branch `prompt-budget`). Check out a fresh short-path worktree and import it
 once outside the lease.
