@@ -140,6 +140,8 @@ namespace GreyBoxStrategy.Realm
             if (world != null) ui.ProvinceLabelSize = i => labelSizes[i];
             ui.Land = world?.Geometry != null ? world : null;
             ui.BuildPanels();
+            // The world's name and story at the head of the chronicle, when the loremaster gave any (#20, world lore).
+            if (world != null && worldLore != null && worldLore.Any) ui.SetWorld(world.Name, world.Backstory);
             ui.ModePressed = SetMode;
             ui.FollowPressed = Follow;
             ui.DiplomacyPressed = ToggleDiplomacy;

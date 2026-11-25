@@ -171,6 +171,12 @@ namespace GreyBoxStrategy
         /// 4.7 to 3.5 a game (within noise, not excluded), so it stays an arm and <c>default</c> keeps every line.
         /// </summary>
         public bool SilentArmies;
+        /// <summary>
+        /// <c>+world-lore</c>: a writs ruler reads its world's name and backstory, and the loremaster's line about itself
+        /// (#20, world lore), as two more knowledge lines, where the world has them. Off: no A/B has measured it (hard
+        /// rule 2), so <c>default</c> sends what it always sent.
+        /// </summary>
+        public bool WorldLore;
         /// <summary>How many of the ruler's last lines <see cref="OwnLines"/> shows.</summary>
         public const int OwnLinesShown = 4;
 
@@ -285,6 +291,7 @@ namespace GreyBoxStrategy
                     else if (modifier == "own-lines") options.OwnLines = true;
                     else if (modifier == "no-own-lines") options.OwnLines = false;
                     else if (modifier == "silent-armies") options.SilentArmies = true;
+                    else if (modifier == "world-lore") options.WorldLore = true;
                     else if (modifier == "storyteller") options.Storyteller = true;
                     else if (modifier == "choices") options.Choices = true;
                     else if (modifier == "call-choices") options.CallChoices = true;

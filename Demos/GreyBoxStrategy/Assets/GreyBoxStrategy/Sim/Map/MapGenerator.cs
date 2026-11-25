@@ -1361,46 +1361,13 @@ namespace GreyBoxStrategy
                 if (failed) Problems.Add(new MapProblem(ProblemKind.Content, "names", "the tables ran out of valid names"));
 
                 string R(string id) => id != null && rename.TryGetValue(id, out var to) ? to : id;
+                map.Rename(rename);
                 for (int c = 0; c < map.Countries.Count; c++)
                 {
                     var country = map.Countries[c];
-                    country.Id = R(country.Id);
-                    country.Name = NameRules.Display(country.Id);
                     country.Personality = TableNames.Personalities[(c + MapRandom.Int(seed, "personality", 0, TableNames.Personalities.Length)) % TableNames.Personalities.Length];
                 }
-                foreach (var p in map.Provinces)
-                {
-                    p.Id = R(p.Id);
-                    p.Name = NameRules.Display(p.Id);
-                    p.Owner = R(p.Owner);
-                    p.Region = R(p.Region);
-                }
-                foreach (var b in map.Borders) { b[0] = R(b[0]); b[1] = R(b[1]); }
-                for (int r = 0; r < map.Regions.Count; r++)
-                {
-                    var reg = map.Regions[r];
-                    reg.Id = R(reg.Id);
-                    reg.Name = NameRules.Display(reg.Id);
-                    reg.Provinces = reg.Provinces.Select(R).ToList();
-                    map.Generated.Styles[reg.Id] = styles[r];
-                }
-                foreach (var s in map.Geometry.Provinces) s.Id = R(s.Id);
-                foreach (var b in map.Geometry.Borders) { b.A = R(b.A); b.B = R(b.B); }
-                foreach (var r in map.Geometry.Ridges)
-                {
-                    foreach (var x in r.Passes) { x[0] = R(x[0]); x[1] = R(x[1]); }
-                    foreach (var x in r.Cuts) { x[0] = R(x[0]); x[1] = R(x[1]); }
-                }
-                foreach (var r in map.Geometry.Rivers)
-                {
-                    r.Provinces = r.Provinces.Select(R).ToList();
-                    foreach (var x in r.Borders) { x[0] = R(x[0]); x[1] = R(x[1]); }
-                }
-                foreach (var r in map.Geometry.Roads)
-                {
-                    r.Provinces = r.Provinces.Select(R).ToList();
-                    foreach (var b in r.Bridges) { b.A = R(b.A); b.B = R(b.B); }
-                }
+                for (int r = 0; r < map.Regions.Count; r++) map.Generated.Styles[map.Regions[r].Id] = styles[r];
                 map.Name = NameRules.Display(R("r0"));
             }
 

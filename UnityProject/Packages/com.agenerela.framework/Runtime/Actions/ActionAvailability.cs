@@ -103,6 +103,7 @@ namespace Agenerela
                     bool everyParameterHasOne = true;
                     foreach (var parameter in definition.Parameters)
                     {
+                        if (parameter.IsFreeText) continue; // no values to check (DR-030)
                         bool anyValue = false;
                         foreach (string value in parameter.Values)
                         {
@@ -199,6 +200,7 @@ namespace Agenerela
         // The declared values of one parameter that no per-value check rejected, in declared order.
         public List<string> ValuesOf(ActionDefinition definition, ActionParameter parameter)
         {
+            if (parameter.Values == null) return new List<string>(); // a free text lists none (DR-030)
             var values = new List<string>(parameter.Values.Length);
             foreach (string value in parameter.Values)
             {

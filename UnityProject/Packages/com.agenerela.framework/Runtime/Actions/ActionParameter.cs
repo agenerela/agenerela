@@ -7,9 +7,10 @@ using UnityEngine;
 namespace Agenerela
 {
     /// <summary>
-    /// A closed choice an action asks for beside its target, such as a strength (<c>minor</c> or
-    /// <c>major</c>) or a count (<c>1</c>, <c>2</c> or <c>3</c>): its name, what it means, and the
-    /// values the model may pick (DR-023, first step).
+    /// A value an action asks for beside its target: a closed choice, such as a strength (<c>minor</c> or
+    /// <c>major</c>) or a count (<c>1</c>, <c>2</c> or <c>3</c>), with the values the model may pick
+    /// (DR-023, first step); or a short free text of at most <see cref="MaxLength"/> characters, such as a
+    /// name the model makes up (DR-030).
     /// </summary>
     /// <remarks>
     /// <para>
@@ -23,7 +24,9 @@ namespace Agenerela
     /// <para>
     /// Every value is a string in the schema. A parameter whose values all read as whole numbers is a
     /// number list (<see cref="IsNumber"/>), and a handler may take it as an <c>int</c>. An open number
-    /// range and a free string are not supported: a small model invents numbers.
+    /// range is not supported: a small model invents numbers. A free text (<see cref="IsFreeText"/>) lists
+    /// no values; the schema caps its length and the legality guard checks it again, and what it says is the
+    /// game's to check, like a statement: it is data, never an id the framework acts on (DR-030).
     /// </para>
     /// </remarks>
     [Serializable]
@@ -37,9 +40,23 @@ namespace Agenerela
         [Tooltip("Optional. What the value means, such as 'how hard it strikes'. Shown in the action list.")]
         [JsonProperty("description", NullValueHandling = NullValueHandling.Ignore)] public string Description;
 
-        /// <summary>The values the model may pick, in the order the schema and the prompt list them. At least one.</summary>
+        /// <summary>
+        /// The values the model may pick, in the order the schema and the prompt list them. At least one, unless
+        /// the parameter is a free text (<see cref="MaxLength"/> above 0), which lists none.
+        /// </summary>
         [Tooltip("The values the model may pick, such as 'minor' and 'major', or '1', '2' and '3'.")]
         [JsonProperty("values")] public string[] Values;
+
+        /// <summary>
+        /// 0, the default, for a closed choice among <see cref="Values"/>. Above 0, the parameter is a free text of at
+        /// most this many characters, which the model writes itself (DR-030): the schema says <c>maxLength</c>, the
+        /// prompt's action list says "free text, at most N characters", and a longer value is refused.
+        /// </summary>
+        [Tooltip("0 for a closed choice among the values. Above 0: a free text of at most this many characters, with no values.")]
+        [JsonProperty("maxLength", DefaultValueHandling = DefaultValueHandling.Ignore)] public int MaxLength;
+
+        /// <summary>Whether this parameter is a free text the model writes (<see cref="MaxLength"/> above 0), not a closed choice.</summary>
+        [JsonIgnore] public bool IsFreeText => MaxLength > 0;
 
         /// <summary>
         /// The value a decision takes when the reply leaves this parameter out or names a value not
@@ -79,10 +96,15 @@ namespace Agenerela
             }
         }
 
-        /// <summary>Whether <paramref name="value"/> is one of <see cref="Values"/>, compared ordinally.</summary>
+        /// <summary>
+        /// Whether <paramref name="value"/> is one of <see cref="Values"/>, compared ordinally; for a free text, whether
+        /// it is at most <see cref="MaxLength"/> characters with no control character but a line break.
+        /// </summary>
         public bool Allows(string value)
         {
-            if (Values == null || value == null) return false;
+            if (value == null) return false;
+            if (IsFreeText) return value.Length <= MaxLength && !HasControlCharacter(value, allowLineBreaks: true);
+            if (Values == null) return false;
             foreach (string allowed in Values)
             {
                 if (string.Equals(allowed, value, StringComparison.Ordinal)) return true;
@@ -122,6 +144,37 @@ namespace Agenerela
             {
                 problem = $"Parameter name '{parameter.Name}' is a field of the decision itself.";
                 return false;
+            }
+
+            if (parameter.MaxLength < 0)
+            {
+                problem = $"Parameter '{parameter.Name}' has a negative MaxLength. Use 0 for a closed choice.";
+                return false;
+            }
+
+            if (parameter.IsFreeText)
+            {
+                if (parameter.Values != null && parameter.Values.Length > 0)
+                {
+                    problem = $"Parameter '{parameter.Name}' is a free text (MaxLength {parameter.MaxLength}) and lists values. " +
+                              "Give either values or a MaxLength, not both.";
+                    return false;
+                }
+
+                if (parameter.HasDefault && !parameter.Allows(parameter.Default))
+                {
+                    problem = $"Parameter '{parameter.Name}' defaults to a text longer than {parameter.MaxLength} characters or with a control character.";
+                    return false;
+                }
+
+                if (!string.IsNullOrEmpty(parameter.ExampleValue) && !parameter.Allows(parameter.ExampleValue))
+                {
+                    problem = $"Parameter '{parameter.Name}' shows a text in its example longer than {parameter.MaxLength} characters or with a control character.";
+                    return false;
+                }
+
+                problem = null;
+                return true;
             }
 
             if (parameter.Values == null || parameter.Values.Length == 0)
@@ -170,10 +223,11 @@ namespace Agenerela
             return true;
         }
 
-        private static bool HasControlCharacter(string value)
+        private static bool HasControlCharacter(string value, bool allowLineBreaks = false)
         {
             foreach (char c in value)
             {
+                if (allowLineBreaks && (c == '\n' || c == '\r')) continue;
                 if (char.IsControl(c)) return true;
             }
 
@@ -188,6 +242,7 @@ namespace Agenerela
                 Name = Name,
                 Description = Description,
                 Values = Values == null ? null : (string[])Values.Clone(),
+                MaxLength = MaxLength,
                 Default = Default,
                 ExampleValue = ExampleValue,
             };

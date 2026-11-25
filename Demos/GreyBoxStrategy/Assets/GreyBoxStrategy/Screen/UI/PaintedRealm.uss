@@ -875,3 +875,9 @@
 .demo-title-rule { width: 160px; height: 2px; margin-top: 14px; margin-bottom: 16px; background-color: rgb(210, 173, 98); }
 .demo-title-line { font-size: 22px; color: rgb(234, 223, 198); -unity-text-align: middle-center; max-width: 900px; white-space: normal; }
 .demo-fade { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: rgb(0, 0, 0); }
+
+/* The world's name and backstory at the head of the chronicle (#20, world lore): one line, a click opens it. */
+.world-lore { flex-shrink: 0; border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.22); }
+.world-lore-name { font-size: 13px; -unity-font-style: bold; color: rgb(236, 210, 150); }
+/* On the loading card: the world's name as its title, and the story beneath. */
+.loading-story { font-size: 14px; -unity-font-style: italic; color: rgb(214, 199, 166); white-space: normal; -unity-text-align: upper-left; margin-top: 6px; margin-bottom: 10px; max-width: 560px; }

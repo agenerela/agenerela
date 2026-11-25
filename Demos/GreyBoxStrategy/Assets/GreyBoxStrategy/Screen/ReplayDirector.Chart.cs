@@ -177,6 +177,11 @@ namespace GreyBoxStrategy.Realm
             }
             long made = watch.ElapsedMilliseconds; watch.Restart();
             world = making.Result.Map;
+            // The world's names and story from the loremaster, before the rules' map, the court and the chart read any
+            // name (#20, world lore): a model game only, from this world's cache when it has them.
+            string loreModel = pendingRule != null ? (pendingRule.Scripted ? null : pendingRule.Model) : pendingLiveModel;
+            yield return NameWorld(loading, setup, loreModel,
+                pendingRule != null ? SeatPersonas(world.Countries.Count, Mathf.Clamp(pendingRule.Slot, 0, world.Countries.Count - 1)) : null);
 
             bool gpu = ChartGpu.Supported;
             int chartWidth = ChartImage.WidthFor(Screen.width);
@@ -267,7 +272,7 @@ namespace GreyBoxStrategy.Realm
             labelSizes = new float[world.Provinces.Count];
             loading.Close();
             LoadReport = $"world in {made} ms{(making.Result.TimedOut ? " (the budget ran out: the best world found)" : "")}, game and chart prepared in {prepared} ms off the main thread, " +
-                         $"drawn in {drawn} ms on the {(gpu ? "GPU" : "CPU")}; {map.ChartReport}; court art: {RulerArtServer.LastReport}";
+                         $"drawn in {drawn} ms on the {(gpu ? "GPU" : "CPU")}; {map.ChartReport}; court art: {RulerArtServer.LastReport}; lore: {LastLoreReport}";
             Debug.Log($"Painted Realm: a generated world, seed {setup.Seed}, {world.Provinces.Count} provinces, {world.Countries.Count} countries, {game.Turns.Count} turns; {LoadReport}");
         }
 

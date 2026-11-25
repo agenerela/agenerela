@@ -5269,6 +5269,23 @@ prompt without the persona's one-sentence line, and accuracy on the answers that
 
 **What would change this.** A model whose thinking ends in a few hundred tokens on this prompt; an
 Ollama release with a thinking budget; a run at `num_ctx` 16384 answering most prompts.
+### Ollama holds `maxLength` on a free string, and a whole world's names and story fit one call (24 November 2026)
+
+**What.** Before DR-030 (free-text parameters), whether Ollama 0.40.14's grammar holds `maxLength` on string fields,
+and how long one reply naming a five-realm world takes. `qwen3.5:4b` on the home server (RTX 4070 SUPER, gate,
+untimed, no lease), `/api/chat` with a `format` schema: `action`, `target`, `world_name` (`maxLength` 24), then
+`realm_N` (11) and `ruler_N` (120) for five realms, then `statement` (480). Two seeds, `think` off.
+`.scratch/20-world-lore/probe.py`.
+
+**Result.** Every field within its cap. The 480-character statement stopped at exactly 480, mid-sentence ("...that
+blocked the eastern pass. A"), and an 11-letter realm name came back cut ("VerdantSwam"): the grammar cuts, it does
+not make the model plan for the cap. 279 and 340 completion tokens; the second call took 3.9 s with the model warm
+(the first, 85 s, included loading it). Not timed under a lease, so these are not measurements of speed.
+
+**What it means.** A cap in the schema is a safety net, not a length instruction: the prompt must say the length
+too, and code must cut prose back to its last whole sentence and refuse, not keep, a name the cap cut. Painted
+Realm's `LoreRules` does both, with a realm-name cap of 20 in the schema against 11 letters in the check. One
+decision is enough for a world's lore; eleven calls of the scribe's recipe are not needed.
 
 ### Z-Image Turbo inside Unity with stable-diffusion.cpp on the RTX 4060 Laptop: about 22 s a picture warm, 6.7 GB on the card, and the model gives its memory back (24 November 2026)
 

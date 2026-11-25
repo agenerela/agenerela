@@ -12,6 +12,11 @@ namespace GreyBoxStrategy
         public string Name;
         /// <summary>Sent to a model ruler as its personality; the rules never read it.</summary>
         public string Personality;
+        /// <summary>
+        /// One line about its ruler, written by the world's loremaster (<see cref="WorldLore"/>) and checked by
+        /// <see cref="LoreRules"/>; null when none. The rules never read it.
+        /// </summary>
+        public string RulerLine;
         public int StartGold = 40;
         public int StartArmy = 30;
     }
@@ -92,6 +97,11 @@ namespace GreyBoxStrategy
         public int Format = CurrentFormat;
         /// <summary>The preset's name (<c>Classic</c>) or the generated world's.</summary>
         public string Name;
+        /// <summary>
+        /// A few sentences of how the world came to be, written by its loremaster (<see cref="WorldLore"/>) and checked
+        /// by <see cref="LoreRules"/>; null when none. The rules never read it.
+        /// </summary>
+        public string Backstory;
         /// <summary>In seat order.</summary>
         public List<CountryData> Countries = new List<CountryData>();
         public List<ProvinceData> Provinces = new List<ProvinceData>();
@@ -136,6 +146,65 @@ namespace GreyBoxStrategy
                 if (b[0] == b[1]) return $"border {b[0]}-{b[1]} joins a province to itself";
             }
             return null;
+        }
+
+        /// <summary>
+        /// Gives the countries, provinces and regions named in <paramref name="ids"/> their new ids, everywhere an id
+        /// is kept (owners, borders, regions, the shapes, rivers and roads, special places, the region styles), and
+        /// each renamed one the display name of its new id (<see cref="NameRules.Display"/>). Ids not in the map stay.
+        /// The generator names a world through this, and so does its loremaster. The caller checks the new ids.
+        /// </summary>
+        public void Rename(IReadOnlyDictionary<string, string> ids)
+        {
+            if (ids == null || ids.Count == 0) return;
+            string R(string id) => id != null && ids.TryGetValue(id, out var to) ? to : id;
+            foreach (var country in Countries)
+            {
+                if (!ids.ContainsKey(country.Id)) continue;
+                country.Id = R(country.Id);
+                country.Name = NameRules.Display(country.Id);
+            }
+            foreach (var p in Provinces)
+            {
+                if (ids.ContainsKey(p.Id))
+                {
+                    p.Id = R(p.Id);
+                    p.Name = NameRules.Display(p.Id);
+                }
+                p.Owner = R(p.Owner);
+                p.Region = R(p.Region);
+            }
+            foreach (var b in Borders) { b[0] = R(b[0]); b[1] = R(b[1]); }
+            foreach (var reg in Regions)
+            {
+                if (ids.ContainsKey(reg.Id))
+                {
+                    reg.Id = R(reg.Id);
+                    reg.Name = NameRules.Display(reg.Id);
+                }
+                reg.Provinces = reg.Provinces.Select(R).ToList();
+            }
+            foreach (var s in Specials ?? new List<SpecialPlace>()) s.Province = R(s.Province);
+            if (Generated?.Styles != null && Generated.Styles.Count > 0)
+                Generated.Styles = Generated.Styles.ToDictionary(kv => R(kv.Key), kv => kv.Value);
+            if (Geometry == null) return;
+            foreach (var s in Geometry.Provinces) s.Id = R(s.Id);
+            foreach (var b in Geometry.Borders) { b.A = R(b.A); b.B = R(b.B); }
+            foreach (var r in Geometry.Ridges)
+            {
+                foreach (var x in r.Passes) { x[0] = R(x[0]); x[1] = R(x[1]); }
+                foreach (var x in r.Cuts) { x[0] = R(x[0]); x[1] = R(x[1]); }
+            }
+            foreach (var r in Geometry.Rivers)
+            {
+                r.Provinces = r.Provinces.Select(R).ToList();
+                foreach (var x in r.Borders) { x[0] = R(x[0]); x[1] = R(x[1]); }
+            }
+            foreach (var r in Geometry.Roads)
+            {
+                r.Provinces = r.Provinces.Select(R).ToList();
+                foreach (var b in r.Bridges) { b.A = R(b.A); b.B = R(b.B); }
+            }
         }
 
         /// <summary>The rules' map. Throws <see cref="ArgumentException"/> with the reason on an invalid map.</summary>

@@ -70,6 +70,13 @@ namespace GreyBoxStrategy
         /// <summary>The advisor (v2 slice A). Data only until it exists.</summary>
         public bool Advisor = true;
         /// <summary>
+        /// A generated world's lore as its loremaster wrote it (#20), saved with the game so Load a replay gives the
+        /// world the same names without asking a model; <see cref="LoreFor"/> says which world it is for. Null for none.
+        /// </summary>
+        public LoreProposal Lore;
+        /// <summary>The world <see cref="Lore"/> was written for: <see cref="LoreRules.WorldKey"/> of it as the generator made it.</summary>
+        public string LoreFor;
+        /// <summary>
         /// The numbers <see cref="BuildRules"/> starts from when none are passed, in place of
         /// <see cref="GameRules.Standard"/>: a headless run's rule settings (<c>-strategyRules</c>). Never
         /// saved with the setup; null, the default, is today's game.

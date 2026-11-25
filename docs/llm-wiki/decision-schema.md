@@ -46,6 +46,7 @@ A `SchemaField` has:
 | `Name` | The JSON key: `action`, `target` or `statement` (`DecisionSchema.ActionFieldName` and its siblings). |
 | `Description` | Text for a model that is shown the schema. JSON Schema carries it; a grammar has nowhere to put it, so GBNF drops it. |
 | `AllowedValues` | The only values allowed, in order, or `null` for a free-form string. |
+| `MaxLength` | For a free-form field, the most characters it may hold, sent as `maxLength`; 0 for no cap. A free-text parameter's (DR-030). |
 | `Required` | Whether every answer must contain the field. Every field is `true` in every schema `DecisionSchema.Build` makes. A hand-built schema may set it `false`, and `JsonSchemaSerializer` then leaves the field out of `required` (test `OnlyRequiredFieldsAreListedAsRequired`). |
 
 An `ActionTargets` branch has `Actions` (ids in the action enum's order) and `Targets` (ids in the
