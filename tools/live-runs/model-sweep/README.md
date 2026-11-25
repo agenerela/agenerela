@@ -10,7 +10,9 @@ gets two things:
    - `idle-none`, with `DecideOptions.IdleExampleStimulus = ""`.
 
 This is the sweep from 9 November 2026 (findings, "Thirteen models on the evaluation set"), packaged
-so any machine can repeat it.
+so any machine can repeat it. Since 24 November the defaults list the actions and targets in the
+prompt (DR-027), so both arms do; to repeat the 9 November numbers exactly, give both arms
+`ListActionsAndTargets = false` in `ModelSweepRun.cs.txt`.
 
 | File | What it is |
 |---|---|

@@ -33,8 +33,9 @@ From the build plan (§2.3 to §2.5, Appendix A, Phase 6b) and [`findings.md`](f
   calling with irrelevance detection (BFCL) and character writing (Creative Writing, EQ-Bench).
 - **The model never reads the schema** (findings, 10 October): field and action descriptions do
   not reach a local model, so it works from the prompt and the examples alone. A call can list the
-  actions and targets in the prompt (`DecideOptions.ListActionsAndTargets`, #190), but that is off
-  by default and unmeasured.
+  actions and targets in the prompt (`DecideOptions.ListActionsAndTargets`, #190), on by default
+  since 24 November 2026 (DR-027): +6.7 points on `qwen3.5:4b`, beyond noise, +4.8 on the 2B,
+  within. A candidate is measured with it on.
 - **Thinking must be off.** A reasoning field before `action` measured worst of five variants
   (Appendix A), and a game waits on every token. `OllamaProvider` sends `think: false`. A model
   that always thinks is out.

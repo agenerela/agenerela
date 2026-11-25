@@ -88,7 +88,9 @@ namespace Agenerela.Tests
             var handler = ScriptedHandler.Replying(Envelope(GoToTheTower));
             var agent = Fixtures.VillageGuard(Provider(handler));
 
-            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+            // The wire format is this test's subject, not the prompt: #88's body has no action list,
+            // which every call has sent by default since DR-027, so the call turns it off.
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", new DecideOptions { ListActionsAndTargets = false }));
 
             Assert.That(result.Decision, Is.Not.Null, result.Telemetry.ErrorMessage);
             Assert.That(handler.Requests, Has.Count.EqualTo(1));

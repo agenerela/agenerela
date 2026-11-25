@@ -790,8 +790,9 @@ than a second schema system — do not let provider-specific syntax leak into th
    +35 points.
 5. **A local model reads no schema** (findings, 10 October 2026), so neither the action list nor
    the target ids reach it unless the prompt carries them. `DecideOptions.ListActionsAndTargets`
-   (#190) lists both in the system prompt, the targets capped at `MaxListedTargets`. It is off
-   by default and unmeasured, and owed an A/B (#151) before it becomes the default.
+   (#190) lists both in the system prompt, the targets capped at `MaxListedTargets`. On by
+   default since 24 November 2026 (DR-027), after the A/B on the 209 set put `qwen3.5:4b`
+   6.7 points ahead, beyond noise.
 6. **The paired schema** (DR-020): with `DecideOptions.PairTargetsWithActions`, off by default,
    each action is offered with only the targets it takes, as a root `anyOf` of complete objects
    that keep the field order above. The flat fields stay as they were, so the prompt is unchanged.
@@ -2871,6 +2872,257 @@ a `RetryPolicy` is a follow-up.
 
 **What would change this.** A gateway or a cloud API whose busy answer is another status; a
 measured case where retrying made a game worse than failing at once; a demo needing a third profile.
+
+### DR-027 — The prompt lists the offered actions and targets by default
+
+**Status:** Accepted, 24 November 2026, by the lead ("Yes, both"), on the framework tech lead's
+recommendation from #151's runs. Built in the pull request that adds this record.
+
+**Context.** A model served through Ollama never reads the response schema: it only constrains
+sampling (findings, 10 October 2026). Without `DecideOptions.ListActionsAndTargets` the system
+prompt says "Choose exactly one action from the allowed list" and never shows that list, so a local
+model learns the actions only from the few-shot examples and never sees their descriptions. The
+switch (#190) was off and owed an A/B (#151). Every demo that met the gap (Living Vale, Painted
+Realm) had already turned it on by hand.
+
+**Evidence.** The 209-prompt evaluation set, guards on, temperature 0, home server, clean leases
+(findings, 23 November 2026, "ListActionsAndTargets off / on, again"):
+
+| Model | Off | On | Difference | Floor | |
+|---|---:|---:|---:|---:|---|
+| `qwen3.5:4b` (#20234, repeated as #27545) | 170 | 184 | **+6.7** | 4.9 | beyond; situations +15.5 beyond 9.3; all 418 answers the same on the repeat |
+| `qwen3.5:2b` (#10915) | 139 | 149 | +4.8 | 4.9 | within, not worse |
+
+On the 4B wrong `none` answers fall from 14 to 3; answers that act unasked go from 4 to 8.
+
+**Decision.**
+
+| Question | Decision | Why |
+|---|---|---|
+| The default | `DecideOptions.ListActionsAndTargets` is `true` | Beyond noise on the 4B, not worse on the 2B; the one place a local model can read the action descriptions |
+| The cap | `MaxListedTargets` stays 12 | Lists all 11 of the evaluation set's targets; unmeasured otherwise |
+| Turning it off | `ListActionsAndTargets = false` gives the prompt from before, byte for byte | An A/B run's control arm, and a game that writes its actions into observations itself |
+| The evaluation set | An arm with default options now sends the list. `EvaluationSchemaTests` pins both: the new default's prompts, and the old ones under `ListActionsAndTargets = false` | Phase 4's later runs measure what ships; the old prompt stays one switch away and pinned, so a run comparable with the earlier ones can still be made |
+| The builder | `PromptOptions.ListActionsAndTargets` stays `false`: `PromptBuilder` adds the list only when asked, and `Agent` asks by default | The builder's golden files keep pinning the base prompt, and the list keeps its own; the default is the agent's, where a developer sets options |
+
+**Consequences.**
+
+- Every request is longer by a line an offered action and a line a listed target. On the
+  evaluation set that is a median of 465 to 563 tokens a request, at most 546 to 663 (estimated at 3 characters a token,
+  `PromptBudget.Estimate`); no framework default budget exists to pass.
+- GreyBoxVillage, GreyBoxVillageClassic and the UnityProject sandbox guard did not set the switch
+  and now send the list. Living Vale and Painted Realm already set it, and do not change.
+- A run whose control arm is "the defaults" now has the list in it. A/B numbers before this record
+  compare against the list off; the reports' `listActionsAndTargets` field says which.
+- More unasked actions on the 4B (4 to 8 of 209) is the measured cost.
+
+**What would change this.** A model or provider for which the list measures worse; a cloud provider
+that reads the schema, where the list repeats it (a per-provider default would then be the next
+record); prompts that the list pushes past a context window.
+
+### DR-028 — Local image models inside Unity: editing in the request, an OpenAI-images backend, and stable-diffusion.cpp in its own package
+
+**Status:** Accepted, 24 November 2026, by the tech lead, every recommendation from Q1 to Q9 as
+proposed. Asked for by the lead: image generation "like llmunity so that developers will be able to
+plug in image models". Each question below gives the options and the recommendation that was
+accepted. This record extends DR-024 and DR-025 and changes nothing either of them decided.
+
+**Context.** DR-025's one real backend, ComfyUI, is a server the developer installs and runs. A
+developer who wants pictures in a shipped game has no way to put an image model *inside* the game,
+the way LLMUnity puts a language model inside it. Three facts shape the answer:
+
+- **Ollama cannot be that backend.** It refuses image models on Linux (findings, 24 November
+  2026), and it is a server too.
+- **LLMUnity runs only language models.** It wraps llama.cpp, and nothing in it runs a diffusion model.
+- **stable-diffusion.cpp** (by leejet, MIT licence, from the same ggml family as llama.cpp) runs
+  Z-Image Turbo, Flux, SDXL, Qwen-Image and Qwen-Image-Edit in C and C++.
+  - Its release builds ship a shared library, `stable-diffusion.dll`, beside `sd-cli` and
+    `sd-server`.
+  - `sd-server` speaks the OpenAI images API (`/v1/images/generations`, `/v1/images/edits`).
+  - On 15 November 2026 (#2365) its C API replaced every public struct with opaque option handles
+    set by string key, such as `sd_ctx_opt_create`, `sd_opt_set_string(opt, "vae_path", …)` and
+    `sd_generate_image`. The API promises no field layout, so a new setting is a new key. That is
+    the shape P/Invoke binds most safely.
+
+Nothing in the framework can ask for an edit today. `ImageRequest` has a prompt, a size, a seed and
+open parameters, and no input picture. The sources for every fact above, header excerpts included,
+are in the session's research notes (`.scratch/sdcpp/research.md` in its worktree, not committed).
+
+**The plan is three pull requests into `test`:**
+
+1. This record.
+2. Editing in the request and an OpenAI-images backend, before the final presentation.
+3. The in-process package, which may land after the presentation.
+
+---
+
+**Q1. How an edit is asked for.**
+
+| Option | For | Against |
+|---|---|---|
+| A separate `EditAsync` on `IImageProvider`, or a second interface | Generation and editing never mix | A new interface member breaks every implementer, or else a game holds two providers. `CachedImageProvider` would have to be written twice |
+| **Fields on `ImageRequest`: `Images` (PNG bytes, empty for plain generation), `Mask` (a PNG, optional), and the instruction in `Prompt`** | One call and one cache, and nothing breaks. The OpenAI API, `sd-server` and sd.cpp's C API all take the same three things | A backend that cannot edit must say so (Q3) |
+
+*Recommended: the fields.*
+
+- `Images[0]` is the picture to change. Any later entries are references, since Qwen-Image-Edit
+  and Flux Kontext take several. `Width` and `Height` are still the size of the result.
+- How strongly the picture changes depends on the backend: a repaint uses `strength`, and an
+  instruction model uses its guidance. So it stays an open parameter (DR-008), documented as
+  `strength`.
+- `Key` hashes the bytes of each image and of the mask, in order, so the cache never returns one
+  edit's picture for another. A request with no images keeps today's key, so no cached picture is
+  lost.
+- `ImagePromptBuilder` is unchanged. An instruction is a prompt, and model-written text in it is as
+  untrusted as it is anywhere else.
+
+**Q2. Which convention the mask follows.**
+
+- OpenAI's mask is a PNG the size of the first image, and its fully transparent pixels are the ones
+  to change.
+- LocalAI's inpainting and sd.cpp use the opposite: white marks the area that changes.
+
+*Recommended: OpenAI's.* The OpenAI-images backend then passes the bytes through untouched. The
+in-process backend builds sd.cpp's mask tensor from the alpha channel when it decodes the PNG, which
+it has to do anyway. The documentation does not say whether `sd-server`'s `/v1/images/edits`
+follows OpenAI's convention. Step 2 checks it.
+
+**Q3. What a backend that cannot edit does.**
+
+| Option | Verdict |
+|---|---|
+| Return `ImageResult.Failed(Rejected)` | A game would answer it with its fallback picture, but an edit sent to a backend that cannot edit is a mistake in the game's code, and the first run should show it |
+| **Throw `ArgumentException` from the call, as an unsupported size already does (DR-025), and add capabilities to check first** | *Recommended.* `ImageCapabilities` gains `Edits`, `Masks` and `MaxImages`, and `WhyNot(request)` beside `WhyNotSize`, so a game can ask before it calls |
+
+- `ComfyUIProvider` reports `Edits = false` in step 2 and throws a clear message for an edit.
+- ComfyUI could edit with a workflow that declares an `image` param: a `LoadImage` node, with the
+  picture sent through `/upload/image`. That is a follow-up, not part of step 2.
+
+**Q4. The quick path: an OpenAI-images backend.**
+
+*Recommended:* `OpenAIImagesProvider`, in its own assembly `Agenerela.OpenAIImages`
+(`Runtime/Providers/OpenAIImages/`). Like `Agenerela.ComfyUI`, it references only the core and
+Newtonsoft (hard rule 6).
+
+- **What it sends.** It posts to `/v1/images/generations` as JSON, or to `/v1/images/edits` as
+  multipart (`image[]`, `mask`, `prompt`, `size`). It reads the picture from `data[0].b64_json`.
+- **Failures.** It maps them to `ProviderErrorKind` as ComfyUI does, and retries 429 and 503 with
+  DR-026's `RetryPolicy`.
+- **Servers.** It works with `sd-server`, with LocalAI for generations only (LocalAI registers no
+  `/v1/images/edits`), and with OpenAI's own API.
+- **Seeds and steps.** The OpenAI API has neither. `sd-server` reads them from a
+  `<sd_cpp_extra_args>{…}</sd_cpp_extra_args>` block in the prompt. A setting, `SdCppExtraArgs`,
+  writes the seed and the `sample.*` parameters into that block, and `HonoursSeed` follows the
+  setting.
+- **The key.** It comes from a variable that an `OpenAIImagesProviderConfig` names, and it travels
+  only in the `Authorization` header (hard rule 1).
+
+**Q5. How stable-diffusion.cpp gets into a game.**
+
+| Option | For | Against |
+|---|---|---|
+| A: P/Invoke into `stable-diffusion.dll`, in the game's own process, as LLMUnity does with llama.cpp | No server and no port. The model loads once for the game's life. This is what the lead asked for | A native crash takes the editor or the game down with it |
+| B: the package starts `sd-server` as a child process and talks to it with Q4's backend | A crash stays in the child process, and there is no binding to keep up to date | A port, and a process to start, watch and kill. A firewall prompt on the first run. It is "no server" only in appearance |
+| C: the developer runs `sd-server` | Nothing to build | Exactly what the lead does not want |
+
+*Recommended: A, with B as the documented fallback* if native crashes prove common. B costs little
+once Q4's backend exists.
+
+**Q6. The package.**
+
+*Recommended:* a new package, `com.agenerela.sdcpp`, beside the framework in `UnityProject/Packages/`
+and depending on `com.agenerela.framework`. Its runtime assembly is `Agenerela.SdCpp`. The core
+never names it.
+
+| Part | Recommended | Why, and how LLMUnity does it |
+|---|---|---|
+| Native binaries | **Not in the package.** An Editor window downloads one pinned sd.cpp release per backend from its GitHub release, checks it against a SHA-256 the package lists, and caches it per user. It then copies it into `Assets/StreamingAssets/Agenerela/sdcpp/<platform>-<backend>/` so a build carries it | LLMUnity does the same with LlamaLib, which is 1.8 GB: it caches it under `%APPDATA%` and copies it into `StreamingAssets`. sd.cpp's CUDA build is 413 MB plus 563 MB of CUDA runtime, too big for a package or Git LFS |
+| Which release | One `master-<n>-<sha>` tag, pinned, with its header copied into the package as the binding's reference. It is moved by hand, together with the binding's tests | sd.cpp publishes several builds a day and has no semantic versions |
+| Loading | `LoadLibrary` or `dlopen`, and function pointers through `Marshal.GetDelegateForFunctionPointer`, rather than `[DllImport]` on a plugin asset. Backends are tried in order: CUDA, Vulkan, CPU. The first that loads and finds a device wins, and the choice is logged | This is LLMUnity's order: cuBLAS, then Vulkan, then the CPU variants. The editor locks a `[DllImport]` plugin until it restarts, so that plugin can be neither chosen at run time nor replaced |
+| Model files | Outside the package. An `SdCppModel` asset, a "recipe", names the diffusion model, the text encoder and the VAE files, plus the model's own defaults (for Z-Image Turbo, 8 steps and cfg 1). The files live in `StreamingAssets` or at an absolute path | LLMUnity's model manager also keeps models out of the package, and a 4 GB file never goes through Git |
+| Model picker | In the recipe's Inspector, a **Choose file** button for each slot. A short list of known recipes gives each file's official Hugging Face URL and size, with a **Download** button | LLMUnity's Download model and Load model buttons |
+| Threads | Each provider has one worker thread, which holds the context. Requests queue on it one at a time, as DR-024's small queue for each kind. PNG decoding (`Texture2D.LoadImage`) runs on the main thread before the request. Encoding (`ImageConversion.EncodeArrayToPNG`, safe off the main thread) runs after it | sd.cpp's calls block for seconds, and the main thread must never wait on them |
+| Cancellation | The caller's token calls `sd_cancel_generation`, and the call ends with `OperationCanceledException` | Whether it is safe to call from another thread is unverified. Step 3 checks that first |
+| Lifetime and VRAM | The model loads on the first request or on `WarmUpAsync`. `UnloadAsync` frees the context and its VRAM, through `IModelLifecycle` (DR-019). `Dispose` unloads | A game can free the card for its language model without quitting |
+| Capabilities | `Edits` follows the recipe. A repaint (`init_image`, `mask_image`, `strength`) works on any model. An instruction edit (`ref_images`) needs an edit model such as Qwen-Image-Edit | sd.cpp handles the two kinds of edit differently |
+
+**Q7. Platforms.**
+
+*Recommended:*
+
+- **First:** Windows x64.
+  - Vulkan (31 MB, any vendor's card) is the default download.
+  - CUDA 12 is the faster choice for NVIDIA cards.
+  - The CPU build is the fallback.
+- **Stated follow-ups:**
+  - Linux x64. sd.cpp publishes Vulkan and CPU builds there, but no CUDA build.
+  - macOS arm64. One build is published, and whether it uses Metal is unverified.
+- **Not planned:** mobile, WebGL and consoles.
+
+**Q8. One GPU for rendering and two models.**
+
+- **Rendering.** sd.cpp's CUDA or Vulkan work competes with Unity's own work on the card, so frames
+  stall while a picture is made.
+  - *Recommended:* the documentation tells developers to generate behind a loading card or during a
+    pause, as Painted Realm already does.
+  - Step 3 measures the frame time while generating, so that advice carries a number.
+- **8 GB.** The weights alone come to 6.7 GB, before the scene. The prototype's 2B language model
+  and a minimal scene used 4.2 GB, so the image model does not fit beside a loaded language model.
+  The 6.7 GB is:
+  - Z-Image Turbo Q4_K, 3.9 GB
+  - Qwen3-4B Q4_K_M as its text encoder, 2.5 GB
+  - the VAE, 0.3 GB
+
+  *Recommended:*
+  - The recipe's defaults keep the text encoder on the CPU (`backend = "te=cpu"`) and turn on VAE
+    tiling. That brings the card's share down to about the diffusion model and its working memory.
+  - The settings expose `params_backend = "*=cpu"`, which keeps the weights in RAM and streams them
+    to the card, plus `max_vram` and `auto_fit`, for a card that is tighter still.
+  - The framework still does not arbitrate between models (DR-024). The sample shows the recipe:
+    unload the language model (`IModelLifecycle.UnloadAsync`), make the pictures, then unload the
+    image model.
+- **Editing on 8 GB.** Qwen-Image-Edit's smallest file is 7.1 GB. On this laptop it runs only with
+  every weight offloaded, using about 17 GB of system RAM, and slowly if at all.
+  - *Recommended:* step 3 proves editing as a Z-Image Turbo repaint (an image, a mask and a
+    strength).
+  - It times Qwen-Image-Edit only if the lead wants that.
+
+**Q9. Licences.**
+
+- stable-diffusion.cpp and ggml are MIT.
+- Z-Image Turbo, Qwen3-4B, Qwen-Image-Edit and FLUX.1-schnell's VAE are Apache-2.0.
+- The package ships none of them. The recipe lists each file's licence beside its download.
+
+---
+
+**What step 3 must show (the lead's ask).** In the editor on the RTX 4060 Laptop (8 GB), with the
+local Ollama models stopped and the laptop on mains, Z-Image Turbo Q4_K makes a picture at 768×896
+through `IImageProvider`. Step 3 records:
+
+- the seconds an image takes, both the first and once warm
+- peak VRAM
+- the frame time while it runs
+- one repaint edit
+
+It goes in `findings.md` as a measurement, not an accuracy claim.
+
+**Not in this decision.** A queue shared between image backends, LoRAs, ControlNet, upscaling, image
+input to the language model, and the image slot on the provider settings page (#359, DR-026).
+
+**Consequences.**
+
+- In the core: three fields on `ImageRequest`, three on `ImageCapabilities`, and `WhyNot`. A request
+  with no images sends and keys exactly as before.
+- A third assembly in the framework package, `Agenerela.OpenAIImages`.
+- A second package in the repository, `com.agenerela.sdcpp`. Its binaries and models are downloaded
+  only on a developer's yes and are never committed. CI's dependency checks apply to it.
+
+**What would change this.**
+
+- Native crashes in the editor that a restart does not cure. Then option B.
+- sd.cpp changing its API in ways that break the binding more often than a pin can absorb.
+- A game that needs pictures during play on an 8 GB card. That would bring framework arbitration
+  between models forward.
 
 ## Appendix A — carried measurements (source: test-ai-framework prototype, Aug 2026, RTX 4060 Laptop 8GB, qwen3.5 family via Ollama)
 

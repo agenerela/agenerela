@@ -125,6 +125,7 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Changed
 
+- **`DecideOptions.ListActionsAndTargets` is on by default** (DR-027, #404): every call's system prompt lists the offered actions with their descriptions and the offered targets (+6.7 points on `qwen3.5:4b` on the evaluation set, beyond noise). Set it to `false` for the prompt from before.
 - An HTTP 429 (was `Rejected`) and 503 (was `ServerError`) are `RateLimited` once the retries run
   out, and `ProviderConfig.Resolve` reads the active profile's config before the Default Provider
   (DR-026, #395).

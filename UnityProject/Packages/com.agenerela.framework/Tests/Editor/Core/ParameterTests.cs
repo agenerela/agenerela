@@ -56,7 +56,9 @@ namespace Agenerela.Tests
         public async Task AnAgentThatDeclaresNoneSendsTheFlatSchemaAndNoActionList()
         {
             var fake = new FakeProvider("{\"action\":\"blight\",\"target\":\"orsk\",\"statement\":\"\"}");
-            var result = await Fixtures.NotCancelled(Storyteller(fake, out _, withParameter: false).DecideAsync("Tell this turn's event."));
+            // The list off (on by default since DR-027), so the test sees that no parameter forces it on.
+            var result = await Fixtures.NotCancelled(Storyteller(fake, out _, withParameter: false)
+                .DecideAsync("Tell this turn's event.", new DecideOptions { ListActionsAndTargets = false }));
 
             Assert.That(fake.LastRequest.Schema.Pairs, Is.Null, "No parameter, no pairing.");
             Assert.That(fake.LastRequest.SystemPrompt, Does.Not.Contain("Allowed actions:"));
@@ -573,7 +575,8 @@ namespace Agenerela.Tests
             var provider = new SerializingProvider(fake);
             var agent = GreeterWithBlight(provider, category, rejectEveryTarget);
 
-            var result = await Fixtures.NotCancelled(agent.DecideAsync("Hello."));
+            // The list off (on by default since DR-027), so the test sees that blight, left out, forces no list.
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Hello.", new DecideOptions { ListActionsAndTargets = false }));
 
             Assert.That(result.Telemetry.Outcome, Is.Not.EqualTo(DecisionOutcome.PipelineError), result.Telemetry.ErrorMessage);
             Assert.That(result.Decision.ActionId, Is.EqualTo("greet"));

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace GreyBoxStrategy
@@ -173,10 +174,13 @@ namespace GreyBoxStrategy
         /// </summary>
         public int AskHoldingArmyEvery = 3;
         /// <summary>
-        /// With <see cref="FreeOrders"/>, an A/B arm (17 November, off): a court's later request in a turn is told what its
-        /// earlier orders settled: "Taxes are raised this turn" once they are, and the gold held back for its orders.
+        /// With <see cref="FreeOrders"/>: a court's later request in a turn is told what its earlier orders settled: "Taxes
+        /// are raised this turn" once they are, and the gold held back for its orders. On by default since 24 November, the
+        /// lead's call as game feel after request 003: every answer legal in both arms, court orders a realm a turn 1.31 to
+        /// 0.98, model seconds a turn 21.2 to 19.2 (findings, "Painted Realm free orders, the court's prompt A/B").
+        /// <c>-strategyRules "CourtTurnFacts=false"</c> is that run's control arm.
         /// </summary>
-        public bool CourtTurnFacts;
+        public bool CourtTurnFacts = true;
         /// <summary>
         /// With <see cref="FreeOrders"/>, an A/B arm (17 November, off): a court's later request in a turn asks for "the
         /// court's next order, or none when the court is done" in place of repeating the turn's headline.
@@ -401,6 +405,24 @@ namespace GreyBoxStrategy
 
         /// <summary>The rules as designed.</summary>
         public static GameRules Standard => new GameRules();
+
+        /// <summary>
+        /// Today's rules with the named fields set, from "Field=value;Field=value", as a run's <c>-strategyRules</c> gives
+        /// them (an A/B arm, such as <c>"FreeOrders=true;CourtTurnFacts=false"</c>). An unknown field throws.
+        /// </summary>
+        public static GameRules With(string settings)
+        {
+            var rules = Standard;
+            foreach (string part in settings.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                int eq = part.IndexOf('=');
+                if (eq <= 0) throw new ArgumentException($"-strategyRules: \"{part}\" is not Field=value.");
+                string name = part.Substring(0, eq).Trim();
+                var field = typeof(GameRules).GetField(name) ?? throw new ArgumentException($"-strategyRules: GameRules has no field {name}.");
+                field.SetValue(rules, Convert.ChangeType(part.Substring(eq + 1).Trim(), field.FieldType, System.Globalization.CultureInfo.InvariantCulture));
+            }
+            return rules;
+        }
 
         /// <summary>A copy, for a test that changes one number.</summary>
         public GameRules Clone()
