@@ -1,0 +1,48 @@
+/*
+ * The New Agent window's layout (#175). Colour, type and the kit's pieces come from Agenerela.uss
+ * (#167), so this sets no colour of its own.
+ */
+
+.na-root {
+    flex-grow: 1;
+}
+
+.na {
+    flex-grow: 1;
+    padding: var(--ag-space-l);
+}
+
+.na-hint {
+    white-space: normal;
+    margin-bottom: var(--ag-space-s);
+}
+
+.na-folder {
+    flex-direction: row;
+}
+
+.na-grow {
+    flex-grow: 1;
+}
+
+.na-add {
+    align-self: flex-start;
+    margin-top: var(--ag-space-s);
+}
+
+.na-as-assets {
+    margin-top: var(--ag-space-m);
+}
+
+.na-remove {
+    align-self: flex-end;
+}
+
+.na-create {
+    align-self: flex-end;
+    margin-top: var(--ag-space-l);
+}
+
+.na-hidden {
+    display: none;
+}

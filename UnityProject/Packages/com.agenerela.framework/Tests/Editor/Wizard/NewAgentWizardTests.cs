@@ -11,7 +11,7 @@ using Object = UnityEngine.Object;
 
 namespace Agenerela.Tests.Wizard
 {
-    // What Create → Agenerela → New Agent… writes (#175). WizardFixtureGuard.cs, beside this file, is
+    // What Create → Agenerela → New Agent writes (#175). WizardFixtureGuard.cs, beside this file, is
     // the script the wizard writes for FixtureAnswers, committed so the tests compile it: the first
     // test proves the template's output is that text, so the template provably compiles. No test
     // calls NewAgentWizard.Create, which writes a script into Assets and so starts a compile mid-run.

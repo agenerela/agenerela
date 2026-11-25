@@ -11,7 +11,7 @@ using UnityEngine;
 namespace Agenerela.Editor
 {
     /// <summary>
-    /// What Create → Agenerela → New Agent… writes (#175, figure 12 of workflow.html): a script with
+    /// What Create → Agenerela → New Agent writes (#175, figure 12 of workflow.html): a script with
     /// an <c>[AgentAction]</c> method for each action, and the profile. With
     /// <see cref="Answers.AsAssets"/>, also an action asset for each, listed on the profile; the
     /// script still runs them, because an asset wins on its id (DR-011). When the project has no
