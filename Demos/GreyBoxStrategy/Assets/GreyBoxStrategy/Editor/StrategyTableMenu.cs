@@ -186,13 +186,13 @@ namespace GreyBoxStrategy.Editor
             return (model, world) =>
             {
                 if (!providers.TryGetValue(model, out var p))
-                    providers[model] = p = new OllamaProvider(new OllamaSettings
+                    providers[model] = p = new OllamaProvider(ThinkSwitch.Apply(new OllamaSettings
                     {
                         Endpoint = Environment.GetEnvironmentVariable("AGENERELA_OLLAMA_URL") is string url && url.Length > 0 ? url : "http://127.0.0.1:11434",
                         ApiKey = Environment.GetEnvironmentVariable("AGENERELA_OLLAMA_API_KEY") ?? "",
                         Model = model,
                         TimeoutSeconds = 90f,
-                    });
+                    }));
                 return p;
             };
         }
@@ -221,13 +221,13 @@ namespace GreyBoxStrategy.Editor
                 ILLMProvider ProviderFor(string model, World world)
                 {
                     if (!providers.TryGetValue(model, out var p))
-                        providers[model] = p = new OllamaProvider(new OllamaSettings
+                        providers[model] = p = new OllamaProvider(ThinkSwitch.Apply(new OllamaSettings
                         {
                             Endpoint = Environment.GetEnvironmentVariable("AGENERELA_OLLAMA_URL") is string url && url.Length > 0 ? url : "http://127.0.0.1:11434",
                             ApiKey = Environment.GetEnvironmentVariable("AGENERELA_OLLAMA_API_KEY") ?? "",
                             Model = model,
                             TimeoutSeconds = 90f,
-                        });
+                        }));
                     return p;
                 }
 

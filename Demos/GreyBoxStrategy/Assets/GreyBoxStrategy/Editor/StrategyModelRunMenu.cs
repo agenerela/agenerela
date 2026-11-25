@@ -81,14 +81,14 @@ namespace GreyBoxStrategy.Editor
                 string kind = seat;
                 if (seat == ModelGameRunner.Model)
                 {
-                    provider = new OllamaProvider(new OllamaSettings
+                    provider = new OllamaProvider(ThinkSwitch.Apply(new OllamaSettings
                     {
                         Endpoint = Environment.GetEnvironmentVariable("AGENERELA_OLLAMA_URL") is string url && url.Length > 0 ? url : "http://127.0.0.1:11434",
                         ApiKey = Environment.GetEnvironmentVariable("AGENERELA_OLLAMA_API_KEY") ?? "",
                         Model = model,
                         TimeoutSeconds = 90f,
                         TokenAlternatives = options.TokenAlternatives,
-                    });
+                    }));
                     kind = $"{model} ({arm})";
                 }
 

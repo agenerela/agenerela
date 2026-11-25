@@ -55,6 +55,7 @@ A rule belongs in `Sim/`; a number the screen shows belongs in `Screen/Replay/` 
 | `WritRuler.cs` | The writs turn's ruler: court and marshal actions registered with the framework |
 | `WritModelRunner.cs`, `ModelGameRunner.cs`, `TableRunner.cs` | Games with model seats, headless; `TableRunner` is any mix of seats |
 | `ModelSeatOptions.cs` | Prompt switches and A/B arms of a model seat |
+| `ThinkSwitch.cs` | `AGENERELA_OLLAMA_THINK` and `AGENERELA_OLLAMA_CTX`: every model seat's provider thinking, for the thinking A/B (DR-028) |
 | `Personas.cs` | The rulers' characters, through the framework's identity fields |
 | `Storyteller.cs` | The storyteller agent |
 | `Advisor.cs` | The advisor in rule mode |
