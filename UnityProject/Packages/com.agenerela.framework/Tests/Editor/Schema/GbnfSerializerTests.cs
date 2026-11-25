@@ -242,6 +242,20 @@ namespace Agenerela.Tests
             Assert.That(grammar, Does.Contain("\\\\"));
         }
 
+        [Test]
+        public void EnumIdsEscapeControlCharactersAndUnpairedSurrogates()
+        {
+            var schema = new DecisionSchema(new[]
+            {
+                Action("control\u0001character", "unpaired\ud800surrogate", "none"),
+                Statement(),
+            });
+            var grammar = Serialize(schema);
+
+            Assert.That(grammar, Does.Contain("\\\\u0001"));
+            Assert.That(grammar, Does.Contain("\\\\ud800"));
+        }
+
         private static string Rule(string grammar, string name) => grammar
             .Split('\n')
             .Single(line => line.StartsWith(name + " ::= ", StringComparison.Ordinal))
