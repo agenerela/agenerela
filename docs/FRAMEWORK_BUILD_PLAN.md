@@ -2922,10 +2922,10 @@ record); prompts that the list pushes past a context window.
 
 ### DR-028 — Local image models inside Unity: editing in the request, an OpenAI-images backend, and stable-diffusion.cpp in its own package
 
-**Status:** Proposed, 24 November 2026, by a framework child session at the lead's request: image
-generation "like llmunity so that developers will be able to plug in image models". Each question
-below gives the options and a recommendation. The tech lead accepts or amends them before step 2 is
-built. This record extends DR-024 and DR-025 and changes nothing either of them decided.
+**Status:** Accepted, 24 November 2026, by the tech lead, every recommendation from Q1 to Q9 as
+proposed. Asked for by the lead: image generation "like llmunity so that developers will be able to
+plug in image models". Each question below gives the options and the recommendation that was
+accepted. This record extends DR-024 and DR-025 and changes nothing either of them decided.
 
 **Context.** DR-025's one real backend, ComfyUI, is a server the developer installs and runs. A
 developer who wants pictures in a shipped game has no way to put an image model *inside* the game,
