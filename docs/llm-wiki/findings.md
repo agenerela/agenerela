@@ -5269,6 +5269,67 @@ prompt without the persona's one-sentence line, and accuracy on the answers that
 
 **What would change this.** A model whose thinking ends in a few hundred tokens on this prompt; an
 Ollama release with a thinking budget; a run at `num_ctx` 16384 answering most prompts.
+### Native thinking on the evaluation set (T1 pilot): the 4B answers 14 of 33 with thinking on, so the full run was not played (24 November 2026)
+
+**What changed.** `OllamaProviderConfig.Think` (#409, DR-029) on against off: the model's own thinking
+channel, not a reasoning field before `action`; the schema is the same in both arms. The pilot of
+request T1, which asked whether the full 209-prompt run is worth the card, with the rule "go on only
+if think-on answers at least 24 of 30" (80%). Report, every answer and each decision's token counts in
+[`runs/2026-11-23-phase4/think-t1-pilot/`](runs/2026-11-23-phase4/think-t1-pilot/report.md).
+
+**Conditions.**
+- **Model and server:** `qwen3.5:4b` in both arms, temperature 0, on the home server: RTX 4070 SUPER
+  12 GB, Docker Ollama 0.40.14 behind the gate `5728506a6d6b`.
+- **Lease and network:** one clean lease, #73923 on `agenerela-runs`, 18:21 to 19:29 local, on the home
+  network and mains. It checked as ours at the start and the end, with no other agenerela request
+  during it.
+- **Code:** test `0666d68` (#409, #410), set `f699ed7`, `EvalRunner` from Unity in batch mode, arms
+  interleaved.
+- **Both arms at `num_ctx` 16384 and a 300 s timeout**, so neither arm is comparable with the
+  4096 baseline (the 4B's 184 on the 209 set). Compare the two arms only with each other.
+- **`ListActionsAndTargets` is on in both arms**, the default since #404.
+- **Slice 0 of the set**, every 7th prompt within each category (`AGENERELA_P4_SLICE`, in memory
+  only). That gives 33 prompts, not the 30 the request expected, because category sizes round up. The
+  rule is applied as the same share: 27 of 33.
+- **No warm-up requests** (`WarmUpRequests = 0`); the model was loaded at 16384 inside the lease
+  before Unity started.
+
+| | think-off | think-on |
+|---|---:|---:|
+| Answered | **33 of 33** | **14 of 33** |
+| Unreadable (an empty reply) / timed out | 0 / 0 | **19** / 0 |
+| Correct, all 33 (unanswered counts as wrong) | 26 (78.8%) | 13 (39.4%) |
+| Correct on the 14 both answered | 9 | 13 |
+| Seconds a decision, answered: mean / p50 / p95 | 1.0 / 1.0 / 1.6 | 40.1 / 45.4 / 55.8 |
+| Seconds, the 19 empty replies | – | 179 to 191 |
+| Tokens generated, answered: mean / p50 / p95 | 35 / 37 / 43 | 3,582 / 3,960 / 5,090 |
+| Prompt tokens, mean | 464 | 473 |
+| Grounding statuses | 32 `Scored`, 1 `Off` | 13 `Scored`, 1 `Off`, 19 none (no decision) |
+
+- **Every empty reply filled the context exactly.** For all 19 prompts, the prompt and the generated
+  tokens add up to 16,384 (15,907 to 15,946 generated), all of it thinking, in 179 to 191 s. None hit
+  the 300 s timeout. This is the probe's runaway at 4096 again, four times longer: the context, not the
+  timeout, ends it.
+- **Answering does not follow the category**: 2 of 4 simple commands, 3 of 5 commands with a
+  target, 1 of 3 impossible requests, 2 of 3 conversations, 3 of 9 situations and 3 of 9 events.
+- **The −39.4 points overall are beyond the 12.3-point floor**, but they are mostly non-answers.
+  That is the finding: on this model, thinking does not reliably produce a decision.
+- **The 14 both answered (13 against 9) are not a result.** They are the prompts on which the
+  thinking happened to end, a subset chosen by the think-on arm itself rather than at random, and
+  only 14 of them. Read them only as a reason to try a model that finishes its thinking.
+- **When thinking ends it is not a slow drift:** 40 s and about 3,600 tokens against 1 s and 35, so
+  even an answered decision is 40 times slower.
+- **No `NoProbabilities`:** the provider found the reply's tokens in every think-on answer, and
+  grounding scored them.
+
+**What it means.** The go/no-go rule says stop: 14 of 33 (42%) is far under 80%. T1-full (the other
+six slices) and T2 (Painted Realm, 3 seeds) were not played. Thinking stays off by default, as DR-029
+has it. Nothing here is a reason to change a default. One block, one model, one slice: an anecdote
+about the model's thinking length, not about accuracy (hard rule 2).
+
+**What would change this.** The probe's list still applies: a model whose thinking ends in a few
+hundred tokens on this prompt, an Ollama release with a thinking budget, or a prompt without the
+persona's one-sentence line, which the probe saw the model argue with.
 ### Ollama holds `maxLength` on a free string, and a whole world's names and story fit one call (24 November 2026)
 
 **What.** Before DR-030 (free-text parameters), whether Ollama 0.40.14's grammar holds `maxLength` on string fields,

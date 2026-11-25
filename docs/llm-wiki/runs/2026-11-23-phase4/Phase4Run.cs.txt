@@ -5,7 +5,8 @@
 //
 // Environment:
 //   AGENERELA_P4_RUN        gate | idle | list | grounding | models | rename | targetrule | history |
-//                           freechoice | summarise | pair | statements | counters
+//                           freechoice | summarise | pair | statements | counters | think
+//   AGENERELA_P4_SLICE      optional: keep every 7th prompt of each category from this index (T1)
 //   AGENERELA_OLLAMA_URL / AGENERELA_OLLAMA_API_KEY  the server (LiveOllama)
 //   AGENERELA_OLLAMA_MODEL  arm model (qwen3.5:2b when unset); "models" uses 2b then 4b
 //   AGENERELA_P4_LOW        the lower grounding threshold for "grounding" (0.6 when unset)
@@ -51,6 +52,19 @@ namespace Agenerela.Tests
             var set = PromptSet.Load(Path.GetFullPath(Path.Combine(Application.dataPath, "Evaluation/agent.json")));
             var profile = AssetDatabase.LoadAssetAtPath<AgentProfile>("Assets/Evaluation/VillageGuard.asset");
             Assert.That(profile, Is.Not.Null);
+            // T1 (think-ab, 24 November): a slice of the set, every 7th prompt within each category, in memory only.
+            if (int.TryParse(Environment.GetEnvironmentVariable("AGENERELA_P4_SLICE"), out int k))
+            {
+                foreach (var c in set.Categories)
+                {
+                    var keep = c.Prompts.Where((p, i) => i % 7 == k).ToList();
+                    c.Prompts.Clear();
+                    c.Prompts.AddRange(keep);
+                }
+
+                TestContext.Out.WriteLine($"SLICE {k}: {set.Prompts.Count()} prompts");
+                Debug.Log($"SLICE {k}: {set.Prompts.Count()} prompts");
+            }
 
             EvalArm a, b;
             var order = EvalArmOrder.Interleaved;
@@ -122,8 +136,13 @@ namespace Agenerela.Tests
                     a = new EvalArm("no-counters", Config("p4-A", model), new DecideOptions { CounterExamples = false });
                     b = new EvalArm("counters", Config("p4-B", model), new DecideOptions());
                     break;
+                case "think":
+                    // DR-029, T1: both arms at num_ctx 16384 and 300 s; think is the only difference.
+                    a = new EvalArm("think-off", Thinking(Config("p4-A", model), false), new DecideOptions());
+                    b = new EvalArm("think-on", Thinking(Config("p4-B", model), true), new DecideOptions());
+                    break;
                 default:
-                    Assert.Fail($"AGENERELA_P4_RUN '{run}' is not one of gate, idle, list, grounding, models, rename, targetrule, history, freechoice, summarise, pair, statements, counters");
+                    Assert.Fail($"AGENERELA_P4_RUN '{run}' is not one of gate, idle, list, grounding, models, rename, targetrule, history, freechoice, summarise, pair, statements, counters, think");
                     return;
             }
 
@@ -131,6 +150,7 @@ namespace Agenerela.Tests
             {
                 Order = order,
                 // The wording every evaluation-set run since 9 November 2026 used.
+                WarmUpRequests = run == "think" ? 0 : 3,
                 DescribeState = state => new[] { (bool)state["isFollowing"] ? "You are following the player." : "You are not following the player." },
             };
 
@@ -138,9 +158,31 @@ namespace Agenerela.Tests
             var report = await LiveOllama.NotCancelled(runner.RunAsync());
             var took = DateTime.Now - started;
             string saved = report.Save(Path.Combine(Application.dataPath, "..", "Logs", "Evaluation"));
+            // Per decision: the provider's own token counts (prompt_eval_count, eval_count) and latency, which
+            // report.json leaves out (24 November, the ListActionsAndTargets timing run).
+            var csv = new System.Text.StringBuilder("arm,promptId,category,outcome,latencySeconds,promptTokens,completionTokens\n");
+            foreach (var ans in report.Answers)
+            {
+                var t = ans.Result?.Telemetry;
+                csv.Append(ans.Arm).Append(',').Append(ans.PromptId).Append(',').Append(ans.Category).Append(',').Append(ans.Outcome).Append(',')
+                   .Append(ans.LatencySeconds.ToString("F4", CultureInfo.InvariantCulture)).Append(',')
+                   .Append(t?.PromptTokens ?? -1).Append(',').Append(t?.CompletionTokens ?? -1).Append('\n');
+            }
+
+            File.WriteAllText(Path.Combine(saved, "decisions.csv"), csv.ToString());
             string line = $"EVAL-REPORT {saved}\nEVAL-TOOK {took.TotalSeconds:F0}s for {set.Prompts.Count()} prompts per arm";
             TestContext.Out.WriteLine(line);
             Debug.Log(line);
+        }
+
+        // DR-029: the model's own thinking channel, not a reasoning field in the schema.
+        private static ProviderConfig Thinking(ProviderConfig config, bool think)
+        {
+            var c = (OllamaProviderConfig)config;
+            c.Think = think;
+            c.ContextSize = 16384;
+            c.TimeoutSeconds = 300f;
+            return c;
         }
 
         private ProviderConfig Config(string name, string model)
