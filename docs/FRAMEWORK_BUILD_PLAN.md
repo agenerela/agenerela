@@ -790,8 +790,9 @@ than a second schema system — do not let provider-specific syntax leak into th
    +35 points.
 5. **A local model reads no schema** (findings, 10 October 2026), so neither the action list nor
    the target ids reach it unless the prompt carries them. `DecideOptions.ListActionsAndTargets`
-   (#190) lists both in the system prompt, the targets capped at `MaxListedTargets`. It is off
-   by default and unmeasured, and owed an A/B (#151) before it becomes the default.
+   (#190) lists both in the system prompt, the targets capped at `MaxListedTargets`. On by
+   default since 24 November 2026 (DR-027), after the A/B on the 209 set put `qwen3.5:4b`
+   6.7 points ahead, beyond noise.
 6. **The paired schema** (DR-020): with `DecideOptions.PairTargetsWithActions`, off by default,
    each action is offered with only the targets it takes, as a root `anyOf` of complete objects
    that keep the field order above. The flat fields stay as they were, so the prompt is unchanged.
@@ -2871,6 +2872,53 @@ a `RetryPolicy` is a follow-up.
 
 **What would change this.** A gateway or a cloud API whose busy answer is another status; a
 measured case where retrying made a game worse than failing at once; a demo needing a third profile.
+
+### DR-027 — The prompt lists the offered actions and targets by default
+
+**Status:** Accepted, 24 November 2026, by the lead ("Yes, both"), on the framework tech lead's
+recommendation from #151's runs. Built in the pull request that adds this record.
+
+**Context.** A model served through Ollama never reads the response schema: it only constrains
+sampling (findings, 10 October 2026). Without `DecideOptions.ListActionsAndTargets` the system
+prompt says "Choose exactly one action from the allowed list" and never shows that list, so a local
+model learns the actions only from the few-shot examples and never sees their descriptions. The
+switch (#190) was off and owed an A/B (#151). Every demo that met the gap (Living Vale, Painted
+Realm) had already turned it on by hand.
+
+**Evidence.** The 209-prompt evaluation set, guards on, temperature 0, home server, clean leases
+(findings, 23 November 2026, "ListActionsAndTargets off / on, again"):
+
+| Model | Off | On | Difference | Floor | |
+|---|---:|---:|---:|---:|---|
+| `qwen3.5:4b` (#20234, repeated as #27545) | 170 | 184 | **+6.7** | 4.9 | beyond; situations +15.5 beyond 9.3; all 418 answers the same on the repeat |
+| `qwen3.5:2b` (#10915) | 139 | 149 | +4.8 | 4.9 | within, not worse |
+
+On the 4B wrong `none` answers fall from 14 to 3; answers that act unasked go from 4 to 8.
+
+**Decision.**
+
+| Question | Decision | Why |
+|---|---|---|
+| The default | `DecideOptions.ListActionsAndTargets` is `true` | Beyond noise on the 4B, not worse on the 2B; the one place a local model can read the action descriptions |
+| The cap | `MaxListedTargets` stays 12 | Lists all 11 of the evaluation set's targets; unmeasured otherwise |
+| Turning it off | `ListActionsAndTargets = false` gives the prompt from before, byte for byte | An A/B run's control arm, and a game that writes its actions into observations itself |
+| The evaluation set | An arm with default options now sends the list. `EvaluationSchemaTests` pins both: the new default's prompts, and the old ones under `ListActionsAndTargets = false` | Phase 4's later runs measure what ships; the old prompt stays one switch away and pinned, so a run comparable with the earlier ones can still be made |
+| The builder | `PromptOptions.ListActionsAndTargets` stays `false`: `PromptBuilder` adds the list only when asked, and `Agent` asks by default | The builder's golden files keep pinning the base prompt, and the list keeps its own; the default is the agent's, where a developer sets options |
+
+**Consequences.**
+
+- Every request is longer by a line an offered action and a line a listed target. On the
+  evaluation set that is a median of 465 to 563 tokens a request, at most 546 to 663 (estimated at 3 characters a token,
+  `PromptBudget.Estimate`); no framework default budget exists to pass.
+- GreyBoxVillage, GreyBoxVillageClassic and the UnityProject sandbox guard did not set the switch
+  and now send the list. Living Vale and Painted Realm already set it, and do not change.
+- A run whose control arm is "the defaults" now has the list in it. A/B numbers before this record
+  compare against the list off; the reports' `listActionsAndTargets` field says which.
+- More unasked actions on the 4B (4 to 8 of 209) is the measured cost.
+
+**What would change this.** A model or provider for which the list measures worse; a cloud provider
+that reads the schema, where the list repeats it (a per-provider default would then be the next
+record); prompts that the list pushes past a context window.
 
 ## Appendix A — carried measurements (source: test-ai-framework prototype, Aug 2026, RTX 4060 Laptop 8GB, qwen3.5 family via Ollama)
 

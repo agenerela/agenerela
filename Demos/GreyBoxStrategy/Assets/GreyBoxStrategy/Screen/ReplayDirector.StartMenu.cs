@@ -63,6 +63,8 @@ namespace GreyBoxStrategy.Realm
             playingSaved = false;
             ui.ShowNewGame(newGame, StartNewGame, OpenTitle, rule == false ? "WATCH A GAME" : "NEW GAME");
             EnterMenus();
+            // The model loads while the person chooses, so turn 1's rulers do not start on a cold model.
+            if (rule != false) Gateway.WarmUp(string.IsNullOrWhiteSpace(newGame.Model) ? "qwen3.5:4b" : newGame.Model.Trim());
         }
 
         /// <summary>Everything a menu over the title needs: the game's own screen put away, the map alive, the keys, the model asked.</summary>

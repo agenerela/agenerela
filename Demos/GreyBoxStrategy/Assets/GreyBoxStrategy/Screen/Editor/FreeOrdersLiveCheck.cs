@@ -24,6 +24,13 @@ namespace GreyBoxStrategy.Realm.Editor
     /// -planSeconds 20 -turns 12 -strategySeed 1 -strategyOut &lt;folder&gt; -strategyArmNames &lt;name&gt;</c>. It reads
     /// <c>AGENERELA_OLLAMA_URL</c> and <c>AGENERELA_OLLAMA_API_KEY</c> from the environment. It writes
     /// <c>&lt;folder&gt;/&lt;name&gt;/turns.csv</c> and <c>summary.md</c>.
+    /// <para>Turn 1 (the wait a game opens with): <c>-coldStart 1</c> unloads the model first, as the end of the last rule
+    /// game leaves it; <c>-warm 1</c> then loads it through the framework's <c>IModelLifecycle.WarmUpAsync</c> before the
+    /// game begins, as New game does; <c>-headStartSeconds S</c> begins the session S seconds before the player sees turn
+    /// 1's council, as a generated world's rule game begins behind the loading card. Today's game is
+    /// <c>-coldStart 1</c> alone.</para>
+    /// <para><c>-strategyRules "Field=value;..."</c> sets rule fields as the table runs do (<see cref="GameRules.With"/>), on
+    /// top of free orders: <c>"CourtTurnFacts=false"</c> plays the court's prompt from before it became the default.</para>
     /// </remarks>
     public static class FreeOrdersLiveCheck
     {
@@ -36,16 +43,33 @@ namespace GreyBoxStrategy.Realm.Editor
             int seed = int.TryParse(Arg("-strategySeed"), out int s) ? s : 1;
             string name = Arg("-strategyArmNames") ?? $"plan{plan:0}";
             string folder = Path.Combine(Arg("-strategyOut") ?? Path.Combine(Application.temporaryCachePath, "free-orders-live"), name);
-            Run(plan, turns, seed, folder);
+            var start = new Start
+            {
+                Cold = Arg("-coldStart") == "1",
+                Warm = Arg("-warm") == "1",
+                HeadStart = double.TryParse(Arg("-headStartSeconds"), NumberStyles.Float, CultureInfo.InvariantCulture, out double h) ? h : 0,
+                Rules = Arg("-strategyRules"),
+            };
+            Run(plan, turns, seed, folder, start);
         }
 
-        private static async void Run(double planSeconds, int turns, int seed, string folder)
+        /// <summary>How the game is begun: the model unloaded first, warmed before, the session's head start on turn 1.</summary>
+        public sealed class Start
+        {
+            public bool Cold, Warm;
+            public double HeadStart;
+            /// <summary>Rule fields to set, "Field=value;...", or null for today's rules.</summary>
+            public string Rules;
+            public override string ToString() => $"cold {(Cold ? 1 : 0)}, warm {(Warm ? 1 : 0)}, head start {HeadStart.ToString("0.##", CultureInfo.InvariantCulture)} s";
+        }
+
+        private static async void Run(double planSeconds, int turns, int seed, string folder, Start start)
         {
             int code = 0;
             try
             {
                 Directory.CreateDirectory(folder);
-                await Play(planSeconds, turns, seed, folder);
+                await Play(planSeconds, turns, seed, folder, start ?? new Start());
             }
             catch (Exception e)
             {
@@ -55,9 +79,10 @@ namespace GreyBoxStrategy.Realm.Editor
             EditorApplication.Exit(code);
         }
 
-        private static async Task Play(double planSeconds, int turns, int seed, string folder)
+        private static async Task Play(double planSeconds, int turns, int seed, string folder, Start start)
         {
             var setup = GameSetup.Writs(seed);
+            if (start.Rules != null) setup.Numbers = GameRules.With(start.Rules);
             var map = setup.BuildMap();
             var rules = setup.BuildRules(map);
             rules.FreeOrders = true;
@@ -75,15 +100,35 @@ namespace GreyBoxStrategy.Realm.Editor
                     });
                 return pr;
             }
+            // Before the game: the model as the last game left it (unloaded) or as New game leaves it (warmed).
+            var lifecycle = (IModelLifecycle)ProviderFor(Model, null);
+            double unloadS = 0, warmS = 0;
+            using (var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(120)))
+            {
+                var watch = System.Diagnostics.Stopwatch.StartNew();
+                if (start.Cold && !await lifecycle.UnloadAsync(cts.Token)) Debug.LogWarning("GreyBoxStrategy free-orders check: the server still listed the model after unloading it");
+                unloadS = watch.Elapsed.TotalSeconds; watch.Restart();
+                if (start.Warm) await lifecycle.WarmUpAsync(cts.Token);
+                warmS = watch.Elapsed.TotalSeconds;
+            }
             var session = new RuleSession(you, Model, "default", seed, Path.Combine(folder, "decisions.jsonl"), ProviderFor, null, map, rules) { AdvisorOn = false };
-            var csv = new StringBuilder("turn,plan_s,deciding_at_open,deciding_at_end_turn,end_turn_wait_s,treaty_wait_s,calls,model_s,courts,armies,envoys,your_court_orders,errors\n");
-            Debug.Log($"GreyBoxStrategy free-orders check: you are {you}, seed {seed}, {turns} turns, planning {planSeconds} s a turn, into {folder}");
+            var csv = new StringBuilder("turn,plan_s,deciding_at_open,deciding_at_end_turn,end_turn_wait_s,treaty_wait_s,calls,model_s,courts,armies,envoys,your_court_orders,errors,head_start_s,warm_s\n");
+            Debug.Log($"GreyBoxStrategy free-orders check: you are {you}, seed {seed}, {turns} turns, planning {planSeconds} s a turn, {start} (unloaded in {unloadS:0.00} s, warmed in {warmS:0.00} s), into {folder}");
+            var began = DateTime.UtcNow;
             var run = session.RunAsync();
             int seen = 0;
             for (int turn = 1; turn <= turns && !session.Finished; turn++)
             {
                 await Until(() => session.WaitingFor == RuleSession.Waiting.Orders && session.Orders != null || session.Finished || session.Error != null, 600, $"turn {turn}'s council", session);
                 if (session.Finished) break;
+                // Turn 1 begun early: the player sees the council only once the head start has passed.
+                double headStart = 0;
+                if (turn == 1 && start.HeadStart > 0)
+                {
+                    double left = start.HeadStart - (DateTime.UtcNow - began).TotalSeconds;
+                    if (left > 0) await Task.Delay(TimeSpan.FromSeconds(left));
+                    headStart = (DateTime.UtcNow - began).TotalSeconds;
+                }
                 int atOpen = session.RulersDeciding;
                 if (planSeconds > 0) await Task.Delay(TimeSpan.FromSeconds(planSeconds));
                 int atEnd = session.RulersDeciding;
@@ -115,11 +160,12 @@ namespace GreyBoxStrategy.Realm.Editor
                 int yours = report.Outcomes.Count(o => o.Request != null && o.Request.CountryId == you && o.Request.Moment == Moment.Council && o.Choice.Action != Actions.None);
                 csv.Append(string.Join(",", turn, planSeconds.ToString(CultureInfo.InvariantCulture), atOpen, atEnd,
                     session.EndTurnWaitSeconds.ToString("0.000", CultureInfo.InvariantCulture), session.TreatyWaitSeconds.ToString("0.000", CultureInfo.InvariantCulture),
-                    mine.Count, modelSeconds.ToString("0.000", CultureInfo.InvariantCulture), courts, armies, envoys, yours, errors)).Append('\n');
+                    mine.Count, modelSeconds.ToString("0.000", CultureInfo.InvariantCulture), courts, armies, envoys, yours, errors,
+                    headStart.ToString("0.000", CultureInfo.InvariantCulture), (turn == 1 ? warmS : 0).ToString("0.000", CultureInfo.InvariantCulture))).Append('\n');
                 File.WriteAllText(Path.Combine(folder, "turns.csv"), csv.ToString());
                 Debug.Log($"GreyBoxStrategy free-orders check: turn {turn}: deciding {atOpen} at open, {atEnd} at End turn; waited {session.EndTurnWaitSeconds:0.00} s ({session.TreatyWaitSeconds:0.00} treaties); {mine.Count} calls, {modelSeconds:0.0} model s");
             }
-            File.WriteAllText(Path.Combine(folder, "summary.md"), $"# free orders, planning {planSeconds} s, seed {seed}\n\n{session.Resolved} turns resolved; error: {session.Error ?? "none"}\n");
+            File.WriteAllText(Path.Combine(folder, "summary.md"), $"# free orders, planning {planSeconds} s, seed {seed}\n\n{start}; unloaded in {unloadS:0.00} s, warmed in {warmS:0.00} s\n\n{session.Resolved} turns resolved; error: {session.Error ?? "none"}\n");
             session.Stop();
             try { await run; } catch (OperationCanceledException) { }
             if (session.Error != null) throw new InvalidOperationException(session.Error);

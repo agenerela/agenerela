@@ -434,28 +434,31 @@ async function build() {
     header(s, "2 · REQUIREMENTS · ADDED SINCE", "Requirements we added, and why", "B");
     const rows = [
       ["**Observations and memory**", "Knows what it sees and what it just did", "DR-012 · #90, #91", "built"],
+      ["**Outcomes**", "Memory records what really happened", "DR-018 · PR #195", "built"],
+      ["**Decision rounds**", "Many agents decide, then act in your order", "DR-021 · PR #243", "built"],
+      ["**Typed parameters**", "Numbers and choices beside the target", "DR-023 · PR #342", "built"],
       ["**Guards**", "Checks every answer; add your own", "Phase 3 · #106–#109", "built"],
       ["**Evaluation harness**", "209 labelled prompts and A/B runs", "Phase 4 · #145, #147", "work"],
-      ["**Demo games**", "Three games test the API from outside", "DR-010 · #20, #69", "built"],
       ["**Prompt budget**", "Measures prompts; trims only what you list", "#151 · PR #392", "built"],
-      ["**Provider retry, settings profiles**", "Retry failed calls; switch settings by profile", "Branch, not merged", "work"],
-      ["**Image generation, speech**", "Actions can ask for a picture or a voice", "DR-024 · PR #394", "work"],
-      ["**Map naming and backstory**", "Places and history written by the model", "Not filed yet", "planned"],
+      ["**Provider retry, profiles**", "Waits out a busy server; settings profiles", "DR-026 · PR #395", "built"],
+      ["**Image provider**", "An action can ask for a picture; cached", "DR-025 · PR #394", "built"],
+      ["**Speech provider**", "A line read aloud by a voice provider", "DR-024, not built yet", "planned"],
     ];
     table(s, ["New requirement", "What it gives the developer", "Where it is", "Status"],
       rows.map((r) => [r[0], r[1], r[2], { status: r[3] }]),
-      { x: 0.4, y: 1.12, w: 9.25, colW: [2.75, 3.65, 1.85, 1.0], rowH: 0.4, size: S.table });
-    source(s, "Status on test, 24 Nov 2026. Sources: build plan §2.8, §2.9, §3, DR-010, DR-012, DR-024 [1]; GitHub issues and pull requests (numbers.md).");
+      { x: 0.4, y: 1.12, w: 9.25, colW: [2.6, 3.55, 2.1, 1.0], rowH: 0.33, size: S.table });
+    source(s, "Framework features only; the games' own features are not listed. Status on test, 24 Nov 2026. Sources: build plan §2.8, §2.9, §3, DR-012, DR-018, DR-021, DR-023 to DR-026 [1]; GitHub (numbers.md).");
     notes(s, [
       "Speaking notes · Presenter TBD (part B) · about 50 seconds",
       "",
-      "- These requirements came after September, each because a game or a measurement needed it.",
+      "- These are framework requirements added after September: features any game can use. Each came because a demo game or a measurement showed the API was missing it.",
+      "- The game now reports what its action actually did, and memory records that. Many agents can decide on one snapshot and then act in an order the game sets. Actions can take typed parameters, like a number of troops, beside the target.",
       "- Guards became a whole pipeline, and developers can add their own rules. That was Phase 3, closed 3 November.",
       "- The evaluation harness: 209 labelled prompts and an A/B runner. It's Phase 4, due 7 December; what's left is a second person labelling a subset blind.",
       "- The prompt budget merged today, 24 November: the framework measures every prompt and trims only what the developer marked optional.",
-      "- Still in work: provider retries and settings profiles, and image generation, whose pull request is open. Map naming and backstory for our strategy game is planned, not started.",
+      "- Provider retries and settings profiles merged today: a provider waits out a busy server, and a game switches between development and production settings. The image provider merged today too: an action can ask for a picture, and results are cached. A speech provider is decided (DR-024) but not built.",
       "",
-      "TEAM NOTE: re-check the four In work / Planned rows before presenting; they will move before 7 December.",
+      "TEAM NOTE: re-check the In work and Planned rows before presenting; they will move before 7 December.",
       "If asked 'How did you decide what to add?': From the demo games. The gaps they hit are logged in issue #190 and became framework features.",
     ]);
   }
@@ -498,7 +501,7 @@ async function build() {
       ["Agent", "who it is, the request", [["Observations", "built"], ["Memory", "built"], ["Execution outcome", "built"]]],
       ["Actions and targets", "registry, availability", [["Target categories", "built"], ["Typed parameters", "built"], ["Choice calls", "built"]]],
       ["Schema and prompt", "action → target → statement", [["Prompt budget", "built"], ["Examples with situation", "built"]]],
-      ["Queue and providers", "one interface, Ollama", [["Model lifecycle", "built"], ["Retry, profiles", "work"], ["Speech, image", "work"]]],
+      ["Queue and providers", "one interface, Ollama", [["Model lifecycle", "built"], ["Retry, profiles", "built"], ["Image provider", "built"]]],
       ["Guards", "the grounding check", [["Guard pipeline", "built"], ["Your own guards", "built"]]],
       ["Result and telemetry", "outcome classes", [["Decision feed, log", "built"], ["Evaluation harness", "work"]]],
     ];
@@ -521,15 +524,15 @@ async function build() {
     // legend
     s.addText("+ Added, built", { shape: pres.shapes.ROUNDED_RECTANGLE, rectRadius: 0.05, x: 0.4, y: 4.88, w: 1.45, h: 0.26, fill: { color: C.blue }, line: { color: C.blue }, fontFace: F.sans, fontSize: S.cap, color: C.white, bold: true, align: "center", valign: "middle", margin: 0 });
     s.addText("+ Added, in work", { shape: pres.shapes.ROUNDED_RECTANGLE, rectRadius: 0.05, x: 1.95, y: 4.88, w: 1.55, h: 0.26, fill: { color: C.white }, line: { color: C.blue, dashType: "dash", width: 1.25 }, fontFace: F.sans, fontSize: S.cap, color: C.blue, bold: true, align: "center", valign: "middle", margin: 0 });
-    text(s, "Black: September. Each addition came from a demo game or a measurement.", { x: 3.65, y: 4.88, w: 6.0, h: 0.26, size: S.cap, color: C.ink3, valign: "middle" });
-    source(s, "Figure 2. Agenerela's modules then and now, our own drawing from build plan §2 and DR-012 to DR-024 [1]; status on test, 24 Nov 2026.");
+    text(s, "Black: September. Framework features only.", { x: 3.65, y: 4.88, w: 6.0, h: 0.26, size: S.cap, color: C.ink3, valign: "middle" });
+    source(s, "Figure 2. Agenerela's modules then and now, our own drawing from build plan §2 and DR-012 to DR-026 [1]; status on test, 24 Nov 2026.");
     notes(s, [
       "Speaking notes · Presenter TBD (part C) · about 40 seconds",
       "",
       "- This is our design: six modules in the order a decision flows. The grey line in each is what we had in September; the blue chips are what we added. Solid is built, dashed is in work.",
       "- The agent gained observations, memory, and an outcome: the game now tells the framework what actually happened, so memory records that, not just the choice.",
-      "- Providers gained model lifecycle, with retries, profiles, speech and images in work.",
-      "- Every one of these came from a demo game asking for something the API couldn't say.",
+      "- Providers gained model lifecycle, retries, settings profiles and an image provider; a speech provider is next.",
+      "- Every one is a framework feature any game can use; each came from a demo game asking for something the API couldn't say.",
       "",
       "If asked 'Did the core change shape?': No. The game still asks, Agenerela offers legal options, the model picks, the guards check and the game acts. Everything here plugs into that loop through an interface.",
     ]);
@@ -538,7 +541,7 @@ async function build() {
   // 10 ── Design: decision records ───────────────────────────────────────────
   {
     const s = pres.addSlide();
-    header(s, "3 · DESIGN UPDATES · DECISION RECORDS", "Sixteen design decisions", "C");
+    header(s, "3 · DESIGN UPDATES · DECISION RECORDS", "Eighteen design decisions", "C");
     const cols = [
       ["SEPTEMBER", [
         ["DR-009", "One dependency: JSON"],
@@ -561,13 +564,15 @@ async function build() {
         ["DR-022", "Options with the call"],
         ["DR-023", "Typed parameters"],
         ["DR-024", "Speech, image providers"],
+        ["DR-025", "Image provider, cached"],
+        ["DR-026", "Retries and profiles"],
       ]],
     ];
     cols.forEach(([m, items], i) => {
       const x = 0.4 + i * 3.1, w = 2.95;
       box(s, x, 1.12, w, 3.75, C.fill);
       text(s, m, { x: x + 0.15, y: 1.22, w: w - 0.3, h: 0.24, size: S.cap, bold: true, color: C.blue, cs: 1.5 });
-      const step = i === 1 ? 0.62 : 0.45;
+      const step = i === 1 ? 0.62 : i === 2 ? 0.36 : 0.45;
       items.forEach(([id, d], j) => {
         const yy = 1.55 + j * step;
         text(s, id, { x: x + 0.15, y: yy, w: 0.75, h: 0.4, size: S.small, bold: true, color: C.blueDk });
@@ -576,13 +581,13 @@ async function build() {
     });
     text(s, "**Why it matters:** each record says what we chose, what we measured, and what would change our mind, so a new teammate or reviewer can see the reason.",
       { x: 3.65, y: 3.1, w: 2.65, h: 1.6, size: S.small, color: C.ink2 });
-    source(s, "Source: build plan §7, decision records DR-009 to DR-024, dated September to 17 November 2026 [1]. DR-001 to DR-008 predate the course.");
+    source(s, "Source: build plan §7, decision records DR-009 to DR-026, dated September to 24 November 2026 [1]. DR-001 to DR-008 predate the course.");
     notes(s, [
       "Speaking notes · Presenter TBD (part C) · about 40 seconds",
       "",
-      "- When a design choice costs more than an hour to undo, we write a decision record: what we chose, why, what we measured, and what would change our mind. There are sixteen since September.",
+      "- When a design choice costs more than an hour to undo, we write a decision record: what we chose, why, what we measured, and what would change our mind. There are eighteen since September.",
       "- October's big one is DR-016: the guard checks the model's own confidence in its target instead of matching the player's words, because we measured the word check refusing good requests.",
-      "- November's came from the games: the game reports outcomes, decision rounds for many rulers, typed parameters, and speech and images as two more kinds of provider.",
+      "- November's added framework features the games needed: the game reports outcomes, decision rounds for many agents, typed parameters, speech and images as two more kinds of provider, and retries and profiles.",
       "",
       "If asked 'Who decides a record?': The lead or the framework tech lead proposes it with the measurement; the team lead accepts it. Each one names its status and date.",
       "If asked about DR-001 to DR-008: those came with the build plan from the prototype, before the course started; DR-001, the in-process model, is still 'probable' until Phase 6b.",
@@ -758,7 +763,7 @@ async function build() {
     // rules
     box(s, 0.4, 4.15, 9.25, 0.85, C.fill);
     bullets(s, [
-      "**290** branches have opened a pull request so far.  **test:** pull requests only, the **Hygiene checks** must pass, no force-push or delete.  **main:** only the repository owner pushes, through release PRs.",
+      "**294** branches have opened a pull request so far.  **test:** pull requests only, the **Hygiene checks** must pass, no force-push or delete.  **main:** only the repository owner pushes, through release PRs.",
       "Big demo work had its own integration branches: **69-living-vale** (19 PRs), **153-gbv-v2** (5), **gbv-lab** (2).",
     ], { x: 0.55, y: 4.2, w: 9.0, h: 0.8, size: S.small, gap: 3 });
     source(s, "Figure 5. Our branch model (own drawing). Source: GitHub branch protection and tags, 24 Nov 2026; AGENTS.md \"Working conventions\" [4]; docs/RELEASING.md.");
@@ -770,7 +775,7 @@ async function build() {
       "- 'main' is protected: only the repository owner can push, and only through a release pull request. Each release is a tag on main, one per closed phase: 0.2.0 after Phase 1, 0.3.0 after Phase 2, and two previews since.",
       "- Big demo games had their own integration branch for a while, like Living Vale with 19 pull requests, merged into test once stable.",
       "",
-      "If asked 'How many branches?': 290 distinct pull request branches so far; 140 still on GitHub today.",
+      "If asked 'How many branches?': 294 distinct pull request branches so far; 143 still on GitHub today.",
       "If asked 'Why not require reviews on test?': We agreed review before merge but didn't make GitHub enforce it; part F covers what that cost us.",
     ]);
   }
@@ -779,21 +784,21 @@ async function build() {
   {
     const s = pres.addSlide();
     header(s, "5 · GITHUB · THE WORK IN NUMBERS", "Pull requests and commits", "E");
-    const stats = [["295", "Pull requests merged"], ["871", "Commits on test, merges excluded"], ["92", "Issues, 54 closed as done"], ["4", "Release tags on main"]];
+    const stats = [["299", "Pull requests merged"], ["878", "Commits on test, merges excluded"], ["92", "Issues, 54 closed as done"], ["4", "Release tags on main"]];
     stats.forEach(([n, l], i) => {
       const y = 1.15 + i * 0.92;
       box(s, 0.4, y, 3.1, 0.8, C.fill);
       text(s, n, { x: 0.55, y, w: 1.15, h: 0.8, size: 26, bold: true, color: C.blue, valign: "middle" });
       text(s, l, { x: 1.65, y, w: 1.8, h: 0.8, size: S.small, valign: "middle" });
     });
-    s.addChart(pres.charts.BAR, [{ name: "Merged pull requests", labels: ["Sep", "Oct", "Nov (to 24th)"], values: [28, 46, 221] }], {
+    s.addChart(pres.charts.BAR, [{ name: "Merged pull requests", labels: ["Sep", "Oct", "Nov (to 24th)"], values: [28, 46, 225] }], {
       x: 3.75, y: 1.1, w: 3.3, h: 3.75, barDir: "col", chartColors: [C.blue],
       showValue: true, dataLabelFontSize: 12, dataLabelFontFace: F.sans, dataLabelColor: C.ink, dataLabelPosition: "outEnd",
       catAxisLabelFontSize: 12, catAxisLabelFontFace: F.sans, valAxisHidden: true, valGridLine: { style: "none" },
       showTitle: true, title: "Merged pull requests a month", titleFontSize: 12, titleFontFace: F.sans, titleColor: C.ink,
     });
     text(s, "MERGED INTO", { x: 7.3, y: 1.15, w: 2.3, h: 0.22, size: S.cap, bold: true, color: C.ink3, cs: 1 });
-    table(s, ["Base", "PRs"], [["test", "263"], ["demo branches", "26"], ["main", "6"]],
+    table(s, ["Base", "PRs"], [["test", "267"], ["demo branches", "26"], ["main", "6"]],
       { x: 7.3, y: 1.42, w: 2.35, colW: [1.6, 0.75], rowH: 0.36, size: S.table });
     text(s, "Into main: **#95** (phases 0 and 1), then releases **#100, #114, #132, #339**.",
       { x: 7.3, y: 3.0, w: 2.35, h: 0.9, size: S.small, color: C.ink2 });
@@ -801,7 +806,7 @@ async function build() {
     notes(s, [
       "Speaking notes · Presenter TBD (part E) · about 25 seconds",
       "",
-      "- In numbers: 295 merged pull requests, 871 commits on test not counting merges, 92 issues of which 54 are done, and four releases.",
+      "- In numbers: 299 merged pull requests, 878 commits on test not counting merges, 92 issues of which 54 are done, and four releases.",
       "- Most pull requests go into test; 26 went into the demo integration branches first; six went into main: the first set it up, the next brought phases 0 and 1, and four are our releases.",
       "",
       "If asked 'Why so many in November?': Smaller pull requests, one slice of a game at a time, and AI coding agents doing the mechanical work, each slice still a reviewed, tested pull request.",
@@ -874,7 +879,7 @@ async function build() {
     const s = pres.addSlide();
     header(s, "6 · GROUP MANAGEMENT · CONTRIBUTION", "Who did what, from GitHub", "F");
     const who = [
-      ["Yevhen Mishchenko", "Draganoider", 820, 270, 26, 15],
+      ["Yevhen Mishchenko", "Draganoider", 827, 274, 26, 15],
       ["Hero Jaiyen", "phupanawat", 16, 9, 10, 0],
       ["Maxim Goloubitsky", "MaximGolubitsky", 21, 6, 5, 0],
       ["Timothy Brustinov", "TimBrustinov", 7, 5, 5, 0],
@@ -893,7 +898,7 @@ async function build() {
     const names = ["Yevhen", "Hero", "Maxim", "Tim", "Tigran", "Hunter"];
     s.addChart(pres.charts.DOUGHNUT, [{ name: "PRs merged", labels: names, values: who.map((w) => w[3]) }], {
       x: 6.25, y: 1.05, w: 3.45, h: 1.95, chartColors: pieColors, holeSize: 50, showLegend: true, legendPos: "r", legendFontSize: 10, legendFontFace: F.sans,
-      showValue: false, showPercent: false, dataLabelColor: C.white, showTitle: true, title: "PRs merged (295)", titleFontSize: 11, titleFontFace: F.sans,
+      showValue: false, showPercent: false, dataLabelColor: C.white, showTitle: true, title: "PRs merged (299)", titleFontSize: 11, titleFontFace: F.sans,
     });
     s.addChart(pres.charts.DOUGHNUT, [{ name: "Issues done", labels: names, values: who.map((w) => w[4]) }], {
       x: 6.25, y: 3.05, w: 3.45, h: 1.95, chartColors: pieColors, holeSize: 50, showLegend: true, legendPos: "r", legendFontSize: 10, legendFontFace: F.sans,
@@ -918,7 +923,7 @@ async function build() {
     header(s, "6 · GROUP MANAGEMENT · PROBLEMS", "Group-work problems", "F");
     const rows = [
       ["Most of the core was built by one person (risk R01)", "From 27 Oct each member owns a **research area**: memory, targets, evaluation, observations, guards", "Areas own extension points; the core stays with the lead"],
-      ["Review before merge was agreed, **not enforced** (R12)", "Review after merge, with a follow-up issue per defect: #61 → #62, #65 → #66", "11 of 295 merged PRs had a formal review"],
+      ["Review before merge was agreed, **not enforced** (R12)", "Review after merge, with a follow-up issue per defect: #61 → #62, #65 → #66", "11 of 299 merged PRs had a formal review"],
       ["Not everyone has a GPU that can run models (R14)", "Shared model servers: an RTX 5080, then a home RTX 4070 SUPER", "Anyone runs live tests from a laptop"],
       ["Exams and other courses (R04)", "Planned: unavailable dates posted each sprint, lighter sprints in exam weeks", "Not tracked in GitHub, so not measured"],
     ];
@@ -930,7 +935,7 @@ async function build() {
       "",
       "- Four problems from our risk register, and what came of them.",
       "- The biggest: most of the core was built by one person, which you saw in the numbers. From 27 October each of us owns a research area with its own extension point: memory, targets, evaluation, observations, guards.",
-      "- We agreed to review before merging but never made GitHub enforce it, and only 11 of 295 merged pull requests had a formal review. So defects were found after merge; each got a follow-up issue, like 61 to 62.",
+      "- We agreed to review before merging but never made GitHub enforce it, and only 11 of 299 merged pull requests had a formal review. So defects were found after merge; each got a follow-up issue, like 61 to 62.",
       "- Not everyone has a graphics card for models, so we set up shared model servers anyone can reach from a laptop.",
       "- What we'd do differently: turn on required reviews from day one.",
       "",

@@ -177,14 +177,26 @@ namespace GreyBoxStrategy.Realm
     {
         private readonly CountryLook look;
 
-        public RealmBanner(CountryLook look, float width = 104, float height = 148)
+        /// <param name="painted">The realm's generated banner (DR-025), drawn in place of the coded one; null for the coded one.</param>
+        public RealmBanner(CountryLook look, float width = 104, float height = 148, Texture2D painted = null)
         {
             this.look = look;
             AddToClassList("realm-banner");
             style.width = width; style.height = height;
             pickingMode = PickingMode.Position;
-            generateVisualContent += Draw;
-            var crest = new Crest(look, width * 0.6f); crest.AddToClassList("realm-banner-crest"); Add(crest);
+            if (painted != null)
+            {
+                // The painted banner fills the slot; its name is still written under it, as on the coded one.
+                var picture = new Image { image = painted, scaleMode = ScaleMode.ScaleAndCrop, pickingMode = PickingMode.Ignore };
+                picture.style.position = Position.Absolute; picture.style.left = 0; picture.style.top = 0; picture.style.right = 0; picture.style.bottom = 0;
+                picture.name = "painted-banner";
+                Add(picture);
+            }
+            else
+            {
+                generateVisualContent += Draw;
+                var crest = new Crest(look, width * 0.6f); crest.AddToClassList("realm-banner-crest"); Add(crest);
+            }
             var name = new Label(look.Name.ToUpperInvariant()); name.AddToClassList("realm-banner-name"); Add(name);
         }
 

@@ -829,6 +829,42 @@ a hungry one none from its hunger line.
   tag, every turn's end tags each siege with the game's own turns, every army has its stores at every moment, and a
   hungry army shows the warning to you and not to a rival (broken by not reading the line of a siege that ended).
 
+### A painted court for every new world (24 November; DR-025)
+
+At New game, behind the loading card, each ruler of a generated world gets a portrait and a banner made for that
+world, through the framework's image provider (`Agenerela.ComfyUI`, DR-025) on the team's ComfyUI server.
+- **When:** after the world is made and its game is set up, before the chart is laid out and before any decision is
+  asked for. A picture unloads the decision model on a shared card, so none is ever made during play. The card shows
+  "Painting Valen's ruler (3 of 10). Esc: skip"; Esc stops asking, and the rest fall back.
+- **What is asked:** the art pack's own style line, word for word, then
+  - **a portrait** (768 × 896, the pack's size, so the head crop fits): king or queen, age, hair, complexion and
+    beard chosen by a stable hash of the world's seed and the realm, the persona's look (two each; a neutral one
+    for your realm), in the realm's map colour with gilt trim;
+  - **a banner** (640 × 896): a swallow-tailed war banner on a dark wall, in the realm's colour, with one beast or
+    device (14) chosen by the realm's name.
+  The prompts are `RulerArtPrompts`; the same world always asks for the same pictures.
+- **A backstory seam:** `RulerSubject.Backstory`, empty today, joins the portrait's prompt as untrusted text, capped at
+  160 characters and cleaned by `ImagePromptBuilder`, so a generated world history can colour the faces without
+  steering the art direction.
+- **The cache:** `<persistentDataPath>/painted-realm-art/<world seed>/`, one PNG per request key. A world painted once
+  starts with no server at all.
+- **Fallbacks:** on the server's first failure (down, busy, a missing model, a timeout of 150 s), past a 300 s budget,
+  or on Esc, nothing more is asked; every picture not in the cache falls back to the art pack's face and the coded
+  banner. A world always starts.
+- **A painted frame:** the model sometimes paints a white frame around the picture despite the prompt (3 of the first
+  20). `RulerArtServer.LooksFramed` spots a bright band on two of the top, left and right edges, and the picture is asked
+  for up to twice more, each time with another seed; the clean one is kept under the first request's key too, and if every try is framed the art pack's picture hangs.
+- **Where they hang:** the portrait wherever a ruler's portrait hangs (until you click your own to choose a pack
+  face); the banner in place of the coded banner beside the top bar. The small crests stay coded, since a painted
+  charge does not read at 14 px.
+- **The server:** `COMFY_URL` and `COMFY_API_TOKEN` from the environment; in the Editor, when unset, the main
+  checkout's `tools/comfyui/.env`, read as `comfy.py` reads it and never logged. The home server has the int8 model,
+  so every request names `z_image_turbo_int8_convrot.safetensors` (`PAINTED_REALM_COMFY_UNET` overrides it).
+- **Headless:** `CourtArtCheck.RunFromCommandLine -courtSeeds 7,21 -courtOut <folder>` paints worlds through the same
+  path, for a contact sheet.
+- **Tests** (`RulerArtTests`): the prompts, the cache on a second visit and with no server, the stop on the first
+  failure, Esc, the budget, the frame check and its retry. Each was seen failing.
+
 ### Generated art: the first pack (16 November)
 
 Variant B's empty picture frames are filled, from an art pack made ahead of time and shipped with the game.
@@ -864,6 +900,42 @@ Variant B's empty picture frames are filled, from an art pack made ahead of time
   through your own faces never moves a rival's; every storyteller template, every listed face and every listed event
   has its picture, at the right shape; a missing picture is null; and a realm's panel hangs the portrait the
   catalogue chose. The three that read the pack were seen failing before the pack existed.
+
+### Turn 1 without the long wait (24 November)
+
+Request 004 measured End turn waiting 0.76 s on turns 2 to 6 but up to 18.5 s on turn 1. Turn 1 has no playback for
+the rulers to decide behind, and it has more calls (16 against 12). The model is also cold for any game after the
+first, because a rule game unloads its model when it ends. Two changes, with no rule touched:
+
+- **The model is warmed before the game.** Opening New game for a rule game, and starting one, call
+  `Gateway.WarmUp`, which loads the model through the framework's `IModelLifecycle.WarmUpAsync` with the game
+  provider's own settings. A different context size would load it again at the first decision. Nothing is sent
+  while another session holds the card or it is paused. The framework already had the call, so there is no
+  framework gap.
+- **A generated world's rulers start behind the loading card.** The session is made as soon as the world's map and
+  rules exist (`BeginRuleEarly`), because the court's painting reads its personas. Its rulers begin once the court is
+  painted (`StartEarlyRulers`), while the chart is laid out and the screen built, and the screen takes the session
+  over. They wait for the painting because a picture unloads the decision model on the shared card (DR-025), so
+  rulers and painter would take turns loading it. When the painting made a picture, the model is warmed again before
+  they begin; a court read from the cache paints in no time, so the head start barely shrinks. The Classic board
+  already started the session as soon as the game began. The console says how long the rulers had
+  before your first council was shown, and how many were still deciding.
+
+The rulers still decide on the same snapshot. Guarding test:
+`FreeOrderSessionTests.Rulers_begun_behind_the_loading_card_decide_on_the_same_snapshot_and_show_you_nothing_early`.
+In one game every ruler finishes turn 1 before the screen is built. In the other the rulers' calls are held until
+your plan is in. Both games must produce the same ruler inputs and the same ruler orders, open on the same screen
+and show you the same council. Two deliberate breaks each made it fail once: a court order that raised the realm's
+soldiers at once failed the council check, and a facts line with every realm's held-back gold failed the rulers'
+check.
+
+`FreeOrderSessionTests.A_session_made_for_the_court_painting_asks_no_ruler_until_it_runs` guards the wait for the
+painting: a session made but not run gives the opening and every ruler's persona, and makes no provider and no call
+until it runs. A session that made its provider at once failed it. Nothing tests the director's own order, painting
+then `StartEarlyRulers`, which needs a scene.
+
+`FreeOrdersLiveCheck` measures it: `-coldStart 1` unloads the model first, as the last game leaves it, `-warm 1`
+warms it as New game does, and `-headStartSeconds S` begins the session S seconds before the player sees turn 1.
 
 ### The economy, part 3: taxes stick, and the court is told what a building gains (23 November; #372, #374)
 
@@ -968,6 +1040,14 @@ screen's side, come next.
   own number goes in `CourtOrdersOverride`). Each later request is built on the same snapshot, tells the orders already
   given, and offers only what is left: the gold its earlier orders will spend is held back (`Country.Reserved`), and an
   order given once is not offered again, except a recruit, which raises one more company.
+- **What a later court request reads** (`GameRules.CourtTurnFacts`, on by default since 24 November): what the
+  court's earlier orders this turn settled, after the headline: "Taxes are raised this turn; they cannot be raised
+  again until next turn." once they are, and the gold held back, such as "Gold held for this turn's orders: 40 of our
+  120; 80 left to spend."
+  The lead chose it as game feel after request 003 (findings, "Painted Realm free orders, the court's prompt A/B"):
+  every answer legal in both arms, court orders a realm a turn 1.31 to 0.98, model seconds a turn 21.2 to 19.2.
+  `-strategyRules CourtTurnFacts=false` (the tables and `FreeOrdersLiveCheck`) plays the court's prompt from before.
+  The other arm of that run, `CourtNoneWording` (a later request asks for "the court's next order, or none"), stays off.
 - **The armies.** Every order stands: a hold as much as a march or a siege. An army is asked again when a wake rule
   fires, or when it has held `AskHoldingArmyEvery` (3) turns unasked, another pacing setting: in watch mode every
   call is a wait. Armies the court recalled come first.

@@ -19,7 +19,7 @@ is for. A line per file or group, no more.
 | `GreyBoxStrategy.Screen` | `Screen/` (the rest) | all of the above, Input System | The running game: director, map, UI, sound, live sessions |
 | `GreyBoxStrategy.Editor` | `Editor/` | Sim, Agents | Menu items for headless runs |
 | `GreyBoxStrategy.Demo.Editor` | `Screen/Demo/Editor/` | Screen, Replay | `DemoCapture`: records a demo timeline to an MP4 with Unity's `MediaEncoder`, from an editor in the background. Demo only |
-| `GreyBoxStrategy.Screen.Editor` | `Screen/Editor/` | Screen, Replay, Sim, Agents | Builds the `Watch` scene, art import settings; `FreeOrdersLiveCheck`, rule mode played headless against model rulers |
+| `GreyBoxStrategy.Screen.Editor` | `Screen/Editor/` | Screen, Replay, Sim, Agents | Builds the `Watch` scene, art import settings; `FreeOrdersLiveCheck`, rule mode played headless against model rulers; `CourtArtCheck`, a world's court painted headless |
 | `GreyBoxStrategy.Tests.Editor` | `Tests/Editor/` | Sim, Agents | Rules, map, model seats, storyteller |
 | `GreyBoxStrategy.Screen.Tests.Editor` | `Screen/Tests/Editor/` | everything | The screen's models, sessions, layout |
 
@@ -30,7 +30,7 @@ A rule belongs in `Sim/`; a number the screen shows belongs in `Screen/Replay/` 
 
 | File | Owns |
 |---|---|
-| `Rules/GameRules.cs` | Every setting and switch (`TurnStyle`, `FreeOrders`, `Economy`, R3's army rules, pacing) |
+| `Rules/GameRules.cs` | Every setting and switch (`TurnStyle`, `FreeOrders`, `CourtTurnFacts`, `Economy`, R3's army rules, pacing); `With`, the `-strategyRules` parser |
 | `Rules/GameSetup.cs` | A new game's choices as one data object, shared by menu, runners and tests |
 | `Rules/World.cs` | The state: `Country`, provinces, relations; income, upkeep, levy, economy queries (`Yield`, `ManpowerCap`, `TaxFactor`) |
 | `Rules/Game.cs` | The one-move game's turn in three calls, upkeep, events applied, victory |
@@ -67,12 +67,13 @@ A rule belongs in `Sim/`; a number the screen shows belongs in `Screen/Replay/` 
 | `RuleSession.cs`, `LiveSession.cs`, `LiveWritsSession.cs`, `LiveGame.cs` | Games without a scene, played by models; `RuleSession` is the person against four rulers |
 | `Demo/DemoDirector.cs`, `DemoOverlay.cs`, `DemoTree.cs` | The demo video: plays a timeline over a replay (off unless the dev menu's `demo` or `-demo <timeline>` starts it), draws the cursor, callouts, dim and titles, finds elements by selector. Timelines in `Demo/Timelines/` |
 | `Gateway.cs` | The server address, the key from the environment, and the RTX 5080's lock; `Provider(model)` builds on the active profile's config |
+| `RulerArt.cs`, `RulerArtServer.cs`, `ReplayDirector.Art.cs` | The generated court (DR-025): portrait and banner prompts, the maker with its cache and fallback, the ComfyUI server and textures, painting behind the loading card |
 | `Resources/` (assets, no code) | `AgenerelaSettings` and the Development and Production profiles: patient retries on the shared server in the Editor, fail-fast in a build (DR-026) |
 | `WritsRecorder.cs`, `ScriptedStory.cs`, `DevTools.cs` | Recording decisions, a no-model storyteller, pretended faults |
 | `Map/MapView.cs`, `Map/ChartGpu.cs`, `Map/*.shader` | The map quad and its shader data; the GPU chart pass |
 | `Audio/SoundManager.cs` | Playing cues by name on buses (`Replay/SoundCues.cs` names them) |
 | `Watch.unity` | The one scene; rebuilt by `Screen/Editor/ScreenSceneBuilder.cs`, never edited by hand |
-| `Art/`, `Art/Resources/ArtPack/` | Baked map data, portraits, the generated art pack (`UI/ArtCatalogue.cs` picks from it) |
+| `Art/`, `Art/Resources/ArtPack/` | Baked map data, portraits, the generated art pack (`UI/ArtCatalogue.cs` picks from it); `Art/Resources/ComfyWorkflows/image.json`, a copy of `tools/comfyui/workflows/image.json` for the court |
 
 ### Screen/Replay: the screen's data, testable without a scene
 

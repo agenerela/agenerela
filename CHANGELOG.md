@@ -31,6 +31,8 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: turn 1 without the long wait** (#20, #401): the model is warmed at New game, and a generated world's rulers start behind the loading card once its court is painted, so the first End turn no longer waits for a cold model (qwen3.5:4b, 3 seeds an arm: 5.71 s to 2.73 s).
+- **Painted Realm paints its court (DR-025)** (#20, #402): at New game, each ruler's portrait and banner come from the image server behind the loading card, cached per world seed. On any failure they fall back to the art pack.
 - **Painted Realm: a demo director for the presentation video** (#20, #398). A timeline of cursor moves, clicks, callouts, dims and titles played over a replay, with elements found by selector; its 56-second sample on the live seed-123 game; and an MP4 capture that runs with the editor in the background.
 - **Painted Realm: free orders' prompt arms and the live-run reports** (#20, #380). Two A/B arms, both off:
   `CourtTurnFacts` (a court's later request reads what its earlier orders settled) and `CourtNoneWording` (it is asked for
@@ -118,6 +120,7 @@ phase table and the open issues, not here.
 
 ### Changed
 
+- **Painted Realm: a court's later order in a turn reads what its earlier orders settled** (#20, #405), on by default (`GameRules.CourtTurnFacts`); `-strategyRules CourtTurnFacts=false` plays the old prompt, and `FreeOrdersLiveCheck` now takes `-strategyRules`.
 - **The evaluation set's guard has no example statements or counter-examples again** (#151). #384 wrote them on `VillageGuard.asset`; on `qwen3.5:4b` the counter-examples cost 10 answers and with the statements 68 of 209 replies copied one, so the default prompt on the set is the one from before #384. The targets' categories stay.
 - **The evaluation set's targets carry categories** (`place`, `creature`), and `VillageGuard.asset`'s `move_to` and `attack_target` take them. Its actions and idle example have example statements, and its actions counter-examples, so the default prompt on the set now shows them (#151, #384).
 - **Painted Realm: the chronicle keeps the fog, and the strip and the watch bar read** (#20). A rival's army order beyond
