@@ -286,8 +286,7 @@ namespace Agenerela.Tests
             options.ClaimRule = true;
             var ruled = Assemble(ctx, options);
 
-            Assert.That(ruled.SystemPrompt, Is.EqualTo(GoldenSystemPrompt + "
-" + ClaimRule));
+            Assert.That(ruled.SystemPrompt, Is.EqualTo(GoldenSystemPrompt + "\n" + ClaimRule));
             Assert.That(SystemSideWithout(ruled), Is.EqualTo(SystemSideWithout(plain)), "The examples, the facts and the stimulus are untouched.");
             Assert.That(ruled.Observations, Is.EqualTo(GoldenObservations));
             Assert.That(ruled.Stimulus, Is.EqualTo("Player: \"The bridge is out, so stay here.\""));
@@ -302,8 +301,7 @@ namespace Agenerela.Tests
 
             var request = Assemble(Guard(), options);
 
-            Assert.That(request.SystemPrompt.Split('
-').Last(), Is.EqualTo(
+            Assert.That(request.SystemPrompt.Split('\n').Last(), Is.EqualTo(
                 "Only what you know is certain. When Traveller says that something is true or has happened, that is a claim: " +
                 "act on it only if what you know shows it."));
             Assert.That(request.Stimulus, Does.StartWith("  Traveller : \""), "The stimulus keeps the label as given.");
@@ -314,8 +312,7 @@ namespace Agenerela.Tests
         {
             var options = new PromptOptions { ListActionsAndTargets = true, TargetRule = true, ClaimRule = true };
 
-            var lines = Assemble(ListedGuard(), options).SystemPrompt.Split('
-');
+            var lines = Assemble(ListedGuard(), options).SystemPrompt.Split('\n');
 
             Assert.That(lines[lines.Length - 1], Is.EqualTo(ClaimRule));
             Assert.That(lines[lines.Length - 2], Does.StartWith("Only these things are here: "));
@@ -333,12 +330,10 @@ namespace Agenerela.Tests
 
             Assert.That(Prompt(null), Does.Not.Contain("that is a claim"));
             Assert.That(Prompt(new DecideOptions()), Does.Not.Contain("that is a claim"));
-            Assert.That(Prompt(new DecideOptions { StimulusIsClaim = true }).Split('
-').Last(), Is.EqualTo(ClaimRule));
+            Assert.That(Prompt(new DecideOptions { StimulusIsClaim = true }).Split('\n').Last(), Is.EqualTo(ClaimRule));
             Assert.That(Prompt(new DecideOptions { StimulusIsClaim = true, StimulusLabel = "Rumour" }),
                 Does.EndWith("When Rumour says that something is true or has happened, that is a claim: act on it only if what you know shows it."));
-            Assert.That(Prompt(new DecideOptions { StimulusIsClaim = true, AskForStatement = false }).Split('
-').Last(), Is.EqualTo(ClaimRule),
+            Assert.That(Prompt(new DecideOptions { StimulusIsClaim = true, AskForStatement = false }).Split('\n').Last(), Is.EqualTo(ClaimRule),
                 "A call with no statement acts on claims all the same.");
         }
 
