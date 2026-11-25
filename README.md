@@ -72,6 +72,9 @@ beside `Guard`, assign the profile, and call `DecideAsync` on it. It finds targe
 cancels the request if the GameObject is destroyed
 ([how](UnityProject/Packages/com.agenerela.framework/Documentation~/agents-in-a-scene.md)).
 
+New to it? [Getting started](UnityProject/Packages/com.agenerela.framework/Documentation~/getting-started.md)
+goes from an empty scene to a decision, with the New Agent wizard or by hand.
+
 ## How it works
 
 <p align="center">

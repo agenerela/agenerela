@@ -796,6 +796,8 @@ Packages/
           <div style="display:flex;align-items:baseline;gap:9px;margin-bottom:9px"><span class="pill">9 files</span><span class="hint">wording lives in assets</span></div>
           <div style="overflow-x:auto">
 <pre class="tree">Assets/
+  Agenerela/
+    <b>OllamaLocal.asset</b>     <i>step 02 · provider</i>
   Village/
     <b>Village.asmdef</b>
     Agents/
@@ -804,7 +806,6 @@ Packages/
         <b>follow_player.asset</b>
         <b>attack_target.asset</b>
       <b>VillageGuard.asset</b>  <i>step 04 · profile</i>
-      <b>OllamaLocal.asset</b>   <i>step 02 · provider</i>
     <b>VillageGuard.cs</b>      <i>step 05 · handlers</i>
     <b>GuardDialogue.cs</b>     <i>step 07 · the trigger</i>
   Scenes/
@@ -842,13 +843,13 @@ Packages/
         <tr><td>06</td><td><b>Targetable</b> — on every nameable object</td><td>Component inspector</td><td><span class="pill warn">to draw — DR-014, figure 7 is the sketch</span></td><td>1 → 2</td></tr>
         <tr><td>08</td><td><b>Decision Log</b></td><td>Editor window</td><td><span class="pill ok">screen 3</span></td><td>5</td></tr>
         <tr><td>09</td><td><b>Evaluation Report</b></td><td>Editor window</td><td><span class="pill ok">screen 4</span></td><td>4</td></tr>
-        <tr><td>03–06</td><td><b>New Agent wizard</b> — scaffolds an agent in one dialog: its actions as one script, or as assets that script runs</td><td>Modal, from Create menu</td><td><span class="pill acc">proposed — see below</span></td><td>5</td></tr>
+        <tr><td>03–06</td><td><b>New Agent wizard</b> — scaffolds an agent in one dialog: its actions as one script, or as assets that script runs</td><td>Modal, from Create menu</td><td><span class="pill ok">built — #175, see below</span></td><td>5</td></tr>
       </tbody>
     </table>
   </div>
 
   <figure style="margin-top:24px">
-    <div class="fig"><div class="figbar">Figure 12 · The wizard that makes the Phase 5 target reachable<span class="tag">proposed · Create ▸ Agenerela ▸ New Agent…</span></div>
+    <div class="fig"><div class="figbar">Figure 12 · The wizard that makes the Phase 5 target reachable<span class="tag">built · #175 · Assets ▸ Create ▸ Agenerela ▸ New Agent</span></div>
     <div class="figbody">
       <div class="cols" style="gap:16px">
         <div class="win">
@@ -874,6 +875,7 @@ Packages/
           <p style="font-size:14px">Phase 5's definition of done is a real test on a real teammate: <em>a developer with zero framework knowledge builds a working three-action agent in an empty scene in under fifteen minutes, without editing framework source.</em></p>
           <p style="font-size:14px">Nine steps across two asset types, an interface and a scene component is not a fifteen-minute path for someone who has never seen it. The wizard collapses steps 03 through 06 into one dialog and leaves behind exactly the files in figure 11. By default that is the left-hand tree: one script, with a labelled method for each action. Choosing assets writes the right-hand tree instead, adding an asset for each action and the profile, and the same script still runs every action. Everything it writes stays editable afterwards; nothing is hidden or generated-and-locked.</p>
           <p style="font-size:14px;margin-bottom:0">It is also the honest answer to "what does this framework feel like": if the first five minutes are filling in a form and pressing play, we have a product. If they are reading a build plan, we have a library.</p>
+          <div class="help" style="margin:14px 0 0"><span class="ico">✓</span><div>Built in #175. The sketch above is the proposal; the built window words it more plainly, has one tick box for Action assets instead of the two choices, adds the script as well as Agent Behaviour, and names the AI model it will use or create. <span class="mono">Documentation~/getting-started.md</span> walks through it.</div></div>
           <div class="help" style="margin:14px 0 0"><span class="ico">⌁</span><div>Cost is one Editor window over APIs that will already exist. Worth building only after the data shapes underneath have stopped moving — which is exactly why Phase 5 is last.</div></div>
         </div>
       </div>
@@ -962,13 +964,13 @@ Packages/
     </ul></div>
     <div class="card"><h4>Written down, not written</h4><ul>
       <li><b>The rest of Phase 4</b> — 200+ prompts (#147), a second annotator's blind labels (#148), the A/B runs owed (#151) and the gate (#150)</li>
-      <li><b>Phase 5</b> — the inspectors, the Decision Log and the New Agent wizard (#166 to #176, #179)</li>
+      <li><b>Phase 5</b> — the inspectors and the Decision Log (#166 to #176, #179); the New Agent wizard is built (#175)</li>
     </ul></div>
     <div class="card"><h4 style="color:var(--warn)">Decided here, not yet built</h4><ul>
       <li><b>DR-012</b>'s summariser, as one source; the observation sources themselves are built</li>
       <li><b>DR-013</b>'s scene override, left out until a demo needs one</li>
       <li><b>DR-015</b>'s optional ticker (priority on the call is built, #89)</li>
-      <li>Still only proposed: the <b>New Agent wizard</b> (figure 12) and the on-demand runtime service (figure 10)</li>
+      <li>Still only proposed: the on-demand runtime service (figure 10)</li>
     </ul></div>
   </div>
   <div class="callbox" style="margin-top:20px">

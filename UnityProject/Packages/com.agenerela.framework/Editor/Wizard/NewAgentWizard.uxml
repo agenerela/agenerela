@@ -1,0 +1,34 @@
+<!--
+    Layout of the New Agent window. Styles are in NewAgentWizard.uss and Agenerela.uss.
+    NewAgentWindow.cs fills in the named elements and adds the action tick boxes and cards.
+-->
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:ScrollView name="newAgent" class="na">
+        <ui:Label class="na-hint ag-muted" text="Makes a script and a profile for a new agent." />
+
+        <ui:TextField name="agentName" label="Agent name" tooltip="Also names the script: Gate guard writes GateGuard.cs." />
+        <ui:TextField name="role" label="Role" tooltip="One line the AI reads to know who it is playing, such as: A gate guard in a small village." />
+        <ui:VisualElement class="na-folder">
+            <ui:TextField name="folder" label="Save in folder" value="Assets/Agents" class="na-grow" tooltip="Made for you if it does not exist yet. Must be inside Assets." />
+            <ui:Button name="browse" text="Browse" />
+        </ui:VisualElement>
+
+        <ui:Label text="WHAT CAN THE AGENT DO?" class="ag-section-title" />
+        <ui:Label class="na-hint ag-muted" text="All optional: tick only the actions this agent needs. You fill them in later, in the script." tooltip="Each ticked action gets an empty method in the script. A target is the thing an action is about, such as a place or a character." />
+        <ui:VisualElement name="starters" />
+        <ui:Toggle name="none" text="none — do nothing (always on)" value="true" enabled="false" />
+
+        <ui:Label text="ADD YOUR OWN ACTIONS" class="ag-section-title" />
+        <ui:Label class="na-hint ag-muted" text="For anything the list above does not cover." />
+        <ui:VisualElement name="ownActions" />
+        <ui:Button name="addAction" text="Add an action" class="na-add" />
+
+        <ui:Toggle name="asAssets" text="Also save every action as an Action asset" class="na-as-assets" tooltip="The script is written either way. An Action asset holds an action's wording outside the code, so it can change without a recompile. The script still runs it." />
+
+        <ui:Toggle name="addToScene" value="true" tooltip="Adds the script and Agent Behaviour once Unity has compiled the script, a few seconds after Create." />
+
+        <ui:Label name="model" class="na-hint ag-muted" />
+        <ui:HelpBox name="problem" message-type="Error" class="na-hidden" />
+        <ui:Button name="create" text="Create agent" class="na-create" />
+    </ui:ScrollView>
+</ui:UXML>

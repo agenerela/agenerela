@@ -7,6 +7,9 @@ ask it to decide. There is no manager object in the scene, ever.
 An agent that is not a thing in the world, such as a country, a colony or a director, has no
 Transform to put a component on. Its own class owns a plain `Agent`: see the end of this page.
 
+New to the framework? Start with [getting-started.md](getting-started.md): the New Agent wizard
+does steps 1 to 4 below in one dialog.
+
 ## Setting one up
 
 1. Create the profile: **Create → Agenerela → Agent Profile**, with its identity and the action
