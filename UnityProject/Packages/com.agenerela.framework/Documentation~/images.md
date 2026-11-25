@@ -162,6 +162,11 @@ key, so a key never reaches a server it was not meant for.
   it off for any other server, which would draw the block.
 - **LocalAI** does not edit and answers with a URL unless asked: set `Edits` off and add the default
   parameter `response_format` = `b64_json`.
+- **`sd-server` edits only with an edit model** (Qwen-Image-Edit, Flux Kontext): its `/images/edits`
+  sends the pictures to the model as references. With Z-Image Turbo a mask is refused ("mask_image
+  requires init_image") and an edit without one stops the server with a native assertion (24 November
+  2026, release `master-1127-79dc7ca`). For Z-Image, set `Edits` off, or repaint in-process with
+  `com.agenerela.sdcpp`.
 - **Failures:** nothing answering is `Unreachable`; a model the server lacks is `ModelNotFound`; a
   refused key, route or request (a content refusal included) is `Rejected`; a server still busy
   (429 or 503) after `Retry` (DR-026) is `RateLimited`; another 5xx is `ServerError`; too slow is
