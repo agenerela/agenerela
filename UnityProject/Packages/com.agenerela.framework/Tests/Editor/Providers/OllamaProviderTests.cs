@@ -114,6 +114,86 @@ namespace Agenerela.Tests
             Assert.That(provider.TokenAlternatives, Is.EqualTo(alternatives));
         }
 
+        // ---- Native thinking (DR-028) ------------------------------------------------------------
+
+        [Test]
+        public async Task ThinkIsOffUnlessSetAndOnChangesOnlyTheThinkField()
+        {
+            Assert.That(new OllamaSettings().Think, Is.False, "Off unless set: the golden body sends think false.");
+            Assert.That(new OllamaSettings().KeepThinking, Is.False);
+
+            var off = ScriptedHandler.Replying(Envelope(GoToTheTower));
+            var on = ScriptedHandler.Replying(Envelope(GoToTheTower));
+            var offProvider = Provider(off);
+            var onProvider = Provider(on, new OllamaSettings { Think = true });
+            await NotCancelled(offProvider.RequestAsync(Request(), CancellationToken.None));
+            await NotCancelled(onProvider.RequestAsync(Request(), CancellationToken.None));
+
+            var offBody = Parse(off.Requests[0].Body);
+            var onBody = Parse(on.Requests[0].Body);
+            Assert.That(offBody["think"].Type, Is.EqualTo(JTokenType.Boolean));
+            Assert.That((bool)offBody["think"], Is.False);
+            Assert.That((bool)onBody["think"], Is.True);
+            Assert.That(offProvider.Think, Is.False);
+            Assert.That(onProvider.Think, Is.True);
+
+            // Everything else, in order, is the request it always was: the schema is untouched,
+            // so no reasoning field is added before action (Appendix A).
+            onBody["think"] = false;
+            Assert.That(onBody.ToString(Formatting.None), Is.EqualTo(offBody.ToString(Formatting.None)));
+        }
+
+        [Test]
+        public async Task ThinkingIsCountedButItsTextIsDroppedUnlessKept()
+        {
+            const string thought = "The player wants the tower. move_to tower.";
+            string reply = ThinkingEnvelope(GoToTheTower, thought);
+
+            var dropped = await NotCancelled(Provider(ScriptedHandler.Replying(reply), new OllamaSettings { Think = true })
+                .RequestAsync(Request(), CancellationToken.None));
+            Assert.That(dropped.Text, Is.EqualTo(GoToTheTower), "The reply is message.content alone, never the thinking.");
+            Assert.That(dropped.ThinkingCharacters, Is.EqualTo(thought.Length));
+            Assert.That(dropped.Thinking, Is.Null, "The text is not kept unless asked, so no log can carry it.");
+            Assert.That(dropped.CompletionTokens, Is.EqualTo(130), "Ollama's eval_count, thinking included.");
+
+            var kept = await NotCancelled(Provider(ScriptedHandler.Replying(reply), new OllamaSettings { Think = true, KeepThinking = true })
+                .RequestAsync(Request(), CancellationToken.None));
+            Assert.That(kept.Thinking, Is.EqualTo(thought));
+            Assert.That(kept.Text, Is.EqualTo(GoToTheTower));
+
+            var none = await NotCancelled(Provider(ScriptedHandler.Replying(Envelope(GoToTheTower)), new OllamaSettings { KeepThinking = true })
+                .RequestAsync(Request(), CancellationToken.None));
+            Assert.That(none.ThinkingCharacters, Is.Zero);
+            Assert.That(none.Thinking, Is.Null);
+        }
+
+        [Test]
+        public async Task WithThinkingOnTheTokenProbabilitiesAreTheRepliesAlone()
+        {
+            // Ollama 0.40.14 reports the thinking's tokens first, then the reply's (findings, 24 November).
+            string[] thinking = { "The", " player", " wants", " target", ":", " tower" };
+            string[] reply = { "{\"action\":\"", "move_to", "\",\"target\":\"", "tower", "\",\"statement\":\"", "On my way.", "\"}" };
+            Assert.That(string.Concat(reply), Is.EqualTo(GoToTheTower));
+            string Logprobs(IEnumerable<string> tokens) =>
+                "[" + string.Join(",", tokens.Select(t => "{\"token\":" + JsonConvert.ToString(t) + ",\"logprob\":-0.1,\"top_logprobs\":[]}")) + "]";
+            string both = Logprobs(thinking.Concat(reply));
+            string envelope = ThinkingEnvelope(GoToTheTower, string.Concat(thinking)).Replace("\"logprobs\":[]", "\"logprobs\":" + both);
+
+            var on = await NotCancelled(Provider(ScriptedHandler.Replying(envelope), new OllamaSettings { Think = true })
+                .RequestAsync(Request(), CancellationToken.None));
+            Assert.That(on.TokenProbabilities.Select(t => t.Text), Is.EqualTo(reply), "The thinking's tokens are cut away.");
+
+            // Thinking off, the list is what Ollama sent, as before DR-028.
+            var off = await NotCancelled(Provider(ScriptedHandler.Replying(envelope))
+                .RequestAsync(Request(), CancellationToken.None));
+            Assert.That(off.TokenProbabilities, Has.Count.EqualTo(thinking.Length + reply.Length));
+
+            // No tail spells the reply: no probabilities, never the thinking read as the reply.
+            Assert.That(OllamaProvider.ReplyTokensOnly(on.TokenProbabilities.Take(3).ToList(), GoToTheTower), Is.Null);
+            Assert.That(OllamaProvider.ReplyTokensOnly(on.TokenProbabilities.ToList(), GoToTheTower.Replace("tower", "towel")), Is.Null);
+            Assert.That(OllamaProvider.ReplyTokensOnly(null, GoToTheTower), Is.Null);
+        }
+
         // ---- Asked without token probabilities (#107) -------------------------------------------
 
         [Test]
@@ -911,6 +991,15 @@ namespace Agenerela.Tests
                 + ",\"prompt_eval_count\":" + promptTokens
                 + ",\"eval_count\":" + completionTokens
                 + ",\"logprobs\":" + logprobs + "}";
+        }
+
+        // A thinking reply as Ollama 0.40.14 sends it: message.thinking beside message.content.
+        private static string ThinkingEnvelope(string content, string thinking)
+        {
+            return "{\"model\":\"qwen3.5:4b\",\"created_at\":\"2026-11-24T23:57:12.9Z\""
+                + ",\"message\":{\"role\":\"assistant\",\"content\":" + JsonConvert.ToString(content)
+                + ",\"thinking\":" + JsonConvert.ToString(thinking) + "}"
+                + ",\"done\":true,\"done_reason\":\"stop\",\"prompt_eval_count\":143,\"eval_count\":130,\"logprobs\":[]}";
         }
 
         private static JObject Parse(string json)

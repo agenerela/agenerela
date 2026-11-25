@@ -107,6 +107,41 @@ namespace Agenerela.Providers
         /// </remarks>
         public bool TokenProbabilities = true;
 
+        /// <summary>
+        /// Whether the model may think before it answers, sent as <c>think: true</c>: false unless
+        /// set, which sends <c>think: false</c>, every request's value before DR-028 (#151).
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// This is the model's own thinking channel, which Ollama returns apart from the reply in
+        /// <c>message.thinking</c>; the reply is still the schema's JSON, <c>action</c> first. It is
+        /// not a reasoning field in the schema, which the prototype measured as the worst of five
+        /// variants (build plan Appendix A). Whether thinking helps any model is unmeasured: it is
+        /// for the A/B run, not a default.
+        /// </para>
+        /// <para>
+        /// It costs seconds and may never answer: on <c>qwen3.5:4b</c> a decision thought until the
+        /// context ran out in 18 of 19 probe requests, about 3,750 tokens and 40 s at a 4096 context,
+        /// with no reply (findings, 24 November). Raise <see cref="ContextSize"/> and
+        /// <see cref="TimeoutSeconds"/> with it. Ollama has no thinking budget per request;
+        /// <c>DecideOptions.MaxReplyTokens</c> caps thinking and reply together.
+        /// The thinking tokens are in <see cref="ProviderResult.CompletionTokens"/>, which Ollama
+        /// counts as one; <see cref="ProviderResult.ThinkingCharacters"/> says how much of it was
+        /// thinking. Ollama's token probabilities cover the thinking too; the provider keeps
+        /// only the reply's, so the grounding guard reads what it always read, or nothing when they
+        /// do not spell the reply exactly. The thinking text itself is dropped unless
+        /// <see cref="KeepThinking"/> is on.
+        /// </para>
+        /// </remarks>
+        public bool Think = false;
+
+        /// <summary>
+        /// Whether a reply's thinking text is kept, in <see cref="ProviderResult.Thinking"/>: false
+        /// unless set, so the text never reaches a result, a log or telemetry. Only matters with
+        /// <see cref="Think"/> on.
+        /// </summary>
+        public bool KeepThinking = false;
+
         /// <summary><see cref="TokenAlternatives"/>' default, 20 (#244); DR-016 measured with 5.</summary>
         public const int DefaultTokenAlternatives = 20;
 

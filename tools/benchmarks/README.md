@@ -172,6 +172,23 @@ read the way `ollama_remote.py` reads it; from a worktree, pass `--server-tools 
 so its `.env` is used, and take the RTX 5080 lock around each stage. A full run of three embedders
 and the control took 7 minutes. The result of 12 November 2026 is in `docs/llm-wiki/findings.md`.
 
+## `think_probe.py` and `think_end_probe.py`
+
+What `think: true` does to `OllamaProvider`'s own evaluation-set request
+(`tools/live-runs/model-sweep/framework_request.json`), with six stimuli of their own (DR-028).
+`think_probe.py` sends each under five arms (off, on, on with `num_predict` 256, `think: "low"`, on
+without logprobs) and records whether the reply is schema JSON, the thinking's length, the tokens
+and seconds, and whether `logprobs` spells the reply or the thinking too. `think_end_probe.py` keeps
+the whole thinking text, at `num_ctx` 16384 and with no `format`, to see whether it ever ends.
+Server as `tools/ollama-server/ollama_remote.py` reads it; untimed.
+
+```bash
+python tools/benchmarks/think_probe.py qwen3.5:4b .scratch/think/probe.jsonl
+python tools/benchmarks/think_end_probe.py qwen3.5:4b .scratch/think/end.jsonl
+```
+
+Results: findings, 24 November 2026, raw data in `docs/llm-wiki/runs/2026-11-24-think-probe/`.
+
 ## Before trusting any number these print
 
 - Was there a **control arm**? A single before/after run is an anecdote.

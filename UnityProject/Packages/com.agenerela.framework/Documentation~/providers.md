@@ -134,7 +134,7 @@ measurement in Appendix A depends on it:
 | `model` | `OllamaSettings.Model` |
 | `messages` | One `system` message, the non-empty system-side blocks joined by a blank line (left out if there are none); then `History`; then `Stimulus` as the last `user` message |
 | `format` | `JsonSchemaSerializer`'s output (#9), embedded as a JSON object exactly as written |
-| `stream`, `think` | `false`, `false` |
+| `stream`, `think` | `false`, and `OllamaSettings.Think`: `false` unless set ([below](#thinking-before-answering)) |
 | `options` | `temperature` from the call's `DecideOptions.Temperature` when set, else from the settings; `num_ctx` from the settings; then `seed` and `num_predict`, each only when the call set `DecideOptions.Seed` or `DecideOptions.MaxReplyTokens` |
 | `logprobs`, `top_logprobs` | `true`, `OllamaSettings.TokenAlternatives` (20 unless set); neither is sent when `OllamaSettings.TokenProbabilities` is off |
 
@@ -174,6 +174,28 @@ Failures throw `ProviderException`:
 The caller's cancellation aborts the HTTP request and throws `OperationCanceledException`,
 even if the timeout has also run out. An address with a user name or password in it is named
 in messages without them.
+
+### Thinking before answering
+
+`OllamaSettings.Think` (and an `OllamaProviderConfig`'s **Think**) sends `think: true`, so the model
+may think before it answers (DR-028). Off unless set, and the request is then exactly the one sent
+before it existed. This is the model's own thinking channel, which Ollama returns in
+`message.thinking` beside the reply; the reply is still the schema's JSON, `action` first. It is not a
+reasoning field in the schema, which the prototype measured as the worst of five variants (build plan
+Appendix A).
+
+- **It is unmeasured, and on `qwen3.5:4b` it rarely answers.** The 4B thought until the context ran
+  out in 18 of 19 probe requests: about 3,750 tokens and 40 s at `num_ctx` 4096, with an empty reply
+  (findings, 24 November). Raise `ContextSize` and `TimeoutSeconds` with it, and A/B it before using it.
+- **No thinking budget.** Ollama 0.40.14 has none per request. `DecideOptions.MaxReplyTokens` caps
+  thinking and reply together, so a cap cuts the thinking and the call ends as an `UnreadableReply`.
+- **The guards read the reply's tokens alone.** Ollama's `logprobs` cover the thinking too, so with
+  `Think` on `TokenProbabilities` is cut to the tail whose join is the reply. If none joins exactly,
+  there are none, and the grounding guard records `NoProbabilities` for that decision.
+- **What is kept.** `ProviderResult.ThinkingCharacters`, the thinking's length; `CompletionTokens`
+  counts thinking and reply together, as Ollama does. The text itself only with
+  `OllamaSettings.KeepThinking`, in `ProviderResult.Thinking`; the framework never logs it. An
+  evaluation report's arm conditions say `think`, and its arms table adds "thinking" to the model.
 
 ### A busy server: retries and a deadline
 
@@ -759,8 +781,10 @@ them is a change to `ILLMProvider`, which is the test this design has to keep pa
   The A/B runner's reads of `/api/version` and `/api/ps` stay internal until a game needs them.
 - **`ProviderHealth` from lifecycle calls.** A warm-up that succeeds could mark a provider up.
   Left out so health follows decisions alone; add it if a game warms up to recover.
-- **A setting for a model that rejects `think`**, when one is adopted. `OllamaProvider` always
-  sends `think: false`.
+- **A setting for a model that rejects `think`**, when one is adopted. `OllamaProvider` sends
+  `think: false` unless `OllamaSettings.Think` is on (DR-028).
+- **Thinking per call**, a `DecideOptions` switch beside the provider's, and the thinking's length in
+  `DecisionTelemetry`. Both are `Agent` changes; add them when a game wants some calls to think.
 - **A provider conformance suite** every vendor must pass. Phase 6 deliverable, shaped from
   the fake provider in #17 (`Tests/Editor/Fakes/FakeProvider.cs`).
 - **A scene override** between an agent's own config and the project default, DR-013's middle

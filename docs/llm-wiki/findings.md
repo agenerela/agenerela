@@ -5080,3 +5080,63 @@ pulls, but this build will not run it. Public reports disagree on whether Ollama
 
 **What it means.** Images stay on ComfyUI, behind the framework's `IImageProvider`, so an Ollama backend can be
 added if a later Ollama runs image models on Linux. Re-run `test.py` after an Ollama upgrade.
+
+### Native thinking on `qwen3.5:4b`: with the schema it thinks until the context runs out, and answered 1 of 19 requests (24 November 2026)
+
+**What changed.** `think: true` instead of `false` in `OllamaProvider`'s own evaluation-set request
+(`tools/live-runs/model-sweep/framework_request.json`), the lead's question of 24 November: would
+letting the model think before it answers help? This is the model's **own thinking channel**, which
+Ollama returns in `message.thinking` beside a reply still constrained to the schema, `action` first.
+It is **not** the reasoning field before `action` that the prototype measured as the worst of five
+variants (build plan Appendix A); the schema is unchanged. Probes `tools/benchmarks/think_probe.py`
+and `think_end_probe.py`, six stimuli of our own, none from either evaluation set or a paraphrase of
+one (hard rule 4). Raw replies in [`runs/2026-11-24-think-probe/`](runs/2026-11-24-think-probe/).
+
+**Conditions.** `qwen3.5:4b` on the home server's Ollama 0.40.14 (RTX 4070 SUPER), temperature 0,
+`num_ctx` 4096 unless said, logprobs on with 20 alternatives. **Untimed**: no lease, other clients'
+requests queued beside these, and 12 of 30 requests in the first probe were turned away with a 503
+while a timed run held the card. Seconds below are Ollama's own `eval_duration`, not wall time.
+
+| Arm | Answered (schema JSON) | Tokens generated | Seconds generating | `done_reason` |
+|---|---|---|---|---|
+| `think: false`, today's request | 3 of 3 | 34 to 41 | 0.45 to 0.49 | `stop` |
+| `think: true` | 0 of 4 | 3,744 to 3,748, all thinking | 39.5 to 41.3 | `length` |
+| `think: true`, `num_predict` 256 | 0 of 4 | 256, all thinking | 2.7 | `length` |
+| `think: "low"` | 0 of 4 | 3,744 to 3,748, the same as `true` | 39.6 to 41.0 | `length` |
+| `think: true`, no logprobs | 0 of 3 | 3,744 to 3,748 | 34.8 to 36.2 | `length` |
+| `think: true`, `num_ctx` 16384 | 1 of 2 | 4,283 (answered); 16,036 | 45.2; 179.1 | `stop`; `length` |
+| `think: true`, no `format` at all | 0 of 2 | 3,746 to 3,748 | 43.3 to 45.1 | `length` |
+
+What the five questions came to:
+
+- **(a) The reply.** When the thinking ended, the reply was the schema's JSON, `action` first
+  (`attack_target`, `wolf`, right for "Put an arrow in that grey beast"). It ended once in 19 thinking requests. In
+  every other request `message.content` was empty: the whole budget, the context's 4096 less the
+  prompt's ~350 tokens, went to thinking. No `<think>` markup ever reached `content`.
+- **(b) Where the thinking goes.** `message.thinking`, 15,000 to 16,000 characters at 4096 and
+  62,000 at 16384. It decides early (the right action and target within the first few hundred
+  tokens) and then argues with itself about the *output format*, "Wait, I'll check if I should
+  output the action tag", because the persona's "Speaks in one short sentence" reads to it as a
+  conflict with choosing an action. The run to 16,036 tokens repeated one four-line paragraph to
+  the end (249 distinct lines of 1,072). Taking the schema away changed nothing: it is the model's
+  thinking, not the grammar.
+- **(c) Cost.** About 90 tokens a second, so a decision that thinks costs 40 s at 4096, and more
+  than the 30 s `OllamaSettings.TimeoutSeconds` default, against under 0.5 s without.
+- **(d) Logprobs cover every generated token, thinking first**: 3,746 entries for 3,746 tokens,
+  and their join is not `content`. A guard reading them unchanged would read thinking as the reply,
+  so `OllamaProvider` with `Think` on keeps only the tail that spells the reply (DR-028). Asking
+  without logprobs saved about 15% of the seconds at this length.
+- **(e) No per-request cap on thinking in 0.40.14.** `think` takes levels (`"low"`), accepted and
+  ignored by this model: the same tokens as `true`. `num_predict` caps thinking and reply together,
+  so a cap cuts the thinking before any reply (256: nothing answered). Only `num_ctx`, `num_predict`
+  and the timeout bound it.
+
+**What it means.** On this model, with this prompt, thinking is not an option a game can turn on:
+it answers almost never at the context a decision uses, and takes 40 to 180 s when it does. The
+switch is still built, off by default with the request unchanged (DR-028), so the A/B can be run;
+but an A/B at 4096 would score the thinking arm at about zero and cost 209 × 40 s, about 2.3 hours,
+for nothing. Not measured: another model (a model trained to think briefly, or `qwen3.5:2b`), a
+prompt without the persona's one-sentence line, and accuracy on the answers that do come back.
+
+**What would change this.** A model whose thinking ends in a few hundred tokens on this prompt; an
+Ollama release with a thinking budget; a run at `num_ctx` 16384 answering most prompts.

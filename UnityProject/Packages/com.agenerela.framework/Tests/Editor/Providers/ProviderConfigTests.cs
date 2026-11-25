@@ -74,6 +74,12 @@ namespace Agenerela.Tests
 
             config.TokenProbabilities = false;
             Assert.That(config.ToSettings().TokenProbabilities, Is.False);
+            Assert.That(settings.Think, Is.False, "No thinking unless ticked (DR-028).");
+            Assert.That(settings.KeepThinking, Is.False);
+            config.Think = true;
+            config.KeepThinking = true;
+            Assert.That(config.ToSettings().Think, Is.True);
+            Assert.That(config.ToSettings().KeepThinking, Is.True);
             Assert.That(config.ApiKeyVariable, Is.Empty);
             Assert.That(config.Provider, Is.TypeOf<OllamaProvider>());
         }

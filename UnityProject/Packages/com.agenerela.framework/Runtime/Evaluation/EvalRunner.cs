@@ -1199,6 +1199,7 @@ namespace Agenerela.Evaluation
                     // None asked for when the arm's Ollama asks without probabilities (#107).
                     TokenAlternatives = Ollama != null && Ollama.TokenProbabilities ? Ollama.TokenAlternatives : (int?)null,
                     TokenProbabilities = Ollama?.TokenProbabilities,
+                    Think = Ollama?.Think,
                     AskForRefusalLine = arm.Options.AskForRefusalLine,
                     IdleExampleStimulus = arm.Options.IdleExampleStimulus,
                     ListActionsAndTargets = arm.Options.ListActionsAndTargets,

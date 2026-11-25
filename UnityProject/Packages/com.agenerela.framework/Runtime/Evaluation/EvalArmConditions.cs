@@ -44,6 +44,13 @@ namespace Agenerela.Evaluation
         /// the target rule and the grounding guard read nothing.
         /// </summary>
         [JsonProperty("tokenProbabilities", NullValueHandling = NullValueHandling.Ignore)] public bool? TokenProbabilities;
+        /// <summary>
+        /// Whether an Ollama arm let its model think before answering
+        /// (<see cref="Agenerela.Providers.OllamaSettings.Think"/>, DR-028); null for another provider,
+        /// and in a report written before it existed, which never thought. With it on, each answer's
+        /// completion tokens include the thinking.
+        /// </summary>
+        [JsonProperty("think", NullValueHandling = NullValueHandling.Ignore)] public bool? Think;
         [JsonProperty("askForRefusalLine")] public bool AskForRefusalLine;
         [JsonProperty("idleExampleStimulus")] public string IdleExampleStimulus;
         [JsonProperty("listActionsAndTargets")] public bool ListActionsAndTargets;

@@ -22,7 +22,7 @@ namespace Agenerela.Providers
     /// <para>
     /// It sends what the prototype sent wherever a measurement depends on it, because every
     /// number in the build plan's Appendix A was measured through Ollama that way: greedy
-    /// decoding, thinking off, the schema in <c>format</c>, and <c>127.0.0.1</c> rather than
+    /// decoding, thinking off (unless <see cref="OllamaSettings.Think"/>, DR-028), the schema in <c>format</c>, and <c>127.0.0.1</c> rather than
     /// <c>localhost</c>. The schema goes in <c>format</c> only, where Ollama compiles it into the
     /// sampling grammar; the model never reads it (findings, 10 October).
     /// </para>
@@ -80,6 +80,8 @@ namespace Agenerela.Providers
         private readonly float temperature;
         private readonly int tokenAlternatives;
         private readonly bool tokenProbabilities;
+        private readonly bool think;
+        private readonly bool keepThinking;
         private readonly float timeoutSeconds;
         private readonly RetryPolicy retry;
         private readonly System.Random jitter = new System.Random();
@@ -183,6 +185,8 @@ namespace Agenerela.Providers
             temperature = settings.Temperature;
             tokenAlternatives = settings.TokenAlternatives;
             tokenProbabilities = settings.TokenProbabilities;
+            think = settings.Think;
+            keepThinking = settings.KeepThinking;
             timeoutSeconds = settings.TimeoutSeconds;
             retry = policy.Copy();
 
@@ -583,6 +587,9 @@ namespace Agenerela.Providers
         // Whether logprobs is asked for, for the evaluation report's conditions (#107).
         internal bool TokenProbabilities => tokenProbabilities;
 
+        // Whether think is sent true, for the evaluation report's conditions (DR-028).
+        internal bool Think => think;
+
         /// <summary>The server's address, without any user name or password it carried.</summary>
         internal string Endpoint => endpoint;
 
@@ -735,9 +742,11 @@ namespace Agenerela.Providers
                 json.WritePropertyName("stream");
                 json.WriteValue(false);
 
-                // Qwen-family reasoning adds seconds and no accuracy here.
+                // Off unless the settings ask (DR-028): every measurement before it sent false.
+                // Thinking is the model's own channel, returned in message.thinking; it is not a
+                // reasoning field in the schema, which Appendix A measured as the worst variant.
                 json.WritePropertyName("think");
-                json.WriteValue(false);
+                json.WriteValue(think);
 
                 json.WritePropertyName("options");
                 json.WriteStartObject();
@@ -854,14 +863,22 @@ namespace Agenerela.Providers
             // The model the server says answered; the one asked for if it does not say.
             string answered = root["model"] is JValue name && name.Type == JTokenType.String ? (string)name : model;
 
+            // Thinking comes back beside the reply, never in it (checked on 0.40.14, DR-028). Its
+            // length is kept; the text only when asked, so it reaches no log by default.
+            string thinking = message["thinking"] is JValue thought && thought.Type == JTokenType.String
+                ? (string)thought : null;
+
             return new ProviderResult
             {
                 Text = (string)content,
                 LatencySeconds = latency,
                 PromptTokens = Count(root, "prompt_eval_count", text),
                 CompletionTokens = Count(root, "eval_count", text),
-                TokenProbabilities = Probabilities(root["logprobs"], text),
+                TokenProbabilities = think ? ReplyTokensOnly(Probabilities(root["logprobs"], text), (string)content)
+                                           : Probabilities(root["logprobs"], text),
                 Model = answered,
+                ThinkingCharacters = thinking?.Length ?? 0,
+                Thinking = keepThinking && !string.IsNullOrEmpty(thinking) ? thinking : null,
             };
         }
 
@@ -940,6 +957,52 @@ namespace Agenerela.Providers
             }
 
             return tokens;
+        }
+
+        // With thinking on, Ollama's logprobs cover every token generated, the thinking first
+        // (checked on 0.40.14, DR-028). The guards read the reply's tokens alone, so the list is cut
+        // to the shortest tail whose join is the reply. When no tail joins to it exactly, as when a
+        // character split across two tokens is missing from both, no probabilities are given: the
+        // grounding guard then records NoProbabilities rather than reading thinking as the reply.
+        internal static List<TokenProbability> ReplyTokensOnly(List<TokenProbability> tokens, string reply)
+        {
+            if (tokens == null)
+            {
+                return null;
+            }
+
+            reply = reply ?? "";
+            int length = 0;
+            for (int i = tokens.Count - 1; i >= 0; i--)
+            {
+                length += (tokens[i].Text ?? "").Length;
+                if (length < reply.Length)
+                {
+                    continue;
+                }
+
+                if (length > reply.Length)
+                {
+                    return null;
+                }
+
+                // As long as the reply: the tail is it, or the tokens do not spell it.
+                var tail = new StringBuilder(length);
+                for (int j = i; j < tokens.Count; j++)
+                {
+                    tail.Append(tokens[j].Text);
+                }
+
+                if (tail.ToString() != reply)
+                {
+                    return null;
+                }
+
+                // Leading empty tokens belong to neither; leave them with the thinking.
+                return tokens.GetRange(i, tokens.Count - i);
+            }
+
+            return length == reply.Length ? tokens : null;
         }
 
         private void ReadToken(JToken entry, string text, out string token, out float logProbability)
