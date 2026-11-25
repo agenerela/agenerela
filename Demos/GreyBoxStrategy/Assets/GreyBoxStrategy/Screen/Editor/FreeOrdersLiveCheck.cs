@@ -29,6 +29,8 @@ namespace GreyBoxStrategy.Realm.Editor
     /// game begins, as New game does; <c>-headStartSeconds S</c> begins the session S seconds before the player sees turn
     /// 1's council, as a generated world's rule game begins behind the loading card. Today's game is
     /// <c>-coldStart 1</c> alone.</para>
+    /// <para><c>-strategyRules "Field=value;..."</c> sets rule fields as the table runs do (<see cref="GameRules.With"/>), on
+    /// top of free orders: <c>"CourtTurnFacts=false"</c> plays the court's prompt from before it became the default.</para>
     /// </remarks>
     public static class FreeOrdersLiveCheck
     {
@@ -46,6 +48,7 @@ namespace GreyBoxStrategy.Realm.Editor
                 Cold = Arg("-coldStart") == "1",
                 Warm = Arg("-warm") == "1",
                 HeadStart = double.TryParse(Arg("-headStartSeconds"), NumberStyles.Float, CultureInfo.InvariantCulture, out double h) ? h : 0,
+                Rules = Arg("-strategyRules"),
             };
             Run(plan, turns, seed, folder, start);
         }
@@ -55,6 +58,8 @@ namespace GreyBoxStrategy.Realm.Editor
         {
             public bool Cold, Warm;
             public double HeadStart;
+            /// <summary>Rule fields to set, "Field=value;...", or null for today's rules.</summary>
+            public string Rules;
             public override string ToString() => $"cold {(Cold ? 1 : 0)}, warm {(Warm ? 1 : 0)}, head start {HeadStart.ToString("0.##", CultureInfo.InvariantCulture)} s";
         }
 
@@ -77,6 +82,7 @@ namespace GreyBoxStrategy.Realm.Editor
         private static async Task Play(double planSeconds, int turns, int seed, string folder, Start start)
         {
             var setup = GameSetup.Writs(seed);
+            if (start.Rules != null) setup.Numbers = GameRules.With(start.Rules);
             var map = setup.BuildMap();
             var rules = setup.BuildRules(map);
             rules.FreeOrders = true;

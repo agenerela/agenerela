@@ -2,6 +2,11 @@
 
 Status: done (results.md)
 
+**Replaying it after 24 November.** `CourtTurnFacts` is on by default since then (the lead's call on this run), so
+`FreeOrders=true` alone is no longer the control. To repeat the run, give the control blocks
+`FreeOrders=true;CourtTurnFacts=false` and the n blocks `FreeOrders=true;CourtTurnFacts=false;CourtNoneWording=true`;
+the t blocks are unchanged.
+
 **Why.** Free orders (#20) let a court give as many orders a turn as its gold allows, one request at a time. Before
 they can become the default, the tech lead wants to know whether telling a court's later request what its earlier
 orders settled (`CourtTurnFacts`: "Taxes are raised this turn", the gold held back) or asking it for "another order, or

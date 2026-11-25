@@ -30,7 +30,7 @@ A rule belongs in `Sim/`; a number the screen shows belongs in `Screen/Replay/` 
 
 | File | Owns |
 |---|---|
-| `Rules/GameRules.cs` | Every setting and switch (`TurnStyle`, `FreeOrders`, `Economy`, R3's army rules, pacing) |
+| `Rules/GameRules.cs` | Every setting and switch (`TurnStyle`, `FreeOrders`, `CourtTurnFacts`, `Economy`, R3's army rules, pacing); `With`, the `-strategyRules` parser |
 | `Rules/GameSetup.cs` | A new game's choices as one data object, shared by menu, runners and tests |
 | `Rules/World.cs` | The state: `Country`, provinces, relations; income, upkeep, levy, economy queries (`Yield`, `ManpowerCap`, `TaxFactor`) |
 | `Rules/Game.cs` | The one-move game's turn in three calls, upkeep, events applied, victory |
