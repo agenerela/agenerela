@@ -1040,6 +1040,14 @@ screen's side, come next.
   own number goes in `CourtOrdersOverride`). Each later request is built on the same snapshot, tells the orders already
   given, and offers only what is left: the gold its earlier orders will spend is held back (`Country.Reserved`), and an
   order given once is not offered again, except a recruit, which raises one more company.
+- **What a later court request reads** (`GameRules.CourtTurnFacts`, on by default since 24 November): what the
+  court's earlier orders this turn settled, after the headline: "Taxes are raised this turn; they cannot be raised
+  again until next turn." once they are, and the gold held back, such as "Gold held for this turn's orders: 40 of our
+  120; 80 left to spend."
+  The lead chose it as game feel after request 003 (findings, "Painted Realm free orders, the court's prompt A/B"):
+  every answer legal in both arms, court orders a realm a turn 1.31 to 0.98, model seconds a turn 21.2 to 19.2.
+  `-strategyRules CourtTurnFacts=false` (the tables and `FreeOrdersLiveCheck`) plays the court's prompt from before.
+  The other arm of that run, `CourtNoneWording` (a later request asks for "the court's next order, or none"), stays off.
 - **The armies.** Every order stands: a hold as much as a march or a siege. An army is asked again when a wake rule
   fires, or when it has held `AskHoldingArmyEvery` (3) turns unasked, another pacing setting: in watch mode every
   call is a wait. Armies the court recalled come first.
