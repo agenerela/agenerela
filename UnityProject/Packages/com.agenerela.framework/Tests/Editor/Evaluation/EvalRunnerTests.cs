@@ -578,10 +578,12 @@ namespace Agenerela.Tests.Evaluation
         [Test]
         public async Task AnArmCanListTheActionsAndTargetsAndTheReportSaysSo()
         {
-            // #151's A/B for #190: the same set, one arm with the list and without counter-examples.
+            // #151's A/B for #190: the same set, one arm without the list (the control before DR-027
+            // made it the default), the other with it, capped, and without counter-examples.
             var a = new FakeProvider(Reply("move_to", "bridge"));
             var b = new FakeProvider(Reply("move_to", "bridge"));
             var runner = Runner(new[] { Bridge }, null, a, b,
+                optionsA: new DecideOptions { ListActionsAndTargets = false },
                 optionsB: new DecideOptions { ListActionsAndTargets = true, MaxListedTargets = 3, CounterExamples = false });
 
             var report = await Fixtures.NotCancelled(runner.RunAsync());

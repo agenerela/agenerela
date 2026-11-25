@@ -2,20 +2,20 @@
 
 `PromptBuilder` assembles every request an agent sends: the system prompt, the few-shot
 examples, the observations, the history and the stimulus. The schema travels with it. This
-note is about one gap, the switches that close it, and two that shape the few-shot examples. At
-their defaults, none of them adds anything to the prompt. The list, the code-built agent's idle
-example and the example-target fallback are off. A counter-example, an example's statement and a
-target's `INamedTarget` name are shown as soon as a developer writes one, which is their opt-in,
-and each has a per-call switch that leaves it out. None becomes a default until an A/B run shows
-it helps (hard rule 2, #151).
+note is about one gap, the switches that close it, and two that shape the few-shot examples. The
+action and target list is on by default since 24 November 2026, after an A/B run showed it helps
+(DR-027). The code-built agent's idle example and the example-target fallback are off. A
+counter-example, an example's statement and a target's `INamedTarget` name are shown as soon as a
+developer writes one, which is their opt-in, and each has a per-call switch that leaves it out.
+None becomes a default until an A/B run shows it helps (hard rule 2, #151).
 
 **The gap.** A model served through Ollama never reads the schema. Ollama uses it only to
 constrain sampling (findings, 10 October 2026), so the action list, the descriptions and the
 target ids in it reach no local model. The system prompt says "Choose exactly one action from
-the allowed list", but by default it never shows that list. A local model learns the actions
-only from the few-shot examples, and learns the targets only from what the game writes into
+the allowed list", and without the list below it never shows one: a local model would learn the
+actions only from the few-shot examples, and the targets only from what the game writes into
 observations. Living Vale and GreyBoxVillage both wrote every action and target into their
-observations by hand (#190).
+observations by hand (#190). So the list is on by default.
 
 **An agent with no examples sends no example block.** When no action has an example, and there is
 no idle example, counter-example or refusal to show, the request carries no few-shot block at all,
@@ -25,8 +25,10 @@ writes.
 
 ## Listing the actions and targets
 
+On by default. To send the prompt from before the list, as an A/B run's control arm does:
+
 ```csharp
-var result = await agent.DecideAsync(line, new DecideOptions { ListActionsAndTargets = true });
+var result = await agent.DecideAsync(line, new DecideOptions { ListActionsAndTargets = false });
 ```
 
 A call that offers an action with a parameter sends this list whatever the option says, with the
@@ -84,7 +86,13 @@ Targets:
   last line.
 
 The list's form follows the "Around you" list that DR-016's probe measured, which listed
-targets the same way, but no actions. It has never been measured on its own.
+targets the same way, but no actions. **Measured on its own** on the 209-prompt evaluation set
+(findings, 23 November 2026, "ListActionsAndTargets off / on, again"): `qwen3.5:4b` went from 170
+to 184 right, +6.7 points against a noise floor of 4.9, the same 418 answers on a repeat. Almost all
+of the gain is in situations (+15.5), and wrong `none` answers fall from 14 to 3; it acted unasked
+8 times against 4. `qwen3.5:2b` gained 4.8, within noise. It costs a line an action and a line a
+listed target: the evaluation set's prompts grow from a median of 465 to 563 tokens, at most 546 to 663 (estimated, 3 characters
+a token). DR-027 made it the default.
 
 **When the cap cuts.** A target the cap leaves out is still offered by the schema, so nothing
 fails, but a local model is told nothing of it. Each decision records the ids cut in

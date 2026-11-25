@@ -111,7 +111,11 @@ namespace Agenerela.Tests.Evaluation
         // 24 November: on the 4B the counter-examples cost 10 answers, and with the statements 68 of
         // its replies copied one (findings, "#151 after #384"). The categories #384 added change no
         // request unless pairing is on, so the default prompt is the one from before #384 again.
-        private static readonly string[] OurPromptHashes =
+        // DR-027 (24 November) put the action and target list into every default request, so these
+        // are now the prompts of an arm with ListActionsAndTargets = false: every A/B number in
+        // findings before DR-027 was measured against them, and a run that must compare with those
+        // sets that switch and is checked here.
+        private static readonly string[] OurPromptHashesWithoutTheList =
         {
             "06057a4179d077bb750563be8dded4ee0846c45518f1ccffe0cb30e19cf5316a",
             "2be670ed354f62d21738e3233b7f3e43ef24bf7af94a1c2a6ead308a2b79eb2a",
@@ -121,8 +125,25 @@ namespace Agenerela.Tests.Evaluation
             "d6cfb5249a2f8dde10e3d86c074e2409677ddf5fc02cfc84afd4f8d95b1e9dad",
         };
 
+        // The same, with the action and target list: our set's default prompt since DR-027, taken on
+        // 24 November 2026 from test 6056863 with only the default changed. The few-shot blocks are
+        // the ones above; only the system prompts gain the list.
+        private static readonly string[] OurPromptHashes =
+        {
+            "2dc0e15064f3ad1046ee250c5aa2a805393448a93e601dade88e013282782d9a",
+            "5004fd199aed47ff0985de57f38b12090dcb8b90f3ca713590f62f0c7f2f7df6",
+            "6f243ad8d603b240acc46feb7b703eae4a79015366bcde3eaf6c248f4d47fc32",
+            "72b589edc5dff5924e779d9edfbf7e4a78d45fc78e6c4871a093172a87fea6be",
+            "e40c9d9cce9032b1953fcb8dc86ef1cd321b91c53d3283b219b99981201635cf",
+            "e867f25940f7ea69c961e3964ceba10f3283fb95606199fe88f8fec086778284",
+        };
+
         [Test]
         public Task OurSetsDefaultPromptIsWhatItWas() => AssertPromptHashes(null, OurPromptHashes);
+
+        [Test]
+        public Task OurSetsPromptWithoutTheListIsTheOneEveryRunBeforeDR027Measured() =>
+            AssertPromptHashes(new DecideOptions { ListActionsAndTargets = false }, OurPromptHashesWithoutTheList);
 
         [Test]
         public Task OurSetsProfileHasNoStatementsOrCounterExamplesToSwitch() =>
