@@ -15,6 +15,11 @@ benchmark run can be traced to the framework that produced it), and the newest d
 section of the package's CHANGELOG.md. The hygiene check "version" keeps the first two
 together on every pull request; this file moves all three at once.
 
+Every other package beside it that depends on the framework (com.agenerela.sdcpp, DR-028)
+names the framework's version in its own package.json. prepare moves that pin too, and the
+same hygiene check fails a pull request where one disagrees, so a release never leaves a
+package asking for the previous framework.
+
 The release notes are docs/releases/<tag>.md when it exists, written for people rather than
 copied from the changelog, followed by the install line and a link to the changelog section.
 Without that file they are the changelog section itself, as releases before 0.4.0 had.
@@ -25,6 +30,7 @@ as a GitHub pre-release, so the "latest release" badge and link stay on the last
 
 import argparse
 import datetime
+import glob
 import json
 import os
 import re
@@ -38,6 +44,8 @@ CHANGELOG = f"{PACKAGE}/CHANGELOG.md"
 REPO = "https://github.com/agenerela/agenerela"
 SEMVER = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*)?$")
 INFO_VERSION = re.compile(r'(public const string Version = ")([^"]*)(")')
+FRAMEWORK_NAME = "com.agenerela.framework"
+DEPENDENCY = re.compile(r'("' + re.escape(FRAMEWORK_NAME) + r'"\s*:\s*")([^"]*)(")')
 
 
 def read(path):
@@ -57,6 +65,22 @@ def manifest_version():
 def info_version():
     m = INFO_VERSION.search(read(INFO))
     return m.group(2) if m else None
+
+
+def dependents():
+    """package.json of every other package in UnityProject/Packages that depends on the framework."""
+    found = []
+    for path in sorted(glob.glob("UnityProject/Packages/*/package.json")):
+        path = path.replace("\\", "/")
+        if path == MANIFEST:
+            continue
+        if FRAMEWORK_NAME in (json.load(open(path, encoding="utf-8")).get("dependencies") or {}):
+            found.append(path)
+    return found
+
+
+def pinned(path):
+    return (json.load(open(path, encoding="utf-8")).get("dependencies") or {}).get(FRAMEWORK_NAME)
 
 
 def section(version):
@@ -90,7 +114,13 @@ def prepare(version, date):
 
     write(MANIFEST, re.sub(r'("version":\s*")[^"]*(")', rf"\g<1>{version}\g<2>", read(MANIFEST), count=1))
     write(INFO, INFO_VERSION.sub(rf"\g<1>{version}\g<3>", read(INFO), count=1))
+    moved = []
+    for path in dependents():
+        write(path, DEPENDENCY.sub(rf"\g<1>{version}\g<3>", read(path), count=1))
+        moved.append(path)
     print(f"Prepared {version}: package.json, AgenerelaInfo.Version and CHANGELOG.md ({date}).")
+    for path in moved:
+        print(f"  {path} now depends on {FRAMEWORK_NAME} {version}.")
     print("Review the diff, then follow docs/RELEASING.md from step 2.")
 
 
@@ -103,6 +133,9 @@ def check(tag):
         errors.append(f"AgenerelaInfo.Version says {info_version()}, not {version}.")
     if not section(version):
         errors.append(f"CHANGELOG.md has no '## [{version}] - <date>' section.")
+    for path in dependents():
+        if pinned(path) != version:
+            errors.append(f"{path} depends on {FRAMEWORK_NAME} {pinned(path)}, not {version}.")
 
     # Releases are cut from main, the branch only the repository owner can push to. A tag on
     # any other commit would publish work that never went through the test -> main merge.

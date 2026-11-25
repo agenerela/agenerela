@@ -37,6 +37,7 @@ not staged is not checked.
 import argparse
 import ast
 import collections
+import glob
 import html
 import json
 import os
@@ -543,8 +544,20 @@ def check_version():
               f"Between releases the version stays at the last release; docs/RELEASING.md says how to cut one.",
               file=changelog)
         fail = True
+    # Every other package that depends on the framework names this version (DR-028): Unity
+    # resolves an embedded framework older than the pin as an error, and a pin left at the last
+    # release says the package was built against a framework it was not.
+    for path in sorted(glob.glob("UnityProject/Packages/*/package.json")):
+        path = path.replace("\\", "/")
+        if path == f"{FRAMEWORK}/package.json":
+            continue
+        pin = (json.load(open(path, encoding="utf-8")).get("dependencies") or {}).get("com.agenerela.framework")
+        if pin is not None and pin != manifest:
+            error(f"This package depends on com.agenerela.framework {pin}, but the framework is {manifest}. "
+                  f"python tools/ci/release.py prepare <version> moves both; set it to {manifest}.", file=path)
+            fail = True
     if not fail:
-        print(f"OK: package.json, AgenerelaInfo.Version and CHANGELOG.md agree on {manifest}")
+        print(f"OK: package.json, AgenerelaInfo.Version and CHANGELOG.md agree on {manifest}, and every package pins it")
     return not fail
 
 

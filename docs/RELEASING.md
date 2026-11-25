@@ -33,7 +33,10 @@ owner releases. Every step before the tag is ordinary pull-request work.
 
    It changes the version in `package.json` and `AgenerelaInfo.Version`, and moves the
    changelog's `[Unreleased]` entries under `## [0.2.0] - <today>`, leaving an empty
-   `[Unreleased]` above them. Read the changelog section as a user would, since it becomes
+   `[Unreleased]` above them. It also sets every other package that depends on the framework,
+   such as `com.agenerela.sdcpp`, to depend on the new version, and lists each one it changed.
+   The hygiene check `version` fails a pull request where a package's pin and the framework's
+   version disagree. The packages' own versions do not move with the framework's. Read the changelog section as a user would, since it becomes
    the release notes. Then do the same by hand in the repository's root
    [`CHANGELOG.md`](../CHANGELOG.md), whose sections are named after the same versions,
    change the tag in the install URL under "Installing" in the [`README`](../README.md)
