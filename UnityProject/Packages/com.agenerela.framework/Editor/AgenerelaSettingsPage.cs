@@ -255,7 +255,7 @@ namespace Agenerela.Editor
         }
 
         // AssetDatabase.CreateFolder makes one level at a time.
-        private static void CreateFolders(string folder)
+        internal static void CreateFolders(string folder)
         {
             if (AssetDatabase.IsValidFolder(folder))
             {

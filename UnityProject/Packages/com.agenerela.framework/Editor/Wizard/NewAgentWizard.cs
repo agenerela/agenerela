@@ -71,14 +71,26 @@ namespace Agenerela.Editor
         internal static string Create(Answers answers)
         {
             Check(answers);
+            string scriptPath = Paths(answers)[0];
+
+            AgenerelaSettingsPage.CreateFolders(answers.Folder.TrimEnd('/'));
+            File.WriteAllText(scriptPath, Script(answers));
+            AssetDatabase.ImportAsset(scriptPath);
+
+            WriteAssets(answers);
+            return scriptPath;
+        }
+
+        /// <summary>
+        /// Writes the profile and, with <see cref="Answers.AsAssets"/>, an action asset for each
+        /// action, listed on the profile. Everything <see cref="Create"/> writes but the script, so
+        /// a test can call it without starting a compile.
+        /// </summary>
+        internal static AgentProfile WriteAssets(Answers answers)
+        {
             List<string> paths = Paths(answers);
             string folder = answers.Folder.TrimEnd('/');
-
-            Directory.CreateDirectory(answers.AsAssets ? folder + "/Actions" : folder);
-            File.WriteAllText(paths[0], Script(answers));
-
-            // Imports the new folders and the script, so the assets below have somewhere to go.
-            AssetDatabase.Refresh();
+            AgenerelaSettingsPage.CreateFolders(folder);
 
             AgentProfile profile = ScriptableObject.CreateInstance<AgentProfile>();
             profile.Identity.Name = answers.Name.Trim();
@@ -86,6 +98,7 @@ namespace Agenerela.Editor
 
             if (answers.AsAssets)
             {
+                AgenerelaSettingsPage.CreateFolders(folder + "/Actions");
                 foreach (ActionChoice action in answers.Actions)
                 {
                     ActionDefinitionAsset asset = ScriptableObject.CreateInstance<ActionDefinitionAsset>();
@@ -101,7 +114,7 @@ namespace Agenerela.Editor
 
             AssetDatabase.CreateAsset(profile, paths[1]);
             AssetDatabase.SaveAssets();
-            return paths[0];
+            return profile;
         }
 
         /// <summary>Throws, saying what is wrong, before anything is written. An existing file is wrong: the wizard never overwrites.</summary>
