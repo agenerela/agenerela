@@ -2906,7 +2906,7 @@ findings above are re-measured through that provider rather than through Ollama'
 API. Treat every number in this appendix as measured against Ollama specifically until
 that comparison exists.
 
-### DR-028 — Native thinking is an Ollama setting, off by default, and the guards read the reply's tokens alone
+### DR-029 — Native thinking is an Ollama setting, off by default, and the guards read the reply's tokens alone
 
 **Status:** Accepted, 24 November 2026, by the framework tech lead, for the lead's question that day:
 "Taking more time but maybe it would improve smth". Built in the pull request that adds this record.

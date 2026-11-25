@@ -73,7 +73,7 @@ namespace Agenerela.Providers
 
         [Tooltip("Whether the model may think before it answers (think: true), in its own channel beside " +
                  "the reply, which stays the schema's JSON. Off unless ticked: unmeasured, for the A/B run " +
-                 "(DR-028). It costs seconds a decision; raise Timeout Seconds with it.")]
+                 "(DR-029). It costs seconds a decision; raise Timeout Seconds with it.")]
         public bool Think = Defaults.Think;
 
         [Tooltip("Whether a reply's thinking text is kept in ProviderResult.Thinking. Off unless ticked, so " +

@@ -5124,7 +5124,7 @@ What the five questions came to:
   than the 30 s `OllamaSettings.TimeoutSeconds` default, against under 0.5 s without.
 - **(d) Logprobs cover every generated token, thinking first**: 3,746 entries for 3,746 tokens,
   and their join is not `content`. A guard reading them unchanged would read thinking as the reply,
-  so `OllamaProvider` with `Think` on keeps only the tail that spells the reply (DR-028). Asking
+  so `OllamaProvider` with `Think` on keeps only the tail that spells the reply (DR-029). Asking
   without logprobs saved about 15% of the seconds at this length.
 - **(e) No per-request cap on thinking in 0.40.14.** `think` takes levels (`"low"`), accepted and
   ignored by this model: the same tokens as `true`. `num_predict` caps thinking and reply together,
@@ -5133,7 +5133,7 @@ What the five questions came to:
 
 **What it means.** On this model, with this prompt, thinking is not an option a game can turn on:
 it answers almost never at the context a decision uses, and takes 40 to 180 s when it does. The
-switch is still built, off by default with the request unchanged (DR-028), so the A/B can be run;
+switch is still built, off by default with the request unchanged (DR-029), so the A/B can be run;
 but an A/B at 4096 would score the thinking arm at about zero and cost 209 × 40 s, about 2.3 hours,
 for nothing. Not measured: another model (a model trained to think briefly, or `qwen3.5:2b`), a
 prompt without the persona's one-sentence line, and accuracy on the answers that do come back.

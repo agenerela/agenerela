@@ -46,7 +46,7 @@ namespace Agenerela.Evaluation
         [JsonProperty("tokenProbabilities", NullValueHandling = NullValueHandling.Ignore)] public bool? TokenProbabilities;
         /// <summary>
         /// Whether an Ollama arm let its model think before answering
-        /// (<see cref="Agenerela.Providers.OllamaSettings.Think"/>, DR-028); null for another provider,
+        /// (<see cref="Agenerela.Providers.OllamaSettings.Think"/>, DR-029); null for another provider,
         /// and in a report written before it existed, which never thought. With it on, each answer's
         /// completion tokens include the thinking.
         /// </summary>

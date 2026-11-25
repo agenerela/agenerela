@@ -103,7 +103,7 @@ namespace Agenerela.Providers
 
         /// <summary>
         /// How many characters of thinking came back before the reply, for a provider asked to
-        /// let its model think (<c>OllamaSettings.Think</c>, DR-028). 0 when there was none or the
+        /// let its model think (<c>OllamaSettings.Think</c>, DR-029). 0 when there was none or the
         /// provider does not think. A length, not the text, so it can be kept and compared freely.
         /// </summary>
         public int ThinkingCharacters;
