@@ -121,6 +121,7 @@ phase table and the open issues, not here.
 
 ### Changed
 
+- **Painted Realm trims each model court's prompt to 1,600 tokens by default** (#20, #413), request 006's arm. `+budget-0` or Settings → Game → Court prompts → Full turns it off, and `+no-trim` leaves the budget measuring only.
 - **Painted Realm: a court's later order in a turn reads what its earlier orders settled** (#20, #405), on by default (`GameRules.CourtTurnFacts`); `-strategyRules CourtTurnFacts=false` plays the old prompt, and `FreeOrdersLiveCheck` now takes `-strategyRules`.
 - **The evaluation set's guard has no example statements or counter-examples again** (#151). #384 wrote them on `VillageGuard.asset`; on `qwen3.5:4b` the counter-examples cost 10 answers and with the statements 68 of 209 replies copied one, so the default prompt on the set is the one from before #384. The targets' categories stay.
 - **The evaluation set's targets carry categories** (`place`, `creature`), and `VillageGuard.asset`'s `move_to` and `attack_target` take them. Its actions and idle example have example statements, and its actions counter-examples, so the default prompt on the set now shows them (#151, #384).
