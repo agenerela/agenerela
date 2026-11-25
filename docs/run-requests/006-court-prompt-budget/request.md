@@ -1,6 +1,6 @@
 # 006: the court's prompt budget, trimmed under 1,600 against 2,048 untrimmed
 
-Status: open
+Status: done, 24 November 2026 (phase4-runs, home server)
 
 **Why.** With the economy on, 35% of Painted Realm's court requests passed 1,600 tokens (mean 1,539, max 2,021) in
 request 005, against 8% without it. Nothing cut them: 1,600 was only `report.py`'s yardstick, and Ollama's
