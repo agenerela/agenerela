@@ -91,13 +91,13 @@ namespace GreyBoxStrategy.Realm.Editor
             ILLMProvider ProviderFor(string model, World w)
             {
                 if (!providers.TryGetValue(model, out var pr))
-                    providers[model] = pr = new OllamaProvider(new OllamaSettings
+                    providers[model] = pr = new OllamaProvider(ThinkSwitch.Apply(new OllamaSettings
                     {
                         Endpoint = Environment.GetEnvironmentVariable("AGENERELA_OLLAMA_URL") is string url && url.Length > 0 ? url : "http://127.0.0.1:11434",
                         ApiKey = Environment.GetEnvironmentVariable("AGENERELA_OLLAMA_API_KEY") ?? "",
                         Model = model,
                         TimeoutSeconds = 90f,
-                    });
+                    }));
                 return pr;
             }
             // Before the game: the model as the last game left it (unloaded) or as New game leaves it (warmed).

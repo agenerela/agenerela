@@ -5081,6 +5081,195 @@ pulls, but this build will not run it. Public reports disagree on whether Ollama
 **What it means.** Images stay on ComfyUI, behind the framework's `IImageProvider`, so an Ollama backend can be
 added if a later Ollama runs image models on Linux. Re-run `test.py` after an Ollama upgrade.
 
+### Painted Realm's silent armies again, on the home server and 20 seeds: 1.9 s a turn faster, treaties within noise, as on the RTX 5080 (24 November 2026)
+
+**What.** A repeat of the 14 November silent-armies row, on another machine and with more seeds. GreyBoxStrategy
+(#20), `personas` table, five `qwen3.5:4b` seats, `-strategyTurn writs -strategyCap 40`, Classic.
+- **Arms:** `default` (d) against `default+silent-armies` (s), whose army orders are asked with
+  `AskForStatement = false`.
+- **Blocks:** seeds 1 to 20, four games a block, played d1 s1 … d5 s5, each block under its own clean lease.
+- **Machine:** the home server (RTX 4070 SUPER, Docker Ollama 0.40.14, gate `5728506a6d6b`), at test `de40abb`.
+
+**Conditions.** Pairs 1 to 3 played on 23–24 November overnight, on the LAN and the `agenerela` key (leases #22796
+to #39304). Pair 4 played over the VPN on 24 November (d4 #43821 on battery, s4 #48455 on mains). Pair 5 played on
+the LAN on mains on the runs client `agenerela-runs` (#55841, #58143).
+- **Voided:** three blocks were voided and replayed. d4's first try lost the network overnight. s4's lease ended
+  15 s in, probably another session on the shared key. d5's lease ended while the laptop moved from the VPN to
+  the LAN.
+- **Set aside:** an s5 played over the VPN, so that d5 and s5 could be one pair on one network.
+- **Lease checks:** from pair 4 on, every block's lease was checked at its start and end and was its own.
+- **Comparisons:** d and s are compared within a pair, never across a network change.
+
+Kit and data are in the runs session's worktree, `.scratch/rows/silent/`; `compare-final.txt` is
+`python compare.py silent d s`, overall and pair by pair. "Beyond" means the paired 95% interval over the seeds
+excludes 0.
+
+| | d, control | s, silent armies | s − d, 20 seeds paired |
+|---|---:|---:|---|
+| Model seconds a turn | 11.43 | **9.55** | −1.88, 95% [−2.10, −1.65], beyond |
+| Seconds an army order | 0.79 | 0.51 | −0.28, beyond |
+| Decisions with a statement | 99% | 45% | |
+| Repeated word for word, all lines / court lines | 19.7% / 23.4% | 19.8% / 19.9% | +0.1 within / −3.5 beyond |
+| Words a line | 13.4 | 14.1 | +0.7, beyond |
+| Illegal answers | 0 | 0 | |
+| Treaties a game | 3.35 | 3.85 | +0.5, 95% [−1.0, +2.0], within |
+| Persona η² aggression / peace / recruit (100 seat-games, all p < 0.001) | 0.67 / 0.61 / 0.69 | 0.53 / 0.53 / 0.42 | |
+
+**By pair.** The time saving holds in each pair: −1.74, −1.88, −2.34, −2.02 (VPN) and −1.40 s a turn, each beyond
+0. An army order is 0.26 to 0.31 s faster in every pair.
+
+**What it shows:**
+- **The time win repeats on a second machine:** 16% of a turn here, against 8.5% on the RTX 5080. The two machines'
+  seconds are never compared, only each one's own pair.
+- **The treaty doubt is not borne out:** +0.5 a game here (within noise) against −1.1 on the RTX 5080 (also within
+  noise). Over 35 seeds on two machines, no loss in treaties is shown.
+- **Personas separate less with silent armies:** η² falls for aggression (0.67 → 0.53), for peace
+  (0.61 → 0.53) and most for recruiting (0.69 → 0.42), all p < 0.001. On the RTX 5080 aggression and peace rose
+  and recruit fell 0.07. η² has no paired interval here, so this is a direction to watch, not a result.
+- **The kit needed a fix for recruiting.** `compare.py` counted the action `recruit`, which the game has since split
+  into `recruit_pikes`, `recruit_bows` and `recruit_riders`, so its recruit η² read 0.00 in both arms.
+  `compare2.py` counts all three, and the recruit row above is its output (`compare-final-recruit.txt`).
+
+**What it suggests, for the tech lead to decide:** time is a clear and repeated win, and treaties show no loss over
+two machines. But recruiting separates the personas less, which matters to a demo whose point is character. A
+run scoring persona separation with paired intervals would settle whether silent armies can become the default. No default was changed here.
+
+### The court's prompt budget (request 006): trimming under 1,600 keeps every court request under it, costs nothing measured in play, and saves no time (24 November 2026)
+
+**What.** Painted Realm with free orders and the economy, `personas` table, five `qwen3.5:4b` seats, writs turn,
+Classic, capped at 40 turns. Seeds 1 to 6, one game a block, interleaved a1 b1 … a6 b6.
+- **Arms:** `default+budget-1600+trim` (a) against `default+budget-2048` (b, the control, which trims nothing and
+  sends today's requests byte for byte).
+- **Machine:** the home server (RTX 4070 SUPER, Docker Ollama 0.40.14, gate `5728506a6d6b`), at test `ac71b5a`.
+- **Conditions:** on mains, on the LAN. Twelve clean leases on `agenerela-runs`, each checked as its own at start
+  and end. None was voided.
+
+Full tables are in [request 006's results](../run-requests/006-court-prompt-budget/results.md). Data is in the runs
+session's worktree, `.scratch/r006/data-006/`.
+
+| | a, trimmed | b, control |
+|---|---:|---|
+| Court prompt tokens (`prompt_eval_count`), mean / max | **1,339 / 1,568** | 1,547 / 2,058 |
+| Court requests over 1,600 | **0 of 2,463** | 834 of 2,257 (37%) |
+| Trimmed | 49%, all by untakeable targets, 229 also by one remembered exchange | – |
+| Illegal answers | 0 of 6,573 | 0 of 6,195 |
+| Seconds a court request | 0.83 | 0.82 |
+| Model seconds a turn, a − b paired over 6 seeds | +1.39, 95% [−1.5, +4.3], within | |
+| Battles a game, a − b | +4.2, 95% [−16.9, +25.2], within | 99.2 |
+| Peace made a game, a − b | +3.0, 95% [−1.8, +7.8], within | 10.7 |
+| Buildings, 6 games | 152 | 146 |
+| Tax changes, 6 games | 120 | 86 |
+
+**What it shows:**
+- **The budget does what it says:** about 210 fewer tokens a court request, and none over 1,600. Unlisting the
+  targets no court order may take carries most of it.
+- **No time saved on this card:** 200 prompt tokens cost milliseconds to evaluate, and a court request takes the
+  same 0.82 s either way.
+- **No play change beyond the noise** in legality, battles, peace, provinces or buildings. Tax changes are the
+  largest gap (120 against 86), which six games cannot settle.
+- **The estimate (3.0 characters a token) runs 64 tokens over the count on average,** never more than 20 short. So
+  the trims fire a little early, as the calibration entry of the same day predicted.
+
+**What it suggests, for the tech lead to decide:** turn the court's `budget-1600+trim` on with the economy. It keeps
+headroom under `num_ctx` 4,096 as the court prompt grows (CourtTurnFacts, #405, now adds to it), at no measured
+cost. It is not a speed change. No default was changed here. Six games an arm on one map and model is an anecdote
+(hard rule 2), and it is never compared with requests 002 or 005.
+
+**Decided, 24 November:** the lead made it the default, with an option: `default` trims the court to 1,600 tokens
+(economy on or off), `+budget-0` or the game's Settings → Court prompts → Full turns it off, and replaying arm b now
+takes `default+budget-2048+no-trim` (request 006's `request.md`).
+
+### `ListActionsAndTargets` on the 4B, timed: +89 prompt tokens a decision, no measurable second, 170 against 184 for the third time (24 November 2026)
+
+**What.** The timing behind DR-027, which #404 made the default. The tech lead asked for it for the slides and the
+default-change PR.
+- **Set and model:** the 209 set, `qwen3.5:4b`, at test `6056863`, just before #404, so `list-off` was still the
+  default.
+- **Arms:** Phase4Run `list`, `list-off` against `list-on`, interleaved.
+- **Machine:** the home server (RTX 4070 SUPER, Docker Ollama 0.40.14, gate `5728506a6d6b`), on the LAN and mains.
+  One clean lease (#73451, `agenerela-runs`), checked as its own at start and end, model warmed first.
+- **Recording:** every decision's own `prompt_eval_count`, `eval_count` and latency, written by the scratch entry
+  point to `decisions.csv`, beside the report in
+  [`runs/2026-11-23-phase4/list-4b-timing/`](runs/2026-11-23-phase4/list-4b-timing/report.md).
+
+| | list-off | list-on |
+|---|---:|---:|
+| Correct of 209 | 170 | **184** (+6.7 points, beyond the 4.9 floor) |
+| Prompt tokens a decision, mean / p50 / min–max | 377 / 373 / 353–456 | 466 / 461 / 440–558 |
+| Completion tokens a decision, mean | 36.2 | 36.1 |
+| Seconds a decision, mean / p50 / p95 / max | 0.754 / 0.757 / 0.948 / 1.650 | 0.748 / 0.762 / 0.877 / 1.371 |
+
+**Tokens.** The list adds 87 to 103 prompt tokens to every decision (mean +89, +24%).
+
+**Time.** On the same prompt, list-on minus list-off is −0.006 s, 95% [−0.027, +0.015]: no difference this run can
+see. Prompt evaluation of 90 tokens costs milliseconds on this card, and the completion length is unchanged.
+
+**Score.** 184 against 170 is the third time on this machine (23 November twice, and now), with 185 of 209
+outcomes the same in both arms.
+
+On a slower card or CPU the 89 tokens would cost more. These seconds are the 4070 SUPER's only, never compared with
+the RTX 5080's or the laptop's.
+
+### Native thinking on `qwen3.5:4b`: with the schema it thinks until the context runs out, and answered 1 of 19 requests (24 November 2026)
+
+**What changed.** `think: true` instead of `false` in `OllamaProvider`'s own evaluation-set request
+(`tools/live-runs/model-sweep/framework_request.json`), the lead's question of 24 November: would
+letting the model think before it answers help? This is the model's **own thinking channel**, which
+Ollama returns in `message.thinking` beside a reply still constrained to the schema, `action` first.
+It is **not** the reasoning field before `action` that the prototype measured as the worst of five
+variants (build plan Appendix A); the schema is unchanged. Probes `tools/benchmarks/think_probe.py`
+and `think_end_probe.py`, six stimuli of our own, none from either evaluation set or a paraphrase of
+one (hard rule 4). Raw replies in [`runs/2026-11-24-think-probe/`](runs/2026-11-24-think-probe/).
+
+**Conditions.** `qwen3.5:4b` on the home server's Ollama 0.40.14 (RTX 4070 SUPER), temperature 0,
+`num_ctx` 4096 unless said, logprobs on with 20 alternatives. **Untimed**: no lease, other clients'
+requests queued beside these, and 12 of 30 requests in the first probe were turned away with a 503
+while a timed run held the card. Seconds below are Ollama's own `eval_duration`, not wall time.
+
+| Arm | Answered (schema JSON) | Tokens generated | Seconds generating | `done_reason` |
+|---|---|---|---|---|
+| `think: false`, today's request | 3 of 3 | 34 to 41 | 0.45 to 0.49 | `stop` |
+| `think: true` | 0 of 4 | 3,744 to 3,748, all thinking | 39.5 to 41.3 | `length` |
+| `think: true`, `num_predict` 256 | 0 of 4 | 256, all thinking | 2.7 | `length` |
+| `think: "low"` | 0 of 4 | 3,744 to 3,748, the same as `true` | 39.6 to 41.0 | `length` |
+| `think: true`, no logprobs | 0 of 3 | 3,744 to 3,748 | 34.8 to 36.2 | `length` |
+| `think: true`, `num_ctx` 16384 | 1 of 2 | 4,283 (answered); 16,036 | 45.2; 179.1 | `stop`; `length` |
+| `think: true`, no `format` at all | 0 of 2 | 3,746 to 3,748 | 43.3 to 45.1 | `length` |
+
+What the five questions came to:
+
+- **(a) The reply.** When the thinking ended, the reply was the schema's JSON, `action` first
+  (`attack_target`, `wolf`, right for "Put an arrow in that grey beast"). It ended once in 19 thinking requests. In
+  every other request `message.content` was empty: the whole budget, the context's 4096 less the
+  prompt's ~350 tokens, went to thinking. No `<think>` markup ever reached `content`.
+- **(b) Where the thinking goes.** `message.thinking`, 15,000 to 16,000 characters at 4096 and
+  62,000 at 16384. It decides early (the right action and target within the first few hundred
+  tokens) and then argues with itself about the *output format*, "Wait, I'll check if I should
+  output the action tag", because the persona's "Speaks in one short sentence" reads to it as a
+  conflict with choosing an action. The run to 16,036 tokens repeated one four-line paragraph to
+  the end (249 distinct lines of 1,072). Taking the schema away changed nothing: it is the model's
+  thinking, not the grammar.
+- **(c) Cost.** About 90 tokens a second, so a decision that thinks costs 40 s at 4096, and more
+  than the 30 s `OllamaSettings.TimeoutSeconds` default, against under 0.5 s without.
+- **(d) Logprobs cover every generated token, thinking first**: 3,746 entries for 3,746 tokens,
+  and their join is not `content`. A guard reading them unchanged would read thinking as the reply,
+  so `OllamaProvider` with `Think` on keeps only the tail that spells the reply (DR-029). Asking
+  without logprobs saved about 15% of the seconds at this length.
+- **(e) No per-request cap on thinking in 0.40.14.** `think` takes levels (`"low"`), accepted and
+  ignored by this model: the same tokens as `true`. `num_predict` caps thinking and reply together,
+  so a cap cuts the thinking before any reply (256: nothing answered). Only `num_ctx`, `num_predict`
+  and the timeout bound it.
+
+**What it means.** On this model, with this prompt, thinking is not an option a game can turn on:
+it answers almost never at the context a decision uses, and takes 40 to 180 s when it does. The
+switch is still built, off by default with the request unchanged (DR-029), so the A/B can be run;
+but an A/B at 4096 would score the thinking arm at about zero and cost 209 × 40 s, about 2.3 hours,
+for nothing. Not measured: another model (a model trained to think briefly, or `qwen3.5:2b`), a
+prompt without the persona's one-sentence line, and accuracy on the answers that do come back.
+
+**What would change this.** A model whose thinking ends in a few hundred tokens on this prompt; an
+Ollama release with a thinking budget; a run at `num_ctx` 16384 answering most prompts.
+
 ### Z-Image Turbo inside Unity with stable-diffusion.cpp on the RTX 4060 Laptop: about 22 s a picture warm, 6.7 GB on the card, and the model gives its memory back (24 November 2026)
 
 **What.** Whether an image model runs in-process in the Unity editor with no server (DR-028, step 3, #359), and

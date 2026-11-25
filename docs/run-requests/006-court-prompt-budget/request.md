@@ -1,6 +1,6 @@
 # 006: the court's prompt budget, trimmed under 1,600 against 2,048 untrimmed
 
-Status: open
+Status: done, 24 November 2026 (phase4-runs, home server)
 
 **Why.** With the economy on, 35% of Painted Realm's court requests passed 1,600 tokens (mean 1,539, max 2,021) in
 request 005, against 8% without it. Nothing cut them: 1,600 was only `report.py`'s yardstick, and Ollama's
@@ -38,6 +38,10 @@ Method `GreyBoxStrategy.Editor.StrategyTableMenu.RunInterleavedFromCommandLine` 
     "a1|1|0|watch|$C -strategyArms default+budget-1600+trim" "b1|1|0|watch|$C -strategyArms default+budget-2048" ...
 
 If the kit's `watch` already passes `-strategyArms default`, replace that argument rather than adding a second.
+
+**Replaying it after 24 November.** `default` has trimmed the court to 1,600 since then (the lead's decision on this
+run), so arm a, `default+budget-1600+trim`, is the same as `default`, and arm b must turn the trimming off to stay
+the control: `default+budget-2048+no-trim`. `default+budget-0` is the `default` before 24 November, with no budget.
 
 **Code.** test at or after the merge of the framework pull request that adds `PromptBudget` and GreyBoxStrategy's
 `+budget-<n>` and `+trim` modifiers (branch `prompt-budget`). Check out a fresh short-path worktree and import it

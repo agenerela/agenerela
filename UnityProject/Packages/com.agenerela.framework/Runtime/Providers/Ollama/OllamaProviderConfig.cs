@@ -71,6 +71,15 @@ namespace Agenerela.Providers
                  "one-line target rule instead: for the A/B run of that rule (#107), never a game's default.")]
         public bool TokenProbabilities = Defaults.TokenProbabilities;
 
+        [Tooltip("Whether the model may think before it answers (think: true), in its own channel beside " +
+                 "the reply, which stays the schema's JSON. Off unless ticked: unmeasured, for the A/B run " +
+                 "(DR-029). It costs seconds a decision; raise Timeout Seconds with it.")]
+        public bool Think = Defaults.Think;
+
+        [Tooltip("Whether a reply's thinking text is kept in ProviderResult.Thinking. Off unless ticked, so " +
+                 "the text reaches no log or telemetry. Only matters with Think on.")]
+        public bool KeepThinking = Defaults.KeepThinking;
+
         [Tooltip("For a server that wants a key: the name of the environment variable holding it, " +
                  "such as AGENERELA_OLLAMA_API_KEY. Empty for a local Ollama. The key itself is never " +
                  "stored in the asset. Restart Unity, and Unity Hub, after setting the variable.")]
@@ -97,6 +106,8 @@ namespace Agenerela.Providers
                 // builds a provider, rather than failing at the first decision (#244).
                 TokenAlternatives = Mathf.Clamp(TokenAlternatives, 1, OllamaSettings.MaxTokenAlternatives),
                 TokenProbabilities = TokenProbabilities,
+                Think = Think,
+                KeepThinking = KeepThinking,
                 Retry = (Retry ?? new RetryPolicy()).Copy(),
                 // A server named by a variable that is not set here is not the one in use, so its
                 // key is not sent to the fallback: a teammate without the home server gets a local
