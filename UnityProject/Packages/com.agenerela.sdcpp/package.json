@@ -1,0 +1,28 @@
+{
+  "name": "com.agenerela.sdcpp",
+  "version": "0.1.0-preview.1",
+  "displayName": "Agenerela — Local Image Models (stable-diffusion.cpp)",
+  "description": "Runs an image model inside Unity, with no server: an IImageProvider for Agenerela that calls stable-diffusion.cpp in-process to make and edit pictures with models such as Z-Image Turbo. The native library and the model files are downloaded on the developer's choice and never ship inside the package.",
+  "unity": "6000.0",
+  "license": "MIT",
+  "dependencies": {
+    "com.agenerela.framework": "0.4.0-preview.2"
+  },
+  "author": {
+    "name": "Agenerela",
+    "url": "https://github.com/agenerela/agenerela"
+  },
+  "keywords": [
+    "ai",
+    "image-generation",
+    "stable-diffusion",
+    "local"
+  ],
+  "samples": [
+    {
+      "displayName": "Paint a portrait",
+      "description": "Makes a portrait at a key press, edits it, and shows both, with the seconds each took.",
+      "path": "Samples~/PaintAPortrait"
+    }
+  ]
+}

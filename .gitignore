@@ -88,3 +88,11 @@ __pycache__/
 # Scratch work kept with the checkout by people and agents: experiment scripts, renders,
 # downloaded models, logs. Anything worth keeping moves into the repository proper.
 /.scratch/
+
+# --- Local image models (com.agenerela.sdcpp, DR-028) --------------------------
+# The native stable-diffusion.cpp builds and the model files a developer downloads from
+# Window > Agenerela > Local Image Models and the recipe's Inspector. Gigabytes, never committed.
+**/StreamingAssets/Agenerela/sdcpp/
+**/StreamingAssets/Agenerela/sdcpp.meta
+**/StreamingAssets/Agenerela/models/
+**/StreamingAssets/Agenerela/models.meta

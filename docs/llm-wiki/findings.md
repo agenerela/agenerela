@@ -5286,3 +5286,67 @@ not make the model plan for the cap. 279 and 340 completion tokens; the second c
 too, and code must cut prose back to its last whole sentence and refuse, not keep, a name the cap cut. Painted
 Realm's `LoreRules` does both, with a realm-name cap of 20 in the schema against 11 letters in the check. One
 decision is enough for a world's lore; eleven calls of the scribe's recipe are not needed.
+
+### Z-Image Turbo inside Unity with stable-diffusion.cpp on the RTX 4060 Laptop: about 22 s a picture warm, 6.7 GB on the card, and the model gives its memory back (24 November 2026)
+
+**What.** Whether an image model runs in-process in the Unity editor with no server (DR-028, step 3, #359), and
+what it costs on an 8 GB card. A measurement of speed and memory, not of accuracy, with one run of each.
+
+**Setup.**
+- **Hardware.** RTX 4060 Laptop, 8 GB, driver 610.74, on mains. Unity 6000.3.23f1 rendered on the same card
+  (Direct3D 12).
+- **Library.** stable-diffusion.cpp release `master-1127-79dc7ca`, Vulkan build, loaded by `SdCppImageProvider` from
+  `com.agenerela.sdcpp`.
+- **Model.** Z-Image Turbo Q4_K, the text encoder Qwen3-4B-Instruct-2507 Q4_K_M and the FLUX VAE (Apache-2.0
+  each), with 8 steps, cfg 1, VAE tiling and flash attention left to sd.cpp's `auto`.
+- **What else was running.** No other model was resident: local Ollama was not running, and the card read 0 MiB
+  before. Two other sessions' Unity batch runs were on the machine.
+- **The run.** Batch mode with graphics, a PlayMode test (`SdCppLiveTests`) and a camera rendering 200 cubes into a
+  1920×1080 target every frame.
+- **Raw data.** In `.scratch/sdcpp/run9/` of the worktree `151-switches-b-41a92c`: `report.json`, `vram.log` (every
+  0.5 s) and the pictures.
+
+**Result**, 768×896:
+
+| | Seconds | Frames while it ran (median / p95 / worst) |
+|---|---:|---|
+| Idle, before | | 1.6 / 5.8 / 425 ms (scene start) |
+| First picture (the model loads on it) | 34.7 | 2.1 / 3.6 / 12.6 ms |
+| Second and third, warm | 22.0, 21.9 | 2.4 / 3.6 / 12.3 and 7.1 ms |
+| Repaint of the bottom half, strength 0.75 | 23.0 | 2.4 / 3.6 / 76.8 ms |
+
+- **Memory.** VRAM peaked at **6.7 GB** with the text encoder on the card, and fell to 190 MiB after
+  `UnloadAsync`.
+- **Seeds.** The same seed gave the same bytes.
+- **Cancelling.** A picture cancelled 1 s in ended about 2.1 s later, as `OperationCanceledException`, with no
+  crash. So `sd_cancel_generation` from the main thread was safe here.
+- **Pictures** were upright and in the expected style. sd.cpp's mask is white = change, confirmed with
+  `sd-cli`. The provider turns the framework's transparent pixels into that, and the repaint changed only the
+  masked half.
+
+**Things that went wrong, each worth knowing:**
+- **The text encoder could not run on the CPU on this machine that evening.** sd.cpp refused: "RAM weight capacity
+  exceeded. Requested 2427425280 bytes, 646942720 bytes available". Other sessions' Unity runs held the RAM. The
+  timed run therefore kept the encoder on the card (`AGENERELA_SDCPP_TE=gpu`), which is why VRAM reached 6.7 GB.
+  The recipe's default (encoder on the CPU, DR-028 Q8) still needs a measurement on a machine with 3 GB free.
+  `sd-cli` with the encoder on the CPU, at a quieter moment, peaked at 4.1 GB of VRAM. Its sampling took 56 s
+  against 32 s with the encoder on the card, but those were two different runs, one a text-to-image and the other
+  a repaint, so they are not an A/B.
+- **`sd-server`'s `/v1/images/edits` with Z-Image** refused a mask ("mask_image requires init_image"). Without a
+  mask it stopped the server with `GGML_ASSERT(txt->ne[1] + img->ne[1] == pe->ne[3])` in `z_image.hpp`: it passes
+  the picture as a reference, which Z-Image does not take. In-process, the same assertion would end the editor,
+  so `SdCppEditMode.Instruction` is for edit models only.
+- **The frame times understate a game's cost.** Batch mode presents no frames and the scene was light, so the GPU
+  contention shows less than it would in a windowed game with a heavy scene. The worst single frame during
+  generation was 77 ms.
+
+**What it means.**
+- An 8 GB card makes a 768×896 picture in about 22 s once warm. That is slow for play, but fine behind a loading
+  card, as Painted Realm already does with ComfyUI.
+- It does not fit beside a loaded language model unless the text encoder moves to the CPU.
+
+**What would change this:**
+- the CUDA build, which was not approved for this run
+- a smaller quantisation (Q3_K is 3.1 GB)
+- a run with the encoder on the CPU and enough RAM
+- a heavy scene in a windowed build

@@ -1,0 +1,16 @@
+{
+    "name": "Agenerela.SdCpp",
+    "rootNamespace": "Agenerela.Providers.SdCpp",
+    "references": [
+        "Agenerela"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

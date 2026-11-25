@@ -1,0 +1,22 @@
+{
+    "name": "Agenerela.SdCpp.Tests.Live",
+    "rootNamespace": "Agenerela.Providers.SdCpp.Tests",
+    "references": [
+        "UnityEngine.TestRunner",
+        "Agenerela",
+        "Agenerela.SdCpp"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

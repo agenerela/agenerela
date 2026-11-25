@@ -173,6 +173,13 @@ key, so a key never reaches a server it was not meant for.
   `Timeout`; a reply with no PNG in it is `MalformedResponse`. `Describe(request)` shows what would
   be sent, with no key and no picture bytes.
 
+## Inside the game, with no server: `com.agenerela.sdcpp`
+
+A second package runs the image model in the game's own process, as LLMUnity does for language models:
+`SdCppImageProvider` calls stable-diffusion.cpp, loads the model once, and makes and repaints pictures on a
+worker thread. The native library and the model files are downloaded from the editor and live under
+`StreamingAssets`. Its `README.md` covers setting it up, editing and memory on an 8 GB card (DR-028).
+
 ## Another backend
 
 Implement `IImageProvider`: return `ImageResult.Made(png, Name, seconds, seed)` for a picture and

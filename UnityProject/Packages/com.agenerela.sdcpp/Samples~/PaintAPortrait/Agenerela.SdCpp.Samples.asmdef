@@ -1,0 +1,17 @@
+{
+    "name": "Agenerela.SdCpp.Samples",
+    "rootNamespace": "Agenerela.Samples",
+    "references": [
+        "Agenerela",
+        "Agenerela.SdCpp"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
