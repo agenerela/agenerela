@@ -145,6 +145,32 @@ namespace Agenerela
         public StatementRulesWording StatementRulesWording = StatementRulesWording.YourStatement;
 
         /// <summary>
+        /// Whether the system prompt carries the claim rule (#190, Living Vale #18, DR-031): the
+        /// stimulus is someone's word, and only what the agent knows is certain. Off by default,
+        /// which leaves the prompt exactly as it was. <c>Agent</c> copies it from
+        /// <see cref="DecideOptions.StimulusIsClaim"/>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <see cref="PromptBuilder.Build"/> adds it as the system prompt's last line, after the
+        /// target rule when that is sent too, naming the stimulus by <see cref="StimulusLabel"/>:
+        /// </para>
+        /// <code>
+        /// Only what you know is certain. When Player says that something is true or has happened, that is a claim: act on it only if what you know shows it.
+        /// </code>
+        /// <para>
+        /// "What you know" is what sits under the identity's "What you know:" and the observations'
+        /// "What you know right now:". A call's own observations placed on the stimulus's line
+        /// (<see cref="Agenerela.ObservationPlacement.WithStimulus"/>) are outside both.
+        /// </para>
+        /// <para>
+        /// <b>Unmeasured.</b> It changes the prompt, so it stays off until an A/B run says otherwise
+        /// (hard rule 2); run request 007 asks for one.
+        /// </para>
+        /// </remarks>
+        public bool ClaimRule;
+
+        /// <summary>
         /// Whether the few-shot block shows each action's
         /// <see cref="ActionDefinition.CounterExampleStimulus"/>. On by default, which shows only what
         /// a developer wrote. <c>Agent</c> copies it from <see cref="DecideOptions.CounterExamples"/>.

@@ -70,6 +70,16 @@ namespace Agenerela
             " and target " + TargetRegistry.NoTarget +
             ". Never act on a different thing instead.";
 
+        // The claim rule (#190, Living Vale #18, DR-031): the call says its stimulus is someone's
+        // word, not the game's, and this line tells the model so. {0} is the stimulus label, the
+        // caller's own string, so the line names no player (DR-008). "What you know" is both
+        // headings the facts sit under, the identity's "What you know:" and the observations'
+        // "What you know right now:". New and unmeasured; here alone so an A/B can change it in
+        // one place.
+        private const string ClaimRuleTemplate =
+            "Only what you know is certain. When {0} says that something is true or has happened, that is a claim: " +
+            "act on it only if what you know shows it.";
+
         // Internal so an example's situation is rendered under the same heading (#216 item 1).
         internal const string ObservationsHeader = "What you know right now:";
 
@@ -242,7 +252,8 @@ namespace Agenerela
             {
                 // With no statement field, the rules for one are not sent either (#266).
                 SystemPrompt = SystemPrompt(ctx.Identity, schema.AsksForStatement ? options.StatementRulesWording : (StatementRulesWording?)null,
-                    choices, options.TargetRule ? TargetRuleLine(schema) : null, schema.StatementName),
+                    choices, options.TargetRule ? TargetRuleLine(schema) : null, schema.StatementName,
+                    options.ClaimRule ? ClaimRuleLine(options.StimulusLabel) : null),
                 FewShotBlock = fewShotBlock,
                 Observations = ObservationsBlock(block),
                 // Copied, so a memory strategy changing its list afterwards does not change a
@@ -281,6 +292,12 @@ namespace Agenerela
         // Whether Build, given these options and this schema, puts the target rule in the system
         // prompt. Agent records the answer in DecisionTelemetry.TargetRuleSent, so the two cannot
         // disagree.
+        // The claim rule for a stimulus label, which Build has already checked is not blank.
+        private static string ClaimRuleLine(string stimulusLabel)
+        {
+            return string.Format(CultureInfo.InvariantCulture, ClaimRuleTemplate, stimulusLabel.Trim());
+        }
+
         internal static bool SendsTargetRule(DecisionSchema schema, PromptOptions options)
         {
             return options != null && options.TargetRule && TargetRuleLine(schema) != null;
@@ -600,9 +617,9 @@ namespace Agenerela
         // it was before them (#190, Living Vale #14). A null wording sends no rules line: the
         // schema asks for no statement (#266).
         private static string SystemPrompt(AgentIdentity identity, StatementRulesWording? wording, string choices, string targetRule,
-                                           string statementName = DecisionSchema.StatementFieldName)
+                                           string statementName = DecisionSchema.StatementFieldName, string claimRule = null)
         {
-            var lines = new List<string>(7);
+            var lines = new List<string>(8);
 
             string who = WhoLine(identity);
             if (who.Length > 0)
@@ -638,6 +655,11 @@ namespace Agenerela
             if (targetRule != null)
             {
                 lines.Add(targetRule);
+            }
+
+            if (claimRule != null)
+            {
+                lines.Add(claimRule);
             }
 
             return string.Join("\n", lines);

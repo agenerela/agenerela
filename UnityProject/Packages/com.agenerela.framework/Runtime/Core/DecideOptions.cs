@@ -139,6 +139,37 @@ namespace Agenerela
         public StatementRulesWording StatementRulesWording = StatementRulesWording.YourStatement;
 
         /// <summary>
+        /// The caller's word that this call's stimulus is someone's say-so, not something the game
+        /// has checked (#190, Living Vale #18, DR-031). On, the system prompt ends with the claim
+        /// rule: only what the agent knows is certain, and what the stimulus's speaker says is true
+        /// or has happened is a claim, to act on only if what the agent knows shows it. Off by
+        /// default: unmeasured, and with it off every request is byte-identical to one sent before it
+        /// existed.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The framework never decides whether a stimulus is a claim (DR-008): a player's line, a
+        /// rumour and a report the game trusts all arrive as text. The caller sets this on the calls
+        /// whose stimulus it has not checked, typically a player's chat, and leaves it off for an
+        /// event the game raised itself.
+        /// </para>
+        /// <para>
+        /// What counts as known is what the game put there: the identity's
+        /// <see cref="AgentIdentity.Knowledge"/>, the observation sources (a <see cref="FactLedger"/>
+        /// included) and <see cref="Observations"/>. So put only what the game has verified there.
+        /// Someone's unchecked word that the game wants mentioned goes in as a report of it ("Fen
+        /// says the bridge is out"), which is itself true. Earlier turns in memory carry the same
+        /// label, so the rule covers what was claimed in them too.
+        /// </para>
+        /// <para>
+        /// The rule is a prompt line, not a guard: the action set is still the protection. A target
+        /// or action that a claim must never unlock is offered only once the game's state allows it
+        /// (<see cref="ITargetAvailability"/>, availability), and the handler checks again.
+        /// </para>
+        /// </remarks>
+        public bool StimulusIsClaim;
+
+        /// <summary>
         /// Whether this call asks for the free-text <c>statement</c> at all (#266). On by default,
         /// the request every call sent before this option, byte for byte. False leaves the field out
         /// of the schema, flat, without targets and paired alike, and out of what the prompt says
