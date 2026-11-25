@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using Agenerela.Providers;
 using UnityEditor;
 using UnityEngine;
 
@@ -13,8 +14,9 @@ namespace Agenerela.Editor
     /// What Create → Agenerela → New Agent… writes (#175, figure 12 of workflow.html): a script with
     /// an <c>[AgentAction]</c> method for each action, and the profile. With
     /// <see cref="Answers.AsAssets"/>, also an action asset for each, listed on the profile; the
-    /// script still runs them, because an asset wins on its id (DR-011). Every file is ordinary and
-    /// editable afterwards.
+    /// script still runs them, because an asset wins on its id (DR-011). When the project has no
+    /// provider for an agent to fall back on, also an <c>OllamaLocal</c> provider, made the project
+    /// default. Every file is ordinary and editable afterwards.
     /// </summary>
     internal static class NewAgentWizard
     {
@@ -78,6 +80,7 @@ namespace Agenerela.Editor
             AssetDatabase.ImportAsset(scriptPath);
 
             WriteAssets(answers);
+            EnsureDefaultProvider(answers.Folder.TrimEnd('/'), AgenerelaSettingsPage.AssetPath);
             return scriptPath;
         }
 
@@ -115,6 +118,27 @@ namespace Agenerela.Editor
             AssetDatabase.CreateAsset(profile, paths[1]);
             AssetDatabase.SaveAssets();
             return profile;
+        }
+
+        /// <summary>
+        /// When no provider is set for an agent to fall back on, neither the active settings
+        /// profile's nor the project default, makes an <c>OllamaLocal</c> provider in
+        /// <paramref name="folder"/> the project default, through the settings page's own code. The
+        /// settings are created at <paramref name="settingsAt"/> if the project has none.
+        /// </summary>
+        /// <returns>The provider it made, or null when one was already set and is left alone.</returns>
+        internal static OllamaProviderConfig EnsureDefaultProvider(string folder, string settingsAt)
+        {
+            if (AgenerelaSettings.ActiveProvider != null)
+            {
+                return null;
+            }
+
+            OllamaProviderConfig provider = ScriptableObject.CreateInstance<OllamaProviderConfig>();
+            AgenerelaSettingsPage.CreateFolders(folder);
+            AssetDatabase.CreateAsset(provider, ProviderPath(folder));
+            AgenerelaSettingsPage.SetDefault(provider, settingsAt);
+            return provider;
         }
 
         /// <summary>Throws, saying what is wrong, before anything is written. An existing file is wrong: the wizard never overwrites.</summary>
@@ -164,7 +188,7 @@ namespace Agenerela.Editor
             }
         }
 
-        /// <summary>Every file <see cref="Create"/> writes: the script, the profile, then any action assets.</summary>
+        /// <summary>Every file <see cref="Create"/> writes: the script, the profile, any action assets, then any provider.</summary>
         internal static List<string> Paths(Answers answers)
         {
             string folder = answers.Folder.TrimEnd('/');
@@ -173,6 +197,12 @@ namespace Agenerela.Editor
             if (answers.AsAssets)
             {
                 paths.AddRange(answers.Actions.Select(a => $"{folder}/Actions/{a.Id}.asset"));
+            }
+
+            // Read now, as EnsureDefaultProvider will read it: only a project with no provider gets one.
+            if (AgenerelaSettings.ActiveProvider == null)
+            {
+                paths.Add(ProviderPath(folder));
             }
 
             return paths;
@@ -240,6 +270,11 @@ namespace Agenerela.Editor
             return string.Concat(Regex.Split(text, "[^A-Za-z0-9]+")
                 .Where(word => word.Length > 0)
                 .Select(word => char.ToUpperInvariant(word[0]) + word.Substring(1)));
+        }
+
+        private static string ProviderPath(string folder)
+        {
+            return folder + "/OllamaLocal.asset";
         }
 
         private static string TargetArgument(TargetKind target)

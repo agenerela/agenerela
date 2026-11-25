@@ -1,10 +1,13 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Agenerela.Editor;
+using Agenerela.Providers;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace Agenerela.Tests.Wizard
 {
@@ -19,11 +22,23 @@ namespace Agenerela.Tests.Wizard
         // Deleted after every test.
         private const string Folder = "Assets/__NewAgentWizardTests";
         private const string FixturePath = "Packages/com.agenerela.framework/Tests/Editor/Wizard/WizardFixtureGuard.cs";
+        private const string SettingsAt = Folder + "/Resources/" + AgenerelaSettings.ResourceName + ".asset";
+
+        // Objects a test made in memory only, destroyed after it.
+        private readonly List<Object> created = new List<Object>();
 
         [TearDown]
         public void TearDown()
         {
             AssetDatabase.DeleteAsset(Folder);
+            AgenerelaSettings.Override = null;
+            AgenerelaSettings.Forget();
+            foreach (Object made in created)
+            {
+                Object.DestroyImmediate(made);
+            }
+
+            created.Clear();
         }
 
         [Test]
@@ -77,6 +92,39 @@ namespace Agenerela.Tests.Wizard
             Assert.That(error.Message, Does.Contain(profilePath));
         }
 
+        [Test]
+        public void AProjectWithNoProviderGetsAnOllamaDefault()
+        {
+            // SetDefault edits the project's own settings wherever they are, so a project that has
+            // some is left alone, as AgenerelaSettingsPageTests does.
+            if (AgenerelaSettingsPage.Find() != null)
+            {
+                Assert.Ignore("This project has its own Agenerela settings.");
+            }
+
+            OllamaProviderConfig provider = NewAgentWizard.EnsureDefaultProvider(Folder, SettingsAt);
+
+            Assert.That(provider, Is.Not.Null, "A provider is made.");
+            Assert.That(AssetDatabase.GetAssetPath(provider), Is.EqualTo(Folder + "/OllamaLocal.asset"));
+            AgenerelaSettings.Forget();
+            Assert.That(AgenerelaSettings.ActiveProvider, Is.SameAs(provider), "It is what an agent with no provider of its own uses.");
+        }
+
+        [Test]
+        public void AnExistingDefaultIsLeftAlone()
+        {
+            AgenerelaSettings settings = Make<AgenerelaSettings>();
+            OllamaProviderConfig existing = Make<OllamaProviderConfig>();
+            settings.DefaultProvider = existing;
+            AgenerelaSettings.Override = settings;
+
+            OllamaProviderConfig made = NewAgentWizard.EnsureDefaultProvider(Folder, SettingsAt);
+
+            Assert.That(made, Is.Null, "Nothing is made.");
+            Assert.That(settings.DefaultProvider, Is.SameAs(existing), "The default is not replaced.");
+            Assert.That(File.Exists(Folder + "/OllamaLocal.asset"), Is.False, "No second provider is written.");
+        }
+
         // The fixed answers WizardFixtureGuard.cs was written from: every starter, and one action of
         // the developer's own with an optional target, no example and a quote in its description.
         private static NewAgentWizard.Answers FixtureAnswers()
@@ -95,6 +143,13 @@ namespace Agenerela.Tests.Wizard
                 Target = NewAgentWizard.TargetKind.Optional,
             });
             return answers;
+        }
+
+        private T Make<T>() where T : ScriptableObject
+        {
+            T made = ScriptableObject.CreateInstance<T>();
+            created.Add(made);
+            return made;
         }
     }
 }
