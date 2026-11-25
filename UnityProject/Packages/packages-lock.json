@@ -8,6 +8,14 @@
         "com.unity.nuget.newtonsoft-json": "3.2.2"
       }
     },
+    "com.agenerela.sdcpp": {
+      "version": "file:com.agenerela.sdcpp",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.agenerela.framework": "0.4.0-preview.2"
+      }
+    },
     "com.coplaydev.unity-mcp": {
       "version": "https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity#2fcc17957823f2494b7b1f7ade92c0fb56f4adb1",
       "depth": 0,
