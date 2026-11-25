@@ -13,18 +13,13 @@ using UnityEngine;
 namespace Agenerela.Editor
 {
     /// <summary>
-    /// What Create → Agenerela → New Agent writes (#175, figure 12 of workflow.html): a script with
-    /// an <c>[AgentAction]</c> method for each action, and the profile. With
-    /// <see cref="Answers.AsAssets"/>, also an action asset for each, listed on the profile; the
-    /// script still runs them, because an asset wins on its id (DR-011). When the project has no
-    /// provider for an agent to fall back on, also an <c>OllamaLocal</c> provider, made the project
-    /// default. With <see cref="Answers.AddToScene"/>, the script and <see cref="AgentBehaviour"/>
-    /// then go on a GameObject, once Unity has compiled the script. Every file is ordinary and
-    /// editable afterwards.
+    /// Creates a new agent from the New Agent window's answers: a script with one method per action,
+    /// a profile, and optionally an Action asset per action. Also sets up a default AI model if the
+    /// project has none, and can add the agent to a GameObject.
     /// </summary>
     internal static class NewAgentWizard
     {
-        /// <summary>The three target states of DR-020.</summary>
+        /// <summary>Whether an action needs a target, can take one, or never takes one.</summary>
         internal enum TargetKind
         {
             Needs,
@@ -39,9 +34,9 @@ namespace Agenerela.Editor
             public TargetKind Target;
 
             /// <summary>
-            /// Something a player might say that leads to this action, <c>{0}</c> for the target.
-            /// Empty writes the <c>[Example]</c> line commented out with a TODO: an invented sentence
-            /// would reach the model as a real example.
+            /// An example of what a player might say to trigger this action, with <c>{0}</c> for the target.
+            /// Leave it empty to write the <c>[Example]</c> line as a commented-out TODO, so no made-up example
+            /// is sent to the AI.
             /// </summary>
             public string Example;
         }
@@ -51,16 +46,15 @@ namespace Agenerela.Editor
             public string Name;
             public string Role;
 
-            /// <summary>Where the files go: <c>Assets</c> or a folder inside it.</summary>
+            /// <summary>The folder the files are written to: <c>Assets</c> or a folder inside it.</summary>
             public string Folder;
 
             public List<ActionChoice> Actions = new List<ActionChoice>();
             public bool AsAssets;
 
             /// <summary>
-            /// Put the agent in the open scene: <see cref="AgentBehaviour"/>, with the new profile, and
-            /// the new script, on <see cref="AddTo"/>, or on a new GameObject named after the agent
-            /// when that is null.
+            /// When true, adds the script and Agent Behaviour to <see cref="AddTo"/>, or to a new GameObject
+            /// when it is null.
             /// </summary>
             public bool AddToScene;
 
@@ -68,8 +62,14 @@ namespace Agenerela.Editor
         }
 
         /// <summary>
-        /// Figure 12's starters. Their examples are not evaluation prompts (hard rule 4): grep
-        /// <c>Assets/Evaluation</c> before changing one.
+        /// The folder the default AI model asset is written to. It sits next to the settings' Resources
+        /// folder rather than inside it, because everything in Resources is included in builds.
+        /// </summary>
+        internal const string ProviderFolder = "Assets/Agenerela";
+
+        /// <summary>
+        /// The four ready-made actions shown in the window. Their examples must not match any evaluation
+        /// prompt.
         /// </summary>
         internal static readonly ActionChoice[] Starters =
         {
@@ -80,9 +80,9 @@ namespace Agenerela.Editor
         };
 
         /// <summary>
-        /// Writes every file in <see cref="Paths"/>. Returns the script's path. Unity compiles the
-        /// script after this returns, so with <see cref="Answers.AddToScene"/> the GameObject's
-        /// components are added by <see cref="FinishAfterReload"/>, after that domain reload.
+        /// Checks the answers, then writes the script, the profile, any Action assets and, if needed, the
+        /// default AI model. Returns the script's path. Adding the agent to a GameObject happens later, in
+        /// <see cref="FinishAfterReload"/>, because the script has to compile first.
         /// </summary>
         internal static string Create(Answers answers)
         {
@@ -94,7 +94,7 @@ namespace Agenerela.Editor
             AssetDatabase.ImportAsset(scriptPath);
 
             AgentProfile profile = WriteAssets(answers);
-            EnsureDefaultProvider(answers.Folder.TrimEnd('/'), AgenerelaSettingsPage.AssetPath);
+            EnsureDefaultProvider(ProviderFolder, AgenerelaSettingsPage.AssetPath);
 
             if (answers.AddToScene)
             {
@@ -108,10 +108,8 @@ namespace Agenerela.Editor
         }
 
         /// <summary>
-        /// After a domain reload, adds the script <see cref="Create"/> wrote and
-        /// <see cref="AgentBehaviour"/>, with the new profile, to the GameObject it was asked for.
-        /// Both go on together, so the agent is never checked half-built. Does nothing when nothing
-        /// is waiting.
+        /// Runs after Unity recompiles. If <see cref="Create"/> left a GameObject waiting, adds the new
+        /// script and Agent Behaviour to it and sets the profile.
         /// </summary>
         [DidReloadScripts]
         private static void FinishAfterReload()
@@ -126,7 +124,7 @@ namespace Agenerela.Editor
             AgentProfile profile = pending.Profile;
             GameObject target = pending.Target;
 
-            // Cleared first, so a problem below is reported once rather than after every reload.
+            // Cleared before anything can fail, so an error is shown once, not after every recompile.
             pending.Clear();
 
             MonoScript script = AssetDatabase.LoadAssetAtPath<MonoScript>(scriptPath);
@@ -149,9 +147,9 @@ namespace Agenerela.Editor
         }
 
         /// <summary>
-        /// Writes the profile and, with <see cref="Answers.AsAssets"/>, an action asset for each
-        /// action, listed on the profile. Everything <see cref="Create"/> writes but the script, so
-        /// a test can call it without starting a compile.
+        /// Writes the profile and, if <see cref="Answers.AsAssets"/> is set, one Action asset per action,
+        /// listed on the profile. Returns the profile. Separate from <see cref="Create"/> so tests can call
+        /// it without writing a script.
         /// </summary>
         internal static AgentProfile WriteAssets(Answers answers)
         {
@@ -185,12 +183,11 @@ namespace Agenerela.Editor
         }
 
         /// <summary>
-        /// When no provider is set for an agent to fall back on, neither the active settings
-        /// profile's nor the project default, makes an <c>OllamaLocal</c> provider in
-        /// <paramref name="folder"/> the project default, through the settings page's own code. The
-        /// settings are created at <paramref name="settingsAt"/> if the project has none.
+        /// If the project has no AI model set, creates an <c>OllamaLocal</c> asset in
+        /// <paramref name="folder"/> and makes it the project default. <paramref name="settingsAt"/> is
+        /// where the settings are created if the project has none.
         /// </summary>
-        /// <returns>The provider it made, or null when one was already set and is left alone.</returns>
+        /// <returns>The new asset, or null if a model was already set.</returns>
         internal static OllamaProviderConfig EnsureDefaultProvider(string folder, string settingsAt)
         {
             if (AgenerelaSettings.ActiveProvider != null)
@@ -205,7 +202,7 @@ namespace Agenerela.Editor
             return provider;
         }
 
-        /// <summary>Throws, saying what is wrong, before anything is written. An existing file is wrong: the wizard never overwrites.</summary>
+        /// <summary>Throws with a message if the answers are invalid or a file the wizard would write already exists.</summary>
         internal static void Check(Answers answers)
         {
             string folder = answers.Folder?.TrimEnd('/');
@@ -257,7 +254,7 @@ namespace Agenerela.Editor
             }
         }
 
-        /// <summary>Every file <see cref="Create"/> writes: the script, the profile, any action assets, then any provider.</summary>
+        /// <summary>The paths of every file <see cref="Create"/> writes: the script first, then the profile, any Action assets and any default AI model.</summary>
         internal static List<string> Paths(Answers answers)
         {
             string folder = answers.Folder.TrimEnd('/');
@@ -268,18 +265,18 @@ namespace Agenerela.Editor
                 paths.AddRange(answers.Actions.Select(a => $"{folder}/Actions/{a.Id}.asset"));
             }
 
-            // Read now, as EnsureDefaultProvider will read it: only a project with no provider gets one.
+            // Only a project with no AI model gets one, so only then is its path listed.
             if (AgenerelaSettings.ActiveProvider == null)
             {
-                paths.Add(ProviderPath(folder));
+                paths.Add(ProviderPath(ProviderFolder));
             }
 
             return paths;
         }
 
         /// <summary>
-        /// The script, as text. Lines end in <c>\n</c> on every machine, so the compiled fixture in
-        /// the tests matches it whoever runs them.
+        /// Returns the text of the agent's script. Lines always end in <c>\n</c>, so it matches the test
+        /// fixture on every machine.
         /// </summary>
         internal static string Script(Answers answers)
         {
@@ -321,7 +318,7 @@ namespace Agenerela.Editor
             return text.ToString();
         }
 
-        /// <summary>"Gate guard" → <c>GateGuard</c>, the script's class and file name.</summary>
+        /// <summary>Turns the agent's name into the script's class name: "Gate guard" becomes <c>GateGuard</c>.</summary>
         internal static string ClassName(string agentName)
         {
             string name = Pascal(agentName ?? "");
@@ -333,7 +330,7 @@ namespace Agenerela.Editor
             return name;
         }
 
-        // A new, empty GameObject in the open scene, which Undo removes again.
+        // Creates an empty GameObject in the open scene, registered with Undo.
         private static GameObject NewGameObject(string name)
         {
             GameObject made = new GameObject(name);
@@ -341,7 +338,7 @@ namespace Agenerela.Editor
             return made;
         }
 
-        // move_to → MoveTo, "gate guard" → GateGuard: words split on anything but a letter or digit.
+        // Joins words into one capitalised name: move_to becomes MoveTo.
         private static string Pascal(string text)
         {
             return string.Concat(Regex.Split(text, "[^A-Za-z0-9]+")
@@ -364,7 +361,7 @@ namespace Agenerela.Editor
             }
         }
 
-        // A C# string literal. A line break becomes a space: descriptions and examples are one line.
+        // Returns text as a C# string literal: quotes and backslashes escaped, line breaks made spaces.
         private static string Quote(string text)
         {
             string oneLine = Regex.Replace(text ?? "", @"\s*\r?\n\s*", " ");

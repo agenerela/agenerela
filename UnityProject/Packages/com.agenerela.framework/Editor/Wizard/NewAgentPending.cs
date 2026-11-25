@@ -4,14 +4,12 @@ using UnityEngine;
 namespace Agenerela.Editor
 {
     /// <summary>
-    /// What the New Agent wizard still has to do once Unity has compiled the script it wrote: add that
-    /// script and <see cref="AgentBehaviour"/> to <see cref="Target"/>. Unity keeps a
-    /// ScriptableSingleton's serialized fields through a domain reload, a link to a scene object
-    /// included, and forgets them when the Editor closes, so nothing is written to disk.
+    /// Remembers which GameObject to add a new agent to while Unity recompiles. Unity keeps these
+    /// fields through a recompile and clears them when the Editor closes.
     /// </summary>
     internal sealed class NewAgentPending : ScriptableSingleton<NewAgentPending>
     {
-        /// <summary>The new script's path. Empty when nothing is waiting.</summary>
+        /// <summary>The new script's path, or empty when nothing is waiting.</summary>
         [SerializeField] internal string ScriptPath;
 
         [SerializeField] internal AgentProfile Profile;

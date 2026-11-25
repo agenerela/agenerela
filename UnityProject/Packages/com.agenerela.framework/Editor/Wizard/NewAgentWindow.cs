@@ -10,22 +10,21 @@ using UnityEngine.UIElements;
 namespace Agenerela.Editor
 {
     /// <summary>
-    /// Create → Agenerela → New Agent (#175, figure 12 of workflow.html): the form. It only collects
-    /// the answers; <see cref="NewAgentWizard.Create"/> checks them and writes every file. Structure
-    /// is in NewAgentWizard.uxml, layout in NewAgentWizard.uss.
+    /// The New Agent window, opened from Assets → Create → Agenerela → New Agent. It collects the
+    /// answers and passes them to <see cref="NewAgentWizard.Create"/>.
     /// </summary>
     internal sealed class NewAgentWindow : EditorWindow
     {
         private const string LayoutPath = "Packages/com.agenerela.framework/Editor/Wizard/NewAgentWizard.uxml";
         private const string SheetPath = "Packages/com.agenerela.framework/Editor/Wizard/NewAgentWizard.uss";
 
-        // Figure 12 ticks these starters to begin with; attack_target starts unticked.
+        // The starter actions ticked when the window opens.
         private static readonly string[] TickedAtFirst = { "move_to", "follow_player", "speak_only" };
 
-        // The target dropdown's words, in NewAgentWizard.TargetKind's order.
+        // The words in the target dropdown, in the same order as NewAgentWizard.TargetKind.
         private static readonly List<string> TargetWords = new List<string> { "needs a target", "target optional", "never a target" };
 
-        // The starters ticked now, and the developer's own actions in the order their rows show.
+        // The starter actions currently ticked, and the actions the user added.
         private readonly HashSet<string> ticked = new HashSet<string>(TickedAtFirst);
         private readonly List<NewAgentWizard.ActionChoice> ownActions = new List<NewAgentWizard.ActionChoice>();
 
@@ -78,14 +77,13 @@ namespace Agenerela.Editor
             AgenerelaButtons.MakePrimary(tree.Q<Button>("create")).clicked += () => Create(tree);
         }
 
-        // Unity calls this when the Hierarchy selection changes, so the tick box names the right object.
+        // Called by Unity when the selection changes.
         private void OnSelectionChange()
         {
             ShowWhereTheAgentGoes();
         }
 
-        // Hands the answers to the wizard. A problem it finds is shown in the form, and nothing has
-        // been written: Check runs before the first file.
+        // Builds the answers from the form and creates the agent. Shows any problem in the form instead.
         private void Create(VisualElement tree)
         {
             NewAgentWizard.Answers answers = new NewAgentWizard.Answers
@@ -114,7 +112,7 @@ namespace Agenerela.Editor
             }
         }
 
-        // One action of the developer's own: a card of fields that write into its ActionChoice.
+        // Adds a card of fields for a new action of the user's own.
         private void AddRow(VisualElement rows)
         {
             NewAgentWizard.ActionChoice action = new NewAgentWizard.ActionChoice { Target = NewAgentWizard.TargetKind.Needs };
@@ -155,7 +153,7 @@ namespace Agenerela.Editor
             rows.Add(card);
         }
 
-        // Before CreateGUI there is no tick box to name it on.
+        // Names the selected GameObject on the "Add the agent to" tick box. Does nothing before the window is built.
         private void ShowWhereTheAgentGoes()
         {
             Toggle addToScene = rootVisualElement.Q<Toggle>("addToScene");
@@ -168,16 +166,14 @@ namespace Agenerela.Editor
             addToScene.text = selected != null ? $"Add the agent to {selected.name} (selected)" : "Add the agent to a new GameObject in the scene";
         }
 
-        // The GameObject selected in the Hierarchy, or null. One in the Project window is a prefab
-        // asset, not a thing in the scene, so it does not count.
+        // The selected GameObject if it is in the scene, otherwise null.
         private static GameObject SelectedSceneObject()
         {
             GameObject selected = Selection.activeGameObject;
             return selected != null && selected.scene.IsValid() ? selected : null;
         }
 
-        // What the agents will talk to, said before Create so that a new asset and a changed project
-        // setting are no surprise. Read when the window opens, as NewAgentWizard.Create reads it.
+        // The line saying which AI model the agent will use, or that one will be created.
         private static string ModelLine()
         {
             ProviderConfig active = AgenerelaSettings.ActiveProvider;
@@ -190,7 +186,7 @@ namespace Agenerela.Editor
             return $"No AI model set up yet: this also adds OllamaLocal ({defaults.Model}) as the project default.";
         }
 
-        // The folder picker gives a full path; the wizard wants one that starts at Assets.
+        // Opens a folder picker and fills in the chosen folder as a path starting with Assets.
         private static void Browse(TextField folder)
         {
             string chosen = EditorUtility.OpenFolderPanel("Folder for the new agent", folder.value, "");

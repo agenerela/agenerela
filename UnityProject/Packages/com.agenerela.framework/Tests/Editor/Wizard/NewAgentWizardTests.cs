@@ -11,20 +11,17 @@ using Object = UnityEngine.Object;
 
 namespace Agenerela.Tests.Wizard
 {
-    // What Create → Agenerela → New Agent writes (#175). WizardFixtureGuard.cs, beside this file, is
-    // the script the wizard writes for FixtureAnswers, committed so the tests compile it: the first
-    // test proves the template's output is that text, so the template provably compiles. No test
-    // calls NewAgentWizard.Create, which writes a script into Assets and so starts a compile mid-run.
-    // None attaches the fixture to a GameObject either: Unity refuses a script that lives under an
-    // Editor folder, so the script running its assets is left to the hand check in a fresh project.
+    // Tests for NewAgentWizard. WizardFixtureGuard.cs is the script the wizard writes for
+    // FixtureAnswers. It compiles, so matching it proves the wizard writes code that compiles. No test
+    // calls Create, because writing a script into Assets would recompile in the middle of the run.
     public sealed class NewAgentWizardTests
     {
-        // Deleted after every test.
+        // Test files are written here and deleted after each test.
         private const string Folder = "Assets/__NewAgentWizardTests";
         private const string FixturePath = "Packages/com.agenerela.framework/Tests/Editor/Wizard/WizardFixtureGuard.cs";
         private const string SettingsAt = Folder + "/Resources/" + AgenerelaSettings.ResourceName + ".asset";
 
-        // Objects a test made in memory only, destroyed after it.
+        // In-memory objects made by a test, destroyed after it.
         private readonly List<Object> created = new List<Object>();
 
         [TearDown]
@@ -44,7 +41,7 @@ namespace Agenerela.Tests.Wizard
         [Test]
         public void TheScriptIsTheCompiledFixture()
         {
-            // Git may check the fixture out with Windows line endings; the wizard always writes \n.
+            // Git may check the file out with Windows line endings; the wizard writes \n.
             string fixture = File.ReadAllText(FixturePath).Replace("\r\n", "\n");
 
             Assert.That(NewAgentWizard.Script(FixtureAnswers()), Is.EqualTo(fixture),
@@ -85,8 +82,8 @@ namespace Agenerela.Tests.Wizard
             AgenerelaSettingsPage.CreateFolders(Folder);
             AssetDatabase.CreateAsset(ScriptableObject.CreateInstance<AgentProfile>(), profilePath);
 
-            // Check, which Create calls before it writes anything: were it Create, a Check that
-            // failed to throw would write a second WizardFixtureGuard class and break the compile.
+            // Calls Check rather than Create: if Check failed to throw, Create would write a second copy
+            // of the fixture class and break compiling.
             InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => NewAgentWizard.Check(FixtureAnswers()));
 
             Assert.That(error.Message, Does.Contain(profilePath));
@@ -95,8 +92,7 @@ namespace Agenerela.Tests.Wizard
         [Test]
         public void AProjectWithNoProviderGetsAnOllamaDefault()
         {
-            // SetDefault edits the project's own settings wherever they are, so a project that has
-            // some is left alone, as AgenerelaSettingsPageTests does.
+            // Skipped when this project has its own settings, so the test never changes them.
             if (AgenerelaSettingsPage.Find() != null)
             {
                 Assert.Ignore("This project has its own Agenerela settings.");
@@ -125,8 +121,8 @@ namespace Agenerela.Tests.Wizard
             Assert.That(File.Exists(Folder + "/OllamaLocal.asset"), Is.False, "No second provider is written.");
         }
 
-        // The fixed answers WizardFixtureGuard.cs was written from: every starter, and one action of
-        // the developer's own with an optional target, no example and a quote in its description.
+        // The answers the fixture was generated from: every starter, plus one action with an optional
+        // target, no example and a quote in its description.
         private static NewAgentWizard.Answers FixtureAnswers()
         {
             NewAgentWizard.Answers answers = new NewAgentWizard.Answers

@@ -1,9 +1,6 @@
 <!--
-    The New Agent window's structure (#175, figure 12 of workflow.html). Layout is in
-    NewAgentWizard.uss; colour and type come from Agenerela.uss (#167). Named elements are filled or
-    wired by NewAgentWindow.cs, which also builds the starter toggles and each action of your own.
-    Every section says what it is for in a hint: the wizard is for someone who has never seen the
-    framework.
+    Layout of the New Agent window. Styles are in NewAgentWizard.uss and Agenerela.uss.
+    NewAgentWindow.cs fills in the named elements and adds the action tick boxes and cards.
 -->
 <ui:UXML xmlns:ui="UnityEngine.UIElements">
     <ui:ScrollView name="newAgent" class="na">

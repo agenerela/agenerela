@@ -1,6 +1,5 @@
 /*
- * The New Agent window's layout (#175). Colour, type and the kit's pieces come from Agenerela.uss
- * (#167), so this sets no colour of its own.
+ * Spacing and layout for the New Agent window. Colours and fonts come from Agenerela.uss.
  */
 
 .na-root {
