@@ -3257,7 +3257,7 @@ Found by stage 2, from the runs above:
   research page's gaps 1, 3, 4, 6, 8 and 9 that it hit.
 - **N13. Several free texts in one answer** (24 November, world lore). Naming a world means a name for the world,
   each realm and each ruler, and a story: one answer with many short texts. A decision had one free-text field, and
-  DR-023 left free strings out. Built as DR-030 (free-text parameters, capped by `maxLength`), proposed in the pull
+  DR-023 left free strings out. Built as DR-030 (free-text parameters, capped by `maxLength`), accepted in the pull
   request that uses it. Two smaller gaps it leaves: the statement itself has no length cap in the schema (the game
   cuts the backstory back to a whole sentence), and a list of texts of one kind is one parameter each
   (`realm_1` ... `realm_5`), declared per world.

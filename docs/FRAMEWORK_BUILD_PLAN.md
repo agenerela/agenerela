@@ -3128,8 +3128,8 @@ input to the language model, and the image slot on the provider settings page (#
   between models forward.
 ### DR-030 — A parameter may be a short free text the model writes, capped by `maxLength`
 
-**Status:** Proposed, 24 November 2026, by the Painted Realm world-lore session (#20), for the
-framework tech lead to accept or refuse in the pull request that builds it. Additive: a parameter
+**Status:** Accepted, 24 November 2026, by the tech lead, as proposed by the Painted Realm
+world-lore session (#20) in the pull request that builds it (#415). Additive: a parameter
 with no `MaxLength` is exactly what DR-023 built, and a call that declares none sends what it sent.
 
 **Context.** The lead asked for "a model naming the map and creating a world's backstory" in
@@ -3159,7 +3159,7 @@ five-realm world came back in one call of about 300 tokens, 3.9 s warm on the ho
 | Defaults and examples | As for a closed parameter | **The same rules.** `Default` covers only a missing value; `ExampleValue` is what the example shows, quoted like a statement; with neither, the example leaves the field out rather than invent one |
 | Per-value checks | Run them; skip them | **Skipped**: there are no values to offer. An action with a free text is never left out for want of one |
 | Place in the reply | As DR-023 | **As DR-023**: after `target`, before the free-text field, in declared order |
-| GBNF | Bound the length in the grammar; a plain string | **A plain string for now**: no in-process provider exists (Phase 6b), and the legality guard holds the cap anyway |
+| GBNF | Bound the length in the grammar; a plain string | **A plain string for now**: no in-process provider exists (Phase 6b), and the legality guard holds the cap anyway. **Owed:** once the GBNF serializer lands again (#126, #408), its grammar bounds a free text to `MaxLength` characters, as `maxLength` does in JSON Schema |
 
 **Decision.** As the table says: `ActionParameter.MaxLength` and `IsFreeText`,
 `AgentParameterAttribute.MaxLength`, `SchemaField.MaxLength` (sent as `maxLength` on a free field),
