@@ -7,9 +7,11 @@
 //
 // The style is our October deck's (../2026-10-15-design-presentation/build-deck.js). The course
 // template's design is not used; its instructions are, and the README lists each one with the
-// slide that meets it. Fonts are Arial and Courier New only,
+// slide that meets it. The font is Arial only (the wordmark on the title and Q & A slides is an
+// image, in the logo's Bahnschrift),
 // because the team edits the deck in Google Slides. Every figure except the game frame is drawn
-// here as shapes and charts, so it stays editable after the import.
+// here as shapes and charts, so it stays editable after the import. The logo and wordmark
+// (figures/agenerela-logo-wordmark.png) are drawn from tools/branding's traced geometry.
 //
 // Every number on a slide is in numbers.md beside this file, with the command or page it came
 // from. Change it there and here together.
@@ -29,10 +31,10 @@ const OUT = process.env.DECK_OUT || path.join(HERE, "Agenerela-Final-Presentatio
 const C = {
   ink: "111111", ink2: "333333", ink3: "595959", line: "BFBFBF", rule: "D9D9D9",
   fill: "F1F3F7", blue: "1F5FD1", blueLt: "E3ECFC", blueDk: "123C8C", white: "FFFFFF",
-  dark: "1C1C1C", dark2: "2A2D33", onDark: "D5D8DE", onDark2: "A3A8B0", blueOnDark: "9DBDF7",
+  dark: "1C1C1C", navy: "1B2433", cyan: "26D9FC", dark2: "2A2D33", onDark: "D5D8DE", onDark2: "A3A8B0", blueOnDark: "9DBDF7",
   green: "1E7B45", greenLt: "E2F2E8", amber: "8A5A00", amberLt: "FCF0D9", grey: "6B6B6B", greyLt: "EEEEEE",
 };
-const F = { sans: "Arial", mono: "Courier New" };
+const F = { sans: "Arial" };
 // One type scale for every slide (rubric: consistent font size). Nothing below 10 pt.
 const S = { title: 26, kicker: 11, head: 16, body: 14, table: 12, small: 12, cap: 11, src: 10 };
 
@@ -56,7 +58,7 @@ function runs(str, base) {
     if (m.index > last) out.push({ text: str.slice(last, m.index), options: { ...base } });
     const t = m[0];
     if (t.startsWith("**")) out.push({ text: t.slice(2, -2), options: { ...base, bold: true } });
-    else out.push({ text: t.slice(1, -1), options: { ...base, fontFace: F.mono } });
+    else out.push({ text: t.slice(1, -1), options: { ...base, bold: true } });
     last = m.index + t.length;
   }
   if (last < str.length) out.push({ text: str.slice(last), options: { ...base } });
@@ -177,130 +179,103 @@ const notes = (s, lines) => s.addNotes(lines.join("\n"));
 // ---------- the parts, for the outline and the notes ----------
 // Six parts of roughly three minutes; part D is the recorded demo.
 const PARTS = [
-  ["A", "Introduction", "1–5", "3:15"],
-  ["B", "Requirements: then and now", "6–8", "2:10"],
-  ["C", "Design updates", "9–11", "1:55"],
-  ["D", "Demo: Painted Realm (video ≈ 5:00)", "12–14", "6:10"],
-  ["E", "GitHub repository", "15–17", "2:15"],
-  ["F", "Group management, thanks", "18–21", "2:35"],
+  ["A", "Introduction", "1–5", "2:45"],
+  ["B", "Requirements: then and now", "6–7", "1:25"],
+  ["C", "Design updates", "8–10", "1:55"],
+  ["D", "Demo: Painted Realm (video ≈ 5:00)", "11–12", "5:35"],
+  ["E", "GitHub repository", "13–15", "2:10"],
+  ["F", "Group management, thanks", "16–19", "2:35"],
 ];
 
 // ---------- slides ----------
 async function build() {
-  TOTAL = 23;
+  TOTAL = 21;
   const ic = {
     pen: await icon(fa.FaPenToSquare), shield: await icon(fa.FaShieldHalved), cloud: await icon(fa.FaCloud),
     repeat: await icon(fa.FaRepeat), check: await icon(fa.FaCheck), play: await icon(fa.FaPlay),
   };
 
+
   // 1 ── Title ───────────────────────────────────────────────────────────────
   {
     const s = pres.addSlide();
     slideNo++;
-    s.background = { color: C.dark };
-    text(s, "COMP 490 SENIOR DESIGN PROJECT · FINAL PRESENTATION", { x: 0.6, y: 0.45, w: 8.8, h: 0.24, size: S.kicker, bold: true, color: C.blueOnDark, cs: 2 });
-    text(s, "Project Report for Agenerela", { x: 0.6, y: 0.78, w: 8.8, h: 0.75, size: 40, bold: true, color: C.white });
-    text(s, "A Unity framework: a language model chooses, validated game code acts",
-      { x: 0.6, y: 1.55, w: 8.8, h: 0.35, size: 18, color: C.onDark });
-
-    const by = 2.25, bh = 0.85;
-    box(s, 0.6, by, 2.4, bh, C.dark2, "6B7078");
-    text(s, "YOUR GAME", { x: 0.75, y: by + 0.14, w: 2.1, h: 0.25, size: 13, bold: true, color: C.white, cs: 2 });
-    text(s, "Asks, then acts", { x: 0.75, y: by + 0.46, w: 2.1, h: 0.28, size: S.body, color: C.onDark });
-    arrow(s, 3.05, by + bh / 2, 3.5, by + bh / 2, C.onDark, 1.75);
-    box(s, 3.55, by, 2.9, bh, C.blue);
-    text(s, "AGENERELA", { x: 3.7, y: by + 0.14, w: 2.6, h: 0.25, size: 13, bold: true, color: C.white, cs: 2 });
-    text(s, "Offers legal options, checks", { x: 3.7, y: by + 0.46, w: 2.7, h: 0.28, size: S.body, color: C.white });
-    arrow(s, 6.5, by + 0.3, 6.95, by + 0.3, C.onDark, 1.75);
-    arrow(s, 6.95, by + 0.56, 6.5, by + 0.56, C.onDark, 1.75);
-    box(s, 7.0, by, 2.4, bh, C.dark, C.onDark2, "dash");
-    text(s, "THE MODEL", { x: 7.15, y: by + 0.14, w: 2.1, h: 0.25, size: 13, bold: true, color: C.white, cs: 2 });
-    text(s, "Chooses, never acts", { x: 7.15, y: by + 0.46, w: 2.2, h: 0.28, size: S.body, color: C.onDark });
-
-    text(s, `${TEAM[0]}  ·  ${TEAM[1]}  ·  ${TEAM[2]}`, { x: 0.6, y: 3.5, w: 8.8, h: 0.3, size: 15, bold: true, color: C.white });
-    text(s, `${TEAM[3]}  ·  ${TEAM[4]}  ·  ${TEAM[5]}`, { x: 0.6, y: 3.82, w: 8.8, h: 0.3, size: 15, bold: true, color: C.white });
-    text(s, "Department of Computer Science", { x: 0.6, y: 4.3, w: 8.8, h: 0.26, size: 14, color: C.onDark });
-    text(s, "California State University, Northridge", { x: 0.6, y: 4.58, w: 8.8, h: 0.26, size: 14, color: C.onDark });
-    text(s, "December 2026  ·  github.com/agenerela/agenerela", { x: 0.6, y: 4.98, w: 8.8, h: 0.24, size: S.small, color: C.onDark2 });
+    s.background = { color: C.navy };
+    const lh = 2.95, lw = lh * 1393 / 1023;
+    s.addImage({ path: FIG("agenerela-logo-wordmark.png"), x: (10 - lw) / 2, y: 0.45, w: lw, h: lh, altText: "Agenerela logo and name" });
+    text(s, `${TEAM[0]}  ·  ${TEAM[1]}  ·  ${TEAM[2]}`, { x: 0.6, y: 3.78, w: 8.8, h: 0.28, size: 14, bold: true, color: C.white, align: "center" });
+    text(s, `${TEAM[3]}  ·  ${TEAM[4]}  ·  ${TEAM[5]}`, { x: 0.6, y: 4.08, w: 8.8, h: 0.28, size: 14, bold: true, color: C.white, align: "center" });
+    text(s, "COMP 490 Senior Design Project  ·  Department of Computer Science, California State University, Northridge",
+      { x: 0.4, y: 4.6, w: 9.2, h: 0.24, size: S.small, color: C.onDark, align: "center" });
+    text(s, "Final presentation, December 2026", { x: 0.6, y: 4.88, w: 8.8, h: 0.24, size: S.small, color: C.onDark2, align: "center" });
     notes(s, [
-      "Speaking notes · Presenter TBD (part A) · about 20 seconds",
+      "Speaking notes · Presenter TBD (part A) · about 15 seconds",
       "",
       "- Hello, we're the Agenerela team: Yevhen, Hunter, Tim, Tigran, Hero and Maxim.",
-      "- Agenerela is a Unity framework that lets a language model choose what a game agent does next, only from actions the developer registered, while the game's own code carries it out.",
+      "- Today: what we built since our design presentation in October, a demo, and how we worked as a team.",
     ]);
   }
 
-  // 2 ── Outline and who presents what ───────────────────────────────────────
+
+  // 2 ── Outline ─────────────────────────────────────────────────────────────
   {
     const s = pres.addSlide();
-    header(s, "OUTLINE", "Outline, and who presents what", "A");
-    table(s, ["Part", "Section", "Slides", "Time", "Presenter"],
-      PARTS.map(([p, n, sl, t]) => [`**${p}**`, n, sl, t, "TBD"]),
-      { x: 0.4, y: 1.2, w: 6.0, colW: [0.55, 3.0, 0.8, 0.7, 0.95], rowH: 0.42, size: S.table });
-    text(s, "Total ≈ 18:20, inside the 15 to 21 minutes. Questions after slide 23: 3 minutes, everyone.",
-      { x: 0.4, y: 4.3, w: 6.0, h: 0.5, size: S.small, color: C.ink2 });
-
-    box(s, 6.75, 1.2, 2.9, 3.55, C.blueLt);
-    text(s, "HOW WE SPLIT IT", { x: 6.95, y: 1.35, w: 2.6, h: 0.22, size: S.cap, bold: true, color: C.blueDk, cs: 1.2 });
-    bullets(s, [
-      "Six parts, about **2½ to 3 minutes** of speaking each",
-      "Part D's presenter frames the **5-minute video** and plays it",
-      "Every slide names its presenter; **TBD** until the team decides",
-      "Each speaker hands off by name to the next",
-    ], { x: 6.95, y: 1.68, w: 2.55, h: 2.95, size: S.small, gap: 8 });
-    source(s, "Times are the speaker notes' estimates at about 140 words a minute; the video's length is the demo session's target.");
-    notes(s, [
-      "Speaking notes · Presenter TBD (part A) · about 20 seconds",
-      "",
-      "- Six parts: what Agenerela is and why, how our requirements changed, how the design changed, a five-minute recorded demo of our strategy game, how we used GitHub, and how we managed the group.",
-      "- (Point at the table; don't read it.) Each of us takes one part.",
-      "",
-      "TEAM NOTE: fill in the Presenter column and the 'Presenter: TBD' pill on each slide once the split is decided. Parts A, B, C, E and F are about 1:55 to 3:15 each; part D is about 70 seconds of speaking plus the video. If the video runs long, cut slide 14 to one line.",
-    ]);
-  }
-
-  // 3 ── Introduction: the problem, for Unity developers ─────────────────────
-  {
-    const s = pres.addSlide();
-    header(s, "1 · INTRODUCTION · BACKGROUND", "The problem, for Unity developers", "A");
-    box(s, 0.4, 1.15, 5.4, 0.95, C.blueLt);
-    text(s, "A Unity developer who wants agents to react to open-ended input has **no safe, reusable way** to let a language model decide what they do.",
-      { x: 0.6, y: 1.2, w: 5.05, h: 0.85, size: S.body, valign: "middle" });
-    text(s, "WITHOUT A FRAMEWORK, EVERY DEVELOPER HAS TO", { x: 0.4, y: 2.28, w: 5.4, h: 0.22, size: S.cap, bold: true, color: C.ink3, cs: 1.2 });
-    const pains = [
-      [ic.pen, "Write prompts and parse replies", "For every agent, then turn free text back into code"],
-      [ic.shield, "Trust whatever comes back", "An action that isn't possible, a target that isn't there"],
-      [ic.cloud, "Pay per request, or ship a server", "Players won't install a model server"],
-      [ic.repeat, "Start over for each kind of agent", "A guard, a companion and a country, wired differently"],
+    header(s, "OUTLINE", "Outline", "A");
+    const cards = [
+      ["Introduction", "What Agenerela is, one decision through it, and our goals"],
+      ["Requirements", "The six we started with, and the ones we added"],
+      ["Design updates", "What the design gained, our decision records, the phase plan"],
+      ["Demo", "Painted Realm, our strategy game, in a 5-minute video"],
+      ["GitHub", "Branches and merge rules, the work in numbers, git problems"],
+      ["Group management", "Our tools, who did what, group problems, thanks"],
     ];
-    for (let i = 0; i < 4; i++) {
-      const [img, h, b] = pains[i];
-      const y = 2.6 + i * 0.6;
-      await iconDot(s, 0.4, y, 0.4, img);
-      text(s, h, { x: 0.95, y: y - 0.04, w: 4.85, h: 0.28, size: S.body, bold: true });
-      text(s, b, { x: 0.95, y: y + 0.23, w: 4.85, h: 0.26, size: S.small, color: C.ink2 });
-    }
-    const px = 6.1, pw = 3.55;
-    box(s, px, 1.15, pw, 3.85, C.dark, null, null, 0.04);
-    text(s, "WITH AGENERELA", { x: px + 0.25, y: 1.32, w: pw - 0.5, h: 0.22, size: S.cap, bold: true, color: C.blueOnDark, cs: 1.2 });
-    const gains = ["Register actions, not prompts", "Only legal, grounded answers reach your code", "A local model, no per-request bill", "One API for any agent, with or without a body"];
-    for (let i = 0; i < 4; i++) {
-      const y = 1.68 + i * 0.5;
-      await iconDot(s, px + 0.25, y, 0.28, ic.check);
-      text(s, gains[i], { x: px + 0.68, y: y - 0.03, w: pw - 0.85, h: 0.5, size: S.body, color: C.white });
-    }
-    s.addShape(pres.shapes.LINE, { x: px + 0.25, y: 3.72, w: pw - 0.5, h: 0, line: { color: "4A4F57", width: 1 } });
-    text(s, "**Our prototype, a 2B model:** 58.5% → **84.9%** correct with a legal-options schema and examples (A/B, n = 53 an arm). A cloud API for 30 agents: **≈ $165** per 100 hours of play.",
-      { x: px + 0.25, y: 3.8, w: pw - 0.45, h: 1.15, size: S.small, color: C.onDark });
-    source(s, "Source: build plan §0, §5 and Appendix A, prototype of Aug 2026, qwen3.5 via Ollama; noise floor ≈ 10 points at n = 53; cost at Flash-Lite pricing, 6 decisions a minute [1].");
+    cards.forEach(([h, d], i) => {
+      const x = 0.4 + (i % 3) * 3.12, y = 1.15 + Math.floor(i / 3) * 1.9;
+      box(s, x, y, 2.97, 1.75, C.fill);
+      num(s, x + 0.2, y + 0.2, i + 1, 0.36);
+      text(s, h, { x: x + 0.2, y: y + 0.66, w: 2.6, h: 0.3, size: S.head, bold: true });
+      text(s, d, { x: x + 0.2, y: y + 0.98, w: 2.6, h: 0.48, size: S.small, color: C.ink2 });
+      text(s, `Presenter: TBD  ·  ≈ ${PARTS[i][3]}`, { x: x + 0.2, y: y + 1.46, w: 2.6, h: 0.2, size: S.cap, bold: true, color: C.blue });
+    });
+    source(s, "About 16½ minutes in all, then 3 minutes of questions. Times are the speaker notes' estimates at about 140 words a minute.");
     notes(s, [
-      "Speaking notes · Presenter TBD (part A) · about 60 seconds",
+      "Speaking notes · Presenter TBD (part A) · about 15 seconds",
       "",
-      "- Our users are Unity developers. Say one wants a guard, a companion or a whole country that reacts to things nobody scripted: a player's typed line, a war report.",
-      "- Today they have no safe, reusable way to let a language model decide what that agent does. (Read the blue box once.)",
-      "- Without a framework, each developer rebuilds the same plumbing for every agent, and still can't trust the answer.",
-      "- Our prototype showed why it matters: a small model went from 58.5 to 84.9 percent correct just from offering legal options and examples, and a cloud API for thirty agents would cost about 165 dollars per hundred hours of play.",
-      "- Agenerela turns that around: they register actions, only legal answers reach their code, it runs on a local model, and one API covers any agent, even one with no body.",
+      "- Six parts, one each: what Agenerela is, how our requirements and design changed, a five-minute demo of our strategy game, how we used GitHub, and how we managed the group.",
+      "- (Point at the cards; don't read them.)",
+      "",
+      "TEAM NOTE: fill in 'Presenter: TBD' on these cards and the pill on each slide once the split is decided.",
+    ]);
+  }
+
+
+  // 3 ── Introduction: what Agenerela is ─────────────────────────────────────
+  {
+    const s = pres.addSlide();
+    header(s, "1 · INTRODUCTION", "What Agenerela is", "A");
+    box(s, 0.4, 1.2, 9.25, 1.0, C.blueLt);
+    text(s, "A **Unity framework** that lets a language model decide what game agents do, choosing only from **actions the developer registered**.",
+      { x: 0.65, y: 1.2, w: 8.75, h: 1.0, size: S.head, valign: "middle" });
+    text(s, "WHAT IT GIVES A UNITY DEVELOPER", { x: 0.4, y: 2.5, w: 9.25, h: 0.22, size: S.cap, bold: true, color: C.ink3, cs: 1.2 });
+    const cards = [
+      [ic.pen, "No prompt plumbing", "Register actions; the framework writes the prompt and reads the reply"],
+      [ic.shield, "Only legal answers", "Impossible actions and made-up targets never reach your code"],
+      [ic.cloud, "A local model", "Runs beside the game, with no bill per request"],
+    ];
+    for (let i = 0; i < 3; i++) {
+      const [img, h, b] = cards[i];
+      const x = 0.4 + i * 3.12;
+      box(s, x, 2.85, 2.97, 2.0, C.fill);
+      await iconDot(s, x + 0.2, 3.03, 0.5, img);
+      text(s, h, { x: x + 0.2, y: 3.68, w: 2.6, h: 0.3, size: S.head, bold: true });
+      text(s, b, { x: x + 0.2, y: 4.02, w: 2.6, h: 0.7, size: S.small, color: C.ink2 });
+    }
+    source(s, "A recap of our design presentation of 15 Oct 2026; build plan §0 [1].");
+    notes(s, [
+      "Speaking notes · Presenter TBD (part A) · about 30 seconds",
+      "",
+      "- A quick reminder from our October presentation. (Read the blue box once.)",
+      "- For a Unity developer that means three things: they register actions instead of writing prompts, only legal answers ever reach their code, and it runs on a local model beside the game.",
       "",
       "If asked 'Why not a cloud model?': Agenerela can use one through the same provider interface (Phase 6, 2027). Local first, because a shipped game can't send every decision to a paid API.",
       "If asked 'Does it replace behaviour trees?': No. Only the top-level choice; the game's own code still does the how, every frame.",
@@ -344,13 +319,18 @@ async function build() {
     arrow(s, 7.28, y0 + 1.75, 6.92, y0 + 1.75, C.blue, 2.25);
     arrow(s, 2.98, y0 + 1.75, 2.62, y0 + 1.75, C.blue, 2.25);
     // example strip
-    box(s, 0.4, 4.0, 9.25, 0.95, C.fill);
-    text(s, "IN OUR STRATEGY GAME", { x: 0.55, y: 4.08, w: 3, h: 0.2, size: S.cap, bold: true, color: C.ink3, cs: 1.2 });
-    text(s, "**Asked:** a ruler's turn and what it sees  →  **offered:** fortify, recruit, declare war on a neighbour, …  →  **chosen:** one order and a line for the chronicle  →  **checked**, then the game carries it out",
-      { x: 0.55, y: 4.32, w: 8.95, h: 0.58, size: S.small, color: C.ink2 });
-    source(s, "Figure 1. One decision through Agenerela; our drawing of the build plan's architecture [1, §2]. The strategy example is illustrative of Painted Realm's court orders.");
+    text(s, "IN OUR DEMO, PAINTED REALM: A STRATEGY GAME WHERE EVERY RULER IS AN AGENT", { x: 0.4, y: 3.98, w: 9.25, h: 0.22, size: S.cap, bold: true, color: C.ink3, cs: 1.0 });
+    const flow = ["**Asked:** a ruler's turn and what it sees", "**Offered:** fortify, recruit, declare war, …", "**Chosen:** one order and a chronicle line", "**Checked**, then the game carries it out"];
+    const fw = 2.05, fg = 0.35;
+    flow.forEach((f, i) => {
+      const x = 0.4 + i * (fw + fg);
+      box(s, x, 4.28, fw, 0.62, C.fill);
+      text(s, f, { x: x + 0.12, y: 4.28, w: fw - 0.24, h: 0.62, size: S.small, valign: "middle" });
+      if (i < 3) arrow(s, x + fw + 0.05, 4.59, x + fw + fg - 0.05, 4.59, C.blue, 2.0);
+    });
+    source(s, "Figure 1. One decision through Agenerela; our drawing of the build plan's architecture [1, §2]. The example is Painted Realm's court orders, shown in the demo.");
     notes(s, [
-      "Speaking notes · Presenter TBD (part A) · about 50 seconds",
+      "Speaking notes · Presenter TBD (part A) · about 60 seconds",
       "",
       "- Here's one decision, in five steps. (Follow the numbers.)",
       "- One: the game asks an agent, whenever its own systems decide to. We never decide when or why an agent is asked; that stays the developer's.",
@@ -358,6 +338,7 @@ async function build() {
       "- Three: the model chooses one action, one target and a line to say. It's untrusted, and it never touches the game.",
       "- Four: we check the answer. A target it isn't sure of, or an action that isn't allowed, becomes 'none'.",
       "- Five: the game runs the action in its own code.",
+      "- In our demo, Painted Realm, every ruler of a country is an agent: on its turn it is offered orders like fortify or declare war, picks one with a line for the chronicle, and the game carries it out.",
       "",
       "If asked 'What if the model writes something outside the list?': The request carries a JSON schema whose enums hold only the legal options, so the model can't write anything else; and the guards check again anyway.",
     ]);
@@ -404,19 +385,19 @@ async function build() {
     const s = pres.addSlide();
     header(s, "2 · REQUIREMENTS · INITIAL VERSION", "Our six starting requirements", "B");
     const rows = [
-      ["3.1", "**Agents and decision requests**", "Hunter Hudson", "#2", "built"],
-      ["3.2", "**Developer-authored action vocabulary**", "Timothy Brustinov", "#4, #15, #49", "built"],
-      ["3.3", "**Action availability and the decision schema**", "Tigran Kolsuzyan", "#6, #7, #8", "built"],
-      ["3.4", "**Target registry and target grounding**", "Hero Jaiyen", "#5, #32, #81", "built"],
-      ["3.5", "**Swappable language-model providers**", "Yevhen Mishchenko", "Phase 2", "partly"],
-      ["3.6", "**Decision telemetry and outcome classes**", "Maxim Goloubitsky", "#3, #43", "built"],
+      ["3.1", "**Agents and decision requests**", "Hunter Hudson", "built"],
+      ["3.2", "**Developer-authored action vocabulary**", "Timothy Brustinov", "built"],
+      ["3.3", "**Action availability and the decision schema**", "Tigran Kolsuzyan", "built"],
+      ["3.4", "**Target registry and target grounding**", "Hero Jaiyen", "built"],
+      ["3.5", "**Swappable language-model providers**", "Yevhen Mishchenko", "partly"],
+      ["3.6", "**Decision telemetry and outcome classes**", "Maxim Goloubitsky", "built"],
     ];
-    table(s, ["SRS", "Requirement (one feature each)", "Owner", "Issues", "Status, 24 Nov"],
-      rows.map((r) => [r[0], r[1], r[2], r[3], { status: r[4] }]),
-      { x: 0.4, y: 1.15, w: 9.25, colW: [0.55, 4.0, 1.85, 1.35, 1.5], rowH: 0.42, size: S.table });
+    table(s, ["SRS", "Requirement (one feature each)", "Owner", "Status, 24 Nov"],
+      rows.map((r) => [r[0], r[1], r[2], { status: r[3] }]),
+      { x: 0.4, y: 1.15, w: 9.25, colW: [0.6, 4.75, 2.3, 1.6], rowH: 0.42, size: S.table });
     text(s, "3.5 is partly built: the Ollama provider passed its Phase 2 gate on 25 October; cloud providers (Phase 6) and a model inside the shipped game (Phase 6b) are 2027 work.",
       { x: 0.4, y: 4.2, w: 9.25, h: 0.55, size: S.small, color: C.ink2 });
-    source(s, "Source: Software Requirements Specification, 10 Sep 2026 (one feature per member) and build plan §6.6 [1, 2]; issue numbers from GitHub.");
+    source(s, "Source: Software Requirements Specification, 10 Sep 2026 (one feature per member) and build plan §6.6 [1, 2].");
     notes(s, [
       "Speaking notes · Presenter TBD (part B) · about 35 seconds",
       "",
@@ -444,9 +425,9 @@ async function build() {
       ["**Image provider**", "An action can ask for a picture; cached", "DR-025 · PR #394", "built"],
       ["**Speech provider**", "A line read aloud by a voice provider", "DR-024, not built yet", "planned"],
     ];
-    table(s, ["New requirement", "What it gives the developer", "Where it is", "Status"],
-      rows.map((r) => [r[0], r[1], r[2], { status: r[3] }]),
-      { x: 0.4, y: 1.12, w: 9.25, colW: [2.6, 3.55, 2.1, 1.0], rowH: 0.33, size: S.table });
+    table(s, ["New requirement", "What it gives the developer", "Status"],
+      rows.map((r) => [r[0], r[1], { status: r[3] }]),
+      { x: 0.4, y: 1.12, w: 9.25, colW: [3.0, 4.85, 1.4], rowH: 0.34, size: S.table });
     source(s, "Framework features only; the games' own features are not listed. Status on test, 24 Nov 2026. Sources: build plan §2.8, §2.9, §3, DR-012, DR-018, DR-021, DR-023 to DR-026 [1]; GitHub (numbers.md).");
     notes(s, [
       "Speaking notes · Presenter TBD (part B) · about 50 seconds",
@@ -455,41 +436,13 @@ async function build() {
       "- The game now reports what its action actually did, and memory records that. Many agents can decide on one snapshot and then act in an order the game sets. Actions can take typed parameters, like a number of troops, beside the target.",
       "- Guards became a whole pipeline, and developers can add their own rules. That was Phase 3, closed 3 November.",
       "- The evaluation harness: 209 labelled prompts and an A/B runner. It's Phase 4, due 7 December; what's left is a second person labelling a subset blind.",
+      "- (If asked what we measured: Phase 4's A/B on the 209 prompts found the guards change accuracy by less than the noise, 66.0 against 67.9 percent, but they turned 14 wrong actions into doing nothing.)",
       "- The prompt budget merged today, 24 November: the framework measures every prompt and trims only what the developer marked optional.",
       "- Provider retries and settings profiles merged today: a provider waits out a busy server, and a game switches between development and production settings. The image provider merged today too: an action can ask for a picture, and results are cached. A speech provider is decided (DR-024) but not built.",
       "",
       "TEAM NOTE: re-check the In work and Planned rows before presenting; they will move before 7 December.",
-      "If asked 'How did you decide what to add?': From the demo games. The gaps they hit are logged in issue #190 and became framework features.",
-    ]);
-  }
-
-  // 8 ── Requirements: measured ──────────────────────────────────────────────
-  {
-    const s = pres.addSlide();
-    header(s, "2 · REQUIREMENTS · MEASURED", "What we measured", "B");
-    const rows = [
-      ["Phase 2 gate, 25 Oct", "Live decision through Unity, `qwen3.5:2b`, RTX 5080", "0.23 to 0.56 s a warm decision (bar: under 5 s)", "Latency, not accuracy"],
-      ["Phase 3 gate, 3 Nov", "Guards on against the check off, 20 prompts, `qwen3.5:2b`", "**19/20** against 18/20; impossible requests 6/6 against 5/6", "n = 20: one answer, far inside noise; the gate's bar was 19/20"],
-      ["Phase 4 gate A/B, 23 Nov", "Same A/B on our 209-prompt set, `qwen3.5:2b`", "66.0% against 67.9%; 14 wrong actions stopped, 4 right ones lost", "+1.9 points, inside the 4.9-point noise floor: no claim"],
-      ["Prompt budget, 24 Nov", "Prompt size against Ollama's token count, 6,304 logged decisions", "3.10 characters a token (sd 0.05)", "No model run: a calibration"],
-    ];
-    table(s, ["Run", "What was compared", "Result", "What we can claim"], rows,
-      { x: 0.4, y: 1.12, w: 9.25, colW: [1.55, 2.9, 2.6, 2.2], rowH: 0.62, size: S.table });
-    box(s, 0.4, 4.3, 9.25, 0.6, C.blueLt);
-    text(s, "**Our rule:** no accuracy claim without an A/B run: same model, machine, prompts and session, with a control arm.",
-      { x: 0.6, y: 4.3, w: 8.9, h: 0.6, size: S.body, valign: "middle" });
-    source(s, "Source: findings.md, entries of 25 Oct, 3 Nov, 23 Nov and 24 Nov 2026 [3]; build plan §3 [1]. Noise floor as findings computes it for n = 209.");
-    notes(s, [
-      "Speaking notes · Presenter TBD (part B) · about 50 seconds",
-      "",
-      "- We hold ourselves to one rule: no accuracy claim without an A/B run against a control, on the same model, machine and prompts.",
-      "- Phase 3's gate passed 19 of 20 with the guards on, 18 without. Twenty prompts is one answer's difference, so that's a pass, not a proof.",
-      "- So in Phase 4 we ran it on our 209-prompt set: 66.0 against 67.9 percent. That difference is inside the noise, so we claim no accuracy change. What the guards do is stop wrong actions: 14 wrong ones became 'none', at the cost of 4 right ones.",
-      "",
       "HAND-OFF: \"<next presenter> will show how the design changed to support all this.\"",
-      "",
-      "If asked 'So the guards don't help?': Not on accuracy, within noise. They change which mistakes reach the game: a wrong attack becomes doing nothing. Impossible requests, where they matter most, were only 15 of the 209, so we want more of them.",
-      "If asked 'What's the noise floor?': How far two runs can differ by chance at that sample size; at 209 prompts it's 4.9 points.",
+      "If asked 'How did you decide what to add?': From the demo games. The gaps they hit are logged in issue #190 and became framework features.",
     ]);
   }
 
@@ -498,38 +451,32 @@ async function build() {
     const s = pres.addSlide();
     header(s, "3 · DESIGN UPDATES · ARCHITECTURE", "What the design gained", "C");
     const mods = [
-      ["Agent", "who it is, the request", [["Observations", "built"], ["Memory", "built"], ["Execution outcome", "built"]]],
-      ["Actions and targets", "registry, availability", [["Target categories", "built"], ["Typed parameters", "built"], ["Choice calls", "built"]]],
-      ["Schema and prompt", "action → target → statement", [["Prompt budget", "built"], ["Examples with situation", "built"]]],
-      ["Queue and providers", "one interface, Ollama", [["Model lifecycle", "built"], ["Retry, profiles", "built"], ["Image provider", "built"]]],
-      ["Guards", "the grounding check", [["Guard pipeline", "built"], ["Your own guards", "built"]]],
-      ["Result and telemetry", "outcome classes", [["Decision feed, log", "built"], ["Evaluation harness", "work"]]],
+      ["Agent", "Who it is, the request", ["Observations", "Memory", "Execution outcome"]],
+      ["Actions and targets", "Registry, availability", ["Target categories", "Typed parameters", "Choice calls"]],
+      ["Schema and prompt", "Action → target → statement", ["Prompt budget", "Examples with situation"]],
+      ["Queue and providers", "One interface, Ollama", ["Model lifecycle", "Retry, profiles", "Image provider"]],
+      ["Guards", "The grounding check", ["Guard pipeline", "Your own guards"]],
+      ["Result and telemetry", "Outcome classes", ["Decision feed, log", "A/B evaluation, in work"]],
     ];
-    const bw = 2.95, bh = 1.78, gx = 0.2, gy = 0.14;
+    const bw = 2.97, bh = 1.84, gx = 0.17, gy = 0.14, pad = 0.15, ch = 0.3, cg = 0.07;
     mods.forEach(([t, sept, adds], i) => {
       const col = i % 3, row = Math.floor(i / 3);
       const x = 0.4 + col * (bw + gx), y = 1.12 + row * (bh + gy);
       box(s, x, y, bw, bh, C.white, C.ink2);
-      text(s, t, { x: x + 0.12, y: y + 0.08, w: bw - 0.24, h: 0.28, size: S.body, bold: true });
-      text(s, "Sept: " + sept[0].toUpperCase() + sept.slice(1), { x: x + 0.12, y: y + 0.38, w: bw - 0.24, h: 0.24, size: S.cap, color: C.ink3 });
-      adds.forEach(([a, st], j) => {
-        const yy = y + 0.68 + j * 0.36;
-        const isNew = st === "built";
-        s.addText("+ " + a, { shape: pres.shapes.ROUNDED_RECTANGLE, rectRadius: 0.05, x: x + 0.12, y: yy, w: bw - 0.24, h: 0.3,
-          fill: { color: isNew ? C.blue : C.white }, line: { color: C.blue, width: 1.25, dashType: isNew ? "solid" : "dash" },
-          fontFace: F.sans, fontSize: S.small, color: isNew ? C.white : C.blue, bold: true, valign: "middle", margin: [0, 6, 0, 6], fit: "none" });
+      text(s, t, { x: x + pad + 0.083, y: y + 0.1, w: bw - 2 * pad, h: 0.28, size: S.body, bold: true });
+      text(s, "Sept: " + sept, { x: x + pad + 0.083, y: y + 0.4, w: bw - 2 * pad, h: 0.24, size: S.cap, color: C.ink3 });
+      adds.forEach((a, j) => {
+        const cy = y + 0.72 + j * (ch + cg);
+        box(s, x + pad, cy, bw - 2 * pad, ch, C.blue, null, null, 0.05);
+        text(s, "+ " + a, { x: x + pad + 0.083, y: cy, w: bw - 2 * pad - 0.17, h: ch, size: S.small, bold: true, color: C.white, valign: "middle" });
       });
-      if (i < 5 && col < 2) arrow(s, x + bw + 0.01, y + bh / 2, x + bw + gx - 0.01, y + bh / 2, C.ink3, 1.5);
+      if (col < 2) arrow(s, x + bw + 0.01, y + bh / 2, x + bw + gx - 0.01, y + bh / 2, C.ink3, 1.5);
     });
-    // legend
-    s.addText("+ Added, built", { shape: pres.shapes.ROUNDED_RECTANGLE, rectRadius: 0.05, x: 0.4, y: 4.88, w: 1.45, h: 0.26, fill: { color: C.blue }, line: { color: C.blue }, fontFace: F.sans, fontSize: S.cap, color: C.white, bold: true, align: "center", valign: "middle", margin: 0 });
-    s.addText("+ Added, in work", { shape: pres.shapes.ROUNDED_RECTANGLE, rectRadius: 0.05, x: 1.95, y: 4.88, w: 1.55, h: 0.26, fill: { color: C.white }, line: { color: C.blue, dashType: "dash", width: 1.25 }, fontFace: F.sans, fontSize: S.cap, color: C.blue, bold: true, align: "center", valign: "middle", margin: 0 });
-    text(s, "Black: September. Framework features only.", { x: 3.65, y: 4.88, w: 6.0, h: 0.26, size: S.cap, color: C.ink3, valign: "middle" });
-    source(s, "Figure 2. Agenerela's modules then and now, our own drawing from build plan §2 and DR-012 to DR-026 [1]; status on test, 24 Nov 2026.");
+    source(s, "Figure 2. Agenerela's modules then and now, our own drawing from build plan §2 and DR-012 to DR-026 [1]. Grey: September; blue: added since. Status on test, 24 Nov 2026.");
     notes(s, [
       "Speaking notes · Presenter TBD (part C) · about 40 seconds",
       "",
-      "- This is our design: six modules in the order a decision flows. The grey line in each is what we had in September; the blue chips are what we added. Solid is built, dashed is in work.",
+      "- This is our design: six modules in the order a decision flows. The grey line in each is what we had in September; the blue chips are what we added.",
       "- The agent gained observations, memory, and an outcome: the game now tells the framework what actually happened, so memory records that, not just the choice.",
       "- Providers gained model lifecycle, retries, settings profiles and an image provider; a speech provider is next.",
       "- Every one is a framework feature any game can use; each came from a demo game asking for something the API couldn't say.",
@@ -579,8 +526,6 @@ async function build() {
         text(s, d, { x: x + 0.9, y: yy, w: w - 0.98, h: step - 0.04, size: S.small });
       });
     });
-    text(s, "**Why it matters:** each record says what we chose, what we measured, and what would change our mind, so a new teammate or reviewer can see the reason.",
-      { x: 3.65, y: 3.1, w: 2.65, h: 1.6, size: S.small, color: C.ink2 });
     source(s, "Source: build plan §7, decision records DR-009 to DR-026, dated September to 24 November 2026 [1]. DR-001 to DR-008 predate the course.");
     notes(s, [
       "Speaking notes · Presenter TBD (part C) · about 40 seconds",
@@ -600,7 +545,7 @@ async function build() {
     header(s, "3 · DESIGN UPDATES · PLAN", "Phases: planned and done", "C");
     // timeline Sep 2026 – Apr 2027, x from 2.6 to 9.6
     const months = ["Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr"];
-    const x0 = 2.75, x1 = 9.55, y0 = 1.12, rh = 0.33;
+    const x0 = 2.75, x1 = 9.55, y0 = 1.12, rh = 0.38;
     const mw = (x1 - x0) / 8;
     const X = (m, d) => x0 + (m + (d - 1) / 30) * mw; // m: months since Sep
     months.forEach((m, i) => {
@@ -634,9 +579,7 @@ async function build() {
     const xt = X(2, 24);
     s.addShape(pres.shapes.LINE, { x: xt, y: y0 + 0.22, w: 0, h: rh * 9 + 0.1, line: { color: C.amber, width: 1.75, dashType: "dash" } });
     text(s, "Today, 24 Nov", { x: xt + 0.06, y: y0 + 0.3, w: 1.2, h: rh - 0.06, size: S.cap, color: C.amber, bold: true, valign: "middle" });
-    text(s, "Phase 1 closed six days after its due date; Phase 2's date moved from 19 to 29 October and it closed on the 25th; Phase 3 closed six days early. Demo games ran beside every phase, as planned.",
-      { x: 0.4, y: 4.42, w: 9.25, h: 0.5, size: S.small, color: C.ink2 });
-    source(s, "Figure 3. Phase plan, our drawing from build plan §3 and the GitHub milestones' due and close dates [1]; COMP 491 covers phases 5 to 8.");
+    source(s, "Figure 3. Phase plan, our drawing from build plan §3 and GitHub milestone dates [1]; phases 5 to 8 are COMP 491.");
     notes(s, [
       "Speaking notes · Presenter TBD (part C) · about 35 seconds",
       "",
@@ -696,36 +639,6 @@ async function build() {
       "- Start the video. Speak only if it has no voice-over; the narration then follows its chapters.",
       "",
       "TEAM NOTE: placeholder. The demo video is being made by another session; insert it here and paste its chapter list and narration into these notes. Also export a backup .mp4 in case the classroom can't play it from Slides.",
-    ]);
-  }
-
-  // 14 ── Demo: after the video ──────────────────────────────────────────────
-  {
-    const s = pres.addSlide();
-    header(s, "4 · DEMO · WHERE IT STANDS", "What you saw, and what is still open", "D");
-    box(s, 0.4, 1.15, 4.5, 2.75, C.fill);
-    text(s, "WORKING TODAY", { x: 0.6, y: 1.28, w: 4.1, h: 0.22, size: S.cap, bold: true, color: C.green, cs: 1.2 });
-    bullets(s, [
-      "Three games on one framework: **GreyBoxVillage**, **Living Vale**, **Painted Realm**",
-      "A country, a guard and a merchant through the same `Agent` API",
-      "A local 2B or 4B model on an ordinary graphics card",
-    ], { x: 0.6, y: 1.6, w: 4.1, h: 2.2, size: S.body, gap: 10 });
-    box(s, 5.15, 1.15, 4.5, 2.75, C.fill);
-    text(s, "STILL OPEN, AND THE PLAN", { x: 5.35, y: 1.28, w: 4.1, h: 0.22, size: S.cap, bold: true, color: C.ink3, cs: 1.2 });
-    bullets(s, [
-      "Phase 4's second annotator (#148): by 7 Dec",
-      "Editor tooling, a model inside the shipped game: COMP 491",
-      "Two planned demos not started: **GreyBox2D**, **CompanionRPG**",
-    ], { x: 5.35, y: 1.6, w: 4.1, h: 2.2, size: S.body, gap: 10 });
-    box(s, 0.4, 4.1, 9.25, 0.8, C.blueLt);
-    text(s, "**Try it:** open `Demos/GreyBoxStrategy` in Unity 6000.3.23f1 with Ollama running. A player build is a Phase 8 deliverable.",
-      { x: 0.6, y: 4.1, w: 8.9, h: 0.8, size: S.body, valign: "middle" });
-    source(s, "Source: Demos/README.md; GitHub milestones Phase 4 to 8; build plan §3 [1]. Status 24 Nov 2026.");
-    notes(s, [
-      "Speaking notes · Presenter TBD (part D) · about 35 seconds",
-      "",
-      "- So: three games run on one framework today, and a country, a village guard and a merchant all use the same agent API.",
-      "- What's open: Phase 4's second annotator by 7 December, then editor tooling and a model inside the shipped game next semester. Two smaller demos we planned haven't started; the plan cuts those first if time runs short.",
       "",
       "HAND-OFF: \"<next presenter> will show how we kept six people's work in one repository.\"",
       "",
@@ -825,7 +738,7 @@ async function build() {
       ["A new test that **could not fail** (#61)", "Break the rule once and watch the test go red", "Fixed in #62; used on the Phase 1 gate"],
     ];
     table(s, ["Problem", "Fix", "Result"], rows,
-      { x: 0.4, y: 1.12, w: 9.25, colW: [3.65, 3.4, 2.2], rowH: 0.66, size: S.table });
+      { x: 0.4, y: 1.12, w: 9.25, colW: [3.65, 3.4, 2.2], rowH: [0.4, 0.7, 0.7, 0.7, 0.7, 0.7], size: S.table });
     source(s, "Source: AGENTS.md \"Lessons\" and \"Before opening a pull request\" [4]; tools/ci/hygiene.py; pull requests #37, #38, #41, #61, #62, #342 and commit c9d6160.");
     notes(s, [
       "Speaking notes · Presenter TBD (part E) · about 55 seconds",
@@ -854,13 +767,11 @@ async function build() {
     ];
     cards.forEach(([h, b], i) => {
       const col = i % 2, row = Math.floor(i / 2);
-      const x = 0.4 + col * 4.68, y = 1.15 + row * 1.6;
-      box(s, x, y, 4.57, 1.45, C.fill);
+      const x = 0.4 + col * 4.68, y = 1.15 + row * 1.9;
+      box(s, x, y, 4.57, 1.75, C.fill);
       text(s, h, { x: x + 0.18, y: y + 0.12, w: 4.2, h: 0.3, size: S.head, bold: true });
-      text(s, b, { x: x + 0.18, y: y + 0.48, w: 4.2, h: 0.9, size: S.small, color: C.ink2 });
+      text(s, b, { x: x + 0.18, y: y + 0.5, w: 4.2, h: 1.1, size: S.body, color: C.ink2 });
     });
-    text(s, "We did not use Jira: issues, the board and pull requests live in one place, linked to the code.",
-      { x: 0.4, y: 4.4, w: 9.25, h: 0.35, size: S.small, color: C.ink2 });
     source(s, "Source: GitHub project \"Agenerela\" and milestones, 24 Nov 2026; course submission of 20 Oct (docs/course/2026-10-20-github-roadmap); AGENTS.md [4].");
     notes(s, [
       "Speaking notes · Presenter TBD (part F) · about 40 seconds",
@@ -888,12 +799,10 @@ async function build() {
     ];
     table(s, ["Member", "GitHub", "Commits", "PRs", "Issues", "Reviews"],
       who.map(([n, g, c, p, i, r]) => [`**${n}**`, g, c, p, i, r]),
-      { x: 0.4, y: 1.12, w: 5.7, colW: [1.6, 1.4, 0.86, 0.45, 0.62, 0.77], rowH: 0.32, size: S.cap, margin: [3, 4, 3, 4] });
-    text(s, "Commits: non-merge commits on test by git author, matched to logins by e-mail. PRs: merged, by author. Issues: closed as done, by assignee. Reviews: formal GitHub reviews of someone else's PR.",
-      { x: 0.4, y: 3.52, w: 5.7, h: 0.7, size: S.cap, color: C.ink2 });
-    box(s, 0.4, 4.32, 5.7, 0.68, C.blueLt);
-    text(s, "**AI-assisted work** counts toward the member who ran the agent: our rules forbid attribution trailers, so git cannot separate it. Many of the lead's commits were written by AI coding agents he directed.",
-      { x: 0.52, y: 4.32, w: 5.5, h: 0.68, size: S.cap, color: C.ink, valign: "middle" });
+      { x: 0.4, y: 1.12, w: 5.7, colW: [1.6, 1.4, 0.86, 0.45, 0.62, 0.77], rowH: 0.38, size: S.cap, margin: [3, 4, 3, 4] });
+    box(s, 0.4, 3.95, 5.7, 1.0, C.blueLt);
+    text(s, "**We used agentic AI throughout.** Coding agents (Claude Code, Codex) helped write, test and review much of the work, inside the same pull requests and checks. Their commits count toward the member who ran them.",
+      { x: 0.55, y: 3.95, w: 5.4, h: 1.0, size: S.small, color: C.ink, valign: "middle" });
     const pieColors = ["1F5FD1", "1E7B45", "8A5A00", "7A3FB0", "B23A3A", "4A4F57"];
     const names = ["Yevhen", "Hero", "Maxim", "Tim", "Tigran", "Hunter"];
     s.addChart(pres.charts.DOUGHNUT, [{ name: "PRs merged", labels: names, values: who.map((w) => w[3]) }], {
@@ -909,7 +818,7 @@ async function build() {
       "Speaking notes · Presenter TBD (part F) · about 45 seconds",
       "",
       "- Here is the work as GitHub records it, per member: commits, merged pull requests, issues done, and formal reviews.",
-      "- The numbers are lopsided, and we want to be honest about why. The lead runs AI coding agents, and their commits go under his name, so his column is his work plus his agents'. We don't add attribution lines, so git can't split them.",
+      "- The numbers are lopsided, and here's why: we used agentic AI a lot, for code, tests and reviews, and an agent's commits go under the name of whoever ran it. The lead ran the most agents, so his column is his work plus theirs.",
       "- The rest of us built the pieces in our own areas: targets and memory, telemetry and the prompt set, actions and profiles, availability and guards, and the core decision types. The next slide is how we tried to balance it.",
       "",
       "If asked 'Is this a fair picture?': Not entirely. Lines and commits don't measure labelling prompts, testing, research or design review; those don't show in git.",
@@ -924,19 +833,20 @@ async function build() {
     const rows = [
       ["Most of the core was built by one person (risk R01)", "From 27 Oct each member owns a **research area**: memory, targets, evaluation, observations, guards", "Areas own extension points; the core stays with the lead"],
       ["Review before merge was agreed, **not enforced** (R12)", "Review after merge, with a follow-up issue per defect: #61 → #62, #65 → #66", "11 of 299 merged PRs had a formal review"],
-      ["Not everyone has a GPU that can run models (R14)", "Shared model servers: an RTX 5080, then a home RTX 4070 SUPER", "Anyone runs live tests from a laptop"],
-      ["Exams and other courses (R04)", "Planned: unavailable dates posted each sprint, lighter sprints in exam weeks", "Not tracked in GitHub, so not measured"],
+      ["Labelling 200+ test prompts by hand is slow (R05)", "A Prompt Set window to write and label them, and an AI-written interim set to measure on meanwhile", "209 labelled prompts used for the Phase 4 A/B"],
+      ["A framework plus several demo games is too much (R08)", "A cut order: art polish and the smaller demos go first, never the strategy game or evaluation", "Two small demos deferred; the strategy game kept its time"],
     ];
     table(s, ["Problem", "What we did", "Result"], rows,
-      { x: 0.4, y: 1.12, w: 9.25, colW: [3.0, 3.85, 2.4], rowH: 0.72, size: S.table });
-    source(s, "Source: risk management plan of 29 Oct 2026, risks R01, R04, R12, R14 (docs/course/2026-10-29-risk-management); build plan §6.6 [1]; GitHub review data (numbers.md).");
+      { x: 0.4, y: 1.12, w: 9.25, colW: [3.0, 3.85, 2.4], rowH: [0.4, 0.8, 0.8, 0.8, 0.8], size: S.table });
+    source(s, "Source: risk management plan of 29 Oct 2026, risks R01, R05, R08, R12 (docs/course/2026-10-29-risk-management); build plan §6.6 [1]; GitHub review data (numbers.md); Demos/README.md.");
     notes(s, [
       "Speaking notes · Presenter TBD (part F) · about 55 seconds",
       "",
       "- Four problems from our risk register, and what came of them.",
       "- The biggest: most of the core was built by one person, which you saw in the numbers. From 27 October each of us owns a research area with its own extension point: memory, targets, evaluation, observations, guards.",
       "- We agreed to review before merging but never made GitHub enforce it, and only 11 of 299 merged pull requests had a formal review. So defects were found after merge; each got a follow-up issue, like 61 to 62.",
-      "- Not everyone has a graphics card for models, so we set up shared model servers anyone can reach from a laptop.",
+      "- Labelling hundreds of test prompts by hand was slow, so we built a window for writing and labelling them, and measured on an AI-written interim set until ours was ready. 209 labelled prompts carried the Phase 4 run.",
+      "- And scope: a framework plus several games is a lot for two semesters. We agreed a cut order early, so two small demos waited and the strategy game got the time.",
       "- What we'd do differently: turn on required reviews from day one.",
       "",
       "If asked 'Did the research areas work?': They gave each person a place to build without touching the core, and a clear owner for questions. Each area has one open research issue (#119 to #122, #138) where its pieces are linked.",
@@ -993,20 +903,12 @@ async function build() {
   {
     const s = pres.addSlide();
     slideNo++;
-    s.background = { color: C.dark };
-    text(s, "Q & A", { x: 0.6, y: 0.5, w: 8.8, h: 0.25, size: S.kicker, bold: true, color: C.blueOnDark, cs: 2 });
-    text(s, "Thank you! Questions?", { x: 0.6, y: 0.85, w: 8.8, h: 0.9, size: 40, bold: true, color: C.white });
-    text(s, "The model chooses. Validated code acts.", { x: 0.6, y: 1.75, w: 8.8, h: 0.4, size: 18, color: C.onDark });
-    const areas = [
-      [TEAM[0], "Team lead · providers, the core"], [TEAM[1], "Agents · observations"], [TEAM[2], "Actions · evaluation"],
-      [TEAM[3], "Availability · guards"], [TEAM[4], "Targets · memory"], [TEAM[5], "Telemetry · targets"],
-    ];
-    areas.forEach(([n, f], i) => {
-      const x = 0.6 + (i % 3) * 2.95, y = 2.75 + Math.floor(i / 3) * 0.9;
-      text(s, n, { x, y, w: 2.8, h: 0.3, size: 15, bold: true, color: C.white });
-      text(s, f, { x, y: y + 0.32, w: 2.8, h: 0.3, size: S.small, color: C.onDark });
-    });
-    text(s, "github.com/agenerela/agenerela", { x: 0.6, y: 4.95, w: 8.8, h: 0.25, size: S.small, color: C.onDark2 });
+    s.background = { color: C.navy };
+    const lh = 2.6, lw = lh * 1393 / 1023;
+    s.addImage({ path: FIG("agenerela-logo-wordmark.png"), x: (10 - lw) / 2, y: 0.4, w: lw, h: lh, altText: "Agenerela logo and name" });
+    text(s, "Thank you! Questions?", { x: 0.6, y: 3.4, w: 8.8, h: 0.7, size: 36, bold: true, color: C.white, align: "center" });
+    text(s, "The model chooses. Validated code acts.", { x: 0.6, y: 4.12, w: 8.8, h: 0.35, size: 18, color: C.onDark, align: "center" });
+    text(s, "github.com/agenerela/agenerela", { x: 0.6, y: 4.85, w: 8.8, h: 0.25, size: S.small, color: C.onDark2, align: "center" });
     notes(s, [
       "EVERYONE · about 3 minutes of questions. Whoever owns the topic answers.",
       "",
@@ -1017,7 +919,7 @@ async function build() {
       "- Do the guards help? Not on accuracy beyond noise (66.0% vs 67.9%, floor 4.9 at n = 209). They turn wrong actions into doing nothing: 14 stopped, 4 right ones lost.",
       "- What if the model ignores the schema? Providers are untrusted: guards check every answer and Execute checks again before any handler runs.",
       "- Is this a chatbot framework? No: most calls come from the game itself, like turns, events and timers. A player's line is one kind of input.",
-      "- Why so many commits by one person? The lead ran AI coding agents under his name; see slide 19. Teammates own research areas.",
+      "- Why so many commits by one person? The lead ran AI coding agents under his name; see slide 17. Teammates own research areas.",
       "- What's next? Phase 4's second annotator by 7 Dec; COMP 491: editor tools, cloud and in-process providers, samples, polished demos.",
     ]);
   }
