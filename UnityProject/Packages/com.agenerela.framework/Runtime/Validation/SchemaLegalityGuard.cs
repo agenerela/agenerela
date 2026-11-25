@@ -86,6 +86,11 @@ namespace Agenerela
 
                 if (!parameter.Allows(argument.Value))
                 {
+                    if (parameter.IsFreeText)
+                    {
+                        return GuardVerdict.Reject($"'{argument.Key}' is longer than {parameter.MaxLength} characters or holds a control character.");
+                    }
+
                     return GuardVerdict.Reject($"'{argument.Value}' is not a value of '{argument.Key}'.");
                 }
             }
@@ -117,6 +122,7 @@ namespace Agenerela
                 // other impossible (DR-023).
                 foreach (var asked in DecisionSchema.ParametersOf(input.Request.Schema, decision.ActionId))
                 {
+                    if (asked.AllowedValues == null) continue; // a free text: its length was checked above (DR-030)
                     if (decision.TryGetArgument(asked.Name, out string given) && definition.ParameterNamed(asked.Name) != null &&
                         definition.ParameterNamed(asked.Name).Allows(given) && !Contains(asked.AllowedValues, given))
                     {

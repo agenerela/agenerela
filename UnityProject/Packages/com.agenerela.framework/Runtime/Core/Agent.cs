@@ -1834,7 +1834,7 @@ namespace Agenerela
             {
                 bool has = decision.TryGetArgument(field.Name, out string value);
                 var parameter = definition.ParameterNamed(field.Name);
-                if (!has && parameter != null && parameter.HasDefault && Contains(field.AllowedValues, parameter.Default))
+                if (!has && parameter != null && parameter.HasDefault && (field.AllowedValues == null || Contains(field.AllowedValues, parameter.Default)))
                 {
                     value = parameter.Default;
                     has = true;

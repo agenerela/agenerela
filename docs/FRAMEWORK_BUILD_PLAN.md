@@ -3123,6 +3123,65 @@ input to the language model, and the image slot on the provider settings page (#
 - sd.cpp changing its API in ways that break the binding more often than a pin can absorb.
 - A game that needs pictures during play on an 8 GB card. That would bring framework arbitration
   between models forward.
+### DR-030 — A parameter may be a short free text the model writes, capped by `maxLength`
+
+**Status:** Proposed, 24 November 2026, by the Painted Realm world-lore session (#20), for the
+framework tech lead to accept or refuse in the pull request that builds it. Additive: a parameter
+with no `MaxLength` is exactly what DR-023 built, and a call that declares none sends what it sent.
+
+**Context.** The lead asked for "a model naming the map and creating a world's backstory" in
+Painted Realm, for the final presentation as a way the framework serves a game. That is one answer
+with several text fields: a world name, a name and a line for each realm, and a few sentences of
+history. The framework could not ask for it. A decision has one free-text field (the statement);
+DR-023 left free strings out on purpose ("a second free-text field is #266 item 3, answered by a
+recipe"), and the recipe, one agent call per field as the storyteller's scribe does for a title,
+would be eleven calls for a five-realm world. The game could build a `DecisionSchema` by hand and
+call `ILLMProvider.RequestAsync` itself, but then the call has no identity prompt, no guards, no
+telemetry, no decision log line and no place in the decision feed: it would not go through the
+framework at all.
+
+What is known (findings, 24 November 2026): Ollama 0.40.14 holds `maxLength` on a string for
+`qwen3.5:4b` (the backstory field, capped at 480, stopped at 480 mid-sentence), and the whole
+five-realm world came back in one call of about 300 tokens, 3.9 s warm on the home server's RTX
+4070 SUPER.
+
+**Options considered**
+
+| Question | Options | Verdict |
+|---|---|---|
+| Where | A new call (`Agent.GenerateAsync` with a field list); the game calls the provider with its own schema; a new kind of `ActionParameter` | **A kind of parameter.** A new call would repeat `DecideAsync`'s queue, backlog, feed, relay and round paths (DR-022 refused the same for choices). Calling the provider directly skips the framework, and every guard with it. A parameter reuses the paired schema, the parser, `Arguments`, the legality guard, the action list, the examples, telemetry and the log as they are |
+| How it is declared | A new class beside `ActionParameter`; a flag; `MaxLength` on `ActionParameter` | **`ActionParameter.MaxLength`** (and `[AgentParameter(..., MaxLength = 24)]`): above 0 the parameter is a free text with no `Values`; 0, the default, keeps it a closed choice. `IsFreeText` says which. Both front doors fill the same plain type (DR-011) |
+| A cap, or none | Uncapped; capped | **Always capped.** The schema sends `maxLength` (the grammar holds it), the legality guard refuses a longer value from a provider that ignored the schema, and the prompt's action list says "free text, at most N characters", since a local model never reads the schema (findings, 10 October 2026) |
+| What it may hold | Any text; printable text | **Any text up to the cap with no control character but a line break.** What it says is the game's to judge, like a statement: the framework never acts on it as an id |
+| Defaults and examples | As for a closed parameter | **The same rules.** `Default` covers only a missing value; `ExampleValue` is what the example shows, quoted like a statement; with neither, the example leaves the field out rather than invent one |
+| Per-value checks | Run them; skip them | **Skipped**: there are no values to offer. An action with a free text is never left out for want of one |
+| Place in the reply | As DR-023 | **As DR-023**: after `target`, before the free-text field, in declared order |
+| GBNF | Bound the length in the grammar; a plain string | **A plain string for now**: no in-process provider exists (Phase 6b), and the legality guard holds the cap anyway |
+
+**Decision.** As the table says: `ActionParameter.MaxLength` and `IsFreeText`,
+`AgentParameterAttribute.MaxLength`, `SchemaField.MaxLength` (sent as `maxLength` on a free field),
+and the parameter paths in `DecisionSchema`, `JsonSchemaSerializer`, `ActionAvailability`,
+`FewShotBuilder`, `PromptBuilder`, `SchemaLegalityGuard` and `Agent`'s default handling taught the
+second kind. Tests: `FreeTextParameterTests`.
+
+**How Painted Realm uses it.** `WorldLoremaster`, one agent with one action, `found_world`, which
+takes no target and asks for `world_name`, then `realm_N` and `ruler_N` for each realm; the
+backstory is its free-text field, renamed `backstory` (`DecideOptions.StatementFieldName`). The
+game's `LoreRules` keeps what passes its own checks (letters, length, no real place, no clash with
+another name, whole sentences) and falls back to the seeded tables for the rest.
+
+**Consequences.**
+
+- Additive; no default changes; no prompt that declares no free text changes (rule 2).
+- A small model can now write text the game shows. That was already true of every statement;
+  the same rule holds: the game checks it as data.
+- Rule 6 safe: no dependency. Rule 5 safe: the model's text is data the game validates; nothing it
+  writes touches Unity.
+
+**Revisit if:** a model ignores `maxLength` and the guard refuses too often; Ollama's native path
+(which sorts keys) is used with free text, where the statement could come before the names; a game
+wants a list of texts of its own length (one parameter a realm is the recipe today); or the
+in-process provider needs the cap in its grammar.
 
 ## Appendix A — carried measurements (source: test-ai-framework prototype, Aug 2026, RTX 4060 Laptop 8GB, qwen3.5 family via Ollama)
 

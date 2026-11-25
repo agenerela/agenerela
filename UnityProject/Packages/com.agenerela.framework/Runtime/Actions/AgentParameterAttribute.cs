@@ -44,6 +44,13 @@ namespace Agenerela
         /// <summary>The value used when the reply leaves this out or names one not offered (<see cref="ActionParameter.Default"/>).</summary>
         public string Default { get; set; }
 
+        /// <summary>
+        /// Above 0, a free text of at most this many characters the model writes itself, given with no values
+        /// (DR-030): <c>[AgentParameter("world_name", "the world's name", MaxLength = 24)]</c>. 0, the default, for a
+        /// closed choice.
+        /// </summary>
+        public int MaxLength { get; set; }
+
         /// <summary>The value this action's example shows (<see cref="ActionParameter.ExampleValue"/>).</summary>
         public string ExampleValue { get; set; }
 

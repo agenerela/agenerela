@@ -1,4 +1,4 @@
-# Parameters: a closed choice beside the target
+# Parameters: a closed choice, or a short free text, beside the target
 
 An action can ask the model for more than a target: how hard an event strikes, how many potions,
 which of three prices. Each is a **parameter**, a closed list of values the action declares. The
@@ -57,9 +57,19 @@ Two kinds, both a list:
 - **A number from a list**: `1`, `2`, `3`. When every value is a whole number, a method may take
   it as an `int` (`[Argument("quantity")] int quantity`), and `AgentDecision.TryGetNumber` reads it.
 
-There is no open number range and no free text: a small model invents numbers, and a second free
-text is a recipe ([prompt.md](prompt.md#two-texts-in-one-statement-a-title-and-a-story)). Compute a
-short list instead, such as three prices.
+There is no open number range: a small model invents numbers. Compute a short list instead, such as
+three prices.
+
+- **A short free text** (DR-030): give `MaxLength` and no values, and the model writes the value
+  itself, such as a name. `[AgentParameter("world_name", "the world's name", MaxLength = 24)]`, or
+  `new ActionParameter { Name = "world_name", MaxLength = 24 }`. The schema sends `maxLength`
+  (Ollama's grammar holds it), the action list says "world_name (the world's name): free text, at
+  most 24 characters.", the example shows `ExampleValue` in quotes (or leaves the field out when
+  there is none), and `SchemaLegalityGuard` refuses a longer value or one with a control character
+  other than a line break. Nothing else is checked: the text is data, and the game judges it as it
+  judges a statement. Painted Realm's loremaster names a world and its realms this way, in one
+  decision (`Demos/GreyBoxStrategy`, `WorldLoremaster`). For one extra text beside the statement,
+  the recipe in [prompt.md](prompt.md#two-texts-in-one-statement-a-title-and-a-story) still works.
 
 **An asset wins over the method, parameters included.** When `RegisterMethods` is given an asset
 with the action's id, the asset's `Parameters` replace the method's `[AgentParameter]`s (DR-011).
@@ -195,7 +205,8 @@ every value, or it is refused. A guard of your own reads `input.Decision.Argumen
 
 ## Not built
 
-- An open number range, and free text.
+- An open number range.
+- A free text's cap in the GBNF grammar: the in-process provider does not exist yet, and the guard holds the cap.
 - `target` plus `also_targets`.
 - Another schema shape for a provider that cannot take a paired one: such a provider cannot be
   given parameters at all yet. Only Ollama exists; Gemini takes `anyOf`, OpenAI's strict mode

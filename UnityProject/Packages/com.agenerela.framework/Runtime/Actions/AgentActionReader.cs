@@ -302,6 +302,7 @@ namespace Agenerela
                     Description = attribute.Description,
                     // Copied, so the definition never shares an array with the attribute.
                     Values = attribute.Values == null ? null : (string[])attribute.Values.Clone(),
+                    MaxLength = attribute.MaxLength,
                     Default = attribute.Default,
                     ExampleValue = attribute.ExampleValue,
                 };

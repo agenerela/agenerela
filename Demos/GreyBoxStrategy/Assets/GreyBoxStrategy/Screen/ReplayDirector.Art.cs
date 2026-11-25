@@ -25,8 +25,8 @@ namespace GreyBoxStrategy.Realm
             {
                 var c = w.Countries[i];
                 string persona = game?.Players != null && game.Players.TryGetValue(c.Id, out var p) ? p?.Persona : null;
-                // Backstory: the seam for the world backstory to come; null until a session writes one.
-                subjects.Add(new RulerSubject { Id = c.Id, Name = c.Name ?? c.Id, Persona = persona, Colour = ChartPalette.Owner(i), Slot = i, Backstory = null });
+                // Backstory: the loremaster's line about this ruler (#20, world lore), checked; null when none.
+                subjects.Add(new RulerSubject { Id = c.Id, Name = c.Name ?? c.Id, Persona = persona, Colour = ChartPalette.Owner(i), Slot = i, Backstory = c.RulerLine });
             }
             return subjects;
         }

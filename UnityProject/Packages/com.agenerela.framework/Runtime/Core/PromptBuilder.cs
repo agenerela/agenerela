@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using Agenerela.Providers;
 
@@ -540,7 +541,9 @@ namespace Agenerela
                 string name = string.IsNullOrWhiteSpace(parameter.Description)
                     ? parameter.Name
                     : parameter.Name + " (" + OneLine(parameter.Description) + ")";
-                entry = WithNote(entry, name + ": " + OneOf(parameter.AllowedValues) + ".");
+                entry = WithNote(entry, name + ": " + (parameter.AllowedValues == null
+                    ? "free text, at most " + parameter.MaxLength.ToString(CultureInfo.InvariantCulture) + " characters" // DR-030
+                    : OneOf(parameter.AllowedValues)) + ".");
             }
 
             return entry;

@@ -514,6 +514,19 @@ namespace Agenerela
 
             foreach (var parameter in definition.Parameters)
             {
+                if (parameter.IsFreeText)
+                {
+                    // A free text (DR-030): no values to offer, only a cap on its length.
+                    fields.Add(new SchemaField
+                    {
+                        Name = parameter.Name,
+                        Description = string.IsNullOrWhiteSpace(parameter.Description) ? null : parameter.Description.Trim(),
+                        MaxLength = parameter.MaxLength,
+                        Required = true,
+                    });
+                    continue;
+                }
+
                 var values = answer != null ? answer.ValuesOf(definition, parameter) : new List<string>(parameter.Values);
                 fields.Add(new SchemaField
                 {
@@ -538,8 +551,10 @@ namespace Agenerela
             var key = new System.Text.StringBuilder("|");
             foreach (var field in parameters)
             {
-                key.Append(field.Name.Length).Append(':').Append(field.Name).Append('=')
-                   .Append(KeyOf(new List<string>(field.AllowedValues))).Append(';');
+                key.Append(field.Name.Length).Append(':').Append(field.Name).Append('=');
+                if (field.AllowedValues == null) key.Append('#').Append(field.MaxLength); // a free text (DR-030)
+                else key.Append(KeyOf(new List<string>(field.AllowedValues)));
+                key.Append(';');
             }
 
             return key.ToString();

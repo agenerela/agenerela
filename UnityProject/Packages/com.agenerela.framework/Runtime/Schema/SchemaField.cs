@@ -28,6 +28,12 @@ namespace Agenerela
         /// </remarks>
         public IReadOnlyList<string> AllowedValues;
 
+        /// <summary>
+        /// For a free-form field, the most characters its value may have, sent as <c>maxLength</c>; 0, the default,
+        /// for no cap. A free-text parameter's (DR-030). Ignored when <see cref="AllowedValues"/> is set.
+        /// </summary>
+        public int MaxLength;
+
         /// <summary>Whether every answer must contain this field. A free-form one may still be empty.</summary>
         public bool Required;
     }
