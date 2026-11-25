@@ -134,6 +134,23 @@ namespace Agenerela.Tests
         // ---- Requests that cannot be sent --------------------------------------------------------
 
         [Test]
+        public void AnEditIsRefusedAtTheCallAndSendsNothing()
+        {
+            var server = new FakeComfy();
+            var provider = Provider(server);
+            var edit = Request();
+            edit.Images.Add(FakeComfy.Png);
+            var masked = Request();
+            masked.Mask = FakeComfy.Png;
+
+            Assert.That(provider.Capabilities.Edits, Is.False);
+            var e = Assert.Throws<ArgumentException>(() => provider.GenerateAsync(edit, CancellationToken.None));
+            Assert.That(e.Message, Does.Contain("does not edit"));
+            Assert.Throws<ArgumentException>(() => provider.GenerateAsync(masked, CancellationToken.None));
+            Assert.That(server.Requests, Is.Empty);
+        }
+
+        [Test]
         public void ARequestThatCannotBeSentFailsAtTheCallAndSendsNothing()
         {
             var server = new FakeComfy();

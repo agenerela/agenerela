@@ -741,8 +741,9 @@ guard.Backlog = new DecisionBacklog(0, BacklogOverflow.RefuseNewest); // none wh
 ## Images
 
 An image backend is not an `ILLMProvider`: it has its own interface, `IImageProvider`, with a
-cache, a prompt builder and a ComfyUI provider in its own assembly. See [images.md](images.md)
-(DR-024, DR-025).
+cache, a prompt builder, and two backends each in its own assembly: ComfyUI, and any server
+that speaks OpenAI's images API, which also edits pictures. See [images.md](images.md)
+(DR-024, DR-025, DR-028).
 
 ## Extension points — where the next things go
 

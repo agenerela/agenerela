@@ -3,8 +3,8 @@
 A language model chooses what an agent does. An image model is a different kind of backend: a
 prompt, a size and a seed go in, a picture comes out. The framework gives it its own small
 interface, `IImageProvider`, beside `ILLMProvider` rather than inside it (DR-024), and ships no
-image model. This page covers the interface, the cache, the prompt builder and the ComfyUI
-provider (DR-025).
+image model. This page covers the interface, the cache, the prompt builder, the ComfyUI provider
+(DR-025), editing a picture and the OpenAI-compatible provider (DR-028).
 
 **The model never asks for a picture itself** (hard rule 5). Your code asks, or a registered
 action's handler does: the model chose "paint the event", the handler calls the image provider.
@@ -38,6 +38,29 @@ Only your own cancellation throws (`OperationCanceledException`), and a request 
 cannot send at all (a size it cannot make, a parameter its workflow lacks) throws
 `ArgumentException` from the call, before anything is sent.
 
+## Editing a picture
+
+An edit is the same call with the picture to start from (DR-028):
+
+```csharp
+var edit = new ImageRequest { Prompt = "give him a golden crown", Width = 768, Height = 896, Seed = 7 };
+edit.Images.Add(portraitPng);            // the picture to change; later entries are references
+edit.Mask = crownAreaPng;                 // optional: fully transparent pixels change, opaque ones are kept
+edit.Parameters["strength"] = "0.6";      // how much it may change, where the backend takes it
+var result = await images.GenerateAsync(edit, ct);
+```
+
+- **`Images`** are PNG bytes. The first is the picture changed; an edit model (Qwen-Image-Edit)
+  may take more as references. `Width` and `Height` are still the size of the result.
+- **`Mask`** follows OpenAI's convention: a PNG the size of `Images[0]` whose fully transparent
+  pixels are the ones to change.
+- **Not every backend edits.** `Capabilities.Edits`, `Masks` and `MaxImages` say what it takes,
+  and `Capabilities.WhyNot(request)` says why a request cannot be sent, or null. An edit sent to a
+  backend that cannot do it throws `ArgumentException` at the call, as a size it cannot make does,
+  so the mistake shows on the first run. `ComfyUIProvider` does not edit yet.
+- **The cache** keys each input picture and the mask by their bytes, so one edit is never handed
+  out for another. A request with no pictures keys exactly as it did before edits existed.
+
 ## Writing a prompt: `ImagePromptBuilder`
 
 The game's art direction leads every prompt, and text a model wrote never comes first:
@@ -64,7 +87,7 @@ var images = new CachedImageProvider(backend, cache);
 
 The same request comes back from the cache without asking the backend; only a success is
 stored. The key is `ImageRequest.Key(providerName)`, a SHA-256 of the provider's name, the
-prompt, the size, the seed and every parameter, so set a seed for a picture a replay must show
+prompt, the size, the seed, every parameter and an edit's pictures, so set a seed for a picture a replay must show
 again. A cache with no backend (`new CachedImageProvider(null, cache, "comfyui")`) still shows
 every picture made before, and fails the rest with `Unreachable`. Write your own `IImageCache`
 to keep pictures in a save file instead.
@@ -109,6 +132,41 @@ the *names* of the two environment variables, never the key, and builds one with
 unloads that model, and the next decision waits for it to load again. Make pictures where no
 decision waits, such as a loading screen, never during play. Painted Realm
 (`Demos/GreyBoxStrategy`) paints its rulers that way, with the art pack as the fallback.
+
+## Any OpenAI-compatible server: `OpenAIImagesProvider`
+
+`OpenAIImagesProvider` speaks OpenAI's images API: a new picture through `/images/generations`, an
+edit through `/images/edits`. It works with stable-diffusion.cpp's `sd-server`, with LocalAI (new
+pictures only) and with OpenAI. It lives in its own assembly, **`Agenerela.OpenAIImages`**, which
+references only the core and Newtonsoft.
+
+```csharp
+// sd-server started with a model, listening on 127.0.0.1:1234
+var settings = new OpenAIImagesSettings { Url = "http://127.0.0.1:1234/v1", SdCppExtraArgs = true };
+settings.DefaultParameters["extra.sample_params.sample_steps"] = "8";   // Z-Image Turbo
+var images = new OpenAIImagesProvider(settings);
+```
+
+Or as an asset: **Create → Agenerela → OpenAI-compatible Image Provider**, which stores the
+address, and the *name* of the key's variable (`AGENERELA_IMAGES_API_KEY` unless changed), never
+the key. A named address variable that is not set falls back to the asset's address and sends no
+key, so a key never reaches a server it was not meant for.
+
+- **What it sends.** A new picture is JSON with `prompt`, `size` (`768x896`), `n` = 1,
+  `output_format` = `png`, `model` when set, and each request parameter as a field of its own
+  name, such as `quality`. An edit is multipart: the same fields, the pictures as `image` (one) or
+  `image[]` (several), and `mask`. The picture comes back from `data[0].b64_json`.
+- **Seeds and steps.** OpenAI's API has neither. For `sd-server`, turn `SdCppExtraArgs` on: the
+  seed, `strength`, `negative_prompt` and every parameter named `extra.<path>` go into the
+  `<sd_cpp_extra_args>` block it reads from the end of the prompt, and the seed is honoured. Leave
+  it off for any other server, which would draw the block.
+- **LocalAI** does not edit and answers with a URL unless asked: set `Edits` off and add the default
+  parameter `response_format` = `b64_json`.
+- **Failures:** nothing answering is `Unreachable`; a model the server lacks is `ModelNotFound`; a
+  refused key, route or request (a content refusal included) is `Rejected`; a server still busy
+  (429 or 503) after `Retry` (DR-026) is `RateLimited`; another 5xx is `ServerError`; too slow is
+  `Timeout`; a reply with no PNG in it is `MalformedResponse`. `Describe(request)` shows what would
+  be sent, with no key and no picture bytes.
 
 ## Another backend
 

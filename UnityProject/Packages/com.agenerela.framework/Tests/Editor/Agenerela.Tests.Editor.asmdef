@@ -6,7 +6,8 @@
         "UnityEditor.TestRunner",
         "Agenerela",
         "Agenerela.Editor",
-        "Agenerela.ComfyUI"
+        "Agenerela.ComfyUI",
+        "Agenerela.OpenAIImages"
     ],
     "includePlatforms": [
         "Editor"
