@@ -82,7 +82,7 @@ namespace Agenerela.Providers.SdCpp
 
             worker = new Thread(Work) { IsBackground = true, Name = "Agenerela sd.cpp" };
             worker.Start();
-            AppDomain.CurrentDomain.DomainUnload += OnDomainUnload;
+            SdCppLibrary.Track(this);
         }
 
         /// <summary><c>"sdcpp"</c>.</summary>
@@ -155,7 +155,10 @@ namespace Agenerela.Providers.SdCpp
             return source.Awaitable;
         }
 
-        /// <summary>Stops the worker and frees the model. Pictures still queued end cancelled.</summary>
+        /// <summary>
+        /// Stops the worker and frees the model. A picture being made is cancelled, and pictures still
+        /// queued end cancelled without running. Returns at once; the model is freed on the worker.
+        /// </summary>
         public void Dispose()
         {
             if (disposed)
@@ -164,10 +167,23 @@ namespace Agenerela.Providers.SdCpp
             }
 
             disposed = true;
-            AppDomain.CurrentDomain.DomainUnload -= OnDomainUnload;
+            SdCppLibrary.Untrack(this);
             engine.Cancel();
             work.Add(engine.Dispose);
             work.CompleteAdding();
+        }
+
+        // Before a domain reload, or as the process ends: dispose, then wait for the worker to leave
+        // native code, however long a load takes, so nothing returns into a domain that is gone. A
+        // cancel sent while sd.cpp is loading, or before a picture starts executing, is ignored by
+        // it, so the cancel is sent again until the worker is out.
+        internal void Shutdown()
+        {
+            Dispose();
+            while (!worker.Join(100))
+            {
+                engine.Cancel();
+            }
         }
 
         // ---- The request ---------------------------------------------------------------------------
@@ -251,12 +267,22 @@ namespace Agenerela.Providers.SdCpp
         {
             var clock = Stopwatch.StartNew();
             float? generateSeconds = null;
+            job.Token = ct;
             byte[] png;
             try
             {
                 png = await Queue(() =>
                 {
                     Load();
+
+                    // A cancel that came while the model loaded: sd.cpp cannot stop a load, so the
+                    // picture is not started rather than made and thrown away.
+                    ct.ThrowIfCancellationRequested();
+                    if (disposed)
+                    {
+                        throw new OperationCanceledException("The provider was disposed before the picture started.");
+                    }
+
                     var made = Stopwatch.StartNew();
                     RgbImage image = engine.Generate(job);
                     generateSeconds = (float)made.Elapsed.TotalSeconds;
@@ -320,6 +346,17 @@ namespace Agenerela.Providers.SdCpp
                 {
                     work.Add(() =>
                     {
+                        if (disposed)
+                        {
+                            // Disposed while it waited: it ends cancelled without running.
+                            if (Interlocked.CompareExchange(ref started, 2, 0) == 0)
+                            {
+                                done.TrySetCanceled();
+                            }
+
+                            return;
+                        }
+
                         if (Interlocked.CompareExchange(ref started, 1, 0) != 0)
                         {
                             return; // cancelled while it waited
@@ -384,16 +421,6 @@ namespace Agenerela.Providers.SdCpp
                     UnityEngine.Debug.LogException(e);
                 }
             }
-        }
-
-        private void OnDomainUnload(object sender, EventArgs e)
-        {
-            // A domain reload in the editor: free the model now, or its memory on the card is lost
-            // until the editor closes. Waits up to 10 s for a picture being made to stop.
-            engine.Cancel();
-            Dispose();
-            worker.Join(TimeSpan.FromSeconds(10));
-            SdCppLibrary.BeforeReload();
         }
     }
 }

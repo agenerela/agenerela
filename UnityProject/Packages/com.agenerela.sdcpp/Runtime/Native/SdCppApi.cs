@@ -53,6 +53,7 @@ namespace Agenerela.Providers.SdCpp.Native
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] internal delegate void LoadAllFromPath(IntPtr dir);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] internal delegate void LogCallback(int level, IntPtr text, IntPtr data);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] internal delegate void SetLogCallbackFn(LogCallback callback, IntPtr data);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] internal delegate UIntPtr ListDevicesFn(byte[] buffer, UIntPtr size);
 
 
         internal NoArgsPtr LastErrorPtr, Version, Commit, SystemInfo, CtxOptCreate, ImgGenOptCreate;
@@ -72,6 +73,7 @@ namespace Agenerela.Providers.SdCpp.Native
         internal NoArgsPtrFromPtr TensorData;
         internal ResultImage ResultGetImage;
         internal SetLogCallbackFn SetLogCallback;
+        internal ListDevicesFn ListDevicesRaw;
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] internal delegate IntPtr NoArgsPtrFromPtr(IntPtr p);
 
@@ -83,17 +85,23 @@ namespace Agenerela.Providers.SdCpp.Native
 
             // ggml loads its GPU and CPU backends as separate libraries, looking beside the running
             // executable (Unity.exe, not this folder). Loading them from this folder first registers
-            // them, so sd.cpp finds them when it creates a context.
+            // them, so sd.cpp finds them when it creates a context. After a domain reload the
+            // libraries are still resident with their backends registered, so it is done once a
+            // process: stable-diffusion.dll being loaded already means it was.
+            bool resident = NativeLoader.IsResident(sdPath);
             IntPtr ggmlLibrary = NativeLoader.Load(ggmlPath);
-            var loadAll = NativeLoader.Function<LoadAllFromPath>(ggmlLibrary, "ggml_backend_load_all_from_path");
-            IntPtr dir = Utf8(folder);
-            try
+            if (!resident)
             {
-                loadAll(dir);
-            }
-            finally
-            {
-                Marshal.FreeHGlobal(dir);
+                var loadAll = NativeLoader.Function<LoadAllFromPath>(ggmlLibrary, "ggml_backend_load_all_from_path");
+                IntPtr dir = Utf8(folder);
+                try
+                {
+                    loadAll(dir);
+                }
+                finally
+                {
+                    Marshal.FreeHGlobal(dir);
+                }
             }
 
             IntPtr sdLibrary = NativeLoader.Load(sdPath);
@@ -126,6 +134,7 @@ namespace Agenerela.Providers.SdCpp.Native
             ResultImageCount = F<PtrSize>("sd_result_get_image_count");
             ResultGetImage = F<ResultImage>("sd_result_get_image");
             SetLogCallback = F<SetLogCallbackFn>("sd_set_log_callback");
+            ListDevicesRaw = F<ListDevicesFn>("sd_list_devices");
         }
 
         // The libraries stay loaded for the life of the process: ggml's backends cannot be unloaded
@@ -136,6 +145,30 @@ namespace Agenerela.Providers.SdCpp.Native
 
         /// <summary>Loads the library in <paramref name="folder"/>. Throws <see cref="DllNotFoundException"/> or <see cref="EntryPointNotFoundException"/> with the reason.</summary>
         internal static SdCppApi Load(string folder) => new SdCppApi(folder);
+
+        /// <summary>The devices ggml found, one a line: a name such as <c>Vulkan1</c> or <c>CPU</c>, a tab, and a description.</summary>
+        internal string ListDevices()
+        {
+            var buffer = new byte[16384];
+            ListDevicesRaw(buffer, (UIntPtr)buffer.Length);
+            int end = Array.IndexOf(buffer, (byte)0);
+            return Encoding.UTF8.GetString(buffer, 0, end < 0 ? buffer.Length : end);
+        }
+
+        /// <summary>True when a device other than the CPU is listed.</summary>
+        internal static bool HasGpu(string devices)
+        {
+            foreach (string line in (devices ?? "").Split('\n'))
+            {
+                string name = line.Split('\t')[0].Trim();
+                if (name.Length > 0 && !name.StartsWith("CPU", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
 
         /// <summary>sd.cpp's last error on this thread, or an empty string.</summary>
         internal string LastError => Text(LastErrorPtr());
@@ -192,6 +225,9 @@ namespace Agenerela.Providers.SdCpp.Native
                 : "lib" + name + ".so";
         }
 
+        /// <summary>True when the library at <paramref name="path"/> is already loaded in this process (Windows only; false elsewhere).</summary>
+        internal static bool IsResident(string path) => IsWindows && GetModuleHandleW(path) != IntPtr.Zero;
+
         internal static IntPtr Load(string path)
         {
             if (!File.Exists(path))
@@ -236,6 +272,9 @@ namespace Agenerela.Providers.SdCpp.Native
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
         private static extern IntPtr LoadLibraryExW(string path, IntPtr file, uint flags);
+
+        [DllImport("kernel32", CharSet = CharSet.Unicode)]
+        private static extern IntPtr GetModuleHandleW(string path);
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Ansi)]
         private static extern IntPtr GetProcAddress(IntPtr module, string name);

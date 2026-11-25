@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Agenerela.Providers.SdCpp.Native;
 
 namespace Agenerela.Providers.SdCpp
@@ -20,6 +20,9 @@ namespace Agenerela.Providers.SdCpp
         internal byte[] Mask;
         internal List<RgbImage> References = new List<RgbImage>();
         internal Dictionary<string, string> Options = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        /// <summary>The caller's token: checked before the picture starts, and watched while it runs.</summary>
+        internal CancellationToken Token;
     }
 
     /// <summary>A failure the provider reports as a result, with its kind.</summary>
@@ -46,7 +49,10 @@ namespace Agenerela.Providers.SdCpp
         /// <summary>Loads the model. Throws <see cref="SdCppFailure"/>.</summary>
         void Load();
 
-        /// <summary>Makes one picture. Throws <see cref="SdCppFailure"/>, or <see cref="OperationCanceledException"/> after <see cref="Cancel"/>.</summary>
+        /// <summary>
+        /// Makes one picture. Throws <see cref="SdCppFailure"/>, or <see cref="OperationCanceledException"/>
+        /// when <see cref="SdCppJob.Token"/> is cancelled, whether before it starts or while it runs.
+        /// </summary>
         RgbImage Generate(SdCppJob job);
 
         /// <summary>Asks a running <see cref="Generate"/> to stop. Called from another thread.</summary>
@@ -68,6 +74,8 @@ namespace Agenerela.Providers.SdCpp
 
         private readonly SdCppSettings settings;
         private readonly IReadOnlyList<string> libraryCandidates;
+        // Guards ctx: Cancel comes from other threads and must never use a context Unload is freeing.
+        private readonly object ctxGate = new object();
         private SdCppApi api;
         private IntPtr ctx = IntPtr.Zero;
 
@@ -152,7 +160,10 @@ namespace Agenerela.Providers.SdCpp
                     throw Failure(status, "load the model");
                 }
 
-                ctx = created;
+                lock (ctxGate)
+                {
+                    ctx = created;
+                }
             }
             finally
             {
@@ -163,6 +174,7 @@ namespace Agenerela.Providers.SdCpp
         public RgbImage Generate(SdCppJob job)
         {
             Load();
+            job.Token.ThrowIfCancellationRequested();
             firstProblem = null;
             api.CancelGeneration(ctx, SdCppApi.CancelReset);
             IntPtr opt = api.ImgGenOptCreate();
@@ -210,8 +222,14 @@ namespace Agenerela.Providers.SdCpp
                 }
                 else if (job.Edit == SdCppEditMode.Instruction && job.References.Count > 0)
                 {
-                    var refs = job.References.Select(r => Tensor(r.Rgb, 3, r.Width, r.Height)).ToArray();
-                    tensors.AddRange(refs);
+                    var refs = new IntPtr[job.References.Count];
+                    for (int i = 0; i < refs.Length; i++)
+                    {
+                        // Kept as each is made, so one that fails cannot leak the ones before it.
+                        refs[i] = Tensor(job.References[i].Rgb, 3, job.References[i].Width, job.References[i].Height);
+                        tensors.Add(refs[i]);
+                    }
+
                     Check(api.OptSetTensors(opt, Key("ref_images", out IntPtr k3), refs, (UIntPtr)refs.Length), "ref_images", k3);
                 }
 
@@ -220,7 +238,33 @@ namespace Agenerela.Providers.SdCpp
                     Set(opt, pair.Key, pair.Value, context: false);
                 }
 
-                int status = api.GenerateImage(ctx, opt, out result);
+                // A cancel sent before sd.cpp starts executing is ignored, so it is checked once more
+                // here and then sent again every 100 ms while the picture runs.
+                job.Token.ThrowIfCancellationRequested();
+                int status;
+                using (var watch = new Timer(_ =>
+                       {
+                           if (job.Token.IsCancellationRequested)
+                           {
+                               Cancel();
+                           }
+                       }, null, 100, 100))
+                {
+                    status = api.GenerateImage(ctx, opt, out result);
+                    using (var stopped = new ManualResetEvent(false))
+                    {
+                        if (watch.Dispose(stopped))
+                        {
+                            stopped.WaitOne();
+                        }
+                    }
+                }
+
+                if (status == SdCppApi.StatusOk && job.Token.IsCancellationRequested)
+                {
+                    status = SdCppApi.StatusCancelled;
+                }
+
                 if (status == SdCppApi.StatusCancelled)
                 {
                     throw new OperationCanceledException("The picture was cancelled while stable-diffusion.cpp was making it.");
@@ -256,20 +300,24 @@ namespace Agenerela.Providers.SdCpp
 
         public void Cancel()
         {
-            IntPtr current = ctx;
-            if (api != null && current != IntPtr.Zero)
+            lock (ctxGate)
             {
-                api.CancelGeneration(current, SdCppApi.CancelAll);
+                if (api != null && ctx != IntPtr.Zero)
+                {
+                    api.CancelGeneration(ctx, SdCppApi.CancelAll);
+                }
             }
         }
 
         public void Unload()
         {
-            if (ctx != IntPtr.Zero)
+            lock (ctxGate)
             {
-                IntPtr old = ctx;
-                ctx = IntPtr.Zero;
-                api.CtxFree(old);
+                if (ctx != IntPtr.Zero)
+                {
+                    api.CtxFree(ctx);
+                    ctx = IntPtr.Zero;
+                }
             }
         }
 

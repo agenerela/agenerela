@@ -299,6 +299,75 @@ namespace Agenerela.Providers.SdCpp.Tests
         }
 
         [Test]
+        public async Task ACancelWhileTheModelLoadsStopsThePictureBeforeItStarts()
+        {
+            // sd.cpp cannot stop a load, and ignores a cancel before a picture starts executing, so
+            // the provider must check the token itself once the load is done (review item 4).
+            var engine = new FakeEngine { HoldLoad = true };
+            using (var provider = Provider(engine))
+            using (var cts = new CancellationTokenSource())
+            {
+                var pending = provider.GenerateAsync(Request(), cts.Token);
+                Assert.That(engine.LoadStarted.Wait(5000), Is.True, "The load started.");
+                cts.Cancel();
+                engine.ReleaseLoad.Set();
+
+                bool cancelled = false;
+                try
+                {
+                    await pending;
+                }
+                catch (OperationCanceledException)
+                {
+                    cancelled = true;
+                }
+
+                Assert.That(cancelled, Is.True);
+                Assert.That(engine.Jobs, Is.Empty, "No picture was started after the cancelled load.");
+                Assert.That(provider.IsLoaded, Is.True, "The load itself finished, for the next picture.");
+            }
+        }
+
+        [Test]
+        public async Task DisposeCancelsThePictureRunningAndEveryOneStillQueued()
+        {
+            var engine = new FakeEngine { Hold = true };
+            var provider = Provider(engine);
+            var running = provider.GenerateAsync(Request(), CancellationToken.None);
+            var queued = provider.GenerateAsync(Request(seed: 7), CancellationToken.None);
+            var unload = provider.UnloadAsync(CancellationToken.None);
+            Assert.That(engine.Started.Wait(5000), Is.True, "The first picture started.");
+
+            provider.Dispose();
+            int cancelled = 0;
+            foreach (var awaitable in new[] { running, queued })
+            {
+                try
+                {
+                    await awaitable;
+                }
+                catch (OperationCanceledException)
+                {
+                    cancelled++;
+                }
+            }
+
+            try
+            {
+                await unload;
+            }
+            catch (OperationCanceledException)
+            {
+                cancelled++;
+            }
+
+            Assert.That(cancelled, Is.EqualTo(3), "The running picture, the queued one and the queued unload all end cancelled.");
+            Assert.That(engine.Jobs.Select(j => j.Seed), Is.EqualTo(new[] { 42L }), "The queued picture never ran.");
+            Assert.That(engine.Unloads, Is.EqualTo(0), "The queued unload never ran; Dispose frees the model instead.");
+            Assert.That(engine.Disposed.Wait(5000), Is.True);
+        }
+
+        [Test]
         public async Task WarmUpLoadsAndUnloadFreesTheModel()
         {
             var engine = new FakeEngine();
@@ -352,6 +421,9 @@ namespace Agenerela.Providers.SdCpp.Tests
             public readonly List<RgbImage> Encoded = new List<RgbImage>();
             public readonly ManualResetEventSlim Started = new ManualResetEventSlim();
             public readonly ManualResetEventSlim Disposed = new ManualResetEventSlim();
+            public readonly ManualResetEventSlim LoadStarted = new ManualResetEventSlim();
+            public readonly ManualResetEventSlim ReleaseLoad = new ManualResetEventSlim();
+            public volatile bool HoldLoad;
             private readonly ManualResetEventSlim cancelled = new ManualResetEventSlim();
             public volatile bool Hold;
             public Exception LoadFails;
@@ -366,6 +438,12 @@ namespace Agenerela.Providers.SdCpp.Tests
                 if (LoadFails != null)
                 {
                     throw LoadFails;
+                }
+
+                LoadStarted.Set();
+                if (HoldLoad && !ReleaseLoad.Wait(10000))
+                {
+                    throw new SdCppFailure(ProviderErrorKind.Timeout, "the load was never released");
                 }
 
                 Loads++;

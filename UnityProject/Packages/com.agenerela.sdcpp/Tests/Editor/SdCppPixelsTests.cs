@@ -88,6 +88,15 @@ namespace Agenerela.Providers.SdCpp.Tests
         }
 
         [Test]
+        public void AGpuIsAnyDeviceButTheCpu()
+        {
+            // sd_list_devices' own output on the RTX 4060 Laptop, and on a machine whose GPU backend did not load.
+            Assert.That(Native.SdCppApi.HasGpu("Vulkan0\tAMD Radeon(TM) 890M Graphics\nVulkan1\tNVIDIA GeForce RTX 4060 Laptop GPU\nCPU\tAMD Ryzen AI 9 HX 370\n"), Is.True);
+            Assert.That(Native.SdCppApi.HasGpu("CPU\tAMD Ryzen AI 9 HX 370\n"), Is.False);
+            Assert.That(Native.SdCppApi.HasGpu(""), Is.False);
+        }
+
+        [Test]
         public void EveryBuildOfThePinnedReleaseHasASizeAndAHash()
         {
             Assert.That(SdCppRelease.Builds.Select(b => b.Sha256), Has.All.Match("^[0-9a-f]{64}$"));
