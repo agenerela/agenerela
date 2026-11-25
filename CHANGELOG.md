@@ -31,6 +31,7 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **The Phase 4 gate's checks** (#150, #416). `Phase4GateTests`, six EditMode checks with no model: the set's size and declared states, game-triggered share, the runner's five outcomes in both arms, the report's conditions read back from disk, two-annotator agreement, and the methodology page. The agreement check waits for the second annotator's labels (#381, #148) behind an `[Ignore]` that names them.
 - **Painted Realm: a thinking switch for runs** (#20, #410). `AGENERELA_OLLAMA_THINK=1` turns on the framework's native thinking (DR-029) for every model seat, with a 16384 context and 300 s tries, and `AGENERELA_OLLAMA_CTX` sets the context for both arms of the A/B.
 - **Painted Realm: turn 1 without the long wait** (#20, #401): the model is warmed at New game, and a generated world's rulers start behind the loading card once its court is painted, so the first End turn no longer waits for a cold model (qwen3.5:4b, 3 seeds an arm: 5.71 s to 2.73 s).
 - **Painted Realm paints its court (DR-025)** (#20, #402): at New game, each ruler's portrait and banner come from the image server behind the loading card, cached per world seed. On any failure they fall back to the art pack.
@@ -121,6 +122,7 @@ phase table and the open issues, not here.
 
 ### Changed
 
+- **Painted Realm trims each model court's prompt to 1,600 tokens by default** (#20, #413), request 006's arm. `+budget-0` or Settings → Game → Court prompts → Full turns it off, and `+no-trim` leaves the budget measuring only.
 - **Painted Realm: a court's later order in a turn reads what its earlier orders settled** (#20, #405), on by default (`GameRules.CourtTurnFacts`); `-strategyRules CourtTurnFacts=false` plays the old prompt, and `FreeOrdersLiveCheck` now takes `-strategyRules`.
 - **The evaluation set's guard has no example statements or counter-examples again** (#151). #384 wrote them on `VillageGuard.asset`; on `qwen3.5:4b` the counter-examples cost 10 answers and with the statements 68 of 209 replies copied one, so the default prompt on the set is the one from before #384. The targets' categories stay.
 - **The evaluation set's targets carry categories** (`place`, `creature`), and `VillageGuard.asset`'s `move_to` and `attack_target` take them. Its actions and idle example have example statements, and its actions counter-examples, so the default prompt on the set now shows them (#151, #384).

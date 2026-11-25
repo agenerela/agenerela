@@ -317,7 +317,12 @@ alternatives the provider reports a token), as in `control+paired+no-grounding`.
 the prompt for gaps N8 and N9: `+no-moves-line` (the game's moves line off), `+moves-sentence` (the
 framework writes the moves as one line among the facts, `LegalTargets = ObservationLine`), and
 `+how-it-reads` and `+own-words` (`StatementRulesWording`). `+storyteller` puts the
-[storyteller](#storyteller) in place of the random event table (`+inspiration-<n>`, `+no-inspiration`). A model run writes everything a scripted run writes, and adds three things:
+[storyteller](#storyteller) in place of the random event table (`+inspiration-<n>`, `+no-inspiration`). Since 24 November
+`default` also trims the court's prompt to 1,600 tokens (`ModelSeatOptions.DefaultCourtBudget`, from
+[request 006](../../docs/run-requests/006-court-prompt-budget/results.md): no illegal answers, play within noise, no time
+saved, every court prompt under 1,600): `+budget-<n>` sets the budget, `+budget-0` takes it away, `+no-trim` leaves it
+measuring only. In the game, Settings → Game → **Court prompts** (Trimmed by default, or Full, which adds `+budget-0`) sets
+it for the next new game. A model run writes everything a scripted run writes, and adds three things:
 
 - the model's own table in `summary.md`;
 - `model.csv`, every model decision with its latency, guard and execution;

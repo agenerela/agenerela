@@ -41,6 +41,14 @@ namespace GreyBoxStrategy.Replay
         public string HintsSeen = "";
         /// <summary>The turn strip folded to its header.</summary>
         public bool TurnStripFolded;
+        /// <summary>
+        /// Model courts' prompts are trimmed to the seat's budget, 1,600 tokens (the lead, 24 November: on by default,
+        /// with an option). Off, a new game's rulers read every line, as before (<c>+budget-0</c>).
+        /// </summary>
+        public bool TrimCourtPrompts = true;
+
+        /// <summary>The arm a new game's model rulers play: <paramref name="arm"/>, without the court's budget when <see cref="TrimCourtPrompts"/> is off.</summary>
+        public string CourtArm(string arm) => TrimCourtPrompts ? arm : (string.IsNullOrEmpty(arm) ? "default" : arm) + "+budget-0";
 
         public bool HintSeen(string id) => !string.IsNullOrEmpty(id) && ("," + (HintsSeen ?? "") + ",").Contains("," + id + ",");
         public void SeeHint(string id) { if (!string.IsNullOrEmpty(id) && !HintSeen(id)) HintsSeen = string.IsNullOrEmpty(HintsSeen) ? id : HintsSeen + "," + id; }

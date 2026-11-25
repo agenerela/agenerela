@@ -36,6 +36,26 @@ namespace GreyBoxStrategy.Screen.Tests
         }
 
         [Test]
+        public void Court_prompts_are_trimmed_unless_the_setting_is_off()
+        {
+            var s = new GameSettings();
+            Assert.That(s.TrimCourtPrompts, Is.True, "on by default (the lead, 24 November)");
+            string arm = StoryArms.For("off");
+            Assert.That(s.CourtArm(arm), Is.EqualTo(arm), "on: the arm as it was");
+            Assert.That(ModelSeatOptions.Named(s.CourtArm(arm)).CourtPromptBudget()?.Tokens, Is.EqualTo(1600));
+
+            s.TrimCourtPrompts = false;
+            Assert.That(ModelSeatOptions.Named(s.CourtArm(arm)).CourtPromptBudget(), Is.Null, "off: every line sent");
+            string story = StoryArms.For(StorytellerSettings.Presets[0].Name);
+            var withStory = ModelSeatOptions.Named(s.CourtArm(story));
+            Assert.That(withStory.CourtPromptBudget(), Is.Null);
+            Assert.That(withStory.Storyteller && StoryArms.HasStoryteller(s.CourtArm(story)), Is.True, "the storyteller's part untouched");
+
+            new SettingsStore(path).Save(s);
+            Assert.That(new SettingsStore(path).Load().TrimCourtPrompts, Is.False, "kept between runs");
+        }
+
+        [Test]
         public void No_file_or_a_broken_one_gives_the_defaults()
         {
             var defaults = new GameSettings();

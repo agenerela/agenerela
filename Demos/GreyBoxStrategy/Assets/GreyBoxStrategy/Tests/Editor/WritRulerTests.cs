@@ -350,6 +350,45 @@ namespace GreyBoxStrategy.Tests
             Assert.That(byDefault.All(x => x.req.Request.Schema.AsksForStatement), Is.True, "off by default");
         }
 
+        // The lead, 24 November: the court's prompt trimmed to 1,600 tokens by default, with a way to turn it off.
+        [Test]
+        public void TheCourtsPrompt_IsTrimmedTo1600ByDefault_AndTheModifiersTurnItOff()
+        {
+            var byDefault = ModelSeatOptions.Default.CourtPromptBudget();
+            Assert.That(byDefault, Is.Not.Null, "a budget by default");
+            Assert.That(byDefault.Tokens, Is.EqualTo(1600));
+            Assert.That(byDefault.Trims, Is.EqualTo(new[] { PromptTrim.UntakeableTargets, PromptTrim.History }), "and it trims");
+            Assert.That(ModelSeatOptions.Named(null).CourtPromptBudget()?.Tokens, Is.EqualTo(1600), "the unnamed arm is the default");
+
+            Assert.That(ModelSeatOptions.Named("default+budget-0").CourtPromptBudget(), Is.Null, "+budget-0: no budget, every line sent");
+            var measures = ModelSeatOptions.Named("default+no-trim").CourtPromptBudget();
+            Assert.That((measures.Tokens, measures.Trims.Count), Is.EqualTo((1600, 0)), "+no-trim: the budget only measures");
+            Assert.That(ModelSeatOptions.Control.CourtPromptBudget(), Is.Null, "stage 2's control stays as it was measured");
+
+            // Request 006's two arms replay exactly: the trimmed arm is unchanged, the control needs +no-trim now.
+            var a = ModelSeatOptions.Named("default+budget-1600+trim").CourtPromptBudget();
+            Assert.That(a.Tokens, Is.EqualTo(byDefault.Tokens));
+            Assert.That(a.Trims, Is.EqualTo(byDefault.Trims));
+            var b = ModelSeatOptions.Named("default+budget-2048+no-trim").CourtPromptBudget();
+            Assert.That((b.Tokens, b.Trims.Count), Is.EqualTo((2048, 0)));
+            Assert.That(ModelSeatOptions.Named("default+budget-x"), Is.Null);
+        }
+
+        [Test]
+        public async Task OnlyTheCourtsRequests_CarryTheBudget()
+        {
+            var (_, seen) = await PlayVoice("default", turns: 3);
+            Assert.That(seen.Any(x => x.asked.Moment == Moment.Council) && seen.Any(x => x.asked.Moment != Moment.Council), Is.True);
+            foreach (var (asked, _) in seen)
+            {
+                var sent = new WritRuler(asked.World, asked.CountryId, new ScriptedProvider(), ModelSeatOptions.Default).OptionsFor(asked).PromptBudget;
+                if (asked.Moment == Moment.Council) Assert.That(sent?.Tokens, Is.EqualTo(1600), $"{asked.CountryId} turn {asked.Turn}");
+                else Assert.That(sent, Is.Null, $"{asked.Moment}");
+                var off = new WritRuler(asked.World, asked.CountryId, new ScriptedProvider(), ModelSeatOptions.Named("default+budget-0")).OptionsFor(asked);
+                Assert.That(off.PromptBudget, Is.Null, "+budget-0 sends every request as before");
+            }
+        }
+
         [Test]
         public void ARuler_IsForTheWritsTurnOnly()
         {
