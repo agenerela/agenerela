@@ -130,6 +130,7 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Changed
 
+- **`DecideOptions.StimulusIsClaim` is measured and stays off by default** (DR-031, run request 007, #423). Its docs now say: a switch for 4B-class models, set only on calls that carry someone's word (`qwen3.5:4b`: 15 → 28 of 30 held-out claims, −3.8 on the 209 set, within noise, about 63 tokens a decision, four plain requests turned into `none`); never set it for a 2B-class model (`qwen3.5:2b`: 124 of 209 answers `none`, −34.9).
 - `ComfyUIProvider` and `ScriptedImageProvider` check a request with `ImageCapabilities.WhyNot`; ComfyUI refuses an edit at the call (DR-028, #411).
 - **`DecideOptions.ListActionsAndTargets` is on by default** (DR-027, #404): every call's system prompt lists the offered actions with their descriptions and the offered targets (+6.7 points on `qwen3.5:4b` on the evaluation set, beyond noise). Set it to `false` for the prompt from before.
 - An HTTP 429 (was `Rejected`) and 503 (was `ServerError`) are `RateLimited` once the retries run

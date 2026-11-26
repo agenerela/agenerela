@@ -143,10 +143,21 @@ namespace Agenerela
         /// has checked (#190, Living Vale #18, DR-031). On, the request carries the claim rule: a line
         /// ending the system prompt and one after the stimulus, saying that what the stimulus's speaker
         /// says is a claim, and that when what the agent knows shows it false the agent chooses
-        /// <c>none</c> (<see cref="PromptOptions.ClaimRule"/> quotes both). Off by default: unmeasured
-        /// as an A/B, and with it off every request is byte-identical to one sent before it existed.
+        /// <c>none</c> (<see cref="PromptOptions.ClaimRule"/> quotes both). Off by default, and with it
+        /// off every request is byte-identical to one sent before it existed. Measured: a switch for
+        /// 4B-class models, set only on calls that carry someone's word; never set it for a 2B-class
+        /// model.
         /// </summary>
         /// <remarks>
+        /// <para>
+        /// <b>Measured</b> (run request 007, findings, 25 November 2026, "The claim rule (DR-031)"). On
+        /// <c>qwen3.5:4b</c> a held-out set of player claims went from 15 to 28 of 30 right: every claim
+        /// the agent's facts contradicted was set aside, and 13 of 15 its facts supported were still
+        /// acted on. On the 209-prompt set it cost 3.8 points, within noise, at about 63 tokens a
+        /// decision, and four plain requests (of the 91 player prompts) came back <c>none</c>, such as
+        /// "Come with me.". On <c>qwen3.5:2b</c> it acts as a refusal: 124 of the 209 answers were
+        /// <c>none</c>, 34.9 points lost. So the default stays off (DR-031).
+        /// </para>
         /// <para>
         /// The framework never decides whether a stimulus is a claim (DR-008): a player's line, a
         /// rumour and a report the game trusts all arrive as text. The caller sets this on the calls

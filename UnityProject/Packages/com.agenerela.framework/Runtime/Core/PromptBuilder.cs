@@ -76,8 +76,9 @@ namespace Agenerela
         // line alone changed almost nothing. {0} is the stimulus label, the caller's own string, so
         // neither names a player (DR-008). "What you know" is both headings the facts sit under, the
         // identity's "What you know:" and the observations' "What you know right now:". A claim is
-        // set aside only when a fact shows it false, never for want of one. Unmeasured as an A/B;
-        // here alone so one can change them in one place.
+        // set aside only when a fact shows it false, never for want of one. Measured in run request
+        // 007 (DR-031): right on qwen3.5:4b, a refusal on qwen3.5:2b. Here alone so a new wording
+        // can be measured in one place.
         private const string ClaimRuleTemplate =
             "What {0} says is a claim, not proof. If what you know shows a claim is false, do not act on it: choose action " +
             ActionRegistry.None + "{1}.";
