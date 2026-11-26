@@ -5411,3 +5411,27 @@ what it costs on an 8 GB card. A measurement of speed and memory, not of accurac
 - a smaller quantisation (Q3_K is 3.1 GB)
 - a run with the encoder on the CPU and enough RAM
 - a heavy scene in a windowed build
+### Painted Realm paints locally in a running game: about 19 s a picture, and the text encoder on the CPU failed again (25 November 2026)
+
+**What.** The same model as the entry above, now behind Painted Realm's Settings → Painted art → Local, in Play mode
+in the editor (#20): your described ruler behind the loading card, the rest of the court and each event's picture in
+the background while turns played. Speed only, one run, untimed beyond the game's own log and the cache files' times.
+
+**Setup.** RTX 4060 Laptop, Vulkan build `master-1127-79dc7ca`, Z-Image Turbo Q4_K, 8 steps, cfg 1. The editor ran
+the game on the same card at 1280 × 720 with autoplay at 8×; one other session's Unity batch run was on the machine,
+about 8 GB of RAM free. No language model was on the card: the rulers were scripted, and the stand-in storyteller
+needs no model.
+
+**Result.**
+- **With the text encoder on the CPU** (the recipe's default), every picture failed at once: "LLM prompt encoding
+  failed", as `run7` did on 24 November. The game therefore keeps the encoder on the card (`RulerArtServer.LocalSettings`).
+- **With it on the card:** your ruler and banner, with two pictures refused for a painted frame and asked again, came
+  to 4 pictures in 105 s including the model's load. After that, pictures landed about 18 to 20 s apart, at
+  768 × 896 and at 1024 × 576 alike (the game's log: 18.7 s and 18.1 s for two event pictures painted alone).
+- **Turns never waited.** Autoplay reached turn 10 while the rest of the court and the first event pictures were painted, and the event card showed
+  the art pack's picture until its own arrived and replaced it in place.
+- **On a second visit** to the same world your pair came from the cache in 0 s.
+
+**What it means.** On an 8 GB card a local image model keeps up with a game only if pictures are few and wanted in
+the background: about three a minute. The court of a small world (8 pictures) takes about 2.5 minutes, which is why
+Local paints only your own ruler behind the loading card. The encoder on the CPU still needs a run with more RAM free.

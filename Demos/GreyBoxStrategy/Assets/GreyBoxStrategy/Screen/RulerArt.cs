@@ -188,6 +188,12 @@ namespace GreyBoxStrategy.Realm
         /// </summary>
         public Func<byte[], bool> Accept;
 
+        /// <summary>
+        /// Told each picture as it hangs (the realm's id, true for its banner, the PNG), so a court painted in the
+        /// background shows each face as it arrives. Called on the thread that awaited <see cref="MakeAsync"/>.
+        /// </summary>
+        public Action<string, bool, byte[]> Painted;
+
         /// <summary>What each further try adds to the seed.</summary>
         public const long RetrySeedOffset = 7919;
 
@@ -279,6 +285,7 @@ namespace GreyBoxStrategy.Realm
                 else if (result.Succeeded)
                 {
                     (flag ? set.Flags : set.Portraits)[subject.Id] = result.Png;
+                    Painted?.Invoke(subject.Id, flag, result.Png);
                     if (result.FromCache) set.FromCache++; else set.Made++;
                 }
                 else

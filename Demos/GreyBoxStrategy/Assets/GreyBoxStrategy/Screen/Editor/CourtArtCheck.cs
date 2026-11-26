@@ -66,7 +66,7 @@ namespace GreyBoxStrategy.Realm.Editor
                 subjects.Add(new RulerSubject { Id = c.Id, Name = c.Name ?? c.Id, Persona = personas[i], Colour = ChartPalette.Owner(i), Slot = i, Backstory = c.RulerLine });
             }
 
-            var backend = RulerArtServer.Provider(out string why);
+            var backend = RulerArtServer.ServerProvider(out string why);
             if (backend == null) Debug.LogWarning($"Court art check: no image server ({why}); the cache alone is used.");
             var maker = new RulerArtMaker(backend, new ImageFileCache(RulerArtServer.CacheFolder(seed))) { Accept = png => !RulerArtServer.LooksFramed(png) };
             var set = await maker.MakeAsync(seed, subjects, (line, f) => Debug.Log($"Court art check, seed {seed}: {line} ({f:P0})"), RulerArtServer.BudgetSeconds, CancellationToken.None);

@@ -260,7 +260,6 @@ namespace GreyBoxStrategy.Realm
             }
             rivalsG.Add(crests);
             rivalsG.Add(FacePicker());
-
             rivalsG.Add(Section2("THE RULERS", "language models on a server, or the rules' own scripted rulers"));
             var rulersNote = new Label(); rulersNote.AddToClassList("src"); rulersNote.style.whiteSpace = WhiteSpace.Normal;
             var model = new TextField("Model") { value = choice.Model }; model.AddToClassList("menu-field");
@@ -521,6 +520,17 @@ namespace GreyBoxStrategy.Realm
             var trim = Steps("Court prompts", new[] { "Full", "Trimmed" }, s.TrimCourtPrompts ? 1 : 0, i => { s.TrimCourtPrompts = i == 1; Changed(); });
             trim.tooltip = "Trimmed: a model court's prompt is kept under 1,600 tokens, dropping targets no order can take and then its oldest memories. Full: it reads every line. Applies to the next new game.";
             card.Add(trim);
+
+            // Where portraits, banners and event pictures are painted (DR-025, DR-028): Local is the image model
+            // inside the game, so nothing but this machine is needed; the rulers' model stays on its server.
+            card.Add(Section2("PAINTED ART", "each world's portraits and banners"));
+            var artNote = new Label(); artNote.AddToClassList("src"); artNote.style.whiteSpace = WhiteSpace.Normal; artNote.name = "art-note";
+            void ArtNote() => artNote.text = RulerArtServer.Describe(s.Art) + " Applies from the next new game.";
+            var art = Steps("Painted art", new[] { "Server", "Local", "Off" }, (int)s.Art, i => { s.Art = (ArtBackend)i; ArtNote(); Changed(); });
+            art.tooltip = "Server: the image server (COMFY_URL). Local: Z-Image Turbo inside the game, on this machine's card, through stable-diffusion.cpp. Off: the art pack's pictures only.";
+            card.Add(art);
+            card.Add(artNote);
+            ArtNote();
 
             card.Add(Section2("SOUND", "the first sounds; more come with the next set"));
             card.Add(Volume("Master", s.MasterVolume, v => { s.MasterVolume = v; Changed(); }));
