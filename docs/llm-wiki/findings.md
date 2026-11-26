@@ -5446,6 +5446,69 @@ cannot show the wording generalises; request 007 scores a held-out set written a
 Nothing here measures the cost on ordinary commands, the 2B, or the framework's own prompt. Script and output:
 `.scratch/190-claims/smoke/` (`smoke.py`, `smoke2.py`, `smoke-4b.txt`, `smoke2-4b.txt`) in the lead's checkout.
 
+### The claim rule (DR-031): on the 4B it sets aside every contradicted claim and keeps 13 of 15 supported ones; on the 2B it makes the model do nothing (25 November 2026)
+
+**What changed.** `DecideOptions.StimulusIsClaim` off against on (DR-031, #421). On, the system prompt ends with
+the claim line, and the stimulus's turn adds that it is what the speaker says, not what the agent knows. The arms
+differ only in the switch. This is run request 007; its
+[results](../run-requests/007-claims-vs-facts/results.md) give every prompt's answer in both arms.
+
+**Conditions.**
+- **Server and models:** the home server (RTX 4070 SUPER, Docker Ollama 0.40.14, gate `5728506a6d6b`), with
+  `qwen3.5:4b` (`d8b0f5e9760c`) and `qwen3.5:2b` (`0689d44085e0`).
+- **Code and arms:** test `8a61eb8`, `EvalRunner` from Unity in batch mode, arms interleaved, temperature 0,
+  guards on.
+- **Defaults:** today's, so `ListActionsAndTargets` is on in both arms (#404). The 4B's 209-set control is 184.
+- **Leases:** five blocks on 25 November, 16:33 to 16:48, each under its own clean lease on `agenerela-runs`
+  (#74283, #74353, #74781, #74851, #74921). Every lease checked as ours at the start and the end, on LAN and
+  mains. Other traffic: 2 other agenerela requests during the 2B's 209 block.
+- **Sets:** the held-out claims set decides. It has 30 prompts, 15 pairs of one player line, once with facts that
+  contradict it (expected `none`) and once with facts that support it. It was written after the wording was fixed
+  and never sent to a model before, and the tech lead read its labels and changed none. The development set,
+  where the wording was chosen, and the 209 set (the cost) were run as well.
+
+| | 4B off | 4B on | 2B off | 2B on |
+|---|---:|---:|---:|---:|
+| Held-out, right of 30 (floor 12.9 points) | 15 | **28** | 10 | 16 |
+| …contradicted set aside / supported acted on, of 15 | 0 / 15 | **15 / 13** | 1 / 14 | 15 / **1** |
+| …pairs both right, of 15 | 0 | 13 | 0 | 1 |
+| Development set, right of 30 (contradicted / supported right) | 14 (1 / 13) | 25 (14 / 11) | – | – |
+| 209 set, right (floor 4.9 points) | 184 | 176 (−3.8, within) | 149 | 76 (**−34.9**) |
+| …the 91 `Player`-labelled prompts (floor 7.4) | 86 | 84 (−2.2, within) | 77 | 47 (**−33.0**) |
+| …wrong `none`, all / Player four | 3 / 0 | 12 / 4 | 21 / 6 | 124 / 41 |
+| Prompt tokens a decision | 466 | 529 | 466 | 529 |
+
+- **The 4B tells the two apart only with the line.** Without it, the 4B acted on all 30 claims whatever it knew.
+  With it, all 15 contradicted claims were set aside, and it still acted on 13 of the 15 supported ones (the two
+  lost went to `none`).
+- **Every changed pair moved the right way:** each of the 15 pairs changed toward its label on the contradicted
+  side.
+- **The flagged rows read like the rest.** The wolf pairs and the two soft contradictions were set aside like the
+  others. The 4B's one wolf miss is a supported prompt.
+- **Statements give the reason.** On a contradicted claim the 4B names the fact that disproves it ("The docks are
+  dry.", "The wolf was caught this morning."), and none repeats the line.
+- **On the development set it reproduces the smoke check for contradicted claims**: 14 of 15 here, 14 in the smoke
+  check. It is weaker on supported ones, 11 of 15 against 14.
+- **The cost on the 4B is within noise** on the Player four, but it is not zero. Four plain requests now come back
+  `none`, among them "Come with me." ("I will not follow you.") and "If you're not busy, the market could use a
+  guard." ("I am busy guarding the village."). Events, which no game would flag as a claim, fall 10.0 points, just
+  past their 9.1 floor.
+- **On the 2B the line is a refusal.** It does nothing on 29 of 30 claims and on 124 of the 209. That scores 16 on
+  the held-out set, as never acting would (15), and loses 33 points on the Player four.
+
+**What it means.** On the 4B the line does what DR-031 is for, on a set it was not tuned on, at about 63 tokens a
+decision. On the 2B it must not be set. It is one run of one block per set; both claims sets are 30 prompts and
+were written by an AI. The held-out gap (+43 points against a 12.9 floor) is far beyond noise, but it is a
+pattern to confirm on a game's own agent, not a settled result (hard rule 2).
+
+**What it suggests, for the tech lead to decide.**
+- Document `StimulusIsClaim` as a 4B-class switch, set only on calls that carry someone's word.
+- Warn against it on the 2B.
+- Leave the default off; no default was changed.
+
+**What would change this.** A game's agent where the claims are its own; a wording that the 2B can follow; a
+claim with no facts either way, which this set leaves out on purpose.
+
 ### Painted Realm paints locally in a running game: about 19 s a picture, and the text encoder on the CPU failed again (25 November 2026)
 
 **What.** The same model as the entry above, now behind Painted Realm's Settings → Painted art → Local, in Play mode

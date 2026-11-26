@@ -5,7 +5,8 @@
 //
 // Environment:
 //   AGENERELA_P4_RUN        gate | idle | list | grounding | models | rename | targetrule | history |
-//                           freechoice | summarise | pair | statements | counters | think
+//                           freechoice | summarise | pair | statements | counters | think | claims
+//   AGENERELA_P4_SET        optional: another set file (request 007); unset is the 209 set
 //   AGENERELA_P4_SLICE      optional: keep every 7th prompt of each category from this index (T1)
 //   AGENERELA_OLLAMA_URL / AGENERELA_OLLAMA_API_KEY  the server (LiveOllama)
 //   AGENERELA_OLLAMA_MODEL  arm model (qwen3.5:2b when unset); "models" uses 2b then 4b
@@ -49,7 +50,11 @@ namespace Agenerela.Tests
             LiveOllama.RequireReachable();
 
             string run = Environment.GetEnvironmentVariable("AGENERELA_P4_RUN") ?? "";
-            var set = PromptSet.Load(Path.GetFullPath(Path.Combine(Application.dataPath, "Evaluation/agent.json")));
+            // Request 007: AGENERELA_P4_SET points at another set file; unset is the 209 set.
+            string setPath = Environment.GetEnvironmentVariable("AGENERELA_P4_SET");
+            var set = PromptSet.Load(Path.GetFullPath(string.IsNullOrEmpty(setPath)
+                ? Path.Combine(Application.dataPath, "Evaluation/agent.json")
+                : setPath));
             var profile = AssetDatabase.LoadAssetAtPath<AgentProfile>("Assets/Evaluation/VillageGuard.asset");
             Assert.That(profile, Is.Not.Null);
             // T1 (think-ab, 24 November): a slice of the set, every 7th prompt within each category, in memory only.
@@ -141,8 +146,13 @@ namespace Agenerela.Tests
                     a = new EvalArm("think-off", Thinking(Config("p4-A", model), false), new DecideOptions());
                     b = new EvalArm("think-on", Thinking(Config("p4-B", model), true), new DecideOptions());
                     break;
+                case "claims":
+                    // DR-031: the claim rule. Only the switch differs between the arms.
+                    a = new EvalArm("claims-off", Config("p4-A", model), new DecideOptions());
+                    b = new EvalArm("claims-on", Config("p4-B", model), new DecideOptions { StimulusIsClaim = true });
+                    break;
                 default:
-                    Assert.Fail($"AGENERELA_P4_RUN '{run}' is not one of gate, idle, list, grounding, models, rename, targetrule, history, freechoice, summarise, pair, statements, counters, think");
+                    Assert.Fail($"AGENERELA_P4_RUN '{run}' is not one of gate, idle, list, grounding, models, rename, targetrule, history, freechoice, summarise, pair, statements, counters, think, claims");
                     return;
             }
 
