@@ -8,6 +8,12 @@ namespace GreyBoxStrategy.Replay
     public enum DisplayMode { Windowed, Borderless, ExclusiveFullscreen }
 
     /// <summary>
+    /// Where the generated court and event pictures are painted (DR-025, DR-028): the image server (ComfyUI), an
+    /// image model inside the game (stable-diffusion.cpp), or nowhere, so the art pack hangs alone.
+    /// </summary>
+    public enum ArtBackend { Server, Local, Off }
+
+    /// <summary>
     /// The player's settings, kept between runs in <c>settings.json</c> in the game's persistent
     /// data folder (<see cref="SettingsStore"/>). Plain values, so the store can be tested without a
     /// screen; the screen applies them.
@@ -46,6 +52,10 @@ namespace GreyBoxStrategy.Replay
         /// with an option). Off, a new game's rulers read every line, as before (<c>+budget-0</c>).
         /// </summary>
         public bool TrimCourtPrompts = true;
+        /// <summary>Where generated pictures are painted: the image server by default, as before the local model came.</summary>
+        public ArtBackend Art = ArtBackend.Server;
+        /// <summary>Each event gets a picture painted for its own story, shown when it arrives (with <see cref="Art"/> not Off).</summary>
+        public bool EventPictures = true;
 
         /// <summary>The arm a new game's model rulers play: <paramref name="arm"/>, without the court's budget when <see cref="TrimCourtPrompts"/> is off.</summary>
         public string CourtArm(string arm) => TrimCourtPrompts ? arm : (string.IsNullOrEmpty(arm) ? "default" : arm) + "+budget-0";
@@ -66,6 +76,7 @@ namespace GreyBoxStrategy.Replay
             s.FrameCap = (int)Nearest(Array.ConvertAll(FrameCaps, x => (float)x), s.FrameCap);
             s.PlaybackSpeed = Nearest(Speeds, s.PlaybackSpeed);
             if (!Enum.IsDefined(typeof(EventWindows), s.EventWindows)) s.EventWindows = EventWindows.All;
+            if (!Enum.IsDefined(typeof(ArtBackend), s.Art)) s.Art = ArtBackend.Server;
             s.HintsSeen = s.HintsSeen ?? "";
             s.MasterVolume = Clamp01(s.MasterVolume); s.MusicVolume = Clamp01(s.MusicVolume);
             s.EffectsVolume = Clamp01(s.EffectsVolume); s.VoiceVolume = Clamp01(s.VoiceVolume);
