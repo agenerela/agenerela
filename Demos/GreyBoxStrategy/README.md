@@ -3334,8 +3334,10 @@ in the middle of the screen; see [variant B: the inspector and the council](#the
 since 25 November. Codex-image's 1672 × 941 painting was first upscaled (`ArtSource/sea-chart-map-upscale.png`); then
 `ArtSource/repaint_4k.py` painted real 4K detail over the upscale on the asset server: fifteen overlapping 1024 px
 tiles through Z-Image Turbo img2img at denoise 0.22, stitched with feathered overlaps, with the upscale's low frequencies
-(a 6 px Gaussian) put back so colour and coarse shapes, coasts included, stay the upscale's. It checks the bake's land
-mask against `province-ids.png` and writes nothing if the coasts moved: IoU 0.9629 against the upscale's own 0.9663,
+(a 6 px Gaussian) put back so colour and coarse shapes, coasts included, stay the upscale's. The model's detail was
+about 20% flatter than the sharpened upscale's, which read as haze under the colour wash, so it is scaled up locally (at
+most 1.6×) to the upscale's detail energy. It checks the bake's land
+mask against `province-ids.png` and writes nothing if the coasts moved: IoU 0.9627 against the upscale's own 0.9663,
 and no shift at four places across the island. Denoise 0.35 and above redrew villages and moved rivers. Only the Classic
 board has a painting; generated worlds stay drawn by code. The province maps are baked at 2048 × 1152 from the upscale
 (`bake_map.py` reads it, so the committed maps stay reproducible), and `provinces.json` records the land's bounds, which

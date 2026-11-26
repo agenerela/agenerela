@@ -11,6 +11,8 @@ cliffs, the sea's ripples) without moving it. Then:
 - the result's low frequencies (a Gaussian of sigma 6 px) are swapped for the master's, so colour and
   coarse shapes are the master's and only the fine detail is new: no tile drifts in tone, and a
   coast cannot move by more than the blur;
+- the new detail is scaled up locally (by at most 1.6) to the master's detail energy: the model's is
+  about 20% flatter, and under the colour wash that read as haze;
 - the land mask the bake uses is taken from the new painting and compared with province-ids.png.
   It fails if the overlap (IoU) falls more than 0.01 below the master's own.
 
@@ -18,7 +20,7 @@ Writes sea-chart-map.png (the 4K master) and ../Assets/GreyBoxStrategy/Screen/Ar
 The province maps are not re-baked: bake_map.py reads the upscaled master, which they came from.
 
 Measured on 25 November, degenerator's RTX 4070 SUPER: about 9 s a tile, two and a half minutes in
-all. IoU with the province map 0.9629 against the master's 0.9663, and a phase-correlation shift
+all. IoU with the province map 0.9627 against the master's 0.9663, and a phase-correlation shift
 of 0 px at four places across the island. Denoise 0.35 and above redrew villages and moved rivers.
 """
 import os, re, subprocess, sys, tempfile
@@ -34,6 +36,7 @@ IDS = HERE.parent / "Assets/GreyBoxStrategy/Screen/Art/province-ids.png"
 W, H, T, F = 4096, 2304, 1024, 128
 XS, YS = [0, 896, 1792, 2688, 3072], [0, 640, 1280]
 DENOISE, SEED, SIGMA = 0.22, 4242, 6.0
+GAIN_RADIUS, GAIN_MAX = 24.0, 1.6
 PROMPT = ("Antique hand-painted fantasy world map seen from high above, fine oil painting detail, tiny pine and oak "
           "forests, small rocky mountains, patchwork farm fields, small villages, winding blue-grey river, dirt roads, "
           "rocky cliffs and dark sea, muted olive green, ochre and umber palette, aged varnish, sharp fine detail, no text")
@@ -76,8 +79,13 @@ def stitch(src, tiles):
         w = np.outer(ry, rx)[..., None]
         acc[y:y + T, x:x + T] += a * w; wsum[y:y + T, x:x + T] += w
     gen = acc / wsum
-    out = gen - blur(gen, SIGMA) + blur(np.asarray(src, float), SIGMA)
-    return Image.fromarray(np.clip(out, 0, 255).astype(np.uint8))
+    s = np.asarray(src, float); base = blur(s, SIGMA)
+    dn, ds = gen - blur(gen, SIGMA), s - base
+    # The model's detail is real but about 20% flatter than the sharpened upscale's, so under the colour
+    # wash mountains and forest read hazy. Scale it, locally, up to the upscale's detail energy (never down).
+    energy = lambda d: np.sqrt(blur((d ** 2).mean(-1, keepdims=True), GAIN_RADIUS))
+    gain = np.clip(energy(ds) / (energy(dn) + 1e-3), 1.0, GAIN_MAX)
+    return Image.fromarray(np.clip(base + gain * dn, 0, 255).astype(np.uint8))
 
 
 def land_iou(img):
