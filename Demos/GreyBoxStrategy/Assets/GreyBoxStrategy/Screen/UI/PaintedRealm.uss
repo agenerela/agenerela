@@ -881,3 +881,8 @@
 .world-lore-name { font-size: 13px; -unity-font-style: bold; color: rgb(236, 210, 150); }
 /* On the loading card: the world's name as its title, and the story beneath. */
 .loading-story { font-size: 14px; -unity-font-style: italic; color: rgb(214, 199, 166); white-space: normal; -unity-text-align: upper-left; margin-top: 6px; margin-bottom: 10px; max-width: 560px; }
+
+/* New game → Rule: describe your ruler (#20, local art). Labels as wide as the face row's. */
+.describe-field { margin: 3px 0; }
+.describe-field .unity-base-field__label { min-width: 130px; width: 130px; }
+.describe-field.unity-text-field--multiline .unity-text-field__input, .describe-field .unity-text-field__input--multiline { min-height: 44px; white-space: normal; }

@@ -57,6 +57,10 @@ namespace GreyBoxStrategy.Realm
         public bool YourFreeOrders => Rule && Writs && FreeOrders;
         /// <summary>The writs game's victory preset: <see cref="GameSetup.ConquestPreset"/> or <see cref="GameSetup.DominationPreset"/>.</summary>
         public string Victory = GameSetup.ConquestPreset;
+        /// <summary>Rule mode: your ruler in your own words, for the portrait and the advisor's persona; empty for the game's own.</summary>
+        public string RulerPersona = "";
+        /// <summary>Rule mode: your banner in your own words, for the painted banner; empty for the game's own.</summary>
+        public string RulerBanner = "";
 
         /// <summary>How many countries a generated world of these settings has.</summary>
         public int CountriesFor() => Countries > 0 ? Countries : MapSettings.DefaultCountries(Size);
@@ -220,6 +224,7 @@ namespace GreyBoxStrategy.Realm
                 watchB.EnableInClassList("pick", !rule); ruleB.EnableInClassList("pick", rule);
                 if (scriptedB != null) scriptedB.text = ScriptedLabel(rule);
                 crests.SetEnabled(rule);
+                rivalsG.Q("describe-ruler")?.SetEnabled(rule);
             }
             watchB.clicked += () => Mode(false); ruleB.clicked += () => Mode(true);
             var modes = Row(watchB, ruleB); modes.AddToClassList("menu-modes"); card.Add(modes);
@@ -260,6 +265,23 @@ namespace GreyBoxStrategy.Realm
             }
             rivalsG.Add(crests);
             rivalsG.Add(FacePicker());
+            // Describe your ruler: your own words paint your portrait and banner (Settings → Painted art), and the
+            // line is the persona your advisor speaks in. Empty fields keep the game's own.
+            rivalsG.Add(Section2("DESCRIBE YOUR RULER", "in your own words: painted on a generated world, and your advisor's character"));
+            var describe = new VisualElement { name = "describe-ruler" };
+            var personaField = new TextField("Your ruler") { value = choice.RulerPersona ?? "", maxLength = RulerDescription.PersonaLength, multiline = true, name = "ruler-persona" };
+            personaField.AddToClassList("menu-field"); personaField.AddToClassList("describe-field");
+            personaField.tooltip = "Who rules: a face, an age, a manner. \"An old one-eyed queen in a fur cloak, patient and cunning.\" Empty: the game's own.";
+            var bannerField = new TextField("Your banner") { value = choice.RulerBanner ?? "", maxLength = RulerDescription.BannerLength, name = "ruler-banner" };
+            bannerField.AddToClassList("menu-field"); bannerField.AddToClassList("describe-field");
+            bannerField.tooltip = "What your banner bears: \"a white wolf's head over three stars\". Its cloth stays your realm's colour. Empty: a beast your realm's name chooses.";
+            var describeNote = new Label("Painted by Settings → Painted art (the image server or this machine) when the world is made. Your advisor speaks and counsels as this ruler.");
+            describeNote.AddToClassList("src"); describeNote.style.whiteSpace = WhiteSpace.Normal;
+            personaField.RegisterValueChangedCallback(e => choice.RulerPersona = e.newValue);
+            bannerField.RegisterValueChangedCallback(e => choice.RulerBanner = e.newValue);
+            describe.Add(personaField); describe.Add(bannerField); describe.Add(describeNote);
+            rivalsG.Add(describe);
+
             rivalsG.Add(Section2("THE RULERS", "language models on a server, or the rules' own scripted rulers"));
             var rulersNote = new Label(); rulersNote.AddToClassList("src"); rulersNote.style.whiteSpace = WhiteSpace.Normal;
             var model = new TextField("Model") { value = choice.Model }; model.AddToClassList("menu-field");

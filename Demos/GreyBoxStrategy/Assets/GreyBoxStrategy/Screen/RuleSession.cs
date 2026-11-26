@@ -146,6 +146,11 @@ namespace GreyBoxStrategy.Realm
         /// next turn follows it. Off: no call is made.
         /// </summary>
         public bool AdvisorOn { get; set; }
+        /// <summary>
+        /// The ruler you described in New game → Rule, as a persona for the advisor on your seat, so its counsel and its
+        /// words are in your ruler's character; null keeps your country's own one-line personality. Set before the game.
+        /// </summary>
+        public Persona YourPersona { get; set; }
         /// <summary>This turn's advice, once it is in; null while the advisor thinks, when it is off, or when it failed.</summary>
         public Advice Advice { get; private set; }
         /// <summary>True while the advisor is deciding this turn's advice.</summary>
@@ -457,7 +462,7 @@ namespace GreyBoxStrategy.Realm
                 if (Writs)
                 {
                     if (!providers.TryGetValue(Model, out var advisorProvider)) providers[Model] = advisorProvider = providerFor(Model, Game.World);
-                    advisor = new Advisor(Game.World, You, advisorProvider, table.Options);
+                    advisor = new Advisor(Game.World, You, advisorProvider, table.Options, YourPersona);
                 }
                 // The storyteller tells on the session's model, through the same provider and queue.
                 if (story != null)

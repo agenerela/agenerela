@@ -24,6 +24,15 @@ namespace GreyBoxStrategy.Realm
     public sealed partial class ReplayDirector
     {
         /// <summary>
+        /// The ruler you described in New game → Rule (or null): its persona line and its banner. Static, as a generated
+        /// world reloads the scene before its game begins.
+        /// </summary>
+        private static RulerDescription described;
+
+        /// <summary>For the Unity CLI: describe the ruler of the next rule game, as New game → Rule's two fields do.</summary>
+        public static void DescribeNextRuler(string persona, string banner) => described = RulerDescription.From(persona, banner);
+
+        /// <summary>
         /// The rulers of the world just made, for the image prompts: name, colour, slot, and persona where one rules.
         /// Your own realm first, so a backend that paints one at a time paints yours before any rival's.
         /// </summary>
@@ -37,6 +46,7 @@ namespace GreyBoxStrategy.Realm
                 string persona = game?.Players != null && game.Players.TryGetValue(c.Id, out var p) ? p?.Persona : null;
                 // Backstory: the loremaster's line about this ruler (#20, world lore), checked; null when none.
                 var s = new RulerSubject { Id = c.Id, Name = c.Name ?? c.Id, Persona = persona, Colour = ChartPalette.Owner(i), Slot = i, Backstory = c.RulerLine };
+                if (c.Id == you && described != null) { s.Described = described.Persona; s.BannerDescribed = described.Banner; }
                 subjects.Add(s);
             }
             return subjects.OrderBy(s => s.Id == you ? 0 : 1).ToList();

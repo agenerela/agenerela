@@ -94,6 +94,8 @@ namespace GreyBoxStrategy.Realm
                     StartGeneratedRule(size, LandShape.Continent, seed, countries, seat, scripted ? null : a[4], scripted);
                     return $"a {size} world, seed {seed}, {countries} countries: you rule seat {seat}, {(scripted ? "stand-in rulers" : a[4])}";
                 });
+            c.Add("describe", "describe <your ruler> | <your banner>", "New game → Rule's Describe your ruler, for the next rule game: either side of the bar may be empty",
+                a => { var parts = string.Join(" ", a).Split('|'); DescribeNextRuler(parts[0].Trim(), parts.Length > 1 ? parts[1].Trim() : ""); return "the next ruler: " + (described?.ToString() ?? "the game's own"); });
             c.Add("plan", "plan court <move> | court2 <move> | <army> <march province|hold> | end", "the writs turn's orders, as the panel and the map give them (rule mode)", a => WritsPlanCommand(a));
             c.Add("writs-live", "writs-live classic|<size> [seed] [turns] [model]", "model rulers play the writs turn live on the RTX 5080, a court and a marshal each (the lock, its pause file and the server are checked first)",
                 a => LiveWritsCommand(a, null));

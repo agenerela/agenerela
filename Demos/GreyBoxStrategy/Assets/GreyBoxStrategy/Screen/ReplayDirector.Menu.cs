@@ -193,6 +193,7 @@ namespace GreyBoxStrategy.Realm
             nextSieges = c.Sieges;
             nextSupply = c.Supply;
             nextFreeOrders = c.YourFreeOrders;
+            described = c.Rule ? RulerDescription.From(c.RulerPersona, c.RulerBanner) : null; // painted, and the advisor's persona
             switch (c.Route(out string why))
             {
                 case NewGameRoute.None: ui.ShowMenuStatus(why); return;
