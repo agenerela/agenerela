@@ -329,7 +329,7 @@ Player: "The supply boats are sinking at the docks!" That is what Player says, n
 says". "What you know" is everything under the identity's "What you know:" and the observations'
 "What you know right now:". With no target field in the schema, both lines end "choose action
 none." Two lines, because in a smoke check on `qwen3.5:4b` a system line alone set aside 1 of 15
-claims the facts contradicted, and the pair 14 (findings, 25 November; unmeasured as an A/B).
+claims the facts contradicted, and the pair 14 (findings, 25 November).
 
 **A claim is set aside only when a fact shows it false**, never for want of one: told "the bridge
 is on fire" with nothing known about the bridge, a guard still goes. A game that wants an
@@ -361,9 +361,28 @@ until the game's state allows it ([targets.md](targets.md), `ITargetAvailability
 checks again: Living Vale's "I have proof" reaches Kest's testimony deal only after Fen has told it.
 The line is for what the model picks among what is offered, and what its statement agrees to.
 
-**Unmeasured as an A/B.** Run request 007 (`docs/run-requests/007-claims-vs-facts/`) asks for one: a
-held-out set of player claims, each once contradicted and once supported by what the agent knows,
-and the 209-prompt set. Until it is run, quote no number for it beyond the smoke check.
+**Measured: a switch for 4B-class models, off by default** (DR-031, run request 007;
+[findings, 25 November 2026, "The claim rule (DR-031)"](../../../../docs/llm-wiki/findings.md#the-claim-rule-dr-031-on-the-4b-it-sets-aside-every-contradicted-claim-and-keeps-13-of-15-supported-ones-on-the-2b-it-makes-the-model-do-nothing-25-november-2026)).
+Arms interleaved on the home server, temperature 0, guards on, today's defaults in both:
+
+| | `qwen3.5:4b` off | `qwen3.5:4b` on | `qwen3.5:2b` off | `qwen3.5:2b` on |
+|---|---:|---:|---:|---:|
+| Held-out claims, right of 30 | 15 | **28** | 10 | 16 |
+| …contradicted set aside / supported acted on, of 15 | 0 / 15 | 15 / 13 | 1 / 14 | 15 / 1 |
+| 209-prompt set, right | 184 | 176 (−3.8, within noise) | 149 | 76 (**−34.9**) |
+| …answered `none` wrongly | 3 | 12 | 21 | 124 |
+
+- **On a 4B-class model, set it only on the calls that carry someone's word**, typically a player's chat,
+  never on an event the game raised. On a contradicted claim the 4B names the fact that disproves it
+  ("The docks are dry.").
+- **Do not set it for a 2B-class model.** There the lines act as a refusal: `qwen3.5:2b` answered `none` to
+  124 of the 209 prompts, and on the claims set it scores what never acting would.
+- **The cost**, on the 4B: about 63 tokens a decision (466 to 529), and four of the 91 plain player requests
+  that came back `none`, among them "Come with me." ("I will not follow you.") and "If you're not busy, the
+  market could use a guard." ("I am busy guarding the village.").
+
+Both claims sets are 30 prompts written by an AI, one run each: check it on your own agent before relying
+on it.
 
 ## Two texts in one statement: a title and a story
 

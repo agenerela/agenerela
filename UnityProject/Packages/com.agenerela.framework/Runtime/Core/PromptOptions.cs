@@ -174,8 +174,9 @@ namespace Agenerela
         /// the stimulus alone.
         /// </para>
         /// <para>
-        /// <b>Unmeasured.</b> It changes the prompt, so it stays off until an A/B run says otherwise
-        /// (hard rule 2); run request 007 asks for one.
+        /// <b>Measured, off by default</b> (DR-031, run request 007): on <c>qwen3.5:4b</c> it sets aside
+        /// claims the facts contradict at a cost within noise; on <c>qwen3.5:2b</c> it turns most answers
+        /// into <c>none</c>. <see cref="DecideOptions.StimulusIsClaim"/> gives the numbers.
         /// </para>
         /// </remarks>
         public bool ClaimRule;

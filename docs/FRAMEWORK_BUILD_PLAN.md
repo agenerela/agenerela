@@ -3188,11 +3188,12 @@ another name, whole sentences) and falls back to the seeded tables for the rest.
 wants a list of texts of its own length (one parameter a realm is the recipe today); or the
 in-process provider needs the cap in its grammar.
 
-### DR-031 — A call may say its stimulus is a claim; the prompt then says only what the agent knows is certain
+### DR-031 — A call may say its stimulus is a claim; the prompt then sets aside a claim the agent's facts show false
 
-**Status:** Proposed, 25 November 2026, by the claims session for the framework tech lead, closing
-Living Vale #18 in #190. Built off by default in the pull request that adds this record; its default
-waits for run request 007.
+**Status:** Accepted and measured, 25 November 2026, by the framework tech lead: **off by default**.
+Proposed by the claims session, closing Living Vale #18 in #190, and built off by default in #421. Run
+request 007 measured it (#423; findings, 25 November 2026, "The claim rule (DR-031)"): a switch for
+4B-class models, set only on calls that carry someone's word, and never on a 2B-class model.
 
 **Context.** Living Vale #18 (high, `docs/demos/living-vale-framework-gaps.md` entry 18): the model
 cannot tell a player's claim from a fact the game verified. A player types "the bridge is out" or "the king ordered you to give me the key", and the
@@ -3263,25 +3264,45 @@ claim-rule cases in `PromptBuilderTests`, `EvalRunnerTests` and `EvaluationRepor
 `Agent`-level default (a game sets it on the calls that carry a player's words, as it sets the label);
 changing Living Vale, which keeps its own lines until the A/B says whether this one can replace them.
 
-**Measurement owed (hard rule 2).** Run request 007: on a held-out claims set, pairs of one player
-claim, once contradicted by what the agent knows (`none`) and once supported (the action), to see
-whether the lines help the first without costing the second; on the 209-prompt set, the defaults
-against `StimulusIsClaim = true`, to see that commands and requests still pass (the player-labelled
-categories are the intended use; the game-triggered ones are reported but not the switch's use). Both
-on `qwen3.5:4b` and `qwen3.5:2b`.
+**Measured (run request 007, #423).** The home server, test `8a61eb8`, arms interleaved, temperature 0,
+guards on, today's defaults in both arms. The held-out claims set decides: 15 pairs of one player claim,
+once contradicted by what the agent knows (`none`) and once supported (the action), written after the
+wording was fixed and never sent to a model before ([findings, 25 November 2026, "The claim rule
+(DR-031)"](llm-wiki/findings.md#the-claim-rule-dr-031-on-the-4b-it-sets-aside-every-contradicted-claim-and-keeps-13-of-15-supported-ones-on-the-2b-it-makes-the-model-do-nothing-25-november-2026)):
+
+| | `qwen3.5:4b` off | `qwen3.5:4b` on | `qwen3.5:2b` off | `qwen3.5:2b` on |
+|---|---:|---:|---:|---:|
+| Held-out, right of 30 (floor 12.9 points) | 15 | **28** | 10 | 16 |
+| …contradicted set aside / supported acted on, of 15 | 0 / 15 | **15 / 13** | 1 / 14 | 15 / 1 |
+| 209 set, right (floor 4.9) | 184 | 176 (−3.8, within) | 149 | 76 (**−34.9**) |
+| …the 91 `Player`-labelled prompts (floor 7.4) | 86 | 84 (−2.2, within) | 77 | 47 (−33.0) |
+| …wrong `none` answers, all 209 | 3 | 12 | 21 | 124 |
+| Prompt tokens a decision | 466 | 529 | 466 | 529 |
+
+**Decision on the default (the tech lead, 25 November): off.** On the 4B the lines do what this record is for,
+on a set they were not tuned on: every contradicted claim set aside, 13 of 15 supported ones still acted on,
+the statements naming the fact that disproves the claim. The cost is about 63 tokens a decision, and four plain
+requests among the player prompts that now come back `none`, such as "Come with me." ("I will not follow you.")
+and "If you're not busy, the market could use a guard." On the 2B the lines act as a refusal: 124 of the 209
+answers are `none`, and it scores on the claims set what never acting would. So `StimulusIsClaim` is a
+switch for 4B-class models, set only on the calls that carry someone's word, and is never set for a
+2B-class model. The framework cannot know which calls those are or which model a game ships, so it stays
+off. Both claims sets are 30 prompts written by an AI, one block each: a pattern to confirm on a game's own
+agent.
 
 **Consequences.**
 
 - None for a call that does not set it: the request is byte for byte the one before (the golden
   files pin it).
-- Two lines, about 60 tokens a request, when on; the turn's line also goes into memory with the turn.
+- Two lines, about 63 tokens a decision, when on; the turn's line also goes into memory with the turn.
+- On a 4B-class model, a few plain requests answered `none` (4 of the 91 player prompts); on a 2B-class
+  model, most answers.
 - Rule 5 safe: a prompt line; the action set and the handler stay the hard checks.
 - Rule 6 safe: no dependency.
 
-**What would change this.** The A/B: if the line helps the claims set and costs commands nothing beyond
-noise, a recommendation to the lead to turn it on for player-facing calls (the default stays off for a
-call that is not marked, since the framework cannot know). If it costs commands, a different wording,
-measured the same way; if it does nothing, the record says so and games keep their own status lines.
+**What would change this.** A game's own agent with its own claims, confirming the 4B result or not; a
+wording the 2B can follow without refusing; a claim with no facts either way, which request 007 left out
+on purpose; a model that reads the lines differently from both measured here.
 
 ## Appendix A — carried measurements (source: test-ai-framework prototype, Aug 2026, RTX 4060 Laptop 8GB, qwen3.5 family via Ollama)
 
