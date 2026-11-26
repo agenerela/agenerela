@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using Agenerela.Providers;
@@ -73,7 +74,7 @@ namespace Agenerela.Editor
         /// </summary>
         internal static readonly ActionChoice[] Starters =
         {
-            new ActionChoice { Id = "move_to", Description = "Walk to a named place.", Target = TargetKind.Needs, Example = "Keep watch over by the {0}." },
+            new ActionChoice { Id = "move_to", Description = "Walk to a named place.", Target = TargetKind.Needs, Example = "Wait by the {0}." },
             new ActionChoice { Id = "follow_player", Description = "Walk with whoever asked.", Target = TargetKind.Never, Example = "Stay close, I'm heading out." },
             new ActionChoice { Id = "speak_only", Description = "Answer without moving.", Target = TargetKind.Never, Example = "What's the news today?" },
             new ActionChoice { Id = "attack_target", Description = "Strike a named thing.", Target = TargetKind.Needs, Example = "Drive off the {0}!" },
@@ -183,11 +184,11 @@ namespace Agenerela.Editor
         }
 
         /// <summary>
-        /// If the project has no AI model set, creates an <c>OllamaLocal</c> asset in
-        /// <paramref name="folder"/> and makes it the project default. <paramref name="settingsAt"/> is
-        /// where the settings are created if the project has none.
+        /// If the project has no AI model set, makes the <c>OllamaLocal</c> asset in
+        /// <paramref name="folder"/> the project default, creating it if it is not there.
+        /// <paramref name="settingsAt"/> is where the settings are created if the project has none.
         /// </summary>
-        /// <returns>The new asset, or null if a model was already set.</returns>
+        /// <returns>The asset made the default, or null if a model was already set.</returns>
         internal static OllamaProviderConfig EnsureDefaultProvider(string folder, string settingsAt)
         {
             if (AgenerelaSettings.ActiveProvider != null)
@@ -195,9 +196,14 @@ namespace Agenerela.Editor
                 return null;
             }
 
-            OllamaProviderConfig provider = ScriptableObject.CreateInstance<OllamaProviderConfig>();
-            AgenerelaSettingsPage.CreateFolders(folder);
-            AssetDatabase.CreateAsset(provider, ProviderPath(folder));
+            OllamaProviderConfig provider = AssetDatabase.LoadAssetAtPath<OllamaProviderConfig>(ProviderPath(folder));
+            if (provider == null)
+            {
+                provider = ScriptableObject.CreateInstance<OllamaProviderConfig>();
+                AgenerelaSettingsPage.CreateFolders(folder);
+                AssetDatabase.CreateAsset(provider, ProviderPath(folder));
+            }
+
             AgenerelaSettingsPage.SetDefault(provider, settingsAt);
             return provider;
         }
@@ -211,17 +217,31 @@ namespace Agenerela.Editor
                 throw new ArgumentException($"The folder '{answers.Folder}' is not inside Assets.");
             }
 
+            if (folder.Contains(".."))
+            {
+                throw new ArgumentException($"The folder '{answers.Folder}' uses '..'. Give a path inside Assets without it.");
+            }
+
             if (answers.Actions.Count == 0)
             {
                 throw new ArgumentException("Pick at least one action.");
             }
 
+            // Every class and method name in the script must differ, or the script does not compile.
+            string className = ClassName(answers.Name);
+            HashSet<string> names = new HashSet<string>(StringComparer.Ordinal) { className };
             HashSet<string> seen = new HashSet<string>(StringComparer.Ordinal);
             foreach (ActionChoice action in answers.Actions)
             {
                 if (!ActionDefinition.ValidateId(action.Id, out string problem))
                 {
                     throw new ArgumentException($"The action '{action.Id}': {problem}.");
+                }
+
+                // The id becomes a method name, so it must start with a letter and hold nothing Pascal drops.
+                if (!Regex.IsMatch(action.Id, "^[a-z][a-z0-9_]*$"))
+                {
+                    throw new ArgumentException($"The action '{action.Id}' must start with a letter and use only a-z, 0-9 and _.");
                 }
 
                 if (action.Id == ActionRegistry.None)
@@ -232,6 +252,13 @@ namespace Agenerela.Editor
                 if (!seen.Add(action.Id))
                 {
                     throw new ArgumentException($"The action '{action.Id}' is listed twice.");
+                }
+
+                string method = Pascal(action.Id);
+                if (!names.Add(method) || !names.Add("Can" + method))
+                {
+                    throw new ArgumentException($"The action '{action.Id}' writes the method {method} and Can{method}, " +
+                                                "but the class or another action already uses one of those names. Rename the action.");
                 }
 
                 if (string.IsNullOrWhiteSpace(action.Description))
@@ -252,6 +279,15 @@ namespace Agenerela.Editor
                     throw new InvalidOperationException($"{path} already exists. The wizard never overwrites a file: move it, or pick another name or folder.");
                 }
             }
+
+            // The script's class has no namespace, so a class of the same name anywhere breaks compiling.
+            foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                if (assembly.GetType(className, false) != null)
+                {
+                    throw new InvalidOperationException($"A class called {className} already exists, in {WhereIs(className, assembly)}. Pick another agent name.");
+                }
+            }
         }
 
         /// <summary>The paths of every file <see cref="Create"/> writes: the script first, then the profile, any Action assets and any default AI model.</summary>
@@ -265,8 +301,10 @@ namespace Agenerela.Editor
                 paths.AddRange(answers.Actions.Select(a => $"{folder}/Actions/{a.Id}.asset"));
             }
 
-            // Only a project with no AI model gets one, so only then is its path listed.
-            if (AgenerelaSettings.ActiveProvider == null)
+            // Only a project with no AI model gets one, and an OllamaLocal already there is reused,
+            // so only then is its path listed.
+            if (AgenerelaSettings.ActiveProvider == null &&
+                AssetDatabase.LoadAssetAtPath<OllamaProviderConfig>(ProviderPath(ProviderFolder)) == null)
             {
                 paths.Add(ProviderPath(ProviderFolder));
             }
@@ -321,6 +359,11 @@ namespace Agenerela.Editor
         /// <summary>Turns the agent's name into the script's class name: "Gate guard" becomes <c>GateGuard</c>.</summary>
         internal static string ClassName(string agentName)
         {
+            if (Regex.IsMatch(agentName ?? "", "[^\\x00-\\x7F]"))
+            {
+                throw new ArgumentException($"The agent name '{agentName}' has a letter outside A to Z, which a class name cannot keep. Use only A to Z, 0 to 9 and spaces.");
+            }
+
             string name = Pascal(agentName ?? "");
             if (name.Length == 0 || !char.IsLetter(name[0]))
             {
@@ -349,6 +392,15 @@ namespace Agenerela.Editor
         private static string ProviderPath(string folder)
         {
             return folder + "/OllamaLocal.asset";
+        }
+
+        // The script file of a class, or the assembly it is in when no script file is found.
+        private static string WhereIs(string className, Assembly assembly)
+        {
+            string script = AssetDatabase.FindAssets($"{className} t:MonoScript")
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .FirstOrDefault(path => Path.GetFileNameWithoutExtension(path) == className);
+            return script ?? assembly.GetName().Name;
         }
 
         private static string TargetArgument(TargetKind target)

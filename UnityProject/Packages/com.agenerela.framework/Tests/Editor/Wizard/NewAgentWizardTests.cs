@@ -71,7 +71,7 @@ namespace Agenerela.Tests.Wizard
             Assert.That(moveTo.RequiresTarget && !moveTo.TakesNoTarget, Is.True, "move_to needs a target.");
             Assert.That(!followPlayer.RequiresTarget && followPlayer.TakesNoTarget, Is.True, "follow_player never takes one.");
             Assert.That(!wave.RequiresTarget && !wave.TakesNoTarget, Is.True, "wave's is optional.");
-            Assert.That(moveTo.ExampleStimulus, Is.EqualTo("Keep watch over by the {0}."));
+            Assert.That(moveTo.ExampleStimulus, Is.EqualTo("Wait by the {0}."));
             Assert.That(wave.ExampleStimulus, Is.Null, "An action with no example gets none, not an invented one.");
         }
 
@@ -89,6 +89,55 @@ namespace Agenerela.Tests.Wizard
             Assert.That(error.Message, Does.Contain(profilePath));
         }
 
+        // Each id passes ActionDefinition.ValidateId but would write a method name that does not compile.
+        [TestCase("2fast")]
+        [TestCase("!!")]
+        [TestCase("über")]
+        [TestCase("open-gate")]
+        public void AnIdThatIsNotAMethodNameIsRefused(string id)
+        {
+            Assert.Throws<ArgumentException>(() => NewAgentWizard.Check(Answers("Gate guard", id)));
+        }
+
+        // Each pair writes the same method twice, or a method named like the class.
+        [TestCase("Gate guard", "open_gate", "open__gate")]
+        [TestCase("Gate guard", "move", "can_move")]
+        [TestCase("Gate guard", "gate_guard", "wave")]
+        public void IdsThatWriteTheSameNameAreRefused(string agentName, string first, string second)
+        {
+            ArgumentException error = Assert.Throws<ArgumentException>(() => NewAgentWizard.Check(Answers(agentName, first, second)));
+
+            Assert.That(error.Message, Does.Contain("Rename the action"));
+        }
+
+        [Test]
+        public void ANameOutsideAToZIsRefused()
+        {
+            Assert.Throws<ArgumentException>(() => NewAgentWizard.Check(Answers("Ärzte", "wave")));
+        }
+
+        [Test]
+        public void AFolderWithDotDotIsRefused()
+        {
+            NewAgentWizard.Answers answers = Answers("Gate guard", "wave");
+            answers.Folder = "Assets/../Elsewhere";
+
+            Assert.Throws<ArgumentException>(() => NewAgentWizard.Check(answers));
+        }
+
+        [Test]
+        public void AClassThatAlreadyExistsIsRefused()
+        {
+            // WizardFixtureGuard is compiled in this test assembly; a folder with no files in it
+            // leaves the class as the only clash.
+            NewAgentWizard.Answers answers = FixtureAnswers();
+            answers.Folder = Folder + "/Elsewhere";
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => NewAgentWizard.Check(answers));
+
+            Assert.That(error.Message, Does.Contain("A class called WizardFixtureGuard already exists"));
+        }
+
         [Test]
         public void AProjectWithNoProviderGetsAnOllamaDefault()
         {
@@ -104,6 +153,26 @@ namespace Agenerela.Tests.Wizard
             Assert.That(AssetDatabase.GetAssetPath(provider), Is.EqualTo(Folder + "/OllamaLocal.asset"));
             AgenerelaSettings.Forget();
             Assert.That(AgenerelaSettings.ActiveProvider, Is.SameAs(provider), "It is what an agent with no provider of its own uses.");
+        }
+
+        [Test]
+        public void AnOllamaLocalAlreadyThereBecomesTheDefault()
+        {
+            // Skipped when this project has its own settings, so the test never changes them.
+            if (AgenerelaSettingsPage.Find() != null)
+            {
+                Assert.Ignore("This project has its own Agenerela settings.");
+            }
+
+            AgenerelaSettingsPage.CreateFolders(Folder);
+            OllamaProviderConfig existing = ScriptableObject.CreateInstance<OllamaProviderConfig>();
+            AssetDatabase.CreateAsset(existing, Folder + "/OllamaLocal.asset");
+
+            OllamaProviderConfig provider = NewAgentWizard.EnsureDefaultProvider(Folder, SettingsAt);
+
+            Assert.That(provider, Is.SameAs(existing), "The asset already there is used, not replaced.");
+            AgenerelaSettings.Forget();
+            Assert.That(AgenerelaSettings.ActiveProvider, Is.SameAs(existing));
         }
 
         [Test]
@@ -138,6 +207,14 @@ namespace Agenerela.Tests.Wizard
                 Description = "Wave at someone, \"friendly\" like.",
                 Target = NewAgentWizard.TargetKind.Optional,
             });
+            return answers;
+        }
+
+        // Answers for an agent with the given action ids, each with a description.
+        private static NewAgentWizard.Answers Answers(string agentName, params string[] ids)
+        {
+            NewAgentWizard.Answers answers = new NewAgentWizard.Answers { Name = agentName, Folder = Folder };
+            answers.Actions.AddRange(ids.Select(id => new NewAgentWizard.ActionChoice { Id = id, Description = "Does a thing." }));
             return answers;
         }
 

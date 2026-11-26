@@ -5,7 +5,7 @@ using UnityEngine;
 public class WizardFixtureGuard : MonoBehaviour
 {
     [AgentAction("move_to", "Walk to a named place.", RequiresTarget = true)]
-    [Example("Keep watch over by the {0}.")]
+    [Example("Wait by the {0}.")]
     void MoveTo(AgentDecision decision)
     {
         // TODO: what move_to does in your game.

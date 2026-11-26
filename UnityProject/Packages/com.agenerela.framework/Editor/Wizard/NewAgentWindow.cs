@@ -121,7 +121,7 @@ namespace Agenerela.Editor
             VisualElement card = new VisualElement();
             card.AddToClassList("ag-card");
 
-            TextField id = new TextField("Action name") { tooltip = "The name the AI picks: lower case and underscores, such as open_gate." };
+            TextField id = new TextField("Action name") { tooltip = "The name the AI picks: starts with a letter, then only a-z, 0-9 and _, such as open_gate." };
             TextField description = new TextField("What it does") { tooltip = "One line the AI reads to know when to pick it, such as: Open the village gate." };
             DropdownField target = new DropdownField("Acts on a target?", TargetWords, 0)
             {

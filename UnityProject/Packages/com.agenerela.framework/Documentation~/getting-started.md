@@ -69,7 +69,8 @@ public class AskOnPlay : MonoBehaviour
 }
 ```
 
-The Console shows the method the agent chose, such as `Guard: speak_only, target no_target`. In
+The Console shows the GameObject's name and the method the agent chose, such as
+`Gate guard: speak_only, target no_target`. In
 a game, your own code decides when to ask: a player's line, an event, a turn
 ([agents-in-a-scene.md](agents-in-a-scene.md)).
 
