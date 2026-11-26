@@ -1,0 +1,25 @@
+{
+  "description": "Img2img with Z-Image Turbo int8 (scratch, for the 4K Classic map tiles).",
+  "params": {
+    "image": {"targets": [["40", "image"]], "required": true, "upload": true, "help": "tile"},
+    "prompt": {"targets": [["27", "text"]], "required": true, "help": "prompt"},
+    "seed": {"targets": [["3", "seed"]], "random": true, "help": "seed"},
+    "denoise": {"targets": [["3", "denoise"]], "help": "denoise"},
+    "steps": {"targets": [["3", "steps"]], "help": "steps"},
+    "filename_prefix": {"targets": [["9", "filename_prefix"]], "help": "name"}
+  },
+  "prompt": {
+    "28": {"class_type": "UNETLoader", "inputs": {"unet_name": "z_image_turbo_int8_convrot.safetensors", "weight_dtype": "default"}},
+    "30": {"class_type": "CLIPLoader", "inputs": {"clip_name": "qwen_3_4b_fp8_mixed.safetensors", "type": "lumina2", "device": "default"}},
+    "29": {"class_type": "VAELoader", "inputs": {"vae_name": "ae.safetensors"}},
+    "11": {"class_type": "ModelSamplingAuraFlow", "inputs": {"model": ["28", 0], "shift": 3.0}},
+    "27": {"class_type": "CLIPTextEncode", "inputs": {"clip": ["30", 0], "text": ""}},
+    "33": {"class_type": "ConditioningZeroOut", "inputs": {"conditioning": ["27", 0]}},
+    "40": {"class_type": "LoadImage", "inputs": {"image": ""}},
+    "41": {"class_type": "VAEEncode", "inputs": {"pixels": ["40", 0], "vae": ["29", 0]}},
+    "3": {"class_type": "KSampler", "inputs": {"model": ["11", 0], "positive": ["27", 0], "negative": ["33", 0], "latent_image": ["41", 0],
+          "seed": 0, "steps": 8, "cfg": 1.0, "sampler_name": "res_multistep", "scheduler": "simple", "denoise": 0.4}},
+    "8": {"class_type": "VAEDecode", "inputs": {"samples": ["3", 0], "vae": ["29", 0]}},
+    "9": {"class_type": "SaveImage", "inputs": {"images": ["8", 0], "filename_prefix": "agenerela/realm4k"}}
+  }
+}

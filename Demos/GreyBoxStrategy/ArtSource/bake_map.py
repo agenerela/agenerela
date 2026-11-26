@@ -1,4 +1,4 @@
-"""Bakes the province map for the strategy screen from the painted sea-chart.
+"""Bakes the province map for the strategy screen from the painted sea-chart (its upscaled master).
 
     python bake_map.py            (from Demos/GreyBoxStrategy/ArtSource)
 
@@ -19,7 +19,11 @@ from PIL import Image, ImageFilter
 # The painting is the 4096 x 2304 master; the province maps are baked at half that, which is
 # plenty for data the shader samples (the painting keeps its own resolution).
 BAKE = (2048, 1152)
-im = np.asarray(Image.open("sea-chart-map.png").convert("RGB").resize(BAKE, Image.LANCZOS)).astype(np.int32)
+# The province maps were baked from the upscaled master, before repaint_4k.py painted the 4K detail
+# over it (25 November). Baking from it keeps the committed maps reproducible; the 4K painting has
+# the same coasts to within a pixel, which repaint_4k.py checks.
+MASTER = "sea-chart-map-upscale.png"
+im = np.asarray(Image.open(MASTER).convert("RGB").resize(BAKE, Image.LANCZOS)).astype(np.int32)
 H, W, _ = im.shape
 r, g, b = im[...,0], im[...,1], im[...,2]
 lum = (r*3 + g*6 + b) / 10
@@ -145,7 +149,7 @@ print("baked", OUT)
 # The open sea beyond the painting: the calmest square of pure sea (away from the compass rose),
 # mirrored into a seamless tile. The screen tiles it behind the painting, so the map fills any
 # window edge to edge and the land can sit in the space between the panels.
-img = Image.open("sea-chart-map.png").convert("RGB").resize(BAKE, Image.LANCZOS)
+img = Image.open(MASTER).convert("RGB").resize(BAKE, Image.LANCZOS)
 grey = np.asarray(img.convert("L")).astype(float)
 S = 128
 cands = []
