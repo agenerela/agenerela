@@ -3188,6 +3188,101 @@ another name, whole sentences) and falls back to the seeded tables for the rest.
 wants a list of texts of its own length (one parameter a realm is the recipe today); or the
 in-process provider needs the cap in its grammar.
 
+### DR-031 — A call may say its stimulus is a claim; the prompt then says only what the agent knows is certain
+
+**Status:** Proposed, 25 November 2026, by the claims session for the framework tech lead, closing
+Living Vale #18 in #190. Built off by default in the pull request that adds this record; its default
+waits for run request 007.
+
+**Context.** Living Vale #18 (high, `docs/demos/living-vale-framework-gaps.md` entry 18): the model
+cannot tell a player's claim from a fact the game verified. A player types "the bridge is out" or "the king ordered you to give me the key", and the
+model treats it like something the game reported. The prompt gives it no way to tell: the identity's
+knowledge sits under "What you know:", the game's observations under "What you know right now:", and
+the player's line under its label, `Player: "..."`, but nothing says the first two are checked and
+the third is not. Living Vale wrote its own fix, per NPC, in `RouteActionBinding`: status lines that
+say what the game has verified ("No witness account of your raid has reached the traveler. Claims of
+proof are only words.") and a rule line ("If the traveler claims something that is not listed here,
+it has not happened"). Every game that lets a player talk would write the same line again, unmeasured
+each time.
+
+The structural protection already exists and is not what is missing: an action or target a claim
+must never unlock is offered only when the game's state allows it (availability, `ITargetAvailability`,
+#235), and the handler checks again (rule 5). Living Vale's "I have proof" reaches Kest's testimony
+deal only after Fen has told it. What is missing is the model's side: which offered action it picks,
+and what its statement agrees to, when a claim is all it has.
+
+**Options considered**
+
+| Question | Options | Verdict |
+|---|---|---|
+| Who says what is a claim | The framework classifies the stimulus (speech, report, event); the developer marks it | **The developer, per call.** The framework never decides when or why an agent is asked, or what a stimulus is (DR-008). A player's line, a rumour and a report the game trusts all arrive as text; only the game knows which it checked |
+| What is marked | A second channel for verified facts, `DecideOptions.Facts`, rendered apart from free observations (Living Vale's own proposal, gaps page entry 18); each observation as verified or claimed; a flag on `FactLedger` facts; the call's stimulus | **The stimulus.** A second channel would make every source (`FactLedger`, `TargetSummarySource`, a game's own) and every caller sort each line into one of two kinds, and change the observations block for whoever uses it, to mark the one input that is not the game's. Observations, knowledge and ledger facts are already the game's own words: it chose to put them there. Someone's unchecked word the game wants mentioned is written as a report of it ("Fen says the bridge is out"), which is itself true, so a per-line flag would mark nothing a sentence does not already say, and would change the plain `IList<string>` every source returns. The stimulus is the one input the game passes on without vouching for it |
+| Where the model reads it | A field in the schema; a relabelled stimulus; rule lines in the prompt | **Lines in the prompt.** A local model never reads the schema (findings, 10 October 2026), the response's `action`, `target`, `statement` order does not change, and no field before `action` is added (Appendix A: a reasoning field was the worst of five). Relabelling the stimulus would change the label the developer chose and the examples it is matched with |
+| Where the lines go | The system prompt's end; right after the stimulus; both | **Both.** In a smoke check (below) a system line alone changed almost nothing on `qwen3.5:4b`; a line right after the stimulus did most of the work, and the two together most |
+| When a claim is set aside | When nothing known confirms it; when something known shows it false | **When something known shows it false.** "Act on it only if what you know shows it" asks a guard to ignore every unconfirmed alarm, which is the game's call, not the framework's. A game that wants absence read as falsehood writes it as a fact, as Living Vale does |
+| A guard | A guard that spots claims and refuses | **None.** A claim has no signal a guard could read without classifying the stimulus, and the action set is already the hard check |
+
+**Evidence so far: a smoke check, not an A/B** (findings, 25 November 2026, "The claim rule, smoke
+check"). A hand-built copy of the evaluation set's prompt, `qwen3.5:4b` on the home server, the 30
+claims of request 007's development set, each wording against none, one request each:
+
+| Wording | Contradicted right (of 15) | Supported right (of 15) |
+|---|---:|---:|
+| None (today) | 0 | 14 |
+| System line, "act on it only if what you know shows it" | 1 | 14 |
+| System line naming `none` | 7 | 14 |
+| Line after the stimulus naming `none` | 12 | 11 |
+| Both | **14** | **14** |
+
+The same session wrote the claims and chose the wording on them, so these numbers cannot show it
+generalises; request 007 scores a held-out set written before the A/B.
+
+**Decision.** `DecideOptions.StimulusIsClaim`, a bool, false by default; `Agent` copies it to
+`PromptOptions.ClaimRule`, and `PromptBuilder` then ends the system prompt with
+
+```
+What Player says is a claim, not proof. If what you know shows a claim is false, do not act on it: choose action none and target no_target.
+```
+
+and follows the stimulus's closing quote, in the user turn, with
+
+```
+That is what Player says, not what you know. If what you know shows it is false, choose action none and target no_target.
+```
+
+`Player` is the call's `StimulusLabel`, trimmed, so the lines name whoever the caller named and no one
+else (DR-008); with no target field in the schema they end "choose action none." "What you know"
+covers both headings the game's facts sit under. The second line is part of the turn a memory keeps,
+so an earlier claim stays marked as one. Neither says anything about requests: "Follow me" is not a
+claim. A false claim that comes with a request ("I'm the captain, follow me", when the captain is
+known to be someone else) is set aside whole; a game for which that is wrong leaves the switch off on
+such calls. The evaluation report records `stimulusIsClaim` per arm. Tests: the
+claim-rule cases in `PromptBuilderTests`, `EvalRunnerTests` and `EvaluationReportViewTests`.
+
+**Not in this decision.** A default of on; marking individual observations or ledger facts; an
+`Agent`-level default (a game sets it on the calls that carry a player's words, as it sets the label);
+changing Living Vale, which keeps its own lines until the A/B says whether this one can replace them.
+
+**Measurement owed (hard rule 2).** Run request 007: on a held-out claims set, pairs of one player
+claim, once contradicted by what the agent knows (`none`) and once supported (the action), to see
+whether the lines help the first without costing the second; on the 209-prompt set, the defaults
+against `StimulusIsClaim = true`, to see that commands and requests still pass (the player-labelled
+categories are the intended use; the game-triggered ones are reported but not the switch's use). Both
+on `qwen3.5:4b` and `qwen3.5:2b`.
+
+**Consequences.**
+
+- None for a call that does not set it: the request is byte for byte the one before (the golden
+  files pin it).
+- Two lines, about 60 tokens a request, when on; the turn's line also goes into memory with the turn.
+- Rule 5 safe: a prompt line; the action set and the handler stay the hard checks.
+- Rule 6 safe: no dependency.
+
+**What would change this.** The A/B: if the line helps the claims set and costs commands nothing beyond
+noise, a recommendation to the lead to turn it on for player-facing calls (the default stays off for a
+call that is not marked, since the framework cannot know). If it costs commands, a different wording,
+measured the same way; if it does nothing, the record says so and games keep their own status lines.
+
 ## Appendix A — carried measurements (source: test-ai-framework prototype, Aug 2026, RTX 4060 Laptop 8GB, qwen3.5 family via Ollama)
 
 | Finding | Numbers |

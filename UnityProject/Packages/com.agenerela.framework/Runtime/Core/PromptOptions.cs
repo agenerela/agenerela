@@ -145,6 +145,42 @@ namespace Agenerela
         public StatementRulesWording StatementRulesWording = StatementRulesWording.YourStatement;
 
         /// <summary>
+        /// Whether the request carries the claim rule (#190, Living Vale #18, DR-031): the stimulus is
+        /// someone's word, and a claim what the agent knows shows false is not acted on. Off by
+        /// default, which leaves the prompt exactly as it was. <c>Agent</c> copies it from
+        /// <see cref="DecideOptions.StimulusIsClaim"/>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <see cref="PromptBuilder.Build"/> adds two lines, naming the stimulus by
+        /// <see cref="StimulusLabel"/>, trimmed. The system prompt's last line, after the target rule
+        /// when that is sent too:
+        /// </para>
+        /// <code>
+        /// What Player says is a claim, not proof. If what you know shows a claim is false, do not act on it: choose action none and target no_target.
+        /// </code>
+        /// <para>
+        /// and, in the user turn, right after the stimulus's closing quote and before any of the call's
+        /// own observations placed there (<see cref="Agenerela.ObservationPlacement.WithStimulus"/>):
+        /// </para>
+        /// <code>
+        /// Player: "The bridge is out." That is what Player says, not what you know. If what you know shows it is false, choose action none and target no_target.
+        /// </code>
+        /// <para>
+        /// With no target field in the schema, both end "choose action none." "What you know" is what
+        /// sits under the identity's "What you know:" and the observations' "What you know right now:".
+        /// The second line is part of <see cref="Providers.DecisionRequest.Stimulus"/>, so a memory
+        /// that keeps that turn keeps it too; <see cref="Providers.DecisionRequest.StimulusText"/> is
+        /// the stimulus alone.
+        /// </para>
+        /// <para>
+        /// <b>Unmeasured.</b> It changes the prompt, so it stays off until an A/B run says otherwise
+        /// (hard rule 2); run request 007 asks for one.
+        /// </para>
+        /// </remarks>
+        public bool ClaimRule;
+
+        /// <summary>
         /// Whether the few-shot block shows each action's
         /// <see cref="ActionDefinition.CounterExampleStimulus"/>. On by default, which shows only what
         /// a developer wrote. <c>Agent</c> copies it from <see cref="DecideOptions.CounterExamples"/>.

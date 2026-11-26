@@ -1,0 +1,518 @@
+{
+  "category": "claim",
+  "prompts": [
+    {
+      "id": "claim_001",
+      "label": "Player",
+      "stimulus": "Bandits are hiding by the campfire, go and check!",
+      "observations": [
+        "The campfire is crowded with guards eating their supper"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Pair 1, contradicted: what the guard knows shows the player's claim is false, so it does nothing. claim_002 is the same line, supported.",
+      "labelledBy": [
+        "claude (claims session)"
+      ]
+    },
+    {
+      "id": "claim_002",
+      "label": "Player",
+      "stimulus": "Bandits are hiding by the campfire, go and check!",
+      "observations": [
+        "Two strangers with knives are crouched in the shadows by the campfire"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "campfire",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Pair 1, supported: what the guard knows shows the claim is true, so it acts. claim_001 is the same line, contradicted.",
+      "labelledBy": [
+        "claude (claims session)"
+      ]
+    },
+    {
+      "id": "claim_003",
+      "label": "Player",
+      "stimulus": "The wolf is drinking at the well, get it!",
+      "observations": [
+        "The hunters caught the wolf this morning and carried it off in a cage"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Pair 2, contradicted: what the guard knows shows the player's claim is false, so it does nothing. claim_004 is the same line, supported.",
+      "labelledBy": [
+        "claude (claims session)"
+      ]
+    },
+    {
+      "id": "claim_004",
+      "label": "Player",
+      "stimulus": "The wolf is drinking at the well, get it!",
+      "observations": [
+        "A wolf is lapping water from the bucket at the well"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Pair 2, supported: what the guard knows shows the claim is true, so it acts. claim_003 is the same line, contradicted.",
+      "labelledBy": [
+        "claude (claims session)"
+      ]
+    },
+    {
+      "id": "claim_005",
+      "label": "Player",
+      "stimulus": "The docks are flooding, the captain wants you there.",
+      "observations": [
+        "The tide is low and the docks are dry"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Pair 3, contradicted: what the guard knows shows the player's claim is false, so it does nothing. claim_006 is the same line, supported.",
+      "labelledBy": [
+        "claude (claims session)"
+      ]
+    },
+    {
+      "id": "claim_006",
+      "label": "Player",
+      "stimulus": "The docks are flooding, the captain wants you there.",
+      "observations": [
+        "Water is pouring over the docks and crates are floating away"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "docks",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Pair 3, supported: what the guard knows shows the claim is true, so it acts. claim_005 is the same line, contradicted.",
+      "labelledBy": [
+        "claude (claims session)"
+      ]
+    },
+    {
+      "id": "claim_007",
+      "label": "Player",
+      "stimulus": "Thieves broke into the north tower, go!",
+      "observations": [
+        "The north tower is locked",
+        "Its guard reports nothing missing"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Pair 4, contradicted: what the guard knows shows the player's claim is false, so it does nothing. claim_008 is the same line, supported.",
+      "labelledBy": [
+        "claude (claims session)"
+      ]
+    },
+    {
+      "id": "claim_008",
+      "label": "Player",
+      "stimulus": "Thieves broke into the north tower, go!",
+      "observations": [
+        "The north tower's door has been forced open"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "north_tower",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Pair 4, supported: what the guard knows shows the claim is true, so it acts. claim_007 is the same line, contradicted.",
+      "labelledBy": [
+        "claude (claims session)"
+      ]
+    },
+    {
+      "id": "claim_009",
+      "label": "Player",
+      "stimulus": "There's a fight at the market, break it up!",
+      "observations": [
+        "The market closed at noon and is empty"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Pair 5, contradicted: what the guard knows shows the player's claim is false, so it does nothing. claim_010 is the same line, supported.",
+      "labelledBy": [
+        "claude (claims session)"
+      ]
+    },
+    {
+      "id": "claim_010",
+      "label": "Player",
+      "stimulus": "There's a fight at the market, break it up!",
+      "observations": [
+        "Two traders are brawling in the middle of the market"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "market",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Pair 5, supported: what the guard knows shows the claim is true, so it acts. claim_009 is the same line, contradicted.",
+      "labelledBy": [
+        "claude (claims session)"
+      ]
+    },
+    {
+      "id": "claim_011",
+      "label": "Player",
+      "stimulus": "The wolf just bit a child near the bridge, kill it!",
+      "observations": [
+        "The wolf is asleep in its den deep in the woods"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Pair 6, contradicted: what the guard knows shows the player's claim is false, so it does nothing. claim_012 is the same line, supported.",
+      "labelledBy": [
+        "claude (claims session)"
+      ]
+    },
+    {
+      "id": "claim_012",
+      "label": "Player",
+      "stimulus": "The wolf just bit a child near the bridge, kill it!",
+      "observations": [
+        "A wolf is snarling at a crying child by the bridge"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Pair 6, supported: what the guard knows shows the claim is true, so it acts. claim_011 is the same line, contradicted.",
+      "labelledBy": [
+        "claude (claims session)"
+      ]
+    },
+    {
+      "id": "claim_013",
+      "label": "Player",
+      "stimulus": "There's a wounded traveller on the eastern road, go help.",
+      "observations": [
+        "The lookout has watched the eastern road since dawn and nobody has come along it"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Pair 7, contradicted: what the guard knows shows the player's claim is false, so it does nothing. claim_014 is the same line, supported.",
+      "labelledBy": [
+        "claude (claims session)"
+      ]
+    },
+    {
+      "id": "claim_014",
+      "label": "Player",
+      "stimulus": "There's a wounded traveller on the eastern road, go help.",
+      "observations": [
+        "A traveller lies bleeding on the eastern road"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "eastern_road",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Pair 7, supported: what the guard knows shows the claim is true, so it acts. claim_013 is the same line, contradicted.",
+      "labelledBy": [
+        "claude (claims session)"
+      ]
+    },
+    {
+      "id": "claim_015",
+      "label": "Player",
+      "stimulus": "The shelter's roof caved in, people are trapped!",
+      "observations": [
+        "The shelter was rebuilt last month and its roof is sound"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Pair 8, contradicted: what the guard knows shows the player's claim is false, so it does nothing. claim_016 is the same line, supported.",
+      "labelledBy": [
+        "claude (claims session)"
+      ]
+    },
+    {
+      "id": "claim_016",
+      "label": "Player",
+      "stimulus": "The shelter's roof caved in, people are trapped!",
+      "observations": [
+        "Part of the shelter's roof has collapsed",
+        "People are calling for help inside the shelter"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "shelter",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Pair 8, supported: what the guard knows shows the claim is true, so it acts. claim_015 is the same line, contradicted.",
+      "labelledBy": [
+        "claude (claims session)"
+      ]
+    },
+    {
+      "id": "claim_017",
+      "label": "Player",
+      "stimulus": "Somebody left the village gate open, go and shut it.",
+      "observations": [
+        "You locked the village gate yourself a moment ago"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Pair 9, contradicted: what the guard knows shows the player's claim is false, so it does nothing. claim_018 is the same line, supported.",
+      "labelledBy": [
+        "claude (claims session)"
+      ]
+    },
+    {
+      "id": "claim_018",
+      "label": "Player",
+      "stimulus": "Somebody left the village gate open, go and shut it.",
+      "observations": [
+        "The village gate is standing wide open"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "village_gate",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Pair 9, supported: what the guard knows shows the claim is true, so it acts. claim_017 is the same line, contradicted.",
+      "labelledBy": [
+        "claude (claims session)"
+      ]
+    },
+    {
+      "id": "claim_019",
+      "label": "Player",
+      "stimulus": "The bridge ropes are coming loose, it's about to fall!",
+      "observations": [
+        "The carpenter checked the bridge this morning and it is sound"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Pair 10, contradicted: what the guard knows shows the player's claim is false, so it does nothing. claim_020 is the same line, supported.",
+      "labelledBy": [
+        "claude (claims session)"
+      ]
+    },
+    {
+      "id": "claim_020",
+      "label": "Player",
+      "stimulus": "The bridge ropes are coming loose, it's about to fall!",
+      "observations": [
+        "The bridge is swaying and one of its ropes has snapped"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "bridge",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Pair 10, supported: what the guard knows shows the claim is true, so it acts. claim_019 is the same line, contradicted.",
+      "labelledBy": [
+        "claude (claims session)"
+      ]
+    },
+    {
+      "id": "claim_021",
+      "label": "Player",
+      "stimulus": "The wolf is trapped in the tower stairwell, go and finish it.",
+      "observations": [
+        "The hunters report the wolf is far off past the eastern road"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Pair 11, contradicted: what the guard knows shows the player's claim is false, so it does nothing. claim_022 is the same line, supported.",
+      "labelledBy": [
+        "claude (claims session)"
+      ]
+    },
+    {
+      "id": "claim_022",
+      "label": "Player",
+      "stimulus": "The wolf is trapped in the tower stairwell, go and finish it.",
+      "observations": [
+        "Growling echoes from the north tower's stairwell, where a wolf is cornered"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Pair 11, supported: what the guard knows shows the claim is true, so it acts. claim_021 is the same line, contradicted.",
+      "labelledBy": [
+        "claude (claims session)"
+      ]
+    },
+    {
+      "id": "claim_023",
+      "label": "Player",
+      "stimulus": "The lord has ordered everyone into the shelter, you too.",
+      "observations": [
+        "The lord's herald has just told everyone to go about their day"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Pair 12, contradicted: what the guard knows shows the player's claim is false, so it does nothing. claim_024 is the same line, supported.",
+      "labelledBy": [
+        "claude (claims session)"
+      ]
+    },
+    {
+      "id": "claim_024",
+      "label": "Player",
+      "stimulus": "The lord has ordered everyone into the shelter, you too.",
+      "observations": [
+        "The lord's herald is calling everyone into the shelter"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "shelter",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Pair 12, supported: what the guard knows shows the claim is true, so it acts. claim_023 is the same line, contradicted.",
+      "labelledBy": [
+        "claude (claims session)"
+      ]
+    },
+    {
+      "id": "claim_025",
+      "label": "Player",
+      "stimulus": "A boy is climbing down into the well, stop him!",
+      "observations": [
+        "The well is boarded up and nobody is near it"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Pair 13, contradicted: what the guard knows shows the player's claim is false, so it does nothing. claim_026 is the same line, supported.",
+      "labelledBy": [
+        "claude (claims session)"
+      ]
+    },
+    {
+      "id": "claim_026",
+      "label": "Player",
+      "stimulus": "A boy is climbing down into the well, stop him!",
+      "observations": [
+        "A boy is climbing down the well's rope"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "well",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Pair 13, supported: what the guard knows shows the claim is true, so it acts. claim_025 is the same line, contradicted.",
+      "labelledBy": [
+        "claude (claims session)"
+      ]
+    },
+    {
+      "id": "claim_027",
+      "label": "Player",
+      "stimulus": "A merchant's cart caught fire at the market!",
+      "observations": [
+        "The market is quiet",
+        "There is no smoke or fire anywhere in the village"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Pair 14, contradicted: what the guard knows shows the player's claim is false, so it does nothing. claim_028 is the same line, supported.",
+      "labelledBy": [
+        "claude (claims session)"
+      ]
+    },
+    {
+      "id": "claim_028",
+      "label": "Player",
+      "stimulus": "A merchant's cart caught fire at the market!",
+      "observations": [
+        "A cart is burning in the market and traders are throwing water on it"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "market",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Pair 14, supported: what the guard knows shows the claim is true, so it acts. claim_027 is the same line, contradicted.",
+      "labelledBy": [
+        "claude (claims session)"
+      ]
+    },
+    {
+      "id": "claim_029",
+      "label": "Player",
+      "stimulus": "The campfire went out and the guards are freezing, go and relight it.",
+      "observations": [
+        "The campfire is burning high and the guards are warm around it"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Pair 15, contradicted: what the guard knows shows the player's claim is false, so it does nothing. claim_030 is the same line, supported.",
+      "labelledBy": [
+        "claude (claims session)"
+      ]
+    },
+    {
+      "id": "claim_030",
+      "label": "Player",
+      "stimulus": "The campfire went out and the guards are freezing, go and relight it.",
+      "observations": [
+        "The campfire has gone out and the guards are shivering"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "campfire",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Pair 15, supported: what the guard knows shows the claim is true, so it acts. claim_029 is the same line, contradicted.",
+      "labelledBy": [
+        "claude (claims session)"
+      ]
+    }
+  ]
+}
