@@ -77,6 +77,23 @@ namespace GreyBoxStrategy.Tests
             Assert.That(StorytellerSettings.Presets.All(p => !string.IsNullOrEmpty(p.Label) && !string.IsNullOrEmpty(p.Description)), Is.True, "a menu can show them");
         }
 
+        [TestCase("default+storyteller+s2+chains-skeleton+preset-saga")]
+        public async Task AWritsTable_TellsWithItsStoryteller_AndPlaysNoTableEvents(string arm)
+        {
+            // Before 26 November a writs table never made its storyteller: +storyteller played the random table alone.
+            var table = Tables.Named("fake,fake,fake,fake,fake", null, arm: arm, personas: true);
+            table.Setup = GameSetup.Writs(1);
+            table.Setup.TurnCap = 8;
+            ILLMProvider Fake(string m, World w) => new ScriptedProvider().Otherwise(ScriptedReply.Decide(ActionRegistry.None, TargetRegistry.NoTarget, "We wait."));
+            var played = await Await.NotCancelled(TableRunner.PlayAsync(table, 1, 0, Fake));
+            Assert.That(played.Storyteller.Count, Is.GreaterThanOrEqualTo(5), "asked every turn from turn 3");
+            Assert.That(played.Record.Game.Events.Events.Any(e => e.Source == EventRecord.FromTable), Is.False, "the random table is off");
+            var control = Tables.Named("fake,fake,fake,fake,fake", null, arm: "default", personas: true);
+            control.Setup = table.Setup;
+            var off = await Await.NotCancelled(TableRunner.PlayAsync(control, 1, 0, Fake));
+            Assert.That(off.Storyteller, Is.Empty);
+        }
+
         // --- Dilemmas -------------------------------------------------------------------------
 
         [Test]
