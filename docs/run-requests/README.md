@@ -109,3 +109,4 @@ runner to it after the block in hand; the one it left continues when its turn co
 |---|---|---|---|
 | [001](001-interim-model-sweep-5080/request.md) | The 13-model sweep on the interim set (389 prompts), on the RTX 5080 | RTX 5080 box, or its Ollama over the network from the laptop | done |
 | [002](002-economy-smoke/request.md) | Economy smoke, the first request sent from the laptop: free orders with and without the economy, seed 1 | RTX 5080 run queue | done |
+| [007](007-claims-vs-facts/request.md) | The claim rule (DR-031), `StimulusIsClaim` off against on: a 30-prompt claims set and the 209 set, both models | Home server, the Phase 4 card owner | open |
