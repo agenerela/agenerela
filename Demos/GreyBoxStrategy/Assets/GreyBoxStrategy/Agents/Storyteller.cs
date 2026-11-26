@@ -156,6 +156,7 @@ namespace GreyBoxStrategy
             this.options = options ?? ModelSeatOptions.Default;
             var w = game.World;
             rules = game.Story;
+            EventFacts.Attach(game); // +event-facts: the rulers' ledger of what happened, null otherwise
             string countries = EventRules.Join(w.CountryList.Select(c => c.Id).ToList());
             var identity = new AgentIdentity
             {

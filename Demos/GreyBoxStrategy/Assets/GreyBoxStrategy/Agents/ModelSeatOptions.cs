@@ -132,6 +132,12 @@ namespace GreyBoxStrategy
         public ChainMode Chains = ChainMode.None;
         /// <summary><c>+preset-&lt;name&gt;</c> (<see cref="StorytellerSettings.Presets"/>); null keeps S1's settings.</summary>
         public string Preset;
+        /// <summary>
+        /// <c>+event-facts</c>: the rulers read each storyteller event from a fact ledger (<see cref="EventFacts"/>, #295),
+        /// worded for each, for <see cref="GreyBoxStrategy.StoryRules.EventFactTurns"/> turns, instead of among the
+        /// next turn's facts. It changes what the rulers read, so it is a switch.
+        /// </summary>
+        public bool EventFacts;
 
         /// <summary>
         /// <c>+strength-bundled</c> or <c>+strength-param</c>: the storyteller chooses how hard an event
@@ -144,6 +150,7 @@ namespace GreyBoxStrategy
         public StoryRules StoryRules() => new StoryRules
         {
             Choices = Choices, Multi = Multi, History = History, Traits = Traits, TitleCall = TitleCall, Chains = Chains,
+            EventFacts = EventFacts,
             Settings = Preset == null ? new StorytellerSettings() : StorytellerSettings.Named(Preset),
         };
 
@@ -299,6 +306,7 @@ namespace GreyBoxStrategy
                     else if (modifier == "history") options.History = true;
                     else if (modifier == "traits") options.Traits = true;
                     else if (modifier == "title-call") options.TitleCall = true;
+                    else if (modifier == "event-facts") options.EventFacts = true;
                     else if (modifier == "strength-bundled") options.EventStrength = EventStrengthForm.Bundled;
                     else if (modifier == "strength-param") options.EventStrength = EventStrengthForm.Parameter;
                     else if (modifier == "chains-free") options.Chains = ChainMode.Free;

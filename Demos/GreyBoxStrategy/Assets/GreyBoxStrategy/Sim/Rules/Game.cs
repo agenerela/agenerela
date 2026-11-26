@@ -485,12 +485,16 @@ namespace GreyBoxStrategy
                 var (amount, value, effect) = ApplyS1(t, id, e.Province, e.Strength);
                 e.Value[id] = value;
                 e.Effect[id] = effect;
-                Tell(id, 1, EventRules.HitLine(e, id, amount));
+                e.HitLines[id] = EventRules.HitLine(e, id, amount);
+                if (!story.EventFacts) Tell(id, 1, e.HitLines[id]);
                 string sign = value >= 0 ? "+" : "-";
                 report.Upkeep.Add($"{id}: event \"{e.Title}\" ({t.Id}{(e.Province != null ? " in " + e.Province : "")}), {sign}{effect}.");
             }
             string news = EventRules.NewsLine(e, t);
-            foreach (var other in World.Alive.Where(c => !e.Hit.Contains(c.Id))) Tell(other.Id, 3, news);
+            e.News = news;
+            // +event-facts: the rulers read the event from the fact ledger for several turns instead (the seats' EventFacts).
+            if (!story.EventFacts)
+                foreach (var other in World.Alive.Where(c => !e.Hit.Contains(c.Id))) Tell(other.Id, 3, news);
             report.Events.Add(e);
             Events.Events.Add(e);
         }
@@ -571,11 +575,15 @@ namespace GreyBoxStrategy
                 }
                 e.Value[id] = value;
                 e.Effect[id] = effect;
-                Tell(id, 1, line);
+                e.HitLines[id] = line;
+                if (!story.EventFacts) Tell(id, 1, line);
                 report.Upkeep.Add($"{id}: event \"{e.Title}\" ({t.Id}{(e.Province != null ? " in " + e.Province : "")}), {effect}.");
             }
             string news = EventRules.NewsLine(e, t);
-            foreach (var other in World.Alive.Where(c => !e.Hit.Contains(c.Id))) Tell(other.Id, 3, news);
+            e.News = news;
+            // +event-facts: the rulers read the event from the fact ledger for several turns instead (the seats' EventFacts).
+            if (!story.EventFacts)
+                foreach (var other in World.Alive.Where(c => !e.Hit.Contains(c.Id))) Tell(other.Id, 3, news);
             report.Events.Add(e);
             Events.Events.Add(e);
             if (story.Chains != ChainMode.None) KeepChain(e, q);

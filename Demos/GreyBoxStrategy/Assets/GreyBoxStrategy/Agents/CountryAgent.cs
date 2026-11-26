@@ -221,6 +221,7 @@ namespace GreyBoxStrategy
             };
             Agent.TargetSources.Add(new StrategyTargetSource(world, countryId));
             Agent.ObservationSources.Add(new StandingFactsSource(world, countryId, Options.MovesLine));
+            if (Options.Storyteller && Options.EventFacts) Agent.ObservationSources.Add(EventFacts.Source(world, countryId));
             Register();
         }
 

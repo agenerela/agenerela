@@ -40,6 +40,7 @@ namespace GreyBoxStrategy.Replay
                     case "history": r.History = true; break;
                     case "traits": r.Traits = true; break;
                     case "title-call": r.TitleCall = true; break;
+                    case "event-facts": r.EventFacts = true; break;
                     case "chains-free": r.Chains = ChainMode.Free; break;
                     case "chains-skeleton": r.Chains = ChainMode.Skeleton; break;
                     case "s2":

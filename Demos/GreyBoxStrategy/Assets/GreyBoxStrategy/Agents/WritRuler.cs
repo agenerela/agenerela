@@ -71,6 +71,8 @@ namespace GreyBoxStrategy
             Marshal.TargetSources.Add(new ProvinceTargets(world, countryId));
             Court.ObservationSources.Add(new WritFactsSource(this));
             Marshal.ObservationSources.Add(new WritFactsSource(this));
+            // +event-facts: the court reads the storyteller's recent events; the marshal moves armies and does not.
+            if (Options.Storyteller && Options.EventFacts) Court.ObservationSources.Add(EventFacts.Source(world, countryId));
             RegisterCourt();
             RegisterMarshal();
         }

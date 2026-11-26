@@ -150,6 +150,10 @@ namespace GreyBoxStrategy
         public string Statement;
         /// <summary>What the story check did: <c>kept</c>, <c>no title</c>, or <c>replaced: ...</c> with the reason.</summary>
         public string StoryVerdict;
+        /// <summary>Per country hit, the line it was told ("Event "The Golden Star": a windfall of 30 gold reached our treasury."); a storyteller event only.</summary>
+        public Dictionary<string, string> HitLines = new Dictionary<string, string>(StringComparer.Ordinal);
+        /// <summary>The news every other living country was told; a storyteller event only.</summary>
+        public string News;
 
         // --- Stage S2 ---
 
