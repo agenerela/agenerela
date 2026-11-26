@@ -200,5 +200,86 @@ namespace GreyBoxStrategy.Screen.Tests
             Assert.That(gold.Province, Is.EqualTo("keshtar"), "a realm's event stands at its capital");
             Assert.That(fort.ProvinceIndex, Is.EqualTo(g.IndexOf("highmoor")));
         }
+            // ---- today's default game: a generated world, the writs turn, R3's army rules ----
+
+        // The menu's default New game with a storyteller: a medium generated world, the writs turn and every R3 rule as
+        // GameSetup and GameRules give them, the arm StoryArms builds for the preset. Stand-ins play every model.
+        private RuleSession DefaultWorldSession(string preset, out string you)
+        {
+            var setup = GameSetup.Writs(11, GameSetup.GeneratedMapId);
+            setup.Countries = MapSettings.DefaultCountries(MapSize.Medium);
+            setup.Generator = new MapSettings { Size = MapSize.Medium, Shape = LandShape.Continent };
+            var map = setup.BuildMap();
+            var rules = setup.BuildRules(map);
+            Assert.That((rules.Turn, rules.UnitTypes, rules.Generals, rules.Sieges, rules.Supply), Is.EqualTo((TurnStyle.Writs, true, true, true, true)), "today's defaults");
+            you = map.Countries[0].Id;
+            return new RuleSession(you, "qwen3.5:4b", StoryArms.For(preset), 11, Path.Combine(folder, "decisions.jsonl"), (m, w) => Stand_ins(5), null, map, rules);
+        }
+
+        // Holds every army and the court each writs turn, and takes the default of any dilemma, until this many turns resolved.
+        private static async Task PlayWritsTo(RuleSession s, int resolved)
+        {
+            for (int i = 0; i < 20000 && s.Resolved < resolved && s.Error == null && !s.Finished; i++)
+            {
+                if (s.WaitingFor == RuleSession.Waiting.Choice) s.Choose(s.Choice.DefaultOption);
+                else if (s.WaitingFor == RuleSession.Waiting.Envoy) s.Answer(false);
+                else if (s.WaitingFor == RuleSession.Waiting.Orders && s.Orders != null) s.Plan(new RuleSession.WritsPlan());
+                await Task.Delay(5);
+            }
+            Assert.That(s.Error, Is.Null);
+            Assert.That(s.Resolved, Is.GreaterThanOrEqualTo(resolved), $"the game reached turn {resolved}");
+        }
+
+        [Test]
+        public async Task In_the_default_game_your_dilemma_shows_its_card_and_its_effect_lands_on_your_armies()
+        {
+            var s = DefaultWorldSession("saga", out string you);
+            var run = s.RunAsync();
+            await PlayWritsTo(s, 1);
+            await Until(() => s.WaitingFor == RuleSession.Waiting.Orders && s.Orders != null, "turn 2's orders");
+            Assert.That(s.QueueDev($"event sellswords {you}"), Is.Null);
+            s.Plan(new RuleSession.WritsPlan());
+            await Until(() => s.WaitingFor == RuleSession.Waiting.Choice || s.Error != null, "the choice card");
+            Assert.That(s.Error, Is.Null);
+
+            var choice = s.Choice;
+            Assert.That(choice.Country, Is.EqualTo(you));
+            Assert.That(choice.Options.Select(o => o.Id), Is.EquivalentTo(new[] { "hire_sellswords", "send_sellswords_away" }));
+            Assert.That(choice.Options.All(o => !string.IsNullOrEmpty(o.Effect)), Is.True, "every option says what it costs or gives");
+            var hire = choice.Options.Single(o => o.Id == "hire_sellswords");
+            int soldiers = hire.Planned.Where(x => x.part.Kind == EffectKind.Soldiers).Sum(x => x.amount);
+            int gold = hire.Planned.Where(x => x.part.Kind == EffectKind.Gold).Sum(x => x.amount);
+            Assert.That(soldiers, Is.GreaterThan(0), "the sellswords join");
+            Assert.That(gold, Is.GreaterThan(0), "for gold");
+            int before = s.Game.World.ArmiesOf(you).Sum(a => a.Soldiers);
+
+            s.Choose("hire_sellswords");
+            await PlayWritsTo(s, 3);
+            var e = s.Game.Events.Told.Single(x => x.Template == "sellswords");
+            Assert.That(e.Choices[you], Is.EqualTo("hire_sellswords"));
+            Assert.That(e.ChosenBy[you], Is.EqualTo("person"));
+            Assert.That(e.Effect[you], Does.Contain("soldiers"));
+            Assert.That(s.Game.World.ArmiesOf(you).Sum(a => a.Soldiers), Is.GreaterThanOrEqualTo(before + soldiers), "the soldiers are on your armies");
+            Assert.That(s.Game.World.Country(you).Army, Is.EqualTo(s.Game.World.ArmiesOf(you).Sum(a => a.Soldiers)), "the count and the armies agree");
+            s.Stop();
+            await run;
+        }
+
+        [TestCase("saga")]
+        [TestCase("even_hand")]
+        public async Task In_the_default_game_a_storyteller_plays_ten_turns_with_its_dilemmas_and_tales(string preset)
+        {
+            var s = DefaultWorldSession(preset, out _);
+            var run = s.RunAsync();
+            await PlayWritsTo(s, 10);
+            s.Stop();
+            await run;
+            var told = s.Game.Events.Told.ToList();
+            Assert.That(told.Count, Is.GreaterThanOrEqualTo(4), "events were told");
+            Assert.That(told.Any(e => e.Choices.Count > 0), Is.True, "and at least one dilemma answered");
+            foreach (var c in s.Game.World.CountryList.Where(c => c.Alive))
+                Assert.That(c.Army, Is.EqualTo(s.Game.World.ArmiesOf(c.Id).Sum(a => a.Soldiers)), $"{c.Id}: the count and the armies agree");
+            Assert.That(s.Game.World.CountryList.All(c => c.Gold >= 0), Is.True, "no treasury below zero");
+        }
     }
 }

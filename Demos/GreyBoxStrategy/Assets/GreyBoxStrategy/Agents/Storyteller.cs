@@ -160,14 +160,14 @@ namespace GreyBoxStrategy
             var identity = new AgentIdentity
             {
                 Name = "The Chronicler",
-                Role = $"the storyteller of a game in which five countries ({countries}) fight over {w.ProvinceList.Count} provinces. "
+                Role = $"the storyteller of a game in which {CountryAgent.CountWord(w.CountryList.Count)} countries ({countries}) fight over {w.ProvinceList.Count} provinces. "
                        + "Once a turn you may make one thing happen: to a country, a group of countries or a province",
                 Personality = "A wry chronicler of fortune and calamity, fond of omens, weather, saints and strange luck.",
                 Goals = "Make every game memorable and different from the last, with events nobody saw coming. Keep it fair: "
                         + "help those falling behind as often as you trouble the strong. Choose none when nothing should happen.",
                 Knowledge = new List<string>
                 {
-                    "The groups: everyone; the_north is valen and orsk; the_south is kesh and ilvar; the_leader and the_weakest are whoever alone holds the most and the fewest provinces; all_at_war is every country at war.",
+                    EventGroups.KnowledgeLine(w), // on Classic: "the_north is valen and orsk; the_south is kesh and ilvar", as measured
                     "The game decides how strong an event is and tells the rulers the numbers; you tell the story.",
                 },
                 StatementRules = "A title of two to five words, a colon, then one or two sentences telling what happened, "

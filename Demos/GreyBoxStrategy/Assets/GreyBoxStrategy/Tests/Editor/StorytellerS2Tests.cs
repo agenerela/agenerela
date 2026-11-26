@@ -643,5 +643,38 @@ namespace GreyBoxStrategy.Tests
             Assert.That(scored.Decisions.Any(d => d.Moment == Moment.Choice), Is.False, "the voice and sense sections never see a choice");
             Assert.That(scored.Choices.Count, Is.EqualTo(choices.Count));
         }
+
+        // --- Today's default game: a generated world, whose countries are not Classic's -------------------------
+
+        [Test]
+        public void OnAGeneratedWorld_TheNorthAndTheSouthAreItsOwnCountries_AndTheStorytellerIsToldSo()
+        {
+            var setup = GameSetup.Writs(11, GameSetup.GeneratedMapId);
+            setup.Countries = MapSettings.DefaultCountries(MapSize.Medium);
+            setup.Generator = new MapSettings { Size = MapSize.Medium, Shape = LandShape.Continent };
+            var map = setup.BuildMap();
+            var game = new Game(11, map, setup.BuildRules(map)) { EventTable = false };
+            game.Story = ModelSeatOptions.Named("default+storyteller+s2+chains-skeleton+preset-saga").StoryRules();
+            var w = game.World;
+            var north = EventGroups.Members(w, EventGroups.North);
+            var south = EventGroups.Members(w, EventGroups.South);
+            Assert.That(north.Count, Is.EqualTo(w.CountryList.Count / 2), "the northern half");
+            Assert.That(south.Count, Is.EqualTo(w.CountryList.Count / 2), "the southern half");
+            Assert.That(north.Intersect(south), Is.Empty);
+            int Row(string id) => w.ProvinceList.Single(p => p.IsCapital && p.Info.StartOwner == id).Info.Row;
+            Assert.That(north.Max(Row), Is.LessThanOrEqualTo(south.Min(Row)), "the north's capitals lie above the south's");
+            var teller = new Storyteller(game, new ScriptedProvider());
+            string knows = string.Join(" | ", teller.Agent.Identity.Knowledge) + " | " + teller.Agent.Identity.Role;
+            Assert.That(knows, Does.Not.Contain("valen").And.Not.Contain("kesh"), "no Classic country in its prompt");
+            Assert.That(knows, Does.Contain("the_north is " + EventRules.Join(north)));
+            Assert.That(knows, Does.Contain(CountryAgent.CountWord(w.CountryList.Count) + " countries"));
+        }
+
+        [Test]
+        public void OnClassic_TheGroupsLineIsTheMeasuredOne()
+        {
+            var g = NewGame(1);
+            Assert.That(EventGroups.KnowledgeLine(g.World), Is.EqualTo("The groups: everyone; the_north is valen and orsk; the_south is kesh and ilvar; the_leader and the_weakest are whoever alone holds the most and the fewest provinces; all_at_war is every country at war."));
+        }
     }
 }
