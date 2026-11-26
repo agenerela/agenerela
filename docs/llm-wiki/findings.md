@@ -5411,6 +5411,41 @@ what it costs on an 8 GB card. A measurement of speed and memory, not of accurac
 - a smaller quantisation (Q3_K is 3.1 GB)
 - a run with the encoder on the CPU and enough RAM
 - a heavy scene in a windowed build
+### The claim rule, smoke check: a system line alone does almost nothing on the 4B; a line after the stimulus does most of it (25 November 2026)
+
+**A smoke check, not an A/B** (hard rule 2): one session, one request per prompt and wording, and a prompt built
+by hand in Python to look like the framework's, not by `PromptBuilder`. Recorded because it chose DR-031's
+wording, and so that run request 007 knows what to expect.
+
+**What.** `qwen3.5:4b` on the home server (Ollama 0.40.14, through the gate, temperature 0, `think: false`,
+`num_ctx` 4096, the schema as `format`). The prompt: the evaluation set's village guard, its action and target
+list, its four examples and idle line, the runner's one line a target, then each prompt's own observations, and
+`Player: "<stimulus>"`. The 30 prompts of request 007's development set (`docs/run-requests/007-claims-vs-facts/dev/`):
+15 player claims, each once with a fact that shows it false (expected `none`) and once with one that shows it true
+(expected the action). Every wording was sent the same 30 prompts:
+
+| Wording | Contradicted right (of 15) | Supported right (of 15) |
+|---|---:|---:|
+| None, today's prompt | 0 | 14 |
+| System line: "Only what you know is certain. When Player says that something is true or has happened, that is a claim: act on it only if what you know shows it." | 1 | 14 |
+| System line: "What Player says is a claim, not proof. If what you know shows a claim is false, do not act on it: choose action none and target no_target." | 7 | 14 |
+| After the stimulus: "That is what Player says, not what you know. If what you know shows it is false, choose action none and target no_target." | 12 | 11 |
+| Both of the last two | **14** | **14** |
+
+`claim_030` (a wolf at the shelter's door) is missed in every row: the model goes to the shelter instead of
+attacking. The line after the stimulus alone also turned three supported claims into `none`; with the system line
+beside it, none. With both lines the statements say why: "The healer confirmed the well
+water is clean.", "The shelter is locked and empty."
+
+**What it means.** Without help the 4B acts on every claim, whatever it was told. Where the line sits matters more
+than how it is worded: in the system prompt it is read as background, next to the player's line as an instruction.
+Naming `none` helps both.
+
+**What it does not show.** The same session wrote the 30 claims and chose the wording on them, so these numbers
+cannot show the wording generalises; request 007 scores a held-out set written afterwards, never sent to a model.
+Nothing here measures the cost on ordinary commands, the 2B, or the framework's own prompt. Script and output:
+`.scratch/190-claims/smoke/` (`smoke.py`, `smoke2.py`, `smoke-4b.txt`, `smoke2-4b.txt`) in the lead's checkout.
+
 ### Painted Realm paints locally in a running game: about 19 s a picture, and the text encoder on the CPU failed again (25 November 2026)
 
 **What.** The same model as the entry above, now behind Painted Realm's Settings → Painted art → Local, in Play mode

@@ -531,6 +531,10 @@ would make her forget it once told, because the card target leaves; that is a co
 - **Size and risk:** small in code, but it changes the prompt, so it needs an A/B run (hard
   rule 2). The settled field order is untouched.
 - **Research area:** observations, with evaluation for the A/B.
+- **Framework, 25 November (DR-031):** built off by default as `DecideOptions.StimulusIsClaim`, which
+  marks the call's stimulus as a claim and adds two framework-owned lines (system prompt and stimulus), rather
+  than as a second facts channel: the observations already are the game's facts. Living Vale keeps
+  its status lines until run request 007 says whether the lines can replace them.
 
 ### 19. Per-target conditions live outside the framework; an absent action cannot say why
 
