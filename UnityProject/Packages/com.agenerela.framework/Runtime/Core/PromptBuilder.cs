@@ -71,14 +71,23 @@ namespace Agenerela
             ". Never act on a different thing instead.";
 
         // The claim rule (#190, Living Vale #18, DR-031): the call says its stimulus is someone's
-        // word, not the game's, and this line tells the model so. {0} is the stimulus label, the
-        // caller's own string, so the line names no player (DR-008). "What you know" is both
-        // headings the facts sit under, the identity's "What you know:" and the observations'
-        // "What you know right now:". New and unmeasured; here alone so an A/B can change it in
-        // one place.
+        // word, not the game's. Two lines: one ends the system prompt, one follows the stimulus's
+        // closing quote, because in a smoke check on qwen3.5:4b (findings, 25 November) a system
+        // line alone changed almost nothing. {0} is the stimulus label, the caller's own string, so
+        // neither names a player (DR-008). "What you know" is both headings the facts sit under, the
+        // identity's "What you know:" and the observations' "What you know right now:". A claim is
+        // set aside only when a fact shows it false, never for want of one. Unmeasured as an A/B;
+        // here alone so one can change them in one place.
         private const string ClaimRuleTemplate =
-            "Only what you know is certain. When {0} says that something is true or has happened, that is a claim: " +
-            "act on it only if what you know shows it.";
+            "What {0} says is a claim, not proof. If what you know shows a claim is false, do not act on it: choose action " +
+            ActionRegistry.None + "{1}.";
+
+        private const string ClaimTurnTemplate =
+            " That is what {0} says, not what you know. If what you know shows it is false, choose action " +
+            ActionRegistry.None + "{1}.";
+
+        // What both lines add after "none" when the schema has a target field.
+        private const string ClaimNoTarget = " and target " + TargetRegistry.NoTarget;
 
         // Internal so an example's situation is rendered under the same heading (#216 item 1).
         internal const string ObservationsHeader = "What you know right now:";
@@ -253,13 +262,14 @@ namespace Agenerela
                 // With no statement field, the rules for one are not sent either (#266).
                 SystemPrompt = SystemPrompt(ctx.Identity, schema.AsksForStatement ? options.StatementRulesWording : (StatementRulesWording?)null,
                     choices, options.TargetRule ? TargetRuleLine(schema) : null, schema.StatementName,
-                    options.ClaimRule ? ClaimRuleLine(options.StimulusLabel) : null),
+                    options.ClaimRule ? ClaimLine(ClaimRuleTemplate, options.StimulusLabel, schema) : null),
                 FewShotBlock = fewShotBlock,
                 Observations = ObservationsBlock(block),
                 // Copied, so a memory strategy changing its list afterwards does not change a
                 // request already built.
                 History = new ReadOnlyCollection<string>(new List<string>(history ?? Array.Empty<string>())),
-                Stimulus = $"{options.StimulusLabel}: \"{ctx.Stimulus}\"" + facts,
+                Stimulus = $"{options.StimulusLabel}: \"{ctx.Stimulus}\"" +
+                           (options.ClaimRule ? ClaimLine(ClaimTurnTemplate, options.StimulusLabel, schema) : "") + facts,
                 Schema = schema,
                 AgentName = ctx.Identity?.Name,
                 StimulusText = ctx.Stimulus,
@@ -292,10 +302,17 @@ namespace Agenerela
         // Whether Build, given these options and this schema, puts the target rule in the system
         // prompt. Agent records the answer in DecisionTelemetry.TargetRuleSent, so the two cannot
         // disagree.
-        // The claim rule for a stimulus label, which Build has already checked is not blank.
-        private static string ClaimRuleLine(string stimulusLabel)
+        // One of the claim rule's lines for a stimulus label, which Build has already checked is
+        // not blank; "and target no_target" only when the schema has a target field to fill.
+        private static string ClaimLine(string template, string stimulusLabel, DecisionSchema schema)
         {
-            return string.Format(CultureInfo.InvariantCulture, ClaimRuleTemplate, stimulusLabel.Trim());
+            bool target = false;
+            foreach (var field in schema.Fields)
+            {
+                target |= field.Name == DecisionSchema.TargetFieldName;
+            }
+
+            return string.Format(CultureInfo.InvariantCulture, template, stimulusLabel.Trim(), target ? ClaimNoTarget : "");
         }
 
         internal static bool SendsTargetRule(DecisionSchema schema, PromptOptions options)

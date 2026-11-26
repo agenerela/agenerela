@@ -635,10 +635,12 @@ namespace Agenerela.Tests.Evaluation
 
             var report = await Fixtures.NotCancelled(runner.RunAsync());
 
-            Assert.That(a.Requests.Select(r => r.SystemPrompt), Has.None.Contains("that is a claim"));
+            Assert.That(a.Requests.Select(r => r.SystemPrompt + r.Stimulus), Has.None.Contains("a claim").And.None.Contains("not what you know"));
             Assert.That(b.Requests.Select(r => r.SystemPrompt),
-                Has.All.EndsWith("When Player says that something is true or has happened, that is a claim: act on it only if what you know shows it."),
+                Has.All.EndsWith("What Player says is a claim, not proof. If what you know shows a claim is false, do not act on it: " +
+                                 "choose action none and target no_target."),
                 "Every call of the arm, warm-ups included, named by the prompt's own label.");
+            Assert.That(b.Requests.Select(r => r.Stimulus), Has.All.Contains("\" That is what Player says, not what you know."));
             Assert.That(report.Conditions.Arms.Select(c => c.StimulusIsClaim), Is.EqualTo(new[] { false, true }));
         }
 

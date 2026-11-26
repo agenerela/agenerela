@@ -140,11 +140,11 @@ namespace Agenerela
 
         /// <summary>
         /// The caller's word that this call's stimulus is someone's say-so, not something the game
-        /// has checked (#190, Living Vale #18, DR-031). On, the system prompt ends with the claim
-        /// rule: only what the agent knows is certain, and what the stimulus's speaker says is true
-        /// or has happened is a claim, to act on only if what the agent knows shows it. Off by
-        /// default: unmeasured, and with it off every request is byte-identical to one sent before it
-        /// existed.
+        /// has checked (#190, Living Vale #18, DR-031). On, the request carries the claim rule: a line
+        /// ending the system prompt and one after the stimulus, saying that what the stimulus's speaker
+        /// says is a claim, and that when what the agent knows shows it false the agent chooses
+        /// <c>none</c> (<see cref="PromptOptions.ClaimRule"/> quotes both). Off by default: unmeasured
+        /// as an A/B, and with it off every request is byte-identical to one sent before it existed.
         /// </summary>
         /// <remarks>
         /// <para>
@@ -152,6 +152,12 @@ namespace Agenerela
         /// rumour and a report the game trusts all arrive as text. The caller sets this on the calls
         /// whose stimulus it has not checked, typically a player's chat, and leaves it off for an
         /// event the game raised itself.
+        /// </para>
+        /// <para>
+        /// A claim is set aside only when a fact shows it false, never for want of one: a guard told
+        /// "the bridge is on fire" with nothing known about the bridge still goes. A game that wants
+        /// an unconfirmed claim treated as false says so in a fact, as Living Vale does ("No witness
+        /// account of your raid has reached the traveler").
         /// </para>
         /// <para>
         /// What counts as known is what the game put there: the identity's
