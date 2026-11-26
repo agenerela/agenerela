@@ -3339,7 +3339,8 @@ about 20% flatter than the sharpened upscale's, which read as haze under the col
 most 1.6×) to the upscale's detail energy. It checks the bake's land
 mask against `province-ids.png` and writes nothing if the coasts moved: IoU 0.9627 against the upscale's own 0.9663,
 and no shift at four places across the island. Denoise 0.35 and above redrew villages and moved rivers. Only the Classic
-board has a painting; generated worlds stay drawn by code. The province maps are baked at 2048 × 1152 from the upscale
+board has a painting; generated worlds stay drawn by code. Before and after in the running game, at the whole board and
+the deepest zoom: [`docs/demos/painted-realm-art/classic-map-4k-before-after.jpg`](../../docs/demos/painted-realm-art/classic-map-4k-before-after.jpg). The province maps are baked at 2048 × 1152 from the upscale
 (`bake_map.py` reads it, so the committed maps stay reproducible), and `provinces.json` records the land's bounds, which
 the camera frames.
 
