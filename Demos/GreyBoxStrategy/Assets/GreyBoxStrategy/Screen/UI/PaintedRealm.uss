@@ -886,3 +886,5 @@
 .describe-field { margin: 3px 0; }
 .describe-field .unity-base-field__label { min-width: 130px; width: 130px; }
 .describe-field.unity-text-field--multiline .unity-text-field__input, .describe-field .unity-text-field__input--multiline { min-height: 44px; white-space: normal; }
+/* The event card's picture painted for its own story: a small mark while it is being painted, none once it hangs. */
+.story-picture-painting { position: absolute; right: 8px; bottom: 6px; font-size: 11px; -unity-font-style: italic; color: rgb(234, 223, 198); background-color: rgba(20, 15, 10, 0.7); padding: 2px 6px; border-radius: 3px; }

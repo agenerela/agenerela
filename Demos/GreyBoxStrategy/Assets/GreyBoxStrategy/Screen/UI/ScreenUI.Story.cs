@@ -95,13 +95,11 @@ namespace GreyBoxStrategy.Realm
             eventCard.Add(head);
             var body = new ScrollView(); body.AddToClassList("event-body"); eventCard.Add(body);
 
-            // The picture, from the art pack (ScreenUI.Art.cs); an event it has none for keeps the empty frame.
-            var picture = new Image { scaleMode = ScaleMode.ScaleAndCrop }; picture.AddToClassList("story-picture");
-            picture.image = EventPicture(r.Template);
-            if (picture.image == null) { var hint = new Label("A picture of the event will hang here"); hint.AddToClassList("story-picture-hint"); picture.Add(hint); }
-            body.Add(picture);
+            // The picture: one painted for this event's own story once it has arrived (EventArt), until then the art pack's
+            // for its kind (ScreenUI.Art.cs); an event the pack has none for keeps the empty frame. The card reads the same either way.
+            body.Add(EventPictureFrame(r));
             var kicker = new Label(card.Kicker); kicker.AddToClassList("story-kicker"); body.Add(kicker);
-            var big = new Label(card.Title); big.AddToClassList("story-title"); body.Add(big);
+            var big = new Label(Cap(card.Title)); big.AddToClassList("story-title"); body.Add(big);
             var tale = new Label(card.Story); tale.AddToClassList("story-text"); body.Add(tale);
             foreach (var s in card.Struck)
             {
@@ -162,11 +160,12 @@ namespace GreyBoxStrategy.Realm
                 b.AddToClassList("tbtn"); b.AddToClassList("wide"); body.Add(b);
             }
 
-            body.Add(SectionHead("THE STORYTELLER", "the framework's decisions behind it"));
-            body.Add(Text(Verdict(r), r.StoryReplaced ? "event-replaced" : "src"));
+            bool table = r.Source == EventRecord.FromTable;
+            body.Add(SectionHead(table ? "THE RANDOM TABLE" : "THE STORYTELLER", table ? "the rules' own roll, no model" : "the framework's decisions behind it"));
+            if (!table) body.Add(Text(Verdict(r), r.StoryReplaced ? "event-replaced" : "src"));
             if (r.HistoryRef != null) body.Add(Text("History check: " + r.HistoryRef, "src"));
             if (e.Decision != null) body.Add(InspectButton($"The storyteller's decision: {e.Decision.Action} on {e.Decision.Target}", e.Decision, e));
-            else body.Add(Text("Set by the dev menu: no storyteller decision behind it.", "src"));
+            else body.Add(Text(table ? "The random event table: no storyteller decision behind it." : "Set by the dev menu: no storyteller decision behind it.", "src"));
             if (e.TitleDecision != null) body.Add(InspectButton($"The title call: “{e.TitleDecision.Statement}”", e.TitleDecision, e));
             eventCard.Add(foot);
             Root.Add(eventCard);
@@ -210,7 +209,7 @@ namespace GreyBoxStrategy.Realm
         }
 
         /// <summary>Closes the event window without telling anyone: a new one replaces it, or the screen resets.</summary>
-        public void CloseEvent() { eventCard?.RemoveFromHierarchy(); eventCard = null; eventDismissed = null; }
+        public void CloseEvent() { eventCard?.RemoveFromHierarchy(); eventCard = null; eventDismissed = null; shownPicture = default; EventPictureState = null; }
 
         /// <summary>The window's button, Enter, Esc, or its own timer: closes it and lets the turn go on.</summary>
         public void DismissEvent()

@@ -54,6 +54,8 @@ namespace GreyBoxStrategy.Replay
         public bool TrimCourtPrompts = true;
         /// <summary>Where generated pictures are painted: the image server by default, as before the local model came.</summary>
         public ArtBackend Art = ArtBackend.Server;
+        /// <summary>Each event gets a picture painted for its own story, shown when it arrives (with <see cref="Art"/> not Off).</summary>
+        public bool EventPictures = true;
 
         /// <summary>The arm a new game's model rulers play: <paramref name="arm"/>, without the court's budget when <see cref="TrimCourtPrompts"/> is off.</summary>
         public string CourtArm(string arm) => TrimCourtPrompts ? arm : (string.IsNullOrEmpty(arm) ? "default" : arm) + "+budget-0";

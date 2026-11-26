@@ -68,7 +68,7 @@ namespace GreyBoxStrategy.Realm
         /// <summary>Settings → Painted art: what paints from now on. Moving off Local frees the local model's memory.</summary>
         private void UseArtBackend(ArtBackend backend)
         {
-            if (RulerArtServer.Backend == ArtBackend.Local && backend != ArtBackend.Local) { StopBackgroundCourt(); RulerArtServer.FreeLocal(); }
+            if (RulerArtServer.Backend == ArtBackend.Local && backend != ArtBackend.Local) { StopBackgroundCourt(); EventArt.Stop(); RulerArtServer.FreeLocal(); }
             RulerArtServer.Backend = backend;
         }
 
@@ -80,6 +80,7 @@ namespace GreyBoxStrategy.Realm
             // A generated world reloads the scene and paints before this director loads its settings (StartScreen):
             // the backend the menu set, kept across the reload, is the one that counts.
             UseArtBackend(settings?.Art ?? RulerArtServer.Backend);
+            EventArt.Begin(worldSeed);
             if (RulerArtServer.Backend == ArtBackend.Off)
             {
                 RulerArtServer.Report("off in Settings: the art pack's pictures");
@@ -125,7 +126,7 @@ namespace GreyBoxStrategy.Realm
         }
 
         // The rest of a Local court: never waited on. Each picture hangs as it comes; a skip at the card leaves the rest
-        // to the cache alone.
+        // to the cache alone. The event pictures queue behind it on the same model.
         private async void PaintRestInBackground(RulerArtMaker frontMaker, int worldSeed, List<RulerSubject> rest, RulerArtSet front, bool cacheOnly)
         {
             backgroundCourt = new CancellationTokenSource();
@@ -149,9 +150,46 @@ namespace GreyBoxStrategy.Realm
             }
         }
 
+        /// <summary>
+        /// A turn's events, as it begins to land: the storyteller's, and the random table's that strike your realm (or
+        /// every realm's while you watch), each get a picture of their own in the background (<see cref="EventArt"/>).
+        /// </summary>
+        private void PaintEvents(IEnumerable<ReplayEvent> events)
+        {
+            EventArt.Enabled = settings == null || (settings.EventPictures && settings.Art != ArtBackend.Off);
+            if (!EventArt.Enabled) return;
+            string viewer = ui?.Fog?.Viewer;
+            foreach (var e in events)
+            {
+                if (e.Kind == ReplayEventKind.Story && e.Story != null) EventArt.Request(e.Story);
+                else if (e.Table != null && (viewer == null || e.Table.Hit.Contains(viewer))) EventArt.Request(e.Table);
+            }
+        }
+
+        /// <summary>The event card for a random table event's upkeep line: the same window the storyteller's events open.</summary>
+        private static ReplayEvent TableCard(ReplayEvent line) => new ReplayEvent
+        {
+            Turn = line.Turn, Kind = ReplayEventKind.Story, Story = line.Table, Country = line.Country,
+            Province = line.Province, ProvinceIndex = line.ProvinceIndex, Text = line.Text, After = line.After,
+        };
+
+        /// <summary>For the Unity CLI: open the card of the last random table event played (yours first when you rule).</summary>
+        public string OpenLastTableEvent()
+        {
+            string viewer = ui?.Fog?.Viewer;
+            var e = played.LastOrDefault(x => x.Table != null && (viewer == null || x.Table.Hit.Contains(viewer))) ?? played.LastOrDefault(x => x.Table != null);
+            if (e == null) return "no table event played yet";
+            OpenEvent(TableCard(e));
+            return $"turn {e.Turn}: {e.Text}";
+        }
+
+        /// <summary>For the Unity CLI and the log: the court's painting and the event painter, in one line.</summary>
+        public static string ArtReport => $"art {RulerArtServer.Backend}; court: {RulerArtServer.LastReport}; events: {EventArt.Report}";
+
         private void OnApplicationQuit()
         {
             StopBackgroundCourt();
+            EventArt.Stop();
             RulerArtServer.FreeLocal();
         }
 

@@ -545,14 +545,17 @@ namespace GreyBoxStrategy.Realm
 
             // Where portraits, banners and event pictures are painted (DR-025, DR-028): Local is the image model
             // inside the game, so nothing but this machine is needed; the rulers' model stays on its server.
-            card.Add(Section2("PAINTED ART", "each world's portraits and banners"));
+            card.Add(Section2("PAINTED ART", "each world's portraits and banners, and a picture for each event"));
             var artNote = new Label(); artNote.AddToClassList("src"); artNote.style.whiteSpace = WhiteSpace.Normal; artNote.name = "art-note";
-            void ArtNote() => artNote.text = RulerArtServer.Describe(s.Art) + " Applies from the next new game.";
+            void ArtNote() => artNote.text = RulerArtServer.Describe(s.Art) + " Applies from the next new game; event pictures change at once.";
             var art = Steps("Painted art", new[] { "Server", "Local", "Off" }, (int)s.Art, i => { s.Art = (ArtBackend)i; ArtNote(); Changed(); });
             art.tooltip = "Server: the image server (COMFY_URL). Local: Z-Image Turbo inside the game, on this machine's card, through stable-diffusion.cpp. Off: the art pack's pictures only.";
             card.Add(art);
             card.Add(artNote);
             ArtNote();
+            var eventArt = Steps("Event pictures", new[] { "Off", "On" }, s.EventPictures ? 1 : 0, i => { s.EventPictures = i == 1; Changed(); });
+            eventArt.tooltip = "On: each event gets a picture painted for its own story, in the background; the card shows the art pack's picture until it arrives.";
+            card.Add(eventArt);
 
             card.Add(Section2("SOUND", "the first sounds; more come with the next set"));
             card.Add(Volume("Master", s.MasterVolume, v => { s.MasterVolume = v; Changed(); }));

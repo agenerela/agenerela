@@ -262,6 +262,17 @@ namespace GreyBoxStrategy.Replay
 
         private static string CapitalOf(MapDefinition map, string country) => map.Provinces.FirstOrDefault(p => p.IsCapital && p.StartOwner == country)?.Id;
 
+        // The random table event an upkeep line tells ("valen: good harvest, +40 gold."), by its country and its kind's words.
+        private static EventRecord TableEventOf(TurnReport tr, string country, string line)
+        {
+            if (country == null) return null;
+            foreach (var r in tr.Events)
+                if (r.Source == EventRecord.FromTable && r.Hit.Count > 0 && r.Hit[0] == country && r.Template != null
+                    && line.IndexOf(": " + r.Template.Replace('_', ' '), StringComparison.Ordinal) >= 0)
+                    return r;
+            return null;
+        }
+
         private static List<ReplayEvent> UpkeepEvents(TurnReport tr, ReplayState before, ReplayState council, ReplayGame replay, int turn)
         {
             var events = new List<ReplayEvent>();
@@ -293,6 +304,7 @@ namespace GreyBoxStrategy.Replay
                 {
                     int colon = line.IndexOf(':');
                     e.Country = colon > 0 ? line.Substring(0, colon) : null;
+                    e.Table = TableEventOf(tr, e.Country, line);
                 }
                 e.After = running.Clone();
                 events.Add(e);
