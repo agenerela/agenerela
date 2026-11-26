@@ -1,7 +1,6 @@
 # 007: the claim rule, `StimulusIsClaim` off against on (DR-031)
 
-Status: open, 25 November 2026 (from the claims session, for the framework tech lead; played by the
-card owner in `.scratch/phase4-runs/queue.md`)
+Status: done, 25 November 2026 (phase4-runs, home server); [results](results.md)
 
 **Why.** Living Vale #18 in #190: the model cannot tell a player's claim from a fact the game verified.
 DR-031 adds `DecideOptions.StimulusIsClaim`, off by default. On, the system prompt ends with
