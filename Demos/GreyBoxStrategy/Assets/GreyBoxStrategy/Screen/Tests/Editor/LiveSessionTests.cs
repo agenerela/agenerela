@@ -21,7 +21,7 @@ namespace GreyBoxStrategy.Screen.Tests
         [TearDown] public void TearDown() { try { Directory.Delete(folder, true); } catch (IOException) { } }
 
         private LiveSession Session(int stopAfter, ScriptedProvider provider) =>
-            new LiveSession("qwen3.5:4b", "default", 11, stopAfter, Path.Combine(folder, "decisions.jsonl"), (m, w) => provider);
+            new LiveSession("qwen3.5:4b", "default+no-storyteller", 11, stopAfter, Path.Combine(folder, "decisions.jsonl"), (m, w) => provider);
 
         [Test]
         public async Task A_short_check_stops_the_model_after_its_turns()

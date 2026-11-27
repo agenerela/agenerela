@@ -64,7 +64,7 @@ namespace GreyBoxStrategy.Screen.Tests
             rules.FreeOrders = true;
             World w = null;
             var provider = Rulers(() => w);
-            var s = new RuleSession(You, "qwen3.5:4b", "default", 5, Path.Combine(folder, "decisions.jsonl"), (m, world) => { w = world; return provider; }, null, map, rules);
+            var s = new RuleSession(You, "qwen3.5:4b", "default+no-storyteller", 5, Path.Combine(folder, "decisions.jsonl"), (m, world) => { w = world; return provider; }, null, map, rules);
             Assert.That(rules.CourtOrdersOverride.ContainsKey(You), Is.False, "the rules given are not changed");
             Assert.That(s.Game.Rules.CourtOrdersFor(You), Is.EqualTo(RuleSession.YourCourtOrders), "your court follows gold alone");
             Assert.That(s.Game.Rules.CourtOrdersFor("valen"), Is.EqualTo(rules.MaxCourtOrders), "a model court keeps its pacing");
@@ -127,7 +127,7 @@ namespace GreyBoxStrategy.Screen.Tests
             rules.FreeOrders = true;
             World w = null;
             var provider = Rulers(() => w);
-            var s = new RuleSession(You, "qwen3.5:4b", "default", 5, Path.Combine(folder, (pressAtOnce ? "now" : "late") + ".jsonl"), (m, world) => { w = world; return provider; }, null, map, rules);
+            var s = new RuleSession(You, "qwen3.5:4b", "default+no-storyteller", 5, Path.Combine(folder, (pressAtOnce ? "now" : "late") + ".jsonl"), (m, world) => { w = world; return provider; }, null, map, rules);
             var waits = new double[3];
             var deciding = new int[3];
             // Pressed at once: every ruler's call waits until your orders are in.
@@ -196,7 +196,7 @@ namespace GreyBoxStrategy.Screen.Tests
                     saw.Add($"{r.AgentId} | {r.Request.Observations} | {r.Request.Stimulus} | {string.Join(",", r.Request.History)} | {string.Join(",", r.OfferedActions)} | {string.Join(",", r.OfferedTargets)}");
                 return scripted(r);
             };
-            var s = new RuleSession(You, "qwen3.5:4b", "default", 5, Path.Combine(folder, (begunEarly ? "early" : "now") + ".jsonl"), (m, world) => { w = world; return provider; }, null, map, rules);
+            var s = new RuleSession(You, "qwen3.5:4b", "default+no-storyteller", 5, Path.Combine(folder, (begunEarly ? "early" : "now") + ".jsonl"), (m, world) => { w = world; return provider; }, null, map, rules);
             provider.Hold = !begunEarly;
             var run = s.RunAsync();
             if (begunEarly) await Until(() => s.RulersDeciding == 0 && s.WaitingFor == RuleSession.Waiting.Orders && s.Orders != null, "the rulers to finish turn 1 behind the loading card");
@@ -262,7 +262,7 @@ namespace GreyBoxStrategy.Screen.Tests
             var scripted = provider.Callback;
             int calls = 0, providersMade = 0;
             provider.Callback = r => { calls++; return scripted(r); };
-            var s = new RuleSession(You, "qwen3.5:4b", "default", 5, Path.Combine(folder, "held.jsonl"), (m, world) => { providersMade++; w = world; return provider; }, null, map, rules);
+            var s = new RuleSession(You, "qwen3.5:4b", "default+no-storyteller", 5, Path.Combine(folder, "held.jsonl"), (m, world) => { providersMade++; w = world; return provider; }, null, map, rules);
 
             var g = s.BuildReplay();
             Assert.That(g.Initial, Is.Not.Null, "the screen's opening exists before the rulers run");

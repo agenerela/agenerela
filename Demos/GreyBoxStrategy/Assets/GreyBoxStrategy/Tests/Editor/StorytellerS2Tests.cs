@@ -77,6 +77,27 @@ namespace GreyBoxStrategy.Tests
             Assert.That(StorytellerSettings.Presets.All(p => !string.IsNullOrEmpty(p.Label) && !string.IsNullOrEmpty(p.Description)), Is.True, "a menu can show them");
         }
 
+        [Test]
+        public void TheDefault_HasTheMenusStoryteller_OnSaga_AndTheOldArmsReadAsBefore()
+        {
+            var d = ModelSeatOptions.Named("default");
+            Assert.That((d.Storyteller, d.Choices, d.Multi, d.History, d.Traits, d.TitleCall, d.Chains, d.Preset, d.EventFacts),
+                Is.EqualTo((true, true, true, true, true, true, ChainMode.Skeleton, "saga", false)), "the menu's arm on saga; event facts stay a switch");
+            var menu = ModelSeatOptions.Named("default+storyteller+s2+chains-skeleton+preset-saga");
+            Assert.That((d.StoryRules().Choices, d.StoryRules().Chains, d.StoryRules().Settings.Name, d.StoryRules().TitleCall),
+                Is.EqualTo((menu.StoryRules().Choices, menu.StoryRules().Chains, menu.StoryRules().Settings.Name, menu.StoryRules().TitleCall)));
+            Assert.That(ModelSeatOptions.Default.Storyteller, Is.True);
+
+            var off = ModelSeatOptions.Named("default+no-storyteller");
+            Assert.That((off.Storyteller, off.Choices, off.TitleCall, off.Chains, off.Preset), Is.EqualTo((false, false, false, ChainMode.None, (string)null)), "the default before 26 November");
+            var s1 = ModelSeatOptions.Named("default+storyteller");
+            Assert.That((s1.Storyteller, s1.StoryRules().IsS2), Is.EqualTo((true, false)), "an explicit storyteller arm starts from none: S1 as measured");
+            var free = ModelSeatOptions.Named("default+storyteller+s2+chains-free");
+            Assert.That((free.Chains, free.Preset), Is.EqualTo((ChainMode.Free, "even_hand")), "S2's measured arm unchanged");
+            Assert.That(ModelSeatOptions.Named("control").Storyteller, Is.False, "the other named arms have none");
+        }
+
+        [TestCase("default")]
         [TestCase("default+storyteller+s2+chains-skeleton+preset-saga")]
         public async Task AWritsTable_TellsWithItsStoryteller_AndPlaysNoTableEvents(string arm)
         {
@@ -88,7 +109,7 @@ namespace GreyBoxStrategy.Tests
             var played = await Await.NotCancelled(TableRunner.PlayAsync(table, 1, 0, Fake));
             Assert.That(played.Storyteller.Count, Is.GreaterThanOrEqualTo(5), "asked every turn from turn 3");
             Assert.That(played.Record.Game.Events.Events.Any(e => e.Source == EventRecord.FromTable), Is.False, "the random table is off");
-            var control = Tables.Named("fake,fake,fake,fake,fake", null, arm: "default", personas: true);
+            var control = Tables.Named("fake,fake,fake,fake,fake", null, arm: "default+no-storyteller", personas: true);
             control.Setup = table.Setup;
             var off = await Await.NotCancelled(TableRunner.PlayAsync(control, 1, 0, Fake));
             Assert.That(off.Storyteller, Is.Empty);

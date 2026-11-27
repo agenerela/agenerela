@@ -284,7 +284,7 @@ namespace GreyBoxStrategy.Tests
                     ? ScriptedReply.Decide(ActionRegistry.None, TargetRegistry.NoTarget, "Calm.")
                     : ScriptedReply.Decide(ActionRegistry.None, TargetRegistry.NoTarget, "We wait."),
             };
-            var control = Tables.Named("fake,fake,fake,fake,fake", null, arm: "default");
+            var control = Tables.Named("fake,fake,fake,fake,fake", null, arm: "default+no-storyteller");
             var story = Tables.Named("fake,fake,fake,fake,fake", null, arm: "default+storyteller");
             Assert.That(story.Options.Storyteller, Is.True);
             Assert.That(control.Options.Storyteller, Is.False);
@@ -408,7 +408,7 @@ namespace GreyBoxStrategy.Tests
             {
                 var arms = new List<(string, TableDefinition)>
                 {
-                    ("control", Tables.Named("fake,fake,fake,fake,fake", null, arm: "default")),
+                    ("control", Tables.Named("fake,fake,fake,fake,fake", null, arm: "default+no-storyteller")),
                     ("story", Tables.Named("fake,fake,fake,fake,fake", null, arm: "default+storyteller")),
                 };
                 var twice = new List<(string, TableDefinition)> { arms[0], ("Control", arms[1].Item2) };
@@ -444,7 +444,7 @@ namespace GreyBoxStrategy.Tests
             var o = ModelSeatOptions.Named("default+storyteller+inspiration-2");
             Assert.That((o.Storyteller, o.Inspiration, o.InspirationSalt, o.PairTargets, o.Arm), Is.EqualTo((true, true, 2, true, "default+storyteller+inspiration-2")));
             Assert.That(ModelSeatOptions.Named("default+storyteller+no-inspiration").Inspiration, Is.False);
-            Assert.That(ModelSeatOptions.Default.Storyteller, Is.False, "off in the default");
+            Assert.That(ModelSeatOptions.Named("default+no-storyteller").Storyteller, Is.False, "off with +no-storyteller");
         }
 
         [Test]

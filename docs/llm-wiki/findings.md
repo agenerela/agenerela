@@ -5411,3 +5411,54 @@ what it costs on an 8 GB card. A measurement of speed and memory, not of accurac
 - a smaller quantisation (Q3_K is 3.1 GB)
 - a run with the encoder on the CPU and enough RAM
 - a heavy scene in a windowed build
+
+### Painted Realm's storyteller on vs off on the 4B: nothing worse, fewer events, struck rulers name them more (26 November 2026)
+
+**Question.** Does turning the storyteller on by default (S2, the menu's arm, the Saga preset) make
+Painted Realm's games worse? The run was there to catch harm before the flip, not to prove a gain.
+
+**Setup.** `qwen3.5:4b` for every seat and the storyteller, on the home RTX 4070 SUPER through the gate,
+each block under a lease that was ours at its start and end. Each game was a generated medium world, the
+writs turn, five `personas` rulers and 40 turns. The arms were `default` before the flip (now
+`default+no-storyteller`) against `default+storyteller+s2+chains-skeleton+preset-saga`, seeds 1–20 in
+both, played interleaved in blocks of four on the same machine and session. One `off` block was void
+(its lease ended while Unity ran) and was replayed whole. The kit and per-game files are in
+`.scratch/realm-storyteller/`, and the comparison is paired by seed (95% interval of the difference).
+
+| Per game, mean of 20 | Off (`default+no-storyteller`) | On (Saga) | Difference |
+|---|---:|---:|---|
+| turns | 40.0 | 40.0 | within |
+| battles a turn | 2.48 | 2.49 | within |
+| provinces changing hands a turn | 0.95 | 0.95 | within |
+| wars declared | 5.35 | 5.65 | within |
+| peace made | 1.45 | 1.90 | within |
+| lead changes | 0.65 | 0.75 | within |
+| events | 45.3 | 32.2 | **beyond**, fewer |
+| of them dilemmas | 0 | 9.15 | **beyond** |
+| stories replaced (the history check) | 0 | 1.30 | **beyond** |
+| of them an invented fight | 0 | 0.10 | within |
+| struck rulers naming the event | 0.112 | 0.157 | **beyond**, better |
+| statements naming their target | 0.781 | 0.783 | within |
+| statements repeated word for word | 0.231 | 0.206 | **beyond**, better |
+| words a statement | 13.4 | 13.6 | within |
+| ruler decisions failed, or timed out | 0 | 0 | within |
+| ruler decision, mean seconds | 0.790 | 0.793 | within |
+| storyteller calls failed | – | 0 | |
+| storyteller call with its title, mean seconds | – | 1.74 | |
+
+**What it means.**
+- No measure of a game's length, pace or the rulers' decisions moved beyond noise. No decision
+  failed or timed out in either arm.
+- The storyteller replaces the random table and deals about 30% fewer events, nine of them dilemmas a game.
+- Struck rulers name the event more often and repeat themselves less word for word. Both differences are
+  small but beyond noise. They are measured, not explained, and could come from the events' own words
+  (a written title and story) rather than from anything the rulers do differently.
+- It costs one call of about 1.7 s a turn.
+
+**Found on the way, each fixed before the run:**
+- a headless writs table never built its storyteller, so `+storyteller` writs tables had played only the
+  random table
+- `the_north` and `the_south` were empty on generated worlds
+
+**Not measured:** `+event-facts` (events in the `FactLedger`, read three turns, worded per ruler), which
+stays off. Presets other than Saga were not measured either.

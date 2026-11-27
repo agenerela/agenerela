@@ -84,9 +84,10 @@ namespace GreyBoxStrategy
         /// <summary>
         /// Whether a <see cref="Storyteller"/> invents the game's events (the README's "Storyteller",
         /// stage S1 of the research page): one event a turn at upkeep in place of the random event
-        /// table, which is then off (<see cref="Game.EventTable"/>). Off in every named arm; <c>+storyteller</c>
-        /// switches it on. It adds what the rulers read, an event's title among their facts, so it is an
-        /// arm until measured (hard rule 2).
+        /// table, which is then off (<see cref="Game.EventTable"/>). On in <see cref="Default"/> since 26 November 2026, with
+        /// the menu's pieces on <see cref="DefaultStoryPreset"/> (<see cref="WithDefaultStoryteller"/>); off in the other
+        /// named arms. <c>+storyteller</c> starts from no storyteller and switches S1's on, so an explicit storyteller arm
+        /// ("default+storyteller+s2+chains-free") reads as it did before; <c>+no-storyteller</c> is the default before.
         /// </summary>
         public bool Storyteller;
 
@@ -225,11 +226,36 @@ namespace GreyBoxStrategy
         /// <c>default+no-own-lines</c>. Since 24 November the court's prompt is trimmed to <see cref="DefaultCourtBudget"/>
         /// (<see cref="CourtTrims"/>); the <c>default</c> before is <c>default+budget-0</c>.
         /// </summary>
-        public static ModelSeatOptions Default => new ModelSeatOptions
+        /// Since 26 November the storyteller is on (<see cref="WithDefaultStoryteller"/>, the menu's arm on
+        /// <see cref="DefaultStoryPreset"/>); the <c>default</c> before is <c>default+no-storyteller</c>.
+        public static ModelSeatOptions Default => WithDefaultStoryteller(new ModelSeatOptions
         {
             PairTargets = true, GroundingThreshold = 0.6f, OwnLines = true,
             CourtBudget = DefaultCourtBudget, CourtTrims = true, Arm = "default",
-        };
+        });
+
+        /// <summary>The storyteller's preset in <see cref="Default"/> and the menu: many dilemmas and long tales (the README's "Storyteller on by default").</summary>
+        public const string DefaultStoryPreset = "saga";
+
+        /// <summary>
+        /// The storyteller as the menu plays it, on these options: every S2 piece, the title call, planned tales, on
+        /// <see cref="DefaultStoryPreset"/>; the same as <c>+storyteller+s2+chains-skeleton+preset-saga</c>.
+        /// </summary>
+        public static ModelSeatOptions WithDefaultStoryteller(ModelSeatOptions o)
+        {
+            o.Storyteller = o.Choices = o.Multi = o.History = o.Traits = o.TitleCall = true;
+            o.Chains = ChainMode.Skeleton;
+            o.Preset = DefaultStoryPreset;
+            return o;
+        }
+
+        // No storyteller and every piece of it off, as every arm before 26 November began.
+        private static void WithoutStoryteller(ModelSeatOptions o)
+        {
+            o.Storyteller = o.Choices = o.CallChoices = o.Multi = o.History = o.Traits = o.TitleCall = o.EventFacts = false;
+            o.Chains = ChainMode.None;
+            o.Preset = null;
+        }
 
         /// <summary>Stage 2's control arm: the moves line, a flat schema, grounding on.</summary>
         public static ModelSeatOptions Control => new ModelSeatOptions();
@@ -299,7 +325,8 @@ namespace GreyBoxStrategy
                     else if (modifier == "no-own-lines") options.OwnLines = false;
                     else if (modifier == "silent-armies") options.SilentArmies = true;
                     else if (modifier == "world-lore") options.WorldLore = true;
-                    else if (modifier == "storyteller") options.Storyteller = true;
+                    else if (modifier == "storyteller") { WithoutStoryteller(options); options.Storyteller = true; }
+                    else if (modifier == "no-storyteller") WithoutStoryteller(options);
                     else if (modifier == "choices") options.Choices = true;
                     else if (modifier == "call-choices") options.CallChoices = true;
                     else if (modifier == "multi") options.Multi = true;

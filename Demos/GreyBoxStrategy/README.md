@@ -30,7 +30,7 @@ language model through the framework, fighting over 25 provinces on a painted se
   the attack, then press End turn. Declare war on a neighbour, and an envoy may come with peace.
   Click a rival's chronicle line: what it did and said opens at once, and its court's report
   stays private until the game ends.
-- **Storyteller:** New game → Storyteller: Saga, then Rule. When the chronicler's banner
+- **Storyteller:** on by default, on Saga (New game → Storyteller sets another preset or Off), then Rule. When the chronicler's banner
   appears over the map, click it to open the event. Its "storyteller's decision" button shows
   the template it picked and the targets it was not offered, with the reasons. Open **Tales** in
   the chronicle. With no server, the dev menu's **Rule kesh, saga** plays the same game with
@@ -63,9 +63,9 @@ language model through the framework, fighting over 25 provinces on a painted se
        and you watched the replay ([the drawn chart](#the-drawn-chart-spike-12-november)). It now
        also plays live, and you can rule a realm on it, on the writs turn
        ([the writs turn on generated worlds](#the-writs-turn-on-generated-worlds-14-november)).
-     - **Storyteller:** Off (the random event table, as every measured game), or one of its
-       presets: Even hand, Underdog, Cruel fate, Quiet years, Saga
-       ([what it shows](#the-storyteller-on-screen-13-november)).
+     - **Storyteller:** one of its presets, Saga by default: Even hand, Underdog, Cruel fate, Quiet
+       years, Saga ([what it shows](#the-storyteller-on-screen-13-november)); or Off, the random event
+       table of every game before 26 November ([on by default](#on-by-default-26-november)).
      - **Advisor:** on or off, for rule mode with model rulers (on by default; [the advisor in rule
        mode](#the-advisor-in-rule-mode-14-november)). The persona mix is listed as coming.
    - **Load a replay:** the finished games, newest first, each with the date, the turns and who won. The
@@ -1663,7 +1663,7 @@ A marshal's says which army it ordered.
 - A country out of the game is at war with nobody, so the wars lists and the diplomacy grid no
   longer show wars with a realm that is gone.
 - New game's Watch button says who plays the turn chosen.
-- The storyteller row is off for the writs turn, which has none yet.
+- The storyteller row was off for the writs turn, which had none yet (it has one since R3, and it is on by default since 26 November).
 - The province names are drawn above the army plates, which stand a little higher, so a crowd of
   armies never hides where it is.
 
@@ -2668,7 +2668,7 @@ personas)`.
 ## Storyteller
 
 Stage S1 of the research page's storyteller ([`painted-realm-research.md`](../../docs/demos/painted-realm-research.md#1-a-storyteller-that-creates-events),
-design A), built in the demo only, with no framework change. **An arm, off in `default`:** `+storyteller`.
+design A), built in the demo only, with no framework change. **An arm:** `+storyteller`, off in `default` until 26 November, when the menu's S2 arm became the default ([on by default](#on-by-default-26-november)).
 
 **What it is.** One more framework `Agent`, `Storyteller`, with no body (DR-011). Before each turn's
 upkeep from turn 3 the game asks it once, alone, on the state the last turn left: *"Turn 7. What
@@ -2953,7 +2953,7 @@ What the lead asked for after reading S1's events: events that ask a ruler to de
 everyone, stories over several turns, stories that know what happened, and places with a character
 of their own. The design, with the alternatives it chose between, is the research page's ["Stage S2:
 design"](../../docs/demos/painted-realm-research.md#stage-s2-design-12-november). Built in the demo, with
-no framework change. **Every piece is a modifier on `+storyteller`, off in `default`**, and with every
+no framework change. **Every piece is a modifier on `+storyteller`, off in `default` until 26 November** (when the menu's arm, below, became the default), and with every
 piece off the storyteller is S1's exactly (a test holds that):
 
 | Modifier | What it adds |
@@ -3137,6 +3137,81 @@ The events of all four arms can be read game by game, with every choice and ever
   almost never chosen (1 dilemma and no tale in 28 events): frequency had to be the game's decision.
 - **New, N14: a follow-up call for one decision.** The title is a second agent's decision on the first's
   story, chained by hand; telemetry shows two unrelated decisions.
+
+### On by default (26 November)
+
+From 26 November the storyteller is on in `default`, in the menu's arm: S2 with its dilemmas, events
+on many, history, traits and titles, skeleton chains, on the **Saga** preset. New game opens on Saga,
+and `ModelSeatOptions.Default` carries the same arm, so a headless table without a `+` part plays it too.
+
+**Why Saga.** The lead's #266 asks for dilemmas, chains and stories, and Saga deals the most of them
+(a choice 35% of turns, a chain 30%). No preset was measured against another; the run below measures
+Saga against no storyteller.
+
+**Old arms read as before.** The default before is `default+no-storyteller`, the random event table and
+nothing else. Every table measured before 26 November names its arm explicitly in its tests, and the
+tests that meant the old default now say `default+no-storyteller`. Inside an arm, `+storyteller` still
+starts from S1 with every piece off, so `default+storyteller+choices` is the arm it always was.
+
+**Measured on vs off** (`qwen3.5:4b`, the home RTX 4070 SUPER through the gate, under a lease; a
+generated medium world, the writs turn, five `personas` rulers, 40 turns; the same seeds 1–20 in both
+arms, played interleaved block by block). Kit and per-game files: `.scratch/realm-storyteller/`.
+
+| Per game, mean of 20 | Off (`default+no-storyteller`) | On (Saga) | Difference |
+|---|---:|---:|---|
+| turns | 40.0 | 40.0 | within |
+| battles a turn | 2.48 | 2.49 | within |
+| provinces changing hands a turn | 0.95 | 0.95 | within |
+| wars declared | 5.35 | 5.65 | within |
+| peace made | 1.45 | 1.90 | within |
+| lead changes | 0.65 | 0.75 | within |
+| events | 45.3 | 32.2 | **beyond**, fewer |
+| of them dilemmas | 0 | 9.15 | **beyond** |
+| stories replaced (the history check) | 0 | 1.30 | **beyond** |
+| of them an invented fight | 0 | 0.10 | within |
+| struck rulers naming the event | 0.112 | 0.157 | **beyond**, better |
+| statements naming their target | 0.781 | 0.783 | within |
+| statements repeated word for word | 0.231 | 0.206 | **beyond**, better |
+| words a statement | 13.4 | 13.6 | within |
+| ruler decisions failed, or timed out | 0 | 0 | within |
+| ruler decision, mean seconds | 0.790 | 0.793 | within |
+| storyteller calls failed | – | 0 | |
+| storyteller call with its title, mean seconds | – | 1.74 | |
+
+"Beyond" means the 95% interval of the per-seed difference excludes 0; "within" means it does not.
+
+**What it shows.**
+- **Nothing got worse.** Game length, battles, provinces changing hands, wars, peace, lead changes, the
+  rulers' statements naming their target and failed or timed-out decisions are all within noise.
+- **Fewer events, written ones.** A game has about 30% fewer events than with the random table
+  (it rolled one most turns), about nine of them dilemmas.
+- **The rulers read them better.** Rulers struck by an event name it more often, and their statements
+  repeat themselves less word for word. Both are small, but beyond noise.
+- **Cost:** the storyteller's call, with its title, takes about 1.7 s a turn; the rulers' own decisions
+  are no slower.
+- Invented-battle replacements are rare in both cases.
+
+**What the run found first, and fixed:**
+- **A headless writs table played no storyteller.** `TableRunner` built the storyteller only for the
+  one-move game, so every `+storyteller` writs table played the random table alone. It now builds it
+  for both (`TellerFor`). The run's first smoke game showed the bug and was set aside.
+- **`the_north` and `the_south` were Classic's countries.** On a generated world both groups were empty,
+  and the storyteller's prompt named Classic's four countries and said "five countries" on any map.
+  The groups now come from the world, ranking capitals by row (`EventGroups.Region`), and the prompt
+  counts the countries the world has (`EventGroups.KnowledgeLine`). On Classic both are unchanged.
+- **The choice card was dark on dark.** A later `.panel` restyle won over the card's parchment, so its
+  title and story were nearly unreadable. The card is parchment again (`.panel.choice-card`).
+
+**Dilemmas in Rule mode on today's default game** (a generated world, the writs turn, R3) were checked
+in a running game. The card stops the turn, and the option chosen lands on your armies and treasury.
+Two screen tests now play it: a dilemma on you shows its card and its effect, and ten turns on Saga
+and Even hand play to the end.
+
+**`+event-facts`, a switch, off.** Each storyteller event goes into the framework's `FactLedger` (#295)
+instead of the turn's facts. Every country reads the news and the struck countries read their own line,
+each worded for its reader (`For(reader)`), for three turns (`StoryRules.EventFactTurns`), at most
+three event lines. Without it, an event is read once, the turn after. It was not measured: it changes
+what the rulers read, so it needs its own A/B before it can be a default (hard rule 2).
 
 ## What the framework lacks for this game
 

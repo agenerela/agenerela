@@ -29,7 +29,7 @@ namespace GreyBoxStrategy.Realm
         public bool Scripted;
 
         /// <summary>"off", or a storyteller preset's name (<see cref="StorytellerSettings.Presets"/>).</summary>
-        public string Storyteller = "off";
+        public string Storyteller = StoryArms.DefaultPreset;
         /// <summary>
         /// Rules v2's writs turn: armies as pieces, occupation and treaties (R1). The default since 15 November, with the
         /// generated world: model rulers play a generated world only on the writs turn. The one-move game stays a choice.
@@ -432,7 +432,7 @@ namespace GreyBoxStrategy.Realm
             int sel = Math.Max(0, presets.ToList().FindIndex(p => p.Name == choice.Storyteller) + 1);
             var presetNote = new Label(); presetNote.AddToClassList("src"); presetNote.style.whiteSpace = WhiteSpace.Normal;
             void Note(int i) => presetNote.text = i == 0
-                ? "Off: the random event table (harvests, bandits, unrest), as every measured game so far."
+                ? "Off: the random event table (harvests, bandits, unrest), as every game before 26 November."
                 : presets[i - 1].Description + " Dilemmas, events on many, planned tales, and a second call that titles each event.";
             storytellerRow = Steps("Storyteller", new[] { "Off" }.Concat(presets.Select(p => p.Label)).ToArray(), sel,
                 i => { choice.Storyteller = i == 0 ? "off" : presets[i - 1].Name; Note(i); });

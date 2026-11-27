@@ -78,7 +78,13 @@ namespace GreyBoxStrategy.Screen.Tests
         [Test]
         public void The_menu_s_arm_has_the_title_call_and_planned_tales()
         {
-            Assert.That(StoryArms.For("off"), Is.EqualTo("default"));
+            Assert.That(StoryArms.For("off"), Is.EqualTo("default+no-storyteller"));
+            Assert.That(StoryArms.Rules(StoryArms.For("off")), Is.Null, "off is off");
+            var byDefault = StoryArms.Rules("default");
+            var agents = ModelSeatOptions.Named("default").StoryRules();
+            Assert.That((byDefault.Choices, byDefault.Multi, byDefault.History, byDefault.Traits, byDefault.TitleCall, byDefault.Chains, byDefault.Settings.Name),
+                Is.EqualTo((agents.Choices, agents.Multi, agents.History, agents.Traits, agents.TitleCall, agents.Chains, agents.Settings.Name)), "a recording's \"default\" replays the agents' default");
+            Assert.That(new NewGameChoice().Storyteller, Is.EqualTo("saga"), "New game opens on Saga");
             foreach (var p in StorytellerSettings.Presets)
             {
                 var r = StoryArms.Rules(StoryArms.For(p.Name));

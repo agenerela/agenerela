@@ -45,7 +45,7 @@ namespace GreyBoxStrategy.Tests
         }
 
         private static TableDefinition FiveFakes(bool personas) =>
-            Tables.Named("fake,fake,fake,fake,fake", null, personas: personas);
+            Tables.Named("fake,fake,fake,fake,fake", null, arm: "default+no-storyteller", personas: personas);
 
         // --- The table and its rounds ------------------------------------------------------------
 
@@ -118,7 +118,7 @@ namespace GreyBoxStrategy.Tests
         [Test]
         public async Task MixedTable_ModelsScriptsAndRandom_PlayTogether()
         {
-            var table = Tables.Named("fake,other,expansionist,cautious,random", null, personas: true);
+            var table = Tables.Named("fake,other,expansionist,cautious,random", null, arm: "default+no-storyteller", personas: true);
             var models = new List<string>();
             var game = await Await.NotCancelled(TableRunner.PlayAsync(table, 4, 0, (model, w) =>
             {
