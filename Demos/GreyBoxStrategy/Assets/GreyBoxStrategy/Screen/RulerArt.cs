@@ -25,6 +25,39 @@ namespace GreyBoxStrategy.Realm
         /// capped and cleaned before it reaches the image model (<see cref="ImagePromptBuilder.Untrusted"/>). Null for none.
         /// </summary>
         public string Backstory;
+        /// <summary>
+        /// Your ruler in your own words (New game → Rule), in place of the persona's look; null for the game's own.
+        /// Untrusted like the backstory: cleaned and capped before it reaches the image model.
+        /// </summary>
+        public string Described;
+        /// <summary>Your banner in your own words, in place of the charge the realm's name chooses; null for the game's own.</summary>
+        public string BannerDescribed;
+    }
+
+    /// <summary>
+    /// The ruler the player describes in New game → Rule: a persona line and a banner, each optional. The line paints
+    /// the portrait and is the advisor's persona on your seat; the banner paints your flag. Both are cleaned and capped
+    /// here, once, so the same words reach the image prompt, the cache key and the decision prompt.
+    /// </summary>
+    public sealed class RulerDescription
+    {
+        public const int PersonaLength = 200, BannerLength = 160;
+
+        public string Persona, Banner;
+
+        /// <summary>The description, or null when both fields are empty: the game's own ruler and banner.</summary>
+        public static RulerDescription From(string persona, string banner)
+        {
+            string p = ImagePromptBuilder.Clean(persona, PersonaLength), b = ImagePromptBuilder.Clean(banner, BannerLength);
+            if (p.Length == 0 && b.Length == 0) return null;
+            return new RulerDescription { Persona = p.Length > 0 ? p : null, Banner = b.Length > 0 ? b : null };
+        }
+
+        /// <summary>The persona the advisor on your seat plays, or null with no persona line.</summary>
+        public GreyBoxStrategy.Persona ToPersona() => Persona == null ? null
+            : new GreyBoxStrategy.Persona("described", Persona, "In this ruler's own voice and character. One sentence, under 25 words. If the move has a target, name it.");
+
+        public override string ToString() => $"persona: {Persona ?? "(the game's)"}; banner: {Banner ?? "(the game's)"}";
     }
 
     /// <summary>
@@ -114,9 +147,15 @@ namespace GreyBoxStrategy.Realm
             string age = string.Format(Ages[ageIndex], king ? "his" : "her");
             string hair = ageIndex == 3 ? "white hair" : Hair[(int)((h >> 16) % (uint)Hair.Length)];
             string face = Complexions[(int)((h >> 20) % (uint)Complexions.Length)] + (king ? ", " + Beards[(int)((h >> 24) % (uint)Beards.Length)] : "");
-            string prompt = new ImagePromptBuilder(Style)
-                .Detail(PortraitLine)
-                .Detail($"{who} {age} with {hair}, {face}: {look}, wearing {ColourName(subject.Colour)} cloth with gilt trim")
+            var builder = new ImagePromptBuilder(Style).Detail(PortraitLine);
+            if (!string.IsNullOrWhiteSpace(subject.Described))
+            {
+                // The player's own words choose the face; the realm's colour still dresses it, so it sits with its banner.
+                builder.Detail("The ruler, as described:").Untrusted(subject.Described, RulerDescription.PersonaLength)
+                    .Detail($"Wearing {ColourName(subject.Colour)} cloth with gilt trim");
+            }
+            else builder.Detail($"{who} {age} with {hair}, {face}: {look}, wearing {ColourName(subject.Colour)} cloth with gilt trim");
+            string prompt = builder
                 .Untrusted(subject.Backstory, BackstoryLength)
                 .Exclude(Exclusions)
                 .Build();
@@ -128,10 +167,13 @@ namespace GreyBoxStrategy.Realm
         {
             string colour = ColourName(subject.Colour);
             string metal = colour.Contains("yellow") || colour.Contains("white") ? "dark umber" : "gold";
-            string prompt = new ImagePromptBuilder(Style)
-                .Detail(FlagLine)
-                .Detail($"The cloth is {colour}. In its middle, one large {metal} {Charge(subject)}, drawn simply and boldly as in a herald's roll")
-                .Exclude(Exclusions + ", no people, no second banner, no pattern on the field")
+            var builder = new ImagePromptBuilder(Style).Detail(FlagLine);
+            if (!string.IsNullOrWhiteSpace(subject.BannerDescribed))
+                builder.Detail($"The cloth is {colour}. On it, drawn simply and boldly as in a herald's roll:").Untrusted(subject.BannerDescribed, RulerDescription.BannerLength);
+            else builder.Detail($"The cloth is {colour}. In its middle, one large {metal} {Charge(subject)}, drawn simply and boldly as in a herald's roll");
+            string prompt = builder
+                // Your own banner may well show a rider or a pattern: only the game's own leaves them out.
+                .Exclude(Exclusions + (string.IsNullOrWhiteSpace(subject.BannerDescribed) ? ", no people, no second banner, no pattern on the field" : ", no second banner"))
                 .Build();
             return new ImageRequest { Prompt = prompt, Width = FlagWidth, Height = FlagHeight, Seed = Seed(worldSeed, subject.Id, "flag") };
         }
@@ -187,6 +229,12 @@ namespace GreyBoxStrategy.Realm
         /// request's key too, so the next visit finds it at once. Null takes every picture.
         /// </summary>
         public Func<byte[], bool> Accept;
+
+        /// <summary>
+        /// Told each picture as it hangs (the realm's id, true for its banner, the PNG), so a court painted in the
+        /// background shows each face as it arrives. Called on the thread that awaited <see cref="MakeAsync"/>.
+        /// </summary>
+        public Action<string, bool, byte[]> Painted;
 
         /// <summary>What each further try adds to the seed.</summary>
         public const long RetrySeedOffset = 7919;
@@ -279,6 +327,7 @@ namespace GreyBoxStrategy.Realm
                 else if (result.Succeeded)
                 {
                     (flag ? set.Flags : set.Portraits)[subject.Id] = result.Png;
+                    Painted?.Invoke(subject.Id, flag, result.Png);
                     if (result.FromCache) set.FromCache++; else set.Made++;
                 }
                 else

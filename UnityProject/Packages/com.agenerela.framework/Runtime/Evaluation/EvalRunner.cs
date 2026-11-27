@@ -1212,6 +1212,7 @@ namespace Agenerela.Evaluation
                     PairTargetsWithActions = arm.Options.PairTargetsWithActions,
                     LegalTargets = arm.Options.LegalTargets.ToString(),
                     StatementRulesWording = arm.Options.StatementRulesWording.ToString(),
+                    StimulusIsClaim = arm.Options.StimulusIsClaim,
                     StatementFieldName = arm.Options.StatementFieldName ?? DecisionSchema.StatementFieldName,
                     StatementRules = arm.StatementRules,
                     Legality = arm.Legality?.Copy(),

@@ -1529,6 +1529,7 @@ namespace Agenerela
                 MaxListedTargets = call.MaxListedTargets,
                 LegalTargets = call.LegalTargets,
                 StatementRulesWording = call.StatementRulesWording,
+                ClaimRule = call.StimulusIsClaim,
                 CounterExamples = call.CounterExamples,
                 AddedExamples = call.AddedExamples == null ? null : new List<FewShotExample>(call.AddedExamples),
                 IdleExampleStatement = call.IdleExampleStatement,

@@ -1,0 +1,95 @@
+{
+  "agent": "Village guard",
+  "actions": [
+    {
+      "id": "follow_player",
+      "needsTarget": false
+    },
+    {
+      "id": "stop_following",
+      "needsTarget": false,
+      "onlyWhen": {
+        "isFollowing": true
+      }
+    },
+    {
+      "id": "move_to",
+      "needsTarget": true
+    },
+    {
+      "id": "attack_target",
+      "needsTarget": true
+    },
+    {
+      "id": "none",
+      "needsTarget": false
+    }
+  ],
+  "targets": [
+    {
+      "id": "bridge",
+      "description": "The wooden bridge over the stream",
+      "category": "place"
+    },
+    {
+      "id": "village_gate",
+      "description": "The main gate in the village wall",
+      "category": "place"
+    },
+    {
+      "id": "campfire",
+      "description": "The campfire in the guards' camp",
+      "category": "place"
+    },
+    {
+      "id": "well",
+      "description": "The stone well in the village square",
+      "category": "place"
+    },
+    {
+      "id": "north_tower",
+      "description": "The tower on the north side of the village",
+      "category": "place"
+    },
+    {
+      "id": "market",
+      "description": "The open-air market where villagers trade",
+      "category": "place"
+    },
+    {
+      "id": "docks",
+      "description": "The docks where supply boats unload",
+      "category": "place"
+    },
+    {
+      "id": "shelter",
+      "description": "The shelter where villagers take cover",
+      "category": "place"
+    },
+    {
+      "id": "eastern_road",
+      "description": "The road leaving the village to the east",
+      "category": "place"
+    },
+    {
+      "id": "wolf",
+      "description": "A wolf that came out of the woods",
+      "category": "creature"
+    },
+    {
+      "id": "locked_cave",
+      "description": "A cave whose entrance is locked",
+      "category": "place"
+    }
+  ],
+  "categories": [
+    {
+      "id": "claim",
+      "file": "prompts/claims.json"
+    }
+  ],
+  "targetRules": {
+    "allExpectedTargetsMustBeRegistered": true,
+    "noneActionTarget": "no_target"
+  }
+}

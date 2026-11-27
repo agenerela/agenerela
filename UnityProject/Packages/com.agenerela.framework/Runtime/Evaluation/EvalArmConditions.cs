@@ -76,6 +76,12 @@ namespace Agenerela.Evaluation
         /// </summary>
         [JsonProperty("statementRulesWording")] public string StatementRulesWording;
         /// <summary>
+        /// The arm's <see cref="DecideOptions.StimulusIsClaim"/>, whether its prompts carried the
+        /// claim rule (#190, Living Vale #18, DR-031); false in a report written before it existed,
+        /// which sent none.
+        /// </summary>
+        [JsonProperty("stimulusIsClaim")] public bool StimulusIsClaim;
+        /// <summary>
         /// What the arm named the free-text field (<see cref="DecideOptions.StatementFieldName"/>,
         /// DR-008); null in a report written before it existed, which named it <c>statement</c>.
         /// </summary>

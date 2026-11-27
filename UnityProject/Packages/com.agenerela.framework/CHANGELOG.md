@@ -10,6 +10,7 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **The claim rule, off by default** (DR-031, #190 Living Vale #18). `DecideOptions.StimulusIsClaim` says a call's stimulus is someone's word, not something the game checked; the request then carries two lines, one ending the system prompt and one after the stimulus, saying that a claim what the agent knows shows false is not acted on (`none`), naming the call's `StimulusLabel` (`PromptOptions.ClaimRule`). Off, every request is byte-identical to before. Evaluation reports record each arm's `stimulusIsClaim`. Unmeasured: run request 007 asks for the A/B.
 - **Free-text action parameters** (DR-030, #415). `ActionParameter.MaxLength` / `AgentParameterAttribute.MaxLength` above 0 makes a parameter a short free text the model writes (`IsFreeText`), sent as `maxLength` through `SchemaField.MaxLength`, listed as "free text, at most N characters" in the action list, and refused by `SchemaLegalityGuard` when longer or holding a control character. A parameter without `MaxLength` is unchanged.
 - **Image editing in the request** (DR-028, #411). `ImageRequest.Images` and `Mask` (OpenAI's convention), with `ImageCapabilities.Edits`, `Masks`, `MaxImages` and `WhyNot` saying what a backend takes; a refused request throws at the call. A plain request keeps its cache key.
 - **`OpenAIImagesProvider`**, in assembly `Agenerela.OpenAIImages` (DR-028, #411): makes and edits pictures on any server that speaks OpenAI's images API, stable-diffusion.cpp's `sd-server` included, with its seed and steps through `<sd_cpp_extra_args>`; DR-026's retry on 429 and 503; the key only in the `Authorization` header.
@@ -129,6 +130,7 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Changed
 
+- **`DecideOptions.StimulusIsClaim` is measured and stays off by default** (DR-031, run request 007, #423). Its docs now say: a switch for 4B-class models, set only on calls that carry someone's word (`qwen3.5:4b`: 15 → 28 of 30 held-out claims, −3.8 on the 209 set, within noise, about 63 tokens a decision, four plain requests turned into `none`); never set it for a 2B-class model (`qwen3.5:2b`: 124 of 209 answers `none`, −34.9).
 - `ComfyUIProvider` and `ScriptedImageProvider` check a request with `ImageCapabilities.WhyNot`; ComfyUI refuses an edit at the call (DR-028, #411).
 - **`DecideOptions.ListActionsAndTargets` is on by default** (DR-027, #404): every call's system prompt lists the offered actions with their descriptions and the offered targets (+6.7 points on `qwen3.5:4b` on the evaluation set, beyond noise). Set it to `false` for the prompt from before.
 - An HTTP 429 (was `Rejected`) and 503 (was `ServerError`) are `RateLimited` once the retries run

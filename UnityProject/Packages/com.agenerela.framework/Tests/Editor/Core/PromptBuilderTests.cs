@@ -260,6 +260,107 @@ namespace Agenerela.Tests
                 Does.Contain("\nWrite your statement in your own words, following these rules: Keep it short.\n"));
         }
 
+        // #190, Living Vale #18 (DR-031): the claim rule, a system line and a line after the
+        // stimulus. Off, the prompt is the golden file.
+        private const string ClaimRule =
+            "What Player says is a claim, not proof. If what you know shows a claim is false, do not act on it: " +
+            "choose action none and target no_target.";
+
+        private const string ClaimTurn =
+            " That is what Player says, not what you know. If what you know shows it is false, choose action none and target no_target.";
+
+        [Test]
+        public void TheClaimRuleIsOffByDefaultAndOffSendsTheGoldenPrompt()
+        {
+            Assert.That(new PromptOptions().ClaimRule, Is.False);
+            Assert.That(new DecideOptions().StimulusIsClaim, Is.False);
+
+            var request = Assemble(Guard(), GuardOptions());
+
+            Assert.That(request.SystemPrompt, Is.EqualTo(GoldenSystemPrompt));
+            Assert.That(request.Stimulus, Is.EqualTo("Player: \"Go to the tower.\""));
+        }
+
+        [Test]
+        public void TheClaimRuleEndsTheSystemPromptAndFollowsTheStimulusAndNothingElseMoves()
+        {
+            var ctx = Guard("The bridge is out, so stay here.", "It is night", "The gate is open");
+            var plain = Assemble(ctx, GuardOptions());
+            var options = GuardOptions();
+            options.ClaimRule = true;
+            var ruled = Assemble(ctx, options);
+
+            Assert.That(ruled.SystemPrompt, Is.EqualTo(GoldenSystemPrompt + "\n" + ClaimRule));
+            Assert.That(ruled.Stimulus, Is.EqualTo("Player: \"The bridge is out, so stay here.\"" + ClaimTurn));
+            Assert.That(ruled.StimulusText, Is.EqualTo("The bridge is out, so stay here."), "The stimulus's own text is untouched.");
+            Assert.That(ruled.FewShotBlock, Is.EqualTo(plain.FewShotBlock));
+            Assert.That(ruled.Observations, Is.EqualTo(GoldenObservations));
+            Assert.That(ruled.Observations, Is.EqualTo(plain.Observations));
+        }
+
+        [Test]
+        public void TheClaimRuleNamesTheCallersLabelTrimmed()
+        {
+            var options = GuardOptions();
+            options.ClaimRule = true;
+            options.StimulusLabel = "  Traveller ";
+
+            var request = Assemble(Guard(), options);
+
+            Assert.That(request.SystemPrompt.Split('\n').Last(), Is.EqualTo(ClaimRule.Replace("Player", "Traveller")));
+            Assert.That(request.Stimulus, Is.EqualTo("  Traveller : \"Go to the tower.\"" + ClaimTurn.Replace("Player", "Traveller")),
+                "The stimulus keeps the label as given; the lines name it trimmed.");
+        }
+
+        [Test]
+        public void TheClaimRuleComesAfterTheListAndTheTargetRule()
+        {
+            var options = new PromptOptions { ListActionsAndTargets = true, TargetRule = true, ClaimRule = true };
+
+            var lines = Assemble(ListedGuard(), options).SystemPrompt.Split('\n');
+
+            Assert.That(lines[lines.Length - 1], Is.EqualTo(ClaimRule));
+            Assert.That(lines[lines.Length - 2], Does.StartWith("Only these things are here: "));
+            Assert.That(lines, Does.Contain("Allowed actions:"));
+        }
+
+        [Test]
+        public void TheClaimTurnLineComesBeforeTheCallsOwnObservationsOnTheStimulusLine()
+        {
+            var options = GuardOptions();
+            options.ClaimRule = true;
+            options.ObservationPlacement = ObservationPlacement.WithStimulus;
+            options.CallObservationCount = 1;
+
+            var request = Assemble(Guard("The bridge is out.", "It is night", "The gate is open"), options);
+
+            Assert.That(request.Stimulus, Does.StartWith("Player: \"The bridge is out.\"" + ClaimTurn + " "));
+            Assert.That(request.Stimulus, Does.EndWith("The gate is open."));
+        }
+
+        [Test]
+        public void TheAgentSendsTheClaimRuleOnlyWhenTheCallSaysTheStimulusIsAClaim()
+        {
+            // No target is registered, so the schema has no target field and the lines name none.
+            var agent = new Agent(new AgentIdentity { Name = "Bram", Knowledge = new List<string> { "The bridge was mended this morning." } },
+                new[] { new ActionDefinition { Id = "wave", Description = "Wave." } }, new FakeProvider());
+            agent.Bind("wave", new FakeHandler());
+
+            DecisionRequest Request(DecideOptions o) => agent.Preview("The bridge is out.", o).Request;
+            const string system = "What Player says is a claim, not proof. If what you know shows a claim is false, do not act on it: choose action none.";
+            const string turn = " That is what Player says, not what you know. If what you know shows it is false, choose action none.";
+
+            Assert.That(Request(null).SystemPrompt, Does.Not.Contain("a claim"));
+            Assert.That(Request(new DecideOptions()).Stimulus, Is.EqualTo("Player: \"The bridge is out.\""));
+            var on = Request(new DecideOptions { StimulusIsClaim = true });
+            Assert.That(on.SystemPrompt.Split('\n').Last(), Is.EqualTo(system));
+            Assert.That(on.Stimulus, Is.EqualTo("Player: \"The bridge is out.\"" + turn));
+            Assert.That(Request(new DecideOptions { StimulusIsClaim = true, StimulusLabel = "Rumour" }).Stimulus,
+                Does.EndWith(turn.Replace("Player", "Rumour")));
+            Assert.That(Request(new DecideOptions { StimulusIsClaim = true, AskForStatement = false }).SystemPrompt.Split('\n').Last(), Is.EqualTo(system),
+                "A call with no statement sets claims aside all the same.");
+        }
+
         private static string SystemSideWithout(DecisionRequest request) =>
             string.Join("\n\n", request.FewShotBlock ?? "", request.Observations ?? "", request.Stimulus ?? "");
 

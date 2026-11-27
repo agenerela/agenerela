@@ -8,6 +8,14 @@
         "com.unity.nuget.newtonsoft-json": "3.2.2"
       }
     },
+    "com.agenerela.sdcpp": {
+      "version": "file:../../../UnityProject/Packages/com.agenerela.sdcpp",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {
+        "com.agenerela.framework": "0.4.0-preview.2"
+      }
+    },
     "com.unity.2d.animation": {
       "version": "13.0.6",
       "depth": 0,

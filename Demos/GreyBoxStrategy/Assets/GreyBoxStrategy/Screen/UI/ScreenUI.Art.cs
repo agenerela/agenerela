@@ -116,5 +116,46 @@ namespace GreyBoxStrategy.Realm
         /// <c>picture.image = ui.EventPicture(e.TemplateId)</c>.
         /// </summary>
         public Texture2D EventPicture(string templateId) => ArtCatalogue.Event(templateId);
+
+        // The open event card's picture, so one painted while it is open hangs in it at once.
+        private (string Key, Image Picture) shownPicture;
+        private bool listening;
+
+        /// <summary>What the open event card's picture shows: "painted", "painting", "pack" or "empty"; null with no card.</summary>
+        public string EventPictureState { get; private set; }
+
+        /// <summary>
+        /// The event card's picture: the one painted for this event's story (<see cref="EventArt"/>) when it is here,
+        /// else the art pack's for its kind with a small "Painting" mark while its own is being painted, else the empty
+        /// frame. A picture that arrives while the card is open replaces the pack's in place.
+        /// </summary>
+        private VisualElement EventPictureFrame(EventRecord r)
+        {
+            var picture = new Image { scaleMode = ScaleMode.ScaleAndCrop, name = "story-picture" }; picture.AddToClassList("story-picture");
+            var own = EventArt.PictureFor(r);
+            picture.image = own ?? EventPicture(r.Template);
+            if (picture.image == null) { var hint = new Label("A picture of the event will hang here"); hint.AddToClassList("story-picture-hint"); picture.Add(hint); }
+            bool painting = own == null && EventArt.Painting(r);
+            if (painting)
+            {
+                var mark = new Label("Painting this event's own picture...") { name = "story-picture-painting" }; mark.AddToClassList("story-picture-painting");
+                picture.Add(mark);
+            }
+            EventPictureState = own != null ? "painted" : painting ? "painting" : picture.image != null ? "pack" : "empty";
+            shownPicture = (EventArt.KeyOf(r), picture);
+            if (!listening) { EventArt.Arrived += PictureArrived; listening = true; }
+            return picture;
+        }
+
+        private void PictureArrived(string key)
+        {
+            var (shownKey, picture) = shownPicture;
+            if (picture == null || eventCard == null || shownKey != key || picture.panel == null) return;
+            var tex = EventArt.PictureFor(key);
+            if (tex == null) return;
+            picture.image = tex;
+            picture.Clear(); // the hint and the painting mark
+            EventPictureState = "painted";
+        }
     }
 }

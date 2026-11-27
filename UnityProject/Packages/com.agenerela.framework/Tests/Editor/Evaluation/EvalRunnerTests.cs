@@ -624,6 +624,27 @@ namespace Agenerela.Tests.Evaluation
         }
 
         [Test]
+        public async Task AnArmsClaimRuleReachesOnlyItsOwnPromptsAndIsRecorded()
+        {
+            // DR-031: run request 007's two arms, the defaults against the claim rule.
+            var a = new FakeProvider(Reply("move_to", "bridge"));
+            var b = new FakeProvider(Reply("move_to", "bridge"));
+            var armA = new EvalArm("control", fixtures.Config(a, "FakeA"));
+            var armB = new EvalArm("claim-rule", fixtures.Config(b, "FakeB"), new DecideOptions { StimulusIsClaim = true });
+            var runner = new EvalRunner(fixtures.Set(new[] { Bridge }, null), Fixtures.VillageGuardProfile(), armA, armB);
+
+            var report = await Fixtures.NotCancelled(runner.RunAsync());
+
+            Assert.That(a.Requests.Select(r => r.SystemPrompt + r.Stimulus), Has.None.Contains("a claim").And.None.Contains("not what you know"));
+            Assert.That(b.Requests.Select(r => r.SystemPrompt),
+                Has.All.EndsWith("What Player says is a claim, not proof. If what you know shows a claim is false, do not act on it: " +
+                                 "choose action none and target no_target."),
+                "Every call of the arm, warm-ups included, named by the prompt's own label.");
+            Assert.That(b.Requests.Select(r => r.Stimulus), Has.All.Contains("\" That is what Player says, not what you know."));
+            Assert.That(report.Conditions.Arms.Select(c => c.StimulusIsClaim), Is.EqualTo(new[] { false, true }));
+        }
+
+        [Test]
         public async Task AnArmsStatementRulesAndTheirWordingReachOnlyItsOwnPromptAndAreRecorded()
         {
             // #244 item 8: both arms give the set's agent the same rules; only the wording differs.

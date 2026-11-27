@@ -207,6 +207,12 @@ namespace Agenerela.Editor.Evaluation
                 yield return $"statement rules introduced as {arm.StatementRulesWording}";
             }
 
+            // Only when on (DR-031), so a report from before it reads as it always did.
+            if (arm.StimulusIsClaim)
+            {
+                yield return "the claim rule: the stimulus is a claim, only what the agent knows is certain";
+            }
+
             if (arm.Legality != null)
             {
                 yield return $"the arm's own target legality '{arm.Legality.Name}' ({arm.Legality.ExtraTargets.Count} extra targets)";

@@ -5411,6 +5411,128 @@ what it costs on an 8 GB card. A measurement of speed and memory, not of accurac
 - a smaller quantisation (Q3_K is 3.1 GB)
 - a run with the encoder on the CPU and enough RAM
 - a heavy scene in a windowed build
+### The claim rule, smoke check: a system line alone does almost nothing on the 4B; a line after the stimulus does most of it (25 November 2026)
+
+**A smoke check, not an A/B** (hard rule 2): one session, one request per prompt and wording, and a prompt built
+by hand in Python to look like the framework's, not by `PromptBuilder`. Recorded because it chose DR-031's
+wording, and so that run request 007 knows what to expect.
+
+**What.** `qwen3.5:4b` on the home server (Ollama 0.40.14, through the gate, temperature 0, `think: false`,
+`num_ctx` 4096, the schema as `format`). The prompt: the evaluation set's village guard, its action and target
+list, its four examples and idle line, the runner's one line a target, then each prompt's own observations, and
+`Player: "<stimulus>"`. The 30 prompts of request 007's development set (`docs/run-requests/007-claims-vs-facts/dev/`):
+15 player claims, each once with a fact that shows it false (expected `none`) and once with one that shows it true
+(expected the action). Every wording was sent the same 30 prompts:
+
+| Wording | Contradicted right (of 15) | Supported right (of 15) |
+|---|---:|---:|
+| None, today's prompt | 0 | 14 |
+| System line: "Only what you know is certain. When Player says that something is true or has happened, that is a claim: act on it only if what you know shows it." | 1 | 14 |
+| System line: "What Player says is a claim, not proof. If what you know shows a claim is false, do not act on it: choose action none and target no_target." | 7 | 14 |
+| After the stimulus: "That is what Player says, not what you know. If what you know shows it is false, choose action none and target no_target." | 12 | 11 |
+| Both of the last two | **14** | **14** |
+
+`claim_030` (a wolf at the shelter's door) is missed in every row: the model goes to the shelter instead of
+attacking. The line after the stimulus alone also turned three supported claims into `none`; with the system line
+beside it, none. With both lines the statements say why: "The healer confirmed the well
+water is clean.", "The shelter is locked and empty."
+
+**What it means.** Without help the 4B acts on every claim, whatever it was told. Where the line sits matters more
+than how it is worded: in the system prompt it is read as background, next to the player's line as an instruction.
+Naming `none` helps both.
+
+**What it does not show.** The same session wrote the 30 claims and chose the wording on them, so these numbers
+cannot show the wording generalises; request 007 scores a held-out set written afterwards, never sent to a model.
+Nothing here measures the cost on ordinary commands, the 2B, or the framework's own prompt. Script and output:
+`.scratch/190-claims/smoke/` (`smoke.py`, `smoke2.py`, `smoke-4b.txt`, `smoke2-4b.txt`) in the lead's checkout.
+
+### The claim rule (DR-031): on the 4B it sets aside every contradicted claim and keeps 13 of 15 supported ones; on the 2B it makes the model do nothing (25 November 2026)
+
+**What changed.** `DecideOptions.StimulusIsClaim` off against on (DR-031, #421). On, the system prompt ends with
+the claim line, and the stimulus's turn adds that it is what the speaker says, not what the agent knows. The arms
+differ only in the switch. This is run request 007; its
+[results](../run-requests/007-claims-vs-facts/results.md) give every prompt's answer in both arms.
+
+**Conditions.**
+- **Server and models:** the home server (RTX 4070 SUPER, Docker Ollama 0.40.14, gate `5728506a6d6b`), with
+  `qwen3.5:4b` (`d8b0f5e9760c`) and `qwen3.5:2b` (`0689d44085e0`).
+- **Code and arms:** test `8a61eb8`, `EvalRunner` from Unity in batch mode, arms interleaved, temperature 0,
+  guards on.
+- **Defaults:** today's, so `ListActionsAndTargets` is on in both arms (#404). The 4B's 209-set control is 184.
+- **Leases:** five blocks on 25 November, 16:33 to 16:48, each under its own clean lease on `agenerela-runs`
+  (#74283, #74353, #74781, #74851, #74921). Every lease checked as ours at the start and the end, on LAN and
+  mains. Other traffic: 2 other agenerela requests during the 2B's 209 block.
+- **Sets:** the held-out claims set decides. It has 30 prompts, 15 pairs of one player line, once with facts that
+  contradict it (expected `none`) and once with facts that support it. It was written after the wording was fixed
+  and never sent to a model before, and the tech lead read its labels and changed none. The development set,
+  where the wording was chosen, and the 209 set (the cost) were run as well.
+
+| | 4B off | 4B on | 2B off | 2B on |
+|---|---:|---:|---:|---:|
+| Held-out, right of 30 (floor 12.9 points) | 15 | **28** | 10 | 16 |
+| …contradicted set aside / supported acted on, of 15 | 0 / 15 | **15 / 13** | 1 / 14 | 15 / **1** |
+| …pairs both right, of 15 | 0 | 13 | 0 | 1 |
+| Development set, right of 30 (contradicted / supported right) | 14 (1 / 13) | 25 (14 / 11) | – | – |
+| 209 set, right (floor 4.9 points) | 184 | 176 (−3.8, within) | 149 | 76 (**−34.9**) |
+| …the 91 `Player`-labelled prompts (floor 7.4) | 86 | 84 (−2.2, within) | 77 | 47 (**−33.0**) |
+| …wrong `none`, all / Player four | 3 / 0 | 12 / 4 | 21 / 6 | 124 / 41 |
+| Prompt tokens a decision | 466 | 529 | 466 | 529 |
+
+- **The 4B tells the two apart only with the line.** Without it, the 4B acted on all 30 claims whatever it knew.
+  With it, all 15 contradicted claims were set aside, and it still acted on 13 of the 15 supported ones (the two
+  lost went to `none`).
+- **Every changed pair moved the right way:** each of the 15 pairs changed toward its label on the contradicted
+  side.
+- **The flagged rows read like the rest.** The wolf pairs and the two soft contradictions were set aside like the
+  others. The 4B's one wolf miss is a supported prompt.
+- **Statements give the reason.** On a contradicted claim the 4B names the fact that disproves it ("The docks are
+  dry.", "The wolf was caught this morning."), and none repeats the line.
+- **On the development set it reproduces the smoke check for contradicted claims**: 14 of 15 here, 14 in the smoke
+  check. It is weaker on supported ones, 11 of 15 against 14.
+- **The cost on the 4B is within noise** on the Player four, but it is not zero. Four plain requests now come back
+  `none`, among them "Come with me." ("I will not follow you.") and "If you're not busy, the market could use a
+  guard." ("I am busy guarding the village."). Events, which no game would flag as a claim, fall 10.0 points, just
+  past their 9.1 floor.
+- **On the 2B the line is a refusal.** It does nothing on 29 of 30 claims and on 124 of the 209. That scores 16 on
+  the held-out set, as never acting would (15), and loses 33 points on the Player four.
+
+**What it means.** On the 4B the line does what DR-031 is for, on a set it was not tuned on, at about 63 tokens a
+decision. On the 2B it must not be set. It is one run of one block per set; both claims sets are 30 prompts and
+were written by an AI. The held-out gap (+43 points against a 12.9 floor) is far beyond noise, but it is a
+pattern to confirm on a game's own agent, not a settled result (hard rule 2).
+
+**What it suggests, for the tech lead to decide.**
+- Document `StimulusIsClaim` as a 4B-class switch, set only on calls that carry someone's word.
+- Warn against it on the 2B.
+- Leave the default off; no default was changed.
+
+**What would change this.** A game's agent where the claims are its own; a wording that the 2B can follow; a
+claim with no facts either way, which this set leaves out on purpose.
+
+### Painted Realm paints locally in a running game: about 19 s a picture, and the text encoder on the CPU failed again (25 November 2026)
+
+**What.** The same model as the entry above, now behind Painted Realm's Settings → Painted art → Local, in Play mode
+in the editor (#20): your described ruler behind the loading card, the rest of the court and each event's picture in
+the background while turns played. Speed only, one run, untimed beyond the game's own log and the cache files' times.
+
+**Setup.** RTX 4060 Laptop, Vulkan build `master-1127-79dc7ca`, Z-Image Turbo Q4_K, 8 steps, cfg 1. The editor ran
+the game on the same card at 1280 × 720 with autoplay at 8×; one other session's Unity batch run was on the machine,
+about 8 GB of RAM free. No language model was on the card: the rulers were scripted, and the stand-in storyteller
+needs no model.
+
+**Result.**
+- **With the text encoder on the CPU** (the recipe's default), every picture failed at once: "LLM prompt encoding
+  failed", as `run7` did on 24 November. The game therefore keeps the encoder on the card (`RulerArtServer.LocalSettings`).
+- **With it on the card:** your ruler and banner, with two pictures refused for a painted frame and asked again, came
+  to 4 pictures in 105 s including the model's load. After that, pictures landed about 18 to 20 s apart, at
+  768 × 896 and at 1024 × 576 alike (the game's log: 18.7 s and 18.1 s for two event pictures painted alone).
+- **Turns never waited.** Autoplay reached turn 10 while the rest of the court and the first event pictures were painted, and the event card showed
+  the art pack's picture until its own arrived and replaced it in place.
+- **On a second visit** to the same world your pair came from the cache in 0 s.
+
+**What it means.** On an 8 GB card a local image model keeps up with a game only if pictures are few and wanted in
+the background: about three a minute. The court of a small world (8 pictures) takes about 2.5 minutes, which is why
+Local paints only your own ruler behind the loading card. The encoder on the CPU still needs a run with more RAM free.
 
 ### Painted Realm's storyteller on vs off on the 4B: nothing worse, fewer events, struck rulers name them more (26 November 2026)
 

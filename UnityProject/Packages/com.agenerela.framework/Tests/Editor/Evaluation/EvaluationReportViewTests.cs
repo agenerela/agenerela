@@ -269,6 +269,18 @@ namespace Agenerela.Tests.Evaluation
         }
 
         [Test]
+        public void AnArmsClaimRuleIsSaidOnlyWhenOn()
+        {
+            // DR-031: a report from before it, or an arm on the default, reads as it did.
+            var arm = new EvalArmConditions();
+            Assert.That(EvaluationReportView.PromptOptions(arm), Has.None.Contains("claim"));
+
+            arm.StimulusIsClaim = true;
+            Assert.That(EvaluationReportView.PromptOptions(arm),
+                Has.Some.EqualTo("the claim rule: the stimulus is a claim, only what the agent knows is certain"));
+        }
+
+        [Test]
         public void AnArmsLegalPairsLineAndRulesWordingAreSaidOnlyWhenSet()
         {
             // #244 items 5 and 8: a report from before them, or an arm on the defaults, reads as it did.

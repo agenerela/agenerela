@@ -10,7 +10,8 @@
         "GreyBoxStrategy.Screen",
         "GreyBoxStrategy",
         "Agenerela",
-        "Agenerela.ComfyUI"
+        "Agenerela.ComfyUI",
+        "Agenerela.SdCpp"
     ],
     "includePlatforms": [
         "Editor"

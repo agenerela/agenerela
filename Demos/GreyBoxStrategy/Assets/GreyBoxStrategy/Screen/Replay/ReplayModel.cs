@@ -239,6 +239,8 @@ namespace GreyBoxStrategy.Replay
         public RecordedDecision Decision;
         /// <summary>The state once this event has happened.</summary>
         public ReplayState After;
+        /// <summary>An upkeep line that is a random table event (a harvest, bandits, unrest): its record, for its card and picture; else null.</summary>
+        public EventRecord Table;
 
         public bool ChangesMap => Kind == ReplayEventKind.Capture || Kind == ReplayEventKind.Revolt || Kind == ReplayEventKind.TakeNeutral
                                   || Kind == ReplayEventKind.Treaty || Kind == ReplayEventKind.Broken;

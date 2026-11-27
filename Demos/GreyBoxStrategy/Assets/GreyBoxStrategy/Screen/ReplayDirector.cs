@@ -123,6 +123,7 @@ namespace GreyBoxStrategy.Realm
                 LinePressed = l =>
                 {
                     if (l.Event.Kind == ReplayEventKind.Story) { OpenEvent(l.Event); return; }
+                    if (l.Event.Table != null) { OpenEvent(TableCard(l.Event)); return; } // a harvest, bandits, unrest: its card
                     if (l.Event.Kind == ReplayEventKind.Battle) { if (l.Event.ProvinceIndex >= 0) PanTo(l.Event.ProvinceIndex); ui.ShowBattle(l.Event); return; }
                     if (l.Event.ProvinceIndex >= 0) PanTo(l.Event.ProvinceIndex); else if (l.Country != null) PanTo(ui.CapitalIndex(l.Country));
                     if (CanInspect(l.Event)) ui.ShowCard(DecisionCard.From(l.Event));
@@ -732,6 +733,8 @@ namespace GreyBoxStrategy.Realm
                     yield return Wait(0.9f);
                     ui.SetThinking(false);
                 }
+                // Each event's own picture, asked for as the turn begins to land, painted while it plays (EventArt).
+                if (turn.Turn >= skipUntilTurn) PaintEvents(turn.Events);
                 for (eventIndex = 0; eventIndex < turn.Events.Count; eventIndex++)
                 {
                     var e = turn.Events[eventIndex];

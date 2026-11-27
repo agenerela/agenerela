@@ -878,12 +878,75 @@ backstory and lines into `court.json`.
 
 **Live, 24 November** (`qwen3.5:4b` on the home server, untimed, no lease; contact sheet in the PR): seed 7 kept the world's name, all five realm names, five ruler lines and the story; seed 21 three of five realm names (two hyphenated ones refused, and the story mended to the kept names). About 8 s and 400 reply tokens a world. With only the parameters' own descriptions the 4B wrote every realm name as two words ("Gilded Shore"); one knowledge line saying "one invented word" fixed most of it, which is why it is there (`WorldLoremaster.NamesRule`).
 
+### Painted on this machine, by your description, and a picture for every event (25 November; DR-025, DR-028)
+
+The court's portraits and banners, and now a picture for each event, can be painted by an image model **inside the
+game**, with no server: the `com.agenerela.sdcpp` package (DR-028), which runs stable-diffusion.cpp in-process behind
+the same `IImageProvider` as ComfyUI. It does for pictures what LLMUnity does for language models. The game loads it
+like the framework, by a relative `file:` path in `Packages/manifest.json`.
+
+- **Settings → Game → Painted art: Server, Local or Off** (`GameSettings.Art`, Server by default, as before).
+  - **Server** is the image server, as in the section below.
+  - **Local** is Z-Image Turbo through the package's own recipe (`SdCppModel.UseZImageTurbo`: Q4 diffusion model,
+    the Qwen3-4B text encoder, the FLUX VAE, 8 steps, cfg 1), with the text encoder on the card: on the CPU, the
+    recipe's default, sd.cpp refused to encode any prompt with about 8 GB of RAM free. Its files are read from
+    `StreamingAssets/Agenerela/models/`, where a built game carries them, or from the folder `AGENERELA_SDCPP_MODELS`
+    names; the native build from `StreamingAssets/Agenerela/sdcpp/`, or the folder `AGENERELA_SDCPP_LIBRARY` names.
+    The two variables are the ones the package's live tests read. The settings line says what is missing when Local
+    cannot run. One provider lives for the whole run and keeps the model loaded; it is freed when the game quits or
+    the setting moves off Local.
+  - **Off** hangs the art pack alone: nothing is painted and no cache is read.
+  - Every backend goes through the same path: `RulerArtMaker`, `CachedImageProvider` over `ImageFileCache`, and the
+    painted-frame check. The cache keys carry the backend's name, so a Local picture and a Server picture of the same
+    ruler are kept apart.
+- **Local never stalls a turn.** The rulers' model stays on its server (`AGENERELA_OLLAMA_URL`), and the image model
+  has this machine's card. Behind the loading card only your own ruler and banner are painted (the first seat's when
+  you watch); every other ruler is painted in the background while you play, each hanging the next time its frame is
+  drawn. The model paints on its own worker thread.
+- **Describe your ruler** (New game → Rivals → Describe your ruler, in Rule mode): two fields, *Your ruler* (200
+  characters) and *Your banner* (160). Empty, the game's own ruler and banner stand.
+  - *Your ruler* takes the place of the persona's look in your portrait's prompt; the realm's colour still dresses
+    the ruler. *Your banner* takes the place of the beast your realm's name chooses; the cloth stays your realm's
+    colour.
+  - *Your ruler* is also the persona of the advisor on your seat (`RuleSession.YourPersona`, `Advisor`'s persona
+    argument, which the game had never passed), so its counsel and its words are in your ruler's character.
+  - Both are cleaned and capped once, by `ImagePromptBuilder.Clean` (`RulerDescription`), so the same words reach the
+    image prompt, the cache key and the decision prompt.
+  - They are painted on a generated world, where the court is painted.
+- **A picture for every event** (Settings → Game → Event pictures, on). As a turn begins to land, each storyteller
+  event, and each random table event that strikes your realm (every realm's while you watch), is asked for a picture
+  of its own story (`EventArt`). It is painted in the background, one at a time, behind any of the court still being
+  painted, and the event card shows it when it arrives, in place of the art pack's picture for the event's kind; a
+  small "Painting this event's own picture..." mark says one is coming. The card reads the same without it.
+  - **The prompt:** the pack's style and scene lines, then the event's title and story as untrusted text (80 and 240
+    characters), 1024 × 576, the pack's event size.
+  - **The cache:** by the event's words, in `<persistentDataPath>/painted-realm-art/events/`, for every world: the
+    same story is the same request, seed included, so it is painted once.
+  - **Table events get a card.** A harvest, bandits or unrest was an upkeep line only; its line now carries its
+    record (`ReplayEvent.Table`), and a click on it opens the same event card, with "The random table" behind it.
+  - On the image server each event picture frees the card after it is made, since that card also serves the rulers'
+    model. The first failure stops asking for the rest of the world; the cache is still read.
+- **Dev menu:** `describe <your ruler> | <your banner>`, `art [server|local|off]` (where pictures come from, what the
+  court and the event painter did, what the open card shows), `table-open`, and `writs-rule-world` takes a storyteller
+  preset after `scripted`.
+- **Tests** (`LocalArtTests`): the setting's default and an old settings file; Off paints nothing; empty fields keep the
+  game's prompts and cache keys; your words reach the portrait and the banner and not the seed's look or charge; they
+  are cleaned and capped; the advisor's persona; an event's picture keyed by its words alone, at a size every backend
+  takes; a table event's words; a model's story cleaned; nothing asked while Off; a writs game's table events reach
+  their upkeep lines.
+- **Checked in the editor, 25 November** (Unity CLI, `writs-rule-world small 7 0 4 scripted even_hand`, Local, on the
+  RTX 4060 Laptop; frames in the PR): your described ruler and banner, 4 pictures with two frame refusals in 105 s
+  including the model's load; after that about 19 s a picture (18.7 s and 18.1 s for two event pictures); turns ran on
+  at 8× meanwhile; a second visit hung your pair from the cache in 0 s. In `findings.md`, 25 November.
+
 ### A painted court for every new world (24 November; DR-025)
 
 At New game, behind the loading card, each ruler of a generated world gets a portrait and a banner made for that
 world, through the framework's image provider (`Agenerela.ComfyUI`, DR-025) on the team's ComfyUI server.
 - **When:** after the world is made and its game is set up, before the chart is laid out and before any decision is
-  asked for. A picture unloads the decision model on a shared card, so none is ever made during play. The card shows
+  asked for. A picture unloads the decision model on a shared card, so on the server the court is never painted
+  during play (Local paints its rest in the background, and an event's picture frees the card after it is made; see
+  the section above). The card shows
   "Painting Valen's ruler (3 of 10). Esc: skip"; Esc stops asking, and the rest fall back.
 - **What is asked:** the art pack's own style line, word for word, then
   - **a portrait** (768 × 896, the pack's size, so the head crop fits): king or queen, age, hair, complexion and
@@ -3405,7 +3468,19 @@ in the middle of the screen; see [variant B: the inspector and the council](#the
 - **Diplomacy** (D) is a 5 × 5 matrix of war, truce and peace, with borders and this turn's envoys.
 - `RealmQueries` answers these from `GameRules` and the map, and a test checks its reach against every attack the game offered in the recorded game.
 
-**The map** is a 4096 × 2304 master with open sea on every side (`ArtSource/sea-chart-map.png`). It is codex-image's 1672 × 941 painting upscaled, so its detail is still the 1672 px original's. The province maps are baked at 2048 × 1152, and `provinces.json` records the land's bounds, which the camera frames.
+**The map** is a 4096 × 2304 master with open sea on every side (`ArtSource/sea-chart-map.png`), painted at that size
+since 25 November. Codex-image's 1672 × 941 painting was first upscaled (`ArtSource/sea-chart-map-upscale.png`); then
+`ArtSource/repaint_4k.py` painted real 4K detail over the upscale on the asset server: fifteen overlapping 1024 px
+tiles through Z-Image Turbo img2img at denoise 0.22, stitched with feathered overlaps, with the upscale's low frequencies
+(a 6 px Gaussian) put back so colour and coarse shapes, coasts included, stay the upscale's. The model's detail was
+about 20% flatter than the sharpened upscale's, which read as haze under the colour wash, so it is scaled up locally (at
+most 1.6×) to the upscale's detail energy. It checks the bake's land
+mask against `province-ids.png` and writes nothing if the coasts moved: IoU 0.9627 against the upscale's own 0.9663,
+and no shift at four places across the island. Denoise 0.35 and above redrew villages and moved rivers. Only the Classic
+board has a painting; generated worlds stay drawn by code. Before and after in the running game, at the whole board and
+the deepest zoom: [`docs/demos/painted-realm-art/classic-map-4k-before-after.jpg`](../../docs/demos/painted-realm-art/classic-map-4k-before-after.jpg). The province maps are baked at 2048 × 1152 from the upscale
+(`bake_map.py` reads it, so the committed maps stay reproducible), and `provinces.json` records the land's bounds, which
+the camera frames.
 
 **A live game** (slice 3): the Watch object's `LiveGame` component, off by default, plays five
 `qwen3.5:4b` persona seats on the default arm, through the game's own `TableRunner`. The

@@ -26,6 +26,7 @@ namespace GreyBoxStrategy.Realm
             speed = settings.PlaybackSpeed;
             ApplySettings(settings, null);
             SoundManager.Apply(settings); // the sound's volumes
+            RulerArtServer.Backend = settings.Art;
         }
 
         /// <summary>The UI scale now: the settings' fixed step, or automatic from the screen's size.</summary>
@@ -62,6 +63,8 @@ namespace GreyBoxStrategy.Realm
             settings = next.Normalised();
             SoundManager.Apply(settings); // the sound's volumes, at once
             ApplySettings(settings, before);
+            if (settings.Art != before.Art) UseArtBackend(settings.Art);
+            if (!settings.EventPictures || settings.Art == ArtBackend.Off) EventArt.Stop();
             if (!settings.DisplayDiffers(before) || Application.isEditor)
             {
                 settingsStore.Save(settings);
@@ -191,6 +194,7 @@ namespace GreyBoxStrategy.Realm
             nextSieges = c.Sieges;
             nextSupply = c.Supply;
             nextFreeOrders = c.YourFreeOrders;
+            described = c.Rule ? RulerDescription.From(c.RulerPersona, c.RulerBanner) : null; // painted, and the advisor's persona
             switch (c.Route(out string why))
             {
                 case NewGameRoute.None: ui.ShowMenuStatus(why); return;

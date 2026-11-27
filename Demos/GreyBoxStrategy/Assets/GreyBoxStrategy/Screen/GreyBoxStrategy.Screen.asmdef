@@ -8,6 +8,7 @@
         "GreyBoxStrategy",
         "Agenerela",
         "Agenerela.ComfyUI",
+        "Agenerela.SdCpp",
         "Unity.InputSystem"
     ],
     "includePlatforms": [],
