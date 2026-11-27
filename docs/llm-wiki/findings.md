@@ -5533,3 +5533,21 @@ needs no model.
 **What it means.** On an 8 GB card a local image model keeps up with a game only if pictures are few and wanted in
 the background: about three a minute. The court of a small world (8 pictures) takes about 2.5 minutes, which is why
 Local paints only your own ruler behind the loading card. The encoder on the CPU still needs a run with more RAM free.
+
+### Frozen-cohort follow-up: five preferences after comparison (26 November 2026)
+
+A review note, not an agreement measurement. Tigran rechecked five cohort prompts
+after comparing proposed choices with Maxim's stored answers. His current
+preferences are `move_to/shelter` for `event_009`, `move_to/village_gate` for
+`situation_001`, `move_to/campfire` for `event_004`, `move_to/north_tower` for
+`situation_009`, and `none/no_target` for `event_005`.
+
+The gate, tower and delivery cases still differ from Maxim's answers. The
+[follow-up notes](cohort-review-2026-11-26.md) preserve both sides and the questions
+for discussion. No author discussion or joint outcome is recorded, including for
+the two matching preferences.
+
+These are post-comparison review preferences, not independent blind labels. No
+agreement statistic is calculated from them. No official prompt or annotator
+label file changed; relabelled prompt ids: **none**. The independent human pass
+and author adjudications required by #148 remain outstanding.
