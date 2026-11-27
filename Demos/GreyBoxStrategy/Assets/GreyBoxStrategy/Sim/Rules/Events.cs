@@ -150,6 +150,10 @@ namespace GreyBoxStrategy
         public string Statement;
         /// <summary>What the story check did: <c>kept</c>, <c>no title</c>, or <c>replaced: ...</c> with the reason.</summary>
         public string StoryVerdict;
+        /// <summary>Per country hit, the line it was told ("Event "The Golden Star": a windfall of 30 gold reached our treasury."); a storyteller event only.</summary>
+        public Dictionary<string, string> HitLines = new Dictionary<string, string>(StringComparer.Ordinal);
+        /// <summary>The news every other living country was told; a storyteller event only.</summary>
+        public string News;
 
         // --- Stage S2 ---
 
@@ -232,8 +236,8 @@ namespace GreyBoxStrategy
             switch (group)
             {
                 case Everyone: return alive.Select(c => c.Id).ToList();
-                case North: return alive.Where(c => c.Id == "valen" || c.Id == "orsk").Select(c => c.Id).ToList();
-                case South: return alive.Where(c => c.Id == "kesh" || c.Id == "ilvar").Select(c => c.Id).ToList();
+                case North: { var r = Region(w, north: true); return alive.Where(c => r.Contains(c.Id)).Select(c => c.Id).ToList(); }
+                case South: { var r = Region(w, north: false); return alive.Where(c => r.Contains(c.Id)).Select(c => c.Id).ToList(); }
                 case Leader:
                 case Weakest:
                 {
@@ -247,6 +251,30 @@ namespace GreyBoxStrategy
                 default: return new List<string>();
             }
         }
+
+        /// <summary>
+        /// The countries a region means, alive or not: on the Classic board valen and orsk in the north, kesh and
+        /// ilvar in the south, as S1 and S2 measured. On any other map (a generated world, whose countries have other
+        /// names) the countries are ranked by their capital's row: the northern half, rounded down, is the north, the
+        /// southern half the south, and a middle country on an odd count is in neither, as merrow is on Classic.
+        /// </summary>
+        public static IReadOnlyList<string> Region(World w, bool north)
+        {
+            if (w.Country("valen") != null && w.Country("orsk") != null && w.Country("kesh") != null && w.Country("ilvar") != null)
+                return north ? new[] { "valen", "orsk" } : new[] { "kesh", "ilvar" };
+            var ranked = w.CountryList
+                .Select(c => (c.Id, row: w.ProvinceList.Where(p => p.IsCapital && p.Info.StartOwner == c.Id).Select(p => (int?)p.Info.Row).FirstOrDefault()))
+                .Where(x => x.row != null)
+                .OrderBy(x => x.row).ThenBy(x => x.Id, StringComparer.Ordinal)
+                .Select(x => x.Id).ToList();
+            int half = ranked.Count / 2;
+            return north ? ranked.Take(half).ToList() : ranked.Skip(ranked.Count - half).ToList();
+        }
+
+        /// <summary>The storyteller's knowledge line for the groups, with this map's regions.</summary>
+        public static string KnowledgeLine(World w) =>
+            $"The groups: everyone; the_north is {EventRules.Join(Region(w, true))}; the_south is {EventRules.Join(Region(w, false))}; "
+            + "the_leader and the_weakest are whoever alone holds the most and the fewest provinces; all_at_war is every country at war.";
 
         /// <summary>The group's line in the storyteller's target list.</summary>
         public static string Describe(World w, string group)

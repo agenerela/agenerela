@@ -246,22 +246,23 @@ namespace GreyBoxStrategy
                 }
             }
 
-            // The storyteller arm: the first model seat's model tells the events, through the same
-            // provider and queue, and the random table is off so the two never both fire.
-            Storyteller teller = null;
-            if (table.Options.Storyteller)
-            {
-                string model = table.Models.FirstOrDefault() ?? throw new ArgumentException("The storyteller needs a model at the table.");
-                game.EventTable = false;
-                game.Story = table.Options.StoryRules();
-                game.Rules.EventStrength = table.Options.EventStrength;
-                teller = new Storyteller(game, providerFor(model, game.World), table.Options);
-            }
-
+            var teller = TellerFor(table, game, providerFor);
             await ModelGameRunner.PlayToTheEndAsync(game, players, seats, ct, teller);
             var record = new GameRecord(game, shown);
             var decisions = seats.Values.SelectMany(s => s.Decisions).ToList();
             return new TableGame(new ModelGameRecord(record, decisions, seats.Keys.ToList()), labels, characters, teller?.Decisions);
+        }
+
+        // The storyteller arm: the first model seat's model tells the events, through the same provider and queue, and the
+        // random table is off so the two never both fire. A table of scripts alone has no model to tell with: it keeps the
+        // random table, whatever the arm.
+        private static Storyteller TellerFor(TableDefinition table, Game game, Func<string, World, ILLMProvider> providerFor)
+        {
+            if (!table.Options.Storyteller || !table.Models.Any()) return null;
+            game.EventTable = false;
+            game.Story = table.Options.StoryRules();
+            game.Rules.EventStrength = table.Options.EventStrength;
+            return new Storyteller(game, providerFor(table.Models.First(), game.World), table.Options);
         }
 
         // The writs turn: the same seating and personas, WritRuler seats, the writs runner.
@@ -297,16 +298,19 @@ namespace GreyBoxStrategy
                     shown[id] = plan.Kind;
                 }
             }
+            // The storyteller arm, as in the one-move game: before 26 November this path never made one, so a writs table
+            // with +storyteller played the random table alone.
+            var teller = TellerFor(table, game, providerFor);
             int guard = game.Rules.MaxTurns + 1;
             while (!game.IsOver)
             {
                 ct.ThrowIfCancellationRequested();
                 if (guard-- <= 0) throw new InvalidOperationException("The game did not end within its turn limit.");
-                await WritModelRunner.PlayTurnAsync(game, players, seats, ct);
+                await WritModelRunner.PlayTurnAsync(game, players, seats, ct, teller);
             }
             var record = new GameRecord(game, shown);
             var decisions = seats.Values.SelectMany(s => s.Decisions).ToList();
-            return new TableGame(new ModelGameRecord(record, decisions, seats.Keys.ToList()), labels, characters);
+            return new TableGame(new ModelGameRecord(record, decisions, seats.Keys.ToList()), labels, characters, teller?.Decisions);
         }
 
         /// <summary>One game per seed, the seats and personas rotating game by game.</summary>

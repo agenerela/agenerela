@@ -77,6 +77,44 @@ namespace GreyBoxStrategy.Tests
             Assert.That(StorytellerSettings.Presets.All(p => !string.IsNullOrEmpty(p.Label) && !string.IsNullOrEmpty(p.Description)), Is.True, "a menu can show them");
         }
 
+        [Test]
+        public void TheDefault_HasTheMenusStoryteller_OnSaga_AndTheOldArmsReadAsBefore()
+        {
+            var d = ModelSeatOptions.Named("default");
+            Assert.That((d.Storyteller, d.Choices, d.Multi, d.History, d.Traits, d.TitleCall, d.Chains, d.Preset, d.EventFacts),
+                Is.EqualTo((true, true, true, true, true, true, ChainMode.Skeleton, "saga", false)), "the menu's arm on saga; event facts stay a switch");
+            var menu = ModelSeatOptions.Named("default+storyteller+s2+chains-skeleton+preset-saga");
+            Assert.That((d.StoryRules().Choices, d.StoryRules().Chains, d.StoryRules().Settings.Name, d.StoryRules().TitleCall),
+                Is.EqualTo((menu.StoryRules().Choices, menu.StoryRules().Chains, menu.StoryRules().Settings.Name, menu.StoryRules().TitleCall)));
+            Assert.That(ModelSeatOptions.Default.Storyteller, Is.True);
+
+            var off = ModelSeatOptions.Named("default+no-storyteller");
+            Assert.That((off.Storyteller, off.Choices, off.TitleCall, off.Chains, off.Preset), Is.EqualTo((false, false, false, ChainMode.None, (string)null)), "the default before 26 November");
+            var s1 = ModelSeatOptions.Named("default+storyteller");
+            Assert.That((s1.Storyteller, s1.StoryRules().IsS2), Is.EqualTo((true, false)), "an explicit storyteller arm starts from none: S1 as measured");
+            var free = ModelSeatOptions.Named("default+storyteller+s2+chains-free");
+            Assert.That((free.Chains, free.Preset), Is.EqualTo((ChainMode.Free, "even_hand")), "S2's measured arm unchanged");
+            Assert.That(ModelSeatOptions.Named("control").Storyteller, Is.False, "the other named arms have none");
+        }
+
+        [TestCase("default")]
+        [TestCase("default+storyteller+s2+chains-skeleton+preset-saga")]
+        public async Task AWritsTable_TellsWithItsStoryteller_AndPlaysNoTableEvents(string arm)
+        {
+            // Before 26 November a writs table never made its storyteller: +storyteller played the random table alone.
+            var table = Tables.Named("fake,fake,fake,fake,fake", null, arm: arm, personas: true);
+            table.Setup = GameSetup.Writs(1);
+            table.Setup.TurnCap = 8;
+            ILLMProvider Fake(string m, World w) => new ScriptedProvider().Otherwise(ScriptedReply.Decide(ActionRegistry.None, TargetRegistry.NoTarget, "We wait."));
+            var played = await Await.NotCancelled(TableRunner.PlayAsync(table, 1, 0, Fake));
+            Assert.That(played.Storyteller.Count, Is.GreaterThanOrEqualTo(5), "asked every turn from turn 3");
+            Assert.That(played.Record.Game.Events.Events.Any(e => e.Source == EventRecord.FromTable), Is.False, "the random table is off");
+            var control = Tables.Named("fake,fake,fake,fake,fake", null, arm: "default+no-storyteller", personas: true);
+            control.Setup = table.Setup;
+            var off = await Await.NotCancelled(TableRunner.PlayAsync(control, 1, 0, Fake));
+            Assert.That(off.Storyteller, Is.Empty);
+        }
+
         // --- Dilemmas -------------------------------------------------------------------------
 
         [Test]
@@ -642,6 +680,39 @@ namespace GreyBoxStrategy.Tests
             var scored = g.ToScored();
             Assert.That(scored.Decisions.Any(d => d.Moment == Moment.Choice), Is.False, "the voice and sense sections never see a choice");
             Assert.That(scored.Choices.Count, Is.EqualTo(choices.Count));
+        }
+
+        // --- Today's default game: a generated world, whose countries are not Classic's -------------------------
+
+        [Test]
+        public void OnAGeneratedWorld_TheNorthAndTheSouthAreItsOwnCountries_AndTheStorytellerIsToldSo()
+        {
+            var setup = GameSetup.Writs(11, GameSetup.GeneratedMapId);
+            setup.Countries = MapSettings.DefaultCountries(MapSize.Medium);
+            setup.Generator = new MapSettings { Size = MapSize.Medium, Shape = LandShape.Continent };
+            var map = setup.BuildMap();
+            var game = new Game(11, map, setup.BuildRules(map)) { EventTable = false };
+            game.Story = ModelSeatOptions.Named("default+storyteller+s2+chains-skeleton+preset-saga").StoryRules();
+            var w = game.World;
+            var north = EventGroups.Members(w, EventGroups.North);
+            var south = EventGroups.Members(w, EventGroups.South);
+            Assert.That(north.Count, Is.EqualTo(w.CountryList.Count / 2), "the northern half");
+            Assert.That(south.Count, Is.EqualTo(w.CountryList.Count / 2), "the southern half");
+            Assert.That(north.Intersect(south), Is.Empty);
+            int Row(string id) => w.ProvinceList.Single(p => p.IsCapital && p.Info.StartOwner == id).Info.Row;
+            Assert.That(north.Max(Row), Is.LessThanOrEqualTo(south.Min(Row)), "the north's capitals lie above the south's");
+            var teller = new Storyteller(game, new ScriptedProvider());
+            string knows = string.Join(" | ", teller.Agent.Identity.Knowledge) + " | " + teller.Agent.Identity.Role;
+            Assert.That(knows, Does.Not.Contain("valen").And.Not.Contain("kesh"), "no Classic country in its prompt");
+            Assert.That(knows, Does.Contain("the_north is " + EventRules.Join(north)));
+            Assert.That(knows, Does.Contain(CountryAgent.CountWord(w.CountryList.Count) + " countries"));
+        }
+
+        [Test]
+        public void OnClassic_TheGroupsLineIsTheMeasuredOne()
+        {
+            var g = NewGame(1);
+            Assert.That(EventGroups.KnowledgeLine(g.World), Is.EqualTo("The groups: everyone; the_north is valen and orsk; the_south is kesh and ilvar; the_leader and the_weakest are whoever alone holds the most and the fewest provinces; all_at_war is every country at war."));
         }
     }
 }

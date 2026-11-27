@@ -94,6 +94,13 @@ namespace GreyBoxStrategy
         public bool Traits;
         public bool TitleCall;
         public ChainMode Chains = ChainMode.None;
+        /// <summary>
+        /// <c>+event-facts</c>: an event is not among the turn's facts; the seats read it from a fact ledger, worded
+        /// per ruler, for <see cref="EventFactTurns"/> turns (the agents' <c>EventFacts</c>, #295).
+        /// </summary>
+        public bool EventFacts;
+        /// <summary>How many turns a ruler reads an event with <see cref="EventFacts"/> on.</summary>
+        public const int EventFactTurns = 3;
         public StorytellerSettings Settings = new StorytellerSettings();
 
         public static StoryRules S1 => new StoryRules();

@@ -81,7 +81,7 @@ namespace GreyBoxStrategy.Realm
                 a => { if (a.Length < 1) return "Name a country."; if (started) return "A game is running: Esc, then Main menu, first."; string why = Preset(a, 2); if (why != null) return why;
                        ui.HideMenu(); StartRuleScriptedWrits(a[0], a.Length > 1 ? int.Parse(a[1]) : 3, GameSetup.ConquestPreset, StoryArms.For(a.Length > 2 ? a[2] : null)); return $"writs rule game, {a[0]}, stand-in rulers{(a.Length > 2 ? ", storyteller " + a[2] : "")}"; });
             c.Add("writs-rule-world", "writs-rule-world <small|medium|large|huge> [seed] [seat] [countries] [model|scripted] [storyteller preset]",
-                "rule the realm in a seat (0 is the first) of a generated world on the writs turn: stand-in rulers through the real agents, or a model on the server when one is named; a preset adds a storyteller (a stand-in one with scripted)",
+                "rule the realm in a seat (0 is the first) of a generated world on the writs turn: stand-in rulers through the real agents, or a model on the server when one is named; a preset adds a storyteller (a stand-in one with scripted); none or off plays without one",
                 a =>
                 {
                     Need(a.Length >= 1, "Give a size.");
@@ -92,9 +92,9 @@ namespace GreyBoxStrategy.Realm
                     Need(seat >= 0 && seat < countries, $"A seat from 0 to {countries - 1}.");
                     bool scripted = a.Length < 5 || a[4] == "scripted";
                     string preset = Preset(a, 5); if (preset != null) return preset;
-                    string arm = a.Length > 5 && a[5] != "off" ? StoryArms.For(a[5]) : null;
+                    string arm = a.Length > 5 && a[5] != "off" ? StoryArms.For(a[5]) : StoryArms.For("off");
                     StartGeneratedRule(size, LandShape.Continent, seed, countries, seat, scripted ? null : a[4], scripted, GameSetup.ConquestPreset, arm);
-                    return $"a {size} world, seed {seed}, {countries} countries: you rule seat {seat}, {(scripted ? "stand-in rulers" : a[4])}{(arm != null ? ", storyteller " + a[5] : "")}";
+                    return $"a {size} world, seed {seed}, {countries} countries: you rule seat {seat}, {(scripted ? "stand-in rulers" : a[4])}{(a.Length > 5 && a[5] != "off" ? ", storyteller " + a[5] : ", no storyteller")}";
                 });
             c.Add("describe", "describe <your ruler> | <your banner>", "New game → Rule's Describe your ruler, for the next rule game: either side of the bar may be empty",
                 a => { var parts = string.Join(" ", a).Split('|'); DescribeNextRuler(parts[0].Trim(), parts.Length > 1 ? parts[1].Trim() : ""); return "the next ruler: " + (described?.ToString() ?? "the game's own"); });

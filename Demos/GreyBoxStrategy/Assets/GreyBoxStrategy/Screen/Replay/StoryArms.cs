@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 
 namespace GreyBoxStrategy.Replay
 {
@@ -16,7 +17,10 @@ namespace GreyBoxStrategy.Replay
         /// on the ruler's choices and so read as a story.
         /// </summary>
         public static string For(string preset) =>
-            string.IsNullOrEmpty(preset) || preset == "off" ? "default" : $"default+storyteller+s2+chains-skeleton+preset-{preset}";
+            string.IsNullOrEmpty(preset) || preset == "off" ? "default+no-storyteller" : $"default+storyteller+s2+chains-skeleton+preset-{preset}";
+
+        /// <summary>The menu's preset when nothing else is chosen (26 November 2026): the same as the agents' <c>ModelSeatOptions.DefaultStoryPreset</c>.</summary>
+        public const string DefaultPreset = "saga";
 
         /// <summary>True when the arm has a storyteller.</summary>
         public static bool HasStoryteller(string arm) => Rules(arm) != null;
@@ -26,7 +30,14 @@ namespace GreyBoxStrategy.Replay
         {
             if (string.IsNullOrEmpty(arm)) return null;
             var parts = arm.Split('+');
-            bool storyteller = false;
+            // "default" alone has the storyteller since 26 November: the menu's arm on DefaultPreset, as ModelSeatOptions.Default.
+            bool storyteller = parts[0] == "default" && !parts.Contains("storyteller") && !parts.Contains("no-storyteller");
+            if (storyteller)
+                return new StoryRules
+                {
+                    Choices = true, Multi = true, History = true, Traits = true, TitleCall = true, Chains = ChainMode.Skeleton,
+                    EventFacts = parts.Contains("event-facts"), Settings = StorytellerSettings.Named(DefaultPreset),
+                };
             var r = new StoryRules();
             string preset = null;
             for (int i = 1; i < parts.Length; i++)
@@ -40,6 +51,7 @@ namespace GreyBoxStrategy.Replay
                     case "history": r.History = true; break;
                     case "traits": r.Traits = true; break;
                     case "title-call": r.TitleCall = true; break;
+                    case "event-facts": r.EventFacts = true; break;
                     case "chains-free": r.Chains = ChainMode.Free; break;
                     case "chains-skeleton": r.Chains = ChainMode.Skeleton; break;
                     case "s2":

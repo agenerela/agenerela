@@ -441,7 +441,7 @@
 .event-replaced { font-size: 12px; color: rgb(216, 162, 74); }
 
 .choice-veil { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: rgba(8, 6, 4, 0.72); align-items: center; justify-content: center; }
-.choice-card { position: relative; width: 560px; max-width: 92%; padding: 16px 18px; background-color: rgb(226, 210, 168); border-width: 3px; border-color: rgb(120, 86, 44); }
+.panel.choice-card { position: relative; width: 560px; max-width: 92%; padding: 16px 18px; background-color: rgb(226, 210, 168); border-width: 3px; border-color: rgb(120, 86, 44); }
 .choice-card .event-title { color: rgb(46, 32, 18); font-size: 24px; }
 .choice-card .event-story { color: rgb(60, 42, 24); font-size: 16px; }
 .choice-card .src { color: rgb(110, 70, 30); }
